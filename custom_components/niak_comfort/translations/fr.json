@@ -83,6 +83,10 @@
       "finish": {
         "title": "Confirmer votre pièce",
         "description": "**Votre configuration**\n\nTempérature intérieure : {indoor_temperature}\n\nHumidité intérieure : {indoor_humidity}\n\nCO₂ : {co2}\n\nTempérature extérieure : {outdoor_temperature}\n\nHumidité extérieure : {outdoor_humidity}\n\nPluie : {rain}\n\nAir extérieur : {pollution}\n\nFenêtres : {windows}\n\nChauffage : {heating}\n\n{capabilities}\n\nAprès validation, vous pourrez ajouter une pièce depuis la page de l’intégration avec « Ajouter un service »."
+      },
+      "home": {
+        "title": "Votre espace Niak Confort",
+        "description": "Validez pour activer la page Niak Confort dans la barre latérale. Vous y configurerez le Salon, les données extérieures du logement et les autres pièces, avec des propositions expliquées."
       }
     },
     "error": {
@@ -188,7 +192,7 @@
       },
       "init": {
         "title": "Configurer votre pièce",
-        "description": "Modifiez une catégorie, puis confirmez pour enregistrer. Rechercher des capteurs ne remplace aucun choix existant.",
+        "description": "Ouvrez Niak Confort dans la barre latérale pour retrouver les pièces, leurs propositions et les données extérieures communes. Ce menu reste disponible pour les réglages classiques.",
         "menu_options": {
           "finish": "Confirmer la configuration",
           "indoor": "Confort intérieur",
