@@ -1,0 +1,153 @@
+{
+  "title": "Niak Comfort",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Your room",
+        "description": "One configuration per room. This alpha observes and advises without controlling equipment.",
+        "data": {
+          "name": "Display name",
+          "area_id": "Home Assistant area"
+        }
+      },
+      "sources": {
+        "title": "Your measurements",
+        "description": "Choose your sources; optional sensors are never assigned automatically. Rain and pollution require explicit binary signals. Without them an opening advice remains unconfirmed. Heating reads actual action, not mode.",
+        "data": {
+          "indoor_temperature": "Indoor temperature",
+          "outdoor_temperature": "Outdoor temperature",
+          "indoor_humidity": "Indoor humidity",
+          "outdoor_humidity": "Outdoor humidity",
+          "co2": "CO₂",
+          "rain": "Rain affecting these windows",
+          "pollution": "Outdoor air blocks ventilation",
+          "heating": "Heating equipment (observed action)",
+          "windows": "Window contacts"
+        }
+      },
+      "settings": {
+        "title": "Your settings",
+        "description": "Initial values replay historical scenarios; they are not health standards. Freshness tracks the last Home Assistant reception. Adjust it to your sensor reporting cadence.",
+        "data": {
+          "minimum": "Comfort minimum (°C)",
+          "maximum": "Comfort maximum (°C)",
+          "humidity_high": "High humidity (%)",
+          "co2_potential": "CO₂ opportunity (ppm)",
+          "co2_action": "CO₂ action (ppm)",
+          "co2_urgent": "CO₂ attention (ppm)",
+          "temperature_hysteresis": "Temperature hysteresis (°C)",
+          "co2_hysteresis": "CO₂ hysteresis (ppm)",
+          "humidity_hysteresis": "Humidity hysteresis (%)",
+          "cooling_delta": "Minimum cooling difference (°C)",
+          "drying_delta": "Minimum water difference (g/m³)",
+          "max_age_seconds": "Maximum reception age (seconds)"
+        }
+      }
+    },
+    "error": {
+      "invalid_settings": "Check comfort range, threshold ordering and hysteresis margins."
+    },
+    "abort": {
+      "already_configured": "This room already has a Niak Comfort configuration."
+    }
+  },
+  "options": {
+    "step": {
+      "sources": {
+        "title": "Your measurements",
+        "description": "Choose your sources; optional sensors are never assigned automatically. Rain and pollution require explicit binary signals. Without them an opening advice remains unconfirmed. Heating reads actual action, not mode.",
+        "data": {
+          "indoor_temperature": "Indoor temperature",
+          "outdoor_temperature": "Outdoor temperature",
+          "indoor_humidity": "Indoor humidity",
+          "outdoor_humidity": "Outdoor humidity",
+          "co2": "CO₂",
+          "rain": "Rain affecting these windows",
+          "pollution": "Outdoor air blocks ventilation",
+          "heating": "Heating equipment (observed action)",
+          "windows": "Window contacts"
+        }
+      },
+      "settings": {
+        "title": "Your settings",
+        "description": "Initial values replay historical scenarios; they are not health standards. Freshness tracks the last Home Assistant reception. Adjust it to your sensor reporting cadence.",
+        "data": {
+          "minimum": "Comfort minimum (°C)",
+          "maximum": "Comfort maximum (°C)",
+          "humidity_high": "High humidity (%)",
+          "co2_potential": "CO₂ opportunity (ppm)",
+          "co2_action": "CO₂ action (ppm)",
+          "co2_urgent": "CO₂ attention (ppm)",
+          "temperature_hysteresis": "Temperature hysteresis (°C)",
+          "co2_hysteresis": "CO₂ hysteresis (ppm)",
+          "humidity_hysteresis": "Humidity hysteresis (%)",
+          "cooling_delta": "Minimum cooling difference (°C)",
+          "drying_delta": "Minimum water difference (g/m³)",
+          "max_age_seconds": "Maximum reception age (seconds)"
+        }
+      }
+    },
+    "error": {
+      "invalid_settings": "Inconsistent settings: check thresholds and margins."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "level": {
+        "name": "Situation",
+        "state": {
+          "calm": "All is well",
+          "benefit": "Opportunity detected",
+          "action": "Action advised",
+          "urgent": "Attention required",
+          "neutral": "Incomplete information"
+        }
+      },
+      "action": {
+        "name": "Action",
+        "state": {
+          "ok": "No new action",
+          "ouvrir": "Open",
+          "fermer": "Close",
+          "attendre": "Wait",
+          "unknown": "Check"
+        }
+      },
+      "reason": {
+        "name": "Reason",
+        "state": {
+          "within_comfort": "Within configured comfort range",
+          "rain_open_windows": "Rain with open windows",
+          "opening_blocked": "Outdoor constraint",
+          "verify_exterior": "Check exterior conditions",
+          "air_needed": "Air renewal needed",
+          "cooling_possible": "Cooling possible",
+          "drying_possible": "Drying possible",
+          "exchange_harmful": "Unfavorable exchange",
+          "cooling_unavailable": "Cooling unavailable",
+          "heat_needed": "Heat needed",
+          "drying_unavailable": "Drying unavailable",
+          "incomplete_data": "Incomplete information",
+          "optional_air_change": "Optional air renewal"
+        }
+      },
+      "heating_action": {
+        "name": "Observed heating",
+        "state": {
+          "heating": "Heating",
+          "idle": "Idle",
+          "off": "Off",
+          "cooling": "Cooling",
+          "unknown": "Unknown"
+        }
+      },
+      "coverage": {
+        "name": "Data coverage",
+        "state": {
+          "partial": "Partial assessment",
+          "configured_sources_available": "Configured sources available"
+        }
+      }
+    }
+  }
+}
