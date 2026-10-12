@@ -1,16 +1,27 @@
 # Niak Comfort — intégration
 
+[![release](https://img.shields.io/github/v/release/Niakman13/niak-comfort-integration?include_prereleases&cacheSeconds=3600)](https://github.com/Niakman13/niak-comfort-integration/releases)
+[![Validate](https://github.com/Niakman13/niak-comfort-integration/actions/workflows/validate.yml/badge.svg)](https://github.com/Niakman13/niak-comfort-integration/actions/workflows/validate.yml)
+[![HACS](https://img.shields.io/badge/HACS-Custom-orange)](https://hacs.xyz)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+[![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/Niakman13)
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-frankblemont-FFDD00?logo=buymeacoffee&logoColor=black)](https://www.buymeacoffee.com/frankblemont)
+[![PayPal](https://img.shields.io/badge/PayPal-Donate-00457C?logo=paypal&logoColor=white)](https://paypal.me/frankblemont)
+
 Moteur de confort par pièce pour Home Assistant. Il normalise les mesures, conserve les besoins simultanés et fournit une vue expliquée à [la carte Niak Comfort](https://github.com/Niakman13/niak-comfort).
 
 **Version 0.2.0 — alpha de test, en observation.** Aucune commande d’équipement. Home Assistant 2026.10.0 minimum, version utilisée pour les contrôles isolés. L’installation complète dans une instance et les capteurs propres à chaque logement restent à vérifier.
 
 ## Installation
 
-1. Dans HACS, ajouter `https://github.com/Niakman13/niak-comfort-integration` comme **dépôt personnalisé**, catégorie **Integration**. Télécharger l’alpha ; afficher les versions bêta si nécessaire. Ce projet n’est pas inclus au catalogue HACS par défaut.
+1. Dans HACS, ouvrir le bouton ci-dessous (ou ⋮ → **Dépôts personnalisés** : `https://github.com/Niakman13/niak-comfort-integration`, catégorie **Intégration**). Télécharger l’alpha ; afficher les versions bêta si nécessaire. Ce projet n’est pas inclus au catalogue HACS par défaut.
 2. Redémarrer Home Assistant.
 3. Ajouter **Niak Comfort** dans Paramètres → Appareils et services.
 4. Choisir une pièce HA, son nom, ses capteurs et ses repères. Une configuration par pièce.
 5. Installer [la carte](https://github.com/Niakman13/niak-comfort#installation).
+
+[![Ouvrir Niak Comfort dans HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Niakman13&repository=niak-comfort-integration&category=integration)
 
 Installation manuelle : copier `custom_components/niak_comfort` de ce dépôt dans `config/custom_components/niak_comfort`, redémarrer puis ajouter l’intégration. Les templates existants ne sont ni importés ni remplacés.
 
