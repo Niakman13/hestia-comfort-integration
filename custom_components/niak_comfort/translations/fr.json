@@ -1,0 +1,153 @@
+{
+  "title": "Niak Comfort",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Votre pièce",
+        "description": "Une configuration par pièce. Cette alpha observe et conseille, sans commander les équipements.",
+        "data": {
+          "name": "Nom affiché",
+          "area_id": "Pièce Home Assistant"
+        }
+      },
+      "sources": {
+        "title": "Vos mesures",
+        "description": "Choisissez vos sources ; aucun capteur facultatif n’est ajouté automatiquement. Pluie et pollution : signaux binaires explicites. Sans ces vérifications, un conseil d’ouverture reste à confirmer. Le chauffage est lu via son action réelle, pas son mode.",
+        "data": {
+          "indoor_temperature": "Température intérieure",
+          "outdoor_temperature": "Température extérieure",
+          "indoor_humidity": "Humidité intérieure",
+          "outdoor_humidity": "Humidité extérieure",
+          "co2": "CO₂",
+          "rain": "Pluie concernant ces ouvrants",
+          "pollution": "Air extérieur défavorable à l’aération",
+          "heating": "Chauffage (action observée)",
+          "windows": "Contacts des ouvrants"
+        }
+      },
+      "settings": {
+        "title": "Vos repères",
+        "description": "Valeurs initiales reprises des scénarios historiques ; ce ne sont pas des références sanitaires. La fraîcheur mesure la dernière réception Home Assistant. À adapter à la cadence de vos capteurs.",
+        "data": {
+          "minimum": "Confort minimum (°C)",
+          "maximum": "Confort maximum (°C)",
+          "humidity_high": "Humidité haute (%)",
+          "co2_potential": "CO₂ potentiel (ppm)",
+          "co2_action": "CO₂ conseil (ppm)",
+          "co2_urgent": "CO₂ attention (ppm)",
+          "temperature_hysteresis": "Hystérésis de température (°C)",
+          "co2_hysteresis": "Hystérésis de CO₂ (ppm)",
+          "humidity_hysteresis": "Hystérésis d’humidité (%)",
+          "cooling_delta": "Écart minimum de fraîcheur (°C)",
+          "drying_delta": "Écart minimum d’eau (g/m³)",
+          "max_age_seconds": "Ancienneté maximum de réception (secondes)"
+        }
+      }
+    },
+    "error": {
+      "invalid_settings": "Vérifiez la plage de confort, l’ordre des seuils et les marges d’hystérésis."
+    },
+    "abort": {
+      "already_configured": "Cette pièce possède déjà une configuration Niak Comfort."
+    }
+  },
+  "options": {
+    "step": {
+      "sources": {
+        "title": "Vos mesures",
+        "description": "Choisissez vos sources ; aucun capteur facultatif n’est ajouté automatiquement. Pluie et pollution : signaux binaires explicites. Sans ces vérifications, un conseil d’ouverture reste à confirmer. Le chauffage est lu via son action réelle, pas son mode.",
+        "data": {
+          "indoor_temperature": "Température intérieure",
+          "outdoor_temperature": "Température extérieure",
+          "indoor_humidity": "Humidité intérieure",
+          "outdoor_humidity": "Humidité extérieure",
+          "co2": "CO₂",
+          "rain": "Pluie concernant ces ouvrants",
+          "pollution": "Air extérieur défavorable à l’aération",
+          "heating": "Chauffage (action observée)",
+          "windows": "Contacts des ouvrants"
+        }
+      },
+      "settings": {
+        "title": "Vos repères",
+        "description": "Valeurs initiales reprises des scénarios historiques ; ce ne sont pas des références sanitaires. La fraîcheur mesure la dernière réception Home Assistant. À adapter à la cadence de vos capteurs.",
+        "data": {
+          "minimum": "Confort minimum (°C)",
+          "maximum": "Confort maximum (°C)",
+          "humidity_high": "Humidité haute (%)",
+          "co2_potential": "CO₂ potentiel (ppm)",
+          "co2_action": "CO₂ conseil (ppm)",
+          "co2_urgent": "CO₂ attention (ppm)",
+          "temperature_hysteresis": "Hystérésis de température (°C)",
+          "co2_hysteresis": "Hystérésis de CO₂ (ppm)",
+          "humidity_hysteresis": "Hystérésis d’humidité (%)",
+          "cooling_delta": "Écart minimum de fraîcheur (°C)",
+          "drying_delta": "Écart minimum d’eau (g/m³)",
+          "max_age_seconds": "Ancienneté maximum de réception (secondes)"
+        }
+      }
+    },
+    "error": {
+      "invalid_settings": "Repères incohérents : vérifiez les seuils et les marges."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "level": {
+        "name": "Situation",
+        "state": {
+          "calm": "Tout va bien",
+          "benefit": "Potentiel détecté",
+          "action": "Geste conseillé",
+          "urgent": "Attention nécessaire",
+          "neutral": "Information incomplète"
+        }
+      },
+      "action": {
+        "name": "Geste",
+        "state": {
+          "ok": "Aucun nouveau geste",
+          "ouvrir": "Ouvrir",
+          "fermer": "Fermer",
+          "attendre": "Attendre",
+          "unknown": "À vérifier"
+        }
+      },
+      "reason": {
+        "name": "Raison",
+        "state": {
+          "within_comfort": "Dans la plage de confort",
+          "rain_open_windows": "Pluie et ouvrants ouverts",
+          "opening_blocked": "Contrainte extérieure",
+          "verify_exterior": "Vérifier les conditions extérieures",
+          "air_needed": "Renouvellement d’air nécessaire",
+          "cooling_possible": "Rafraîchissement possible",
+          "drying_possible": "Assèchement possible",
+          "exchange_harmful": "Échange défavorable",
+          "cooling_unavailable": "Fraîcheur indisponible",
+          "heat_needed": "Besoin de chaleur",
+          "drying_unavailable": "Assèchement indisponible",
+          "incomplete_data": "Information incomplète",
+          "optional_air_change": "Renouvellement d’air facultatif"
+        }
+      },
+      "heating_action": {
+        "name": "Chauffage observé",
+        "state": {
+          "heating": "Chauffe en cours",
+          "idle": "Au repos",
+          "off": "Arrêté",
+          "cooling": "Rafraîchit",
+          "unknown": "Inconnu"
+        }
+      },
+      "coverage": {
+        "name": "Couverture des données",
+        "state": {
+          "partial": "Bilan partiel",
+          "configured_sources_available": "Sources configurées disponibles"
+        }
+      }
+    }
+  }
+}

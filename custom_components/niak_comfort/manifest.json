@@ -1,0 +1,17 @@
+{
+  "domain": "niak_comfort",
+  "name": "Niak Comfort",
+  "codeowners": [
+    "@Niakman13"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "websocket_api"
+  ],
+  "documentation": "https://github.com/Niakman13/niak-comfort-integration",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/Niakman13/niak-comfort-integration/issues",
+  "requirements": [],
+  "version": "0.2.0"
+}
