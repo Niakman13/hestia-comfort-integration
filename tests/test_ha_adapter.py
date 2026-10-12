@@ -11,18 +11,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntries, ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
 from custom_components.niak_comfort.config_flow import source_schema, settings_schema, ComfortOptionsFlow, ComfortConfigFlow
 from custom_components.niak_comfort.coordinator import ComfortCoordinator
 from custom_components.niak_comfort.sensor import ComfortSensor, DESCRIPTIONS
 from custom_components.niak_comfort import async_setup
 
 
-class AdapterTests(unittest.IsolatedAsyncioTestCase):
+class AdapterFixture(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.hass = HomeAssistant(self.directory.name)
         self.hass.config_entries = ConfigEntries(self.hass, {})
         await self.hass.config_entries.async_initialize()
+        await ar.async_load(self.hass)
+        dr.async_setup(self.hass)
+        await dr.async_load(self.hass)
+        await er.async_load(self.hass)
+        ar.async_get(self.hass).async_create("Salon")
         self.entry = ConfigEntry(domain="niak_comfort", title="Salon", unique_id="salon", version=1, minor_version=1,
             source="user", data={"name": "Salon", "area_id": "salon", "sources": {
                 "indoor_temperature": "sensor.inside", "outdoor_temperature": "sensor.outside",
@@ -30,8 +36,8 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
                 "heating": "climate.test"}, "windows": ["binary_sensor.window"]},
             options={}, discovery_keys={}, subentries_data=[])
         for entity, value, attributes in (
-            ("sensor.inside", "72", {"unit_of_measurement": "°F"}),
-            ("sensor.outside", "10", {"unit_of_measurement": "°C"}),
+            ("sensor.inside", "72", {"unit_of_measurement": "°F", "device_class": "temperature"}),
+            ("sensor.outside", "10", {"unit_of_measurement": "°C", "device_class": "temperature"}),
             ("sensor.co2", "1700", {"unit_of_measurement": "ppm"}),
             ("binary_sensor.rain", "off", {}), ("binary_sensor.pollution", "off", {}),
             ("binary_sensor.window", "off", {}), ("climate.test", "heat", {"hvac_action": "idle"}),
@@ -42,6 +48,8 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
         await self.hass.async_stop()
         self.directory.cleanup()
 
+
+class AdapterTests(AdapterFixture):
     async def test_real_state_mapping_and_sensor_output(self):
         coordinator = ComfortCoordinator(self.hass, self.entry)
         coordinator.data = await coordinator._async_update_data()
@@ -75,12 +83,16 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
         flow.hass = self.hass
         flow.context = {"source": "user"}
         result = await flow.async_step_user({"name": "Salon", "area_id": "salon"})
-        self.assertEqual(result["step_id"], "sources")
-        result = await flow.async_step_sources({"indoor_temperature": "sensor.inside", "outdoor_temperature": "sensor.outside"})
-        self.assertEqual(result["step_id"], "settings")
-        result = await flow.async_step_settings({"minimum": 30, "maximum": 20})
+        self.assertEqual(result["step_id"], "indoor")
+        result = await flow.async_step_indoor({"indoor_temperature": "sensor.inside"})
+        self.assertEqual(result["step_id"], "outdoor")
+        await flow.async_step_outdoor({})
+        await flow.async_step_windows({})
+        await flow.async_step_heating({})
+        result = await flow.async_step_preferences({"minimum": 30, "maximum": 20})
         self.assertEqual(result["errors"], {"base": "invalid_settings"})
-        result = await flow.async_step_settings({})
+        await flow.async_step_preferences({"minimum": 20, "maximum": 24})
+        result = await flow.async_step_finish({})
         self.assertEqual(result["data"]["area_id"], "salon")
         self.assertNotIn("co2", result["data"]["sources"])
 

@@ -14,7 +14,7 @@ DESCRIPTIONS = (
                                      "air_needed", "cooling_possible", "drying_possible", "exchange_harmful",
                                      "cooling_unavailable", "heat_needed", "drying_unavailable", "incomplete_data", "optional_air_change"]),
     SensorEntityDescription(key="heating_action", translation_key="heating_action", device_class=SensorDeviceClass.ENUM,
-                            options=["heating", "idle", "off", "cooling", "unknown"]),
+                            options=["heating", "idle", "off", "cooling", "unknown", "not_configured"]),
     SensorEntityDescription(key="coverage", translation_key="coverage", entity_category=EntityCategory.DIAGNOSTIC,
                             device_class=SensorDeviceClass.ENUM, options=["partial", "configured_sources_available"]),
 )
