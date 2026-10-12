@@ -3,49 +3,93 @@
   "config": {
     "step": {
       "user": {
-        "title": "Your room",
-        "description": "One configuration per room. This alpha observes and advises without controlling equipment.",
+        "title": "1 · Your first room",
+        "description": "Start with the living room or choose another Home Assistant area. You can add more later. Leave the display name empty to use the area name.",
         "data": {
-          "name": "Display name",
-          "area_id": "Home Assistant area"
+          "area_id": "Home Assistant area",
+          "name": "Display name (optional)"
         }
       },
-      "sources": {
-        "title": "Your measurements",
-        "description": "Choose your sources; optional sensors are never assigned automatically. Rain and pollution require explicit binary signals. Without them an opening advice remains unconfirmed. Heating reads actual action, not mode.",
-        "data": {
-          "indoor_temperature": "Indoor temperature",
-          "outdoor_temperature": "Outdoor temperature",
-          "indoor_humidity": "Indoor humidity",
-          "outdoor_humidity": "Outdoor humidity",
-          "co2": "CO₂",
-          "rain": "Rain affecting these windows",
-          "pollution": "Outdoor air blocks ventilation",
-          "heating": "Heating equipment (observed action)",
-          "windows": "Window contacts"
-        }
-      },
-      "settings": {
-        "title": "Your settings",
-        "description": "Initial values replay historical scenarios; they are not health standards. Freshness tracks the last Home Assistant reception. Adjust it to your sensor reporting cadence.",
+      "preferences": {
+        "title": "6 · Your preferences",
+        "description": "Choose the temperature range you feel comfortable in. Other settings remain available under Advanced settings.",
         "data": {
           "minimum": "Comfort minimum (°C)",
-          "maximum": "Comfort maximum (°C)",
-          "humidity_high": "High humidity (%)",
-          "co2_potential": "CO₂ opportunity (ppm)",
-          "co2_action": "CO₂ action (ppm)",
-          "co2_urgent": "CO₂ attention (ppm)",
-          "temperature_hysteresis": "Temperature hysteresis (°C)",
-          "co2_hysteresis": "CO₂ hysteresis (ppm)",
-          "humidity_hysteresis": "Humidity hysteresis (%)",
-          "cooling_delta": "Minimum cooling difference (°C)",
-          "drying_delta": "Minimum water difference (g/m³)",
-          "max_age_seconds": "Maximum reception age (seconds)"
+          "maximum": "Comfort maximum (°C)"
         }
+      },
+      "indoor": {
+        "title": "2 · Indoor comfort",
+        "description": "Confirm your room measurements. Temperature is required; humidity and CO₂ are optional. Empty fields stay empty. You can select a sensor from any room.",
+        "data": {
+          "indoor_temperature": "Indoor temperature",
+          "indoor_humidity": "Indoor humidity",
+          "co2": "CO₂"
+        },
+        "data_description": {
+          "indoor_temperature": "Measures room temperature. Some candidates measure a device rather than ambient air.\n\n{indoor_temperature}",
+          "indoor_humidity": "Optional. Measures room humidity.\n\n{indoor_humidity}",
+          "co2": "Optional. Detects an air renewal need; it does not measure all pollutants.\n\n{co2}"
+        }
+      },
+      "outdoor": {
+        "title": "3 · Outdoor conditions",
+        "description": "These readings help compare indoor and outdoor air. All are optional. Existing shared readings are proposed; rain must apply to this room’s windows.",
+        "data": {
+          "outdoor_temperature": "Outdoor temperature",
+          "outdoor_humidity": "Outdoor humidity",
+          "rain": "Rain affecting these windows",
+          "pollution": "Outdoor air blocks ventilation"
+        },
+        "data_description": {
+          "outdoor_temperature": "Optional. Without this reading, the thermal benefit of opening remains unknown.\n\n{outdoor_temperature}",
+          "outdoor_humidity": "Optional. Together with both temperatures and indoor humidity, compares water content in the air.\n\n{outdoor_humidity}",
+          "rain": "Optional. A binary signal must be active when rain affects these windows. Without it, check outside before opening.\n\n{rain}",
+          "pollution": "Optional. A binary signal must be active when ventilation is discouraged. An ATMO index or concentration cannot be used directly.\n\n{pollution}"
+        }
+      },
+      "windows": {
+        "title": "4 · Your windows",
+        "description": "Contacts show whether windows are open. Review detected contacts and remove duplicates or thermostat summaries. Without contacts, Niak never assumes windows are closed.",
+        "data": {
+          "windows": "Window contacts"
+        },
+        "data_description": {
+          "windows": "Optional. Remove contacts that do not belong to this room.\n\n{windows}"
+        }
+      },
+      "heating": {
+        "title": "5 · Your heating",
+        "description": "Optional. Select equipment to observe whether it is actually heating. Niak does not control heating. Without equipment, observation remains unconfigured.",
+        "data": {
+          "heating": "Heating equipment (observed action)"
+        },
+        "data_description": {
+          "heating": "Optional. Equipment must provide actual HVAC action; mode alone is insufficient.\n\n{heating}"
+        }
+      },
+      "review": {
+        "title": "Your summary",
+        "description": "**Your configuration**\n\nIndoor temperature: {indoor_temperature}\n\nIndoor humidity: {indoor_humidity}\n\nCO₂: {co2}\n\nOutdoor temperature: {outdoor_temperature}\n\nOutdoor humidity: {outdoor_humidity}\n\nRain: {rain}\n\nOutdoor air: {pollution}\n\nWindows: {windows}\n\nHeating: {heating}\n\n{capabilities}",
+        "menu_options": {
+          "finish": "Confirm configuration",
+          "indoor": "Indoor comfort",
+          "outdoor": "Outdoor conditions",
+          "windows": "Windows",
+          "heating": "Observed heating",
+          "preferences": "Comfort preferences"
+        }
+      },
+      "finish": {
+        "title": "Confirm your room",
+        "description": "**Your configuration**\n\nIndoor temperature: {indoor_temperature}\n\nIndoor humidity: {indoor_humidity}\n\nCO₂: {co2}\n\nOutdoor temperature: {outdoor_temperature}\n\nOutdoor humidity: {outdoor_humidity}\n\nRain: {rain}\n\nOutdoor air: {pollution}\n\nWindows: {windows}\n\nHeating: {heating}\n\n{capabilities}\n\nAfter saving, use “Add entry” on the integration page to add another room."
       }
     },
     "error": {
-      "invalid_settings": "Check comfort range, threshold ordering and hysteresis margins."
+      "invalid_settings": "Check comfort range, threshold ordering and hysteresis margins.",
+      "invalid_source": "Choose an existing compatible entity.",
+      "required_source": "Choose an indoor temperature sensor for this room.",
+      "invalid_area": "Choose an existing Home Assistant area."
     },
     "abort": {
       "already_configured": "This room already has a Niak Comfort configuration."
@@ -53,27 +97,18 @@
   },
   "options": {
     "step": {
-      "sources": {
-        "title": "Your measurements",
-        "description": "Choose your sources; optional sensors are never assigned automatically. Rain and pollution require explicit binary signals. Without them an opening advice remains unconfirmed. Heating reads actual action, not mode.",
-        "data": {
-          "indoor_temperature": "Indoor temperature",
-          "outdoor_temperature": "Outdoor temperature",
-          "indoor_humidity": "Indoor humidity",
-          "outdoor_humidity": "Outdoor humidity",
-          "co2": "CO₂",
-          "rain": "Rain affecting these windows",
-          "pollution": "Outdoor air blocks ventilation",
-          "heating": "Heating equipment (observed action)",
-          "windows": "Window contacts"
-        }
-      },
-      "settings": {
-        "title": "Your settings",
-        "description": "Initial values replay historical scenarios; they are not health standards. Freshness tracks the last Home Assistant reception. Adjust it to your sensor reporting cadence.",
+      "preferences": {
+        "title": "Your preferences",
+        "description": "Choose the temperature range you feel comfortable in. Other settings remain available under Advanced settings.",
         "data": {
           "minimum": "Comfort minimum (°C)",
-          "maximum": "Comfort maximum (°C)",
+          "maximum": "Comfort maximum (°C)"
+        }
+      },
+      "advanced": {
+        "title": "Advanced settings",
+        "description": "Initial values replay historical scenarios; they are not health standards. Freshness tracks the last Home Assistant reception. Adjust it to your sensor reporting cadence.",
+        "data": {
           "humidity_high": "High humidity (%)",
           "co2_potential": "CO₂ opportunity (ppm)",
           "co2_action": "CO₂ action (ppm)",
@@ -85,10 +120,92 @@
           "drying_delta": "Minimum water difference (g/m³)",
           "max_age_seconds": "Maximum reception age (seconds)"
         }
+      },
+      "indoor": {
+        "title": "Indoor comfort",
+        "description": "Confirm your room measurements. Temperature is required; humidity and CO₂ are optional. Empty fields stay empty. You can select a sensor from any room.",
+        "data": {
+          "indoor_temperature": "Indoor temperature",
+          "indoor_humidity": "Indoor humidity",
+          "co2": "CO₂"
+        },
+        "data_description": {
+          "indoor_temperature": "Measures room temperature. Some candidates measure a device rather than ambient air.\n\n{indoor_temperature}",
+          "indoor_humidity": "Optional. Measures room humidity.\n\n{indoor_humidity}",
+          "co2": "Optional. Detects an air renewal need; it does not measure all pollutants.\n\n{co2}"
+        }
+      },
+      "outdoor": {
+        "title": "Outdoor conditions",
+        "description": "These readings help compare indoor and outdoor air. All are optional. Existing shared readings are proposed; rain must apply to this room’s windows.",
+        "data": {
+          "outdoor_temperature": "Outdoor temperature",
+          "outdoor_humidity": "Outdoor humidity",
+          "rain": "Rain affecting these windows",
+          "pollution": "Outdoor air blocks ventilation"
+        },
+        "data_description": {
+          "outdoor_temperature": "Optional. Without this reading, the thermal benefit of opening remains unknown.\n\n{outdoor_temperature}",
+          "outdoor_humidity": "Optional. Together with both temperatures and indoor humidity, compares water content in the air.\n\n{outdoor_humidity}",
+          "rain": "Optional. A binary signal must be active when rain affects these windows. Without it, check outside before opening.\n\n{rain}",
+          "pollution": "Optional. A binary signal must be active when ventilation is discouraged. An ATMO index or concentration cannot be used directly.\n\n{pollution}"
+        }
+      },
+      "windows": {
+        "title": "Your windows",
+        "description": "Contacts show whether windows are open. Review detected contacts and remove duplicates or thermostat summaries. Without contacts, Niak never assumes windows are closed.",
+        "data": {
+          "windows": "Window contacts"
+        },
+        "data_description": {
+          "windows": "Optional. Remove contacts that do not belong to this room.\n\n{windows}"
+        }
+      },
+      "heating": {
+        "title": "Your heating",
+        "description": "Optional. Select equipment to observe whether it is actually heating. Niak does not control heating. Without equipment, observation remains unconfigured.",
+        "data": {
+          "heating": "Heating equipment (observed action)"
+        },
+        "data_description": {
+          "heating": "Optional. Equipment must provide actual HVAC action; mode alone is insufficient.\n\n{heating}"
+        }
+      },
+      "finish": {
+        "title": "Confirm your room",
+        "description": "**Your configuration**\n\nIndoor temperature: {indoor_temperature}\n\nIndoor humidity: {indoor_humidity}\n\nCO₂: {co2}\n\nOutdoor temperature: {outdoor_temperature}\n\nOutdoor humidity: {outdoor_humidity}\n\nRain: {rain}\n\nOutdoor air: {pollution}\n\nWindows: {windows}\n\nHeating: {heating}\n\n{capabilities}\n\nAfter saving, use “Add entry” on the integration page to add another room."
+      },
+      "discover": {
+        "title": "Search for sensors",
+        "description": "Proposed sensors:\n\n{detected}\n\nCheck only proposals you want to add. Existing choices are preserved. Categories also allow manual selection when multiple candidates exist.",
+        "data": {
+          "indoor_temperature": "Indoor temperature",
+          "indoor_humidity": "Indoor humidity",
+          "co2": "CO₂",
+          "windows": "Window contacts",
+          "heating": "Heating equipment (observed action)"
+        }
+      },
+      "init": {
+        "title": "Configure your room",
+        "description": "Edit a category, then confirm to save. Searching for sensors never replaces existing choices.",
+        "menu_options": {
+          "finish": "Confirm configuration",
+          "indoor": "Indoor comfort",
+          "outdoor": "Outdoor conditions",
+          "windows": "Windows",
+          "heating": "Observed heating",
+          "preferences": "Comfort preferences",
+          "advanced": "Advanced settings",
+          "discover": "Search for sensors"
+        }
       }
     },
     "error": {
-      "invalid_settings": "Inconsistent settings: check thresholds and margins."
+      "invalid_settings": "Check comfort range, threshold ordering and hysteresis margins.",
+      "invalid_source": "Choose an existing compatible entity.",
+      "required_source": "Choose an indoor temperature sensor for this room.",
+      "invalid_area": "Choose an existing Home Assistant area."
     }
   },
   "entity": {
@@ -138,7 +255,8 @@
           "idle": "Idle",
           "off": "Off",
           "cooling": "Cooling",
-          "unknown": "Unknown"
+          "unknown": "Unknown",
+          "not_configured": "Not configured"
         }
       },
       "coverage": {

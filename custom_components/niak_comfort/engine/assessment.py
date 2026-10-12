@@ -133,6 +133,6 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         action, reason = "unknown", "incomplete_data"
     elif opportunities and not opened and co2 is not None and co2 >= settings.co2_potential:
         level, reason = "benefit", "optional_air_change"
-    heating = value("heating") or "unknown"
+    heating = (value("heating") or "unknown") if "heating" in readings else "not_configured"
     return Assessment(action, level, reason, needs, constraints, opportunities, partial, missing,
                       heating, ai, ae, delta)

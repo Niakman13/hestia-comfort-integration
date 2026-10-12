@@ -11,14 +11,14 @@
 
 Moteur de confort par pièce pour Home Assistant. Il normalise les mesures, conserve les besoins simultanés et fournit une vue expliquée à [la carte Niak Comfort](https://github.com/Niakman13/niak-comfort).
 
-**Version 0.2.0 — alpha de test, en observation.** Aucune commande d’équipement. Home Assistant 2026.10.0 minimum, version utilisée pour les contrôles isolés. L’installation complète dans une instance et les capteurs propres à chaque logement restent à vérifier.
+**Version 0.3.0-beta.2 — bêta de test, en observation.** Aucune commande d’équipement. Home Assistant 2026.10.0 minimum, version utilisée pour les contrôles isolés. L’installation complète dans une instance et les capteurs propres à chaque logement restent à vérifier.
 
 ## Installation
 
 1. Dans HACS, ouvrir le bouton ci-dessous (ou ⋮ → **Dépôts personnalisés** : `https://github.com/Niakman13/niak-comfort-integration`, catégorie **Intégration**). Télécharger l’alpha ; afficher les versions bêta si nécessaire. Ce projet n’est pas inclus au catalogue HACS par défaut.
 2. Redémarrer Home Assistant.
 3. Ajouter **Niak Comfort** dans Paramètres → Appareils et services.
-4. Choisir une pièce HA, son nom, ses capteurs et ses repères. Une configuration par pièce.
+4. Suivre l’assistant : pièce (Salon proposé), intérieur, extérieur, fenêtres, chauffage et préférences. Vérifier le récapitulatif avant de confirmer. Une configuration par pièce ; ajouter les suivantes avec **Ajouter un service**.
 5. Installer [la carte](https://github.com/Niakman13/niak-comfort#installation).
 
 [![Ouvrir Niak Comfort dans HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Niakman13&repository=niak-comfort-integration&category=integration)
@@ -27,9 +27,11 @@ Installation manuelle : copier `custom_components/niak_comfort` de ce dépôt da
 
 ## Mesures et réglages
 
-Températures intérieure/extérieure requises ; humidités, CO₂, contacts d’ouvrants et chauffage facultatifs. Un champ laissé vide reste vide. Pluie et air extérieur défavorable utilisent des signaux binaires explicitement interprétés pour cette pièce. Sans ces vérifications, une possibilité d’ouverture reste à confirmer.
+Température intérieure requise ; température extérieure, humidités, CO₂, contacts d’ouvrants et chauffage facultatifs. Sans température extérieure, un bénéfice thermique d’ouverture n’est pas confirmé. Les capteurs sont proposés à partir des pièces HA (affectation de l’entité, puis de son appareil), avec priorité aux références température/humidité de la pièce. Plusieurs candidats nécessitent un choix ; les capteurs de toute l’installation restent accessibles pour les stations mixtes. Les contacts détectés doivent être vérifiés, notamment les doublons et états agrégés de thermostats. Un champ laissé vide reste vide. Pluie et air extérieur défavorable utilisent des signaux binaires explicitement interprétés pour cette pièce. Sans ces vérifications, une possibilité d’ouverture reste à confirmer.
 
 Températures °C/°F/K normalisées en °C, humidité en %, CO₂ en ppm. Valeurs absentes, non finies, incompatibles ou périmées exclues : aucun 600 ppm de remplacement. L’action chauffage utilise `hvac_action`, pas simplement le mode `heat`.
+
+La configuration initiale présente seulement la plage de confort. Le menu **Configurer** permet ensuite de modifier une catégorie, d’accéder aux réglages avancés et de rechercher explicitement de nouveaux capteurs sans remplacer les choix confirmés. Température/humidité extérieures et signal d’air défavorable déjà communs aux pièces sont proposés à l’ajout suivant, puis copiés dans la configuration de la nouvelle pièce : modifier une pièce ne modifie pas les autres. La pluie n’est pas héritée, car l’exposition dépend des fenêtres.
 
 Repères thermiques, humidité et CO₂ configurables ; seuils initiaux historiques de démonstration, pas des références sanitaires. Hystérésis configurable. La fraîcheur s’appuie sur la dernière réception HA, pas une garantie sur l’heure physique de mesure. Sa durée maximum est encore commune aux sources de la pièce : l’adapter à leur cadence, notamment pour les contacts.
 
@@ -49,7 +51,7 @@ Weather sera passif. Comfort publiera des besoins. Le futur chauffage décidera 
 
 Moteur autonome : `python3 -m unittest discover -s tests -p test_engine.py` et `python3 -m unittest discover -s tests -p test_scenarios.py`.
 
-Contrôles HA isolés : Python 3.14, `pip install -r requirements-test.txt`, puis `python -m unittest discover -s tests -p 'test_*.py'`. 38 tests, dont un replay de 12 situations. Aucun contact avec une instance réelle. Le test d’indisponibilité injecte volontairement une erreur dans les journaux.
+Contrôles HA isolés : Python 3.14, `pip install -r requirements-test.txt`, puis `python -m unittest discover -s tests -p 'test_*.py'`. 49 tests, dont un replay de 12 situations et les cas de détection/configuration par pièce. Aucun contact avec une instance réelle. Le test d’indisponibilité injecte volontairement une erreur dans les journaux.
 
 `python3 scripts/export_card_fixtures.py` exporte des vues fictives du moteur pour le banc frontend dans `dist/card-fixtures.json`.
 
