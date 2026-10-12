@@ -9,6 +9,7 @@ from homeassistant.helpers import area_registry as ar, device_registry as dr, en
 from homeassistant.helpers.selector import selector
 
 from .const import DOMAIN, SOURCES
+from .discovery import catalog, suggestions
 from .engine.assessment import Settings
 
 CATEGORIES = {
@@ -69,18 +70,7 @@ def room_candidates(hass, area_id):
 
 
 def proposals(hass, area_id):
-    candidates = room_candidates(hass, area_id)
-    area = ar.async_get(hass).async_get_area(area_id)
-    result = {}
-    for key, ids in candidates.items():
-        reference = getattr(area, "temperature_entity_id" if key == "indoor_temperature" else "humidity_entity_id", None) if key in ("indoor_temperature", "indoor_humidity") else None
-        if reference and reference in ids:
-            result[key] = reference
-        elif key == "windows" and ids:
-            result[key] = ids
-        elif len(ids) == 1:
-            result[key] = ids[0]
-    return result
+    return suggestions(catalog(hass, area_id), area_id)
 
 
 class SourceSteps:
@@ -236,6 +226,20 @@ class ComfortConfigFlow(SourceSteps, ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(self, user_input=None):
+        if user_input and "panel_config" in user_input:
+            from .configuration import get_configuration
+            service = await get_configuration(self.hass)
+            values, warnings = service.validate(user_input["panel_config"])
+            service.ensure_acknowledged(warnings, user_input.get("acknowledged", []))
+            await self.async_set_unique_id(values["area_id"])
+            self._abort_if_unique_id_configured()
+            return self.async_create_entry(title=values["name"], data=values)
+        if not self.hass.config_entries.async_entries(DOMAIN) and not (user_input and "area_id" in user_input):
+            if user_input is not None:
+                await self.async_set_unique_id("niak_home")
+                self._abort_if_unique_id_configured()
+                return self.async_create_entry(title="Mon logement", data={"home": True})
+            return self.async_show_form(step_id="home", data_schema=vol.Schema({}), last_step=True)
         areas = ar.async_get(self.hass)
         if user_input is not None:
             area = areas.async_get_area(user_input["area_id"])
@@ -259,6 +263,9 @@ class ComfortConfigFlow(SourceSteps, ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="user", last_step=False,
             data_schema=self.add_suggested_values_to_schema(schema, {"area_id": salon} if salon else {}))
 
+    async def async_step_home(self, user_input=None):
+        return await self.async_step_user(user_input)
+
     def _finish(self):
         self.values.setdefault("settings", asdict(Settings()))
         return self.async_create_entry(title=self.values["name"], data=self.values)
@@ -273,6 +280,11 @@ class ComfortOptionsFlow(SourceSteps, OptionsFlow):
     editing = True
 
     async def async_step_init(self, user_input=None):
+        if self.config_entry.data.get("home"):
+            if user_input is not None:
+                return self.async_create_entry(data=dict(self.config_entry.options))
+            return self.async_show_form(step_id="init", data_schema=vol.Schema({}),
+                description_placeholders={"workspace": "Niak Confort → Mon logement"})
         if not hasattr(self, "values"):
             self.values = deepcopy({**self.config_entry.data, **self.config_entry.options})
         return self.async_show_menu(step_id="init", menu_options=[*CATEGORIES, "preferences", "advanced", "discover", "finish"])

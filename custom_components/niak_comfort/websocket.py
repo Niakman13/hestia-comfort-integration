@@ -12,11 +12,13 @@ def async_setup_websocket(hass):
     websocket_api.async_register_command(hass, ws_view)
     websocket_api.async_register_command(hass, ws_entries)
     websocket_api.async_register_command(hass, ws_subscribe)
+    for command in (ws_configuration, ws_discover, ws_validate, ws_save):
+        websocket_api.async_register_command(hass, command)
 
 
 def loaded_entries(hass):
     return sorted((e for e in hass.config_entries.async_entries(DOMAIN)
-                   if e.state is ConfigEntryState.LOADED), key=lambda e: e.title)
+                   if e.state is ConfigEntryState.LOADED and not e.data.get("home")), key=lambda e: e.title)
 
 
 @websocket_api.websocket_command({vol.Required("type"): "niak_comfort/entries"})
@@ -75,3 +77,55 @@ def ws_view(hass, connection, msg):
         connection.send_error(msg["id"], "not_found", "Pièce Niak Comfort non chargée")
         return
     connection.send_result(msg["id"], entry.runtime_data.data)
+
+
+from .configuration import get_configuration
+
+
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/configuration"})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_configuration(hass, connection, msg):
+    service = await get_configuration(hass)
+    connection.send_result(msg["id"], service.snapshot())
+
+
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/discover", vol.Optional("area_id"): str, vol.Optional("entry_id"): str})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_discover(hass, connection, msg):
+    service = await get_configuration(hass)
+    try:
+        result = service.discover(msg.get("area_id"), msg.get("entry_id"))
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_config", str(err))
+    else:
+        connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/validate_config", vol.Required("config"): dict, vol.Optional("home", default=False): bool})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_validate(hass, connection, msg):
+    service = await get_configuration(hass)
+    try:
+        config, warnings = service.validate(msg["config"], home=msg["home"])
+    except (ValueError, TypeError) as err:
+        connection.send_error(msg["id"], "invalid_config", str(err))
+    else:
+        connection.send_result(msg["id"], {"config": config, "warnings": warnings, "revision": service.revision()})
+
+
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/save_config", vol.Required("config"): dict,
+    vol.Required("revision"): str, vol.Optional("entry_id"): str, vol.Optional("home", default=False): bool,
+    vol.Optional("acknowledged", default=[]): [str]})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_save(hass, connection, msg):
+    service = await get_configuration(hass)
+    try:
+        result = await service.save(msg["config"], msg["revision"], msg.get("entry_id"), home=msg["home"], acknowledged=msg["acknowledged"])
+    except (ValueError, TypeError) as err:
+        connection.send_error(msg["id"], "invalid_config", str(err))
+    else:
+        connection.send_result(msg["id"], result)

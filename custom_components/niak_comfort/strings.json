@@ -83,6 +83,10 @@
       "finish": {
         "title": "Confirm your room",
         "description": "**Your configuration**\n\nIndoor temperature: {indoor_temperature}\n\nIndoor humidity: {indoor_humidity}\n\nCO₂: {co2}\n\nOutdoor temperature: {outdoor_temperature}\n\nOutdoor humidity: {outdoor_humidity}\n\nRain: {rain}\n\nOutdoor air: {pollution}\n\nWindows: {windows}\n\nHeating: {heating}\n\n{capabilities}\n\nAfter saving, use “Add entry” on the integration page to add another room."
+      },
+      "home": {
+        "title": "Your Niak Comfort workspace",
+        "description": "Confirm to enable Niak Comfort in the sidebar. Configure the living room, shared outdoor sources and additional rooms with explained sensor proposals."
       }
     },
     "error": {
@@ -188,7 +192,7 @@
       },
       "init": {
         "title": "Configure your room",
-        "description": "Edit a category, then confirm to save. Searching for sensors never replaces existing choices.",
+        "description": "Open Niak Comfort in the sidebar to manage rooms, explained proposals and shared outdoor data. This menu remains available for classic settings.",
         "menu_options": {
           "finish": "Confirm configuration",
           "indoor": "Indoor comfort",

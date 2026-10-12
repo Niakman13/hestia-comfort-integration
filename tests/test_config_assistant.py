@@ -28,8 +28,10 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
     async def test_salon_default_and_area_name(self):
         flow=self.flow()
         result=await flow.async_step_user()
-        marker=next(k for k in result['data_schema'].schema if k.schema=='area_id')
-        self.assertEqual(marker.description['suggested_value'],'salon')
+        self.assertEqual(result['step_id'],'home')
+        workspace=await flow.async_step_user({})
+        self.assertTrue(workspace['data']['home'])
+        flow=self.flow()
         await flow.async_step_user({'area_id':'salon'})
         self.assertEqual(flow.values['name'],'Salon')
 

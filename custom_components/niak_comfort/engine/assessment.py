@@ -84,6 +84,9 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     opened = any(r.usable and r.value is True for r in contacts)
     closed = bool(contacts) and all(r.usable and r.value is False for r in contacts)
     rain, pollution = value("rain"), value("pollution")
+    daily_air = readings.get("pollution")
+    if daily_air and daily_air.quality == "estimated" and daily_air.value is True:
+        pollution = True  # Configured daily precaution can block; it never clears an opening.
     old = previous.needs if previous else ()
     hot = ti is not None and ti > settings.maximum - (settings.temperature_hysteresis if "cool" in old else 0)
     cold = ti is not None and ti < settings.minimum + (settings.temperature_hysteresis if "heat" in old else 0)

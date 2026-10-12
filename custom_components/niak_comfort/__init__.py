@@ -5,16 +5,24 @@ from homeassistant.helpers import config_validation as cv
 from .const import DOMAIN
 from .coordinator import ComfortCoordinator
 from .websocket import async_setup_websocket
+from .configuration import get_configuration
+from .panel import async_setup_panel
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass, config):
     async_setup_websocket(hass)
+    await get_configuration(hass)
+    await async_setup_panel(hass)
     return True
 
 
 async def async_setup_entry(hass, entry):
+    await get_configuration(hass)
+    await async_setup_panel(hass)
+    if entry.data.get("home"):
+        return True
     coordinator = ComfortCoordinator(hass, entry)
     await coordinator.async_start()
     entry.runtime_data = coordinator
@@ -24,6 +32,8 @@ async def async_setup_entry(hass, entry):
 
 
 async def async_unload_entry(hass, entry):
+    if entry.data.get("home"):
+        return True
     return await hass.config_entries.async_unload_platforms(entry, [Platform.SENSOR])
 
 
