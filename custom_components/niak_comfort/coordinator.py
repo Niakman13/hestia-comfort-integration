@@ -9,7 +9,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, SOURCES, VIEW_VERSION
-from .engine.assessment import Settings, assess
+from .engine.assessment import Opening, Settings, Sun, assess
 from .engine.sources import normalize, Reading
 from .configuration import DATA_CONFIG
 from .exterior import exterior_reading
@@ -29,8 +29,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
     async def async_start(self):
         self.config_entry.async_on_unload(self.async_stopped)
         ids = set(self.config.get("sources", {}).values()) | set(self.config.get("windows", []))
-        if self.home_configuration and self.config.get("use_home"):
-            ids |= {s["entity_id"] for s in self.home_configuration.home_sources().values()}
+        if self.home_configuration:
+            ids |= {s["entity_id"] for s in self.home_configuration.effective_sources(self.config).values()}
         ids.discard("")
         if ids:
             self.config_entry.async_on_unload(async_track_state_change_event(self.hass, sorted(ids), self._changed))
@@ -58,15 +58,26 @@ class ComfortCoordinator(DataUpdateCoordinator):
         if self.home_configuration:
             for key, spec in self.home_configuration.effective_sources(self.config).items():
                 readings[key] = exterior_reading(self.hass.states.get(spec["entity_id"]), key, spec, now=now, max_age=self.settings.max_age_seconds)
-        if self.config.get("rain_exposed") is False:
-            readings["rain"] = Reading(False, "valid", source="declared:rain_sheltered", received_at=now.isoformat(), detail="user_declared")
-        for entity_id in self.config.get("windows", []):
+        windows = self.config.get("windows", [])
+        declared = self.config.get("openings", {})
+        # Older rooms declared rain shelter for the whole room instead of per opening.
+        sheltered = self.config.get("rain_exposed") is False
+        openings = {e: Opening(**{"sheltered": sheltered, **declared.get(e, {})}) for e in windows}
+        for entity_id in windows:
             readings[f"window:{entity_id}"] = self._reading(entity_id, "window", now)
-        self.previous = assess(readings, self.settings, self.previous)
+        self.previous = assess(readings, self.settings, self.previous, openings, self._sun())
         return {"version": VIEW_VERSION, "entry_id": self.entry_id,
                 "area_id": self.config.get("area_id"), "title": self.config.get("name"),
                 "computed_at": now.isoformat(), "assessment": self.previous.to_dict(),
-                "observations": {k: asdict(v) for k, v in readings.items()}}
+                "observations": {k: asdict(v) for k, v in readings.items()},
+                "names": {e: (state.name if (state := self.hass.states.get(e)) else e) for e in windows}}
+
+    def _sun(self):
+        state = self.hass.states.get("sun.sun")
+        try:
+            return Sun(float(state.attributes["elevation"]), float(state.attributes["azimuth"])) if state else None
+        except (KeyError, TypeError, ValueError):
+            return None
 
     def _reading(self, entity_id, kind, now):
         state = self.hass.states.get(entity_id)

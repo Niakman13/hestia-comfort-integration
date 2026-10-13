@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from homeassistant.config_entries import ConfigEntry, ConfigEntries, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
-from custom_components.niak_comfort.config_flow import source_schema, settings_schema, ComfortOptionsFlow, ComfortConfigFlow
+from custom_components.niak_comfort.config_flow import ComfortOptionsFlow, ComfortConfigFlow
 from custom_components.niak_comfort.coordinator import ComfortCoordinator
 from custom_components.niak_comfort.sensor import ComfortSensor, DESCRIPTIONS
 from custom_components.niak_comfort import async_setup
@@ -68,9 +68,7 @@ class AdapterTests(AdapterFixture):
         self.assertNotIn("air", result["needs"])
         self.assertTrue(result["partial"])
 
-    async def test_configuration_schema_and_options_constructor(self):
-        source_schema()({"indoor_temperature": "sensor.inside", "outdoor_temperature": "sensor.outside"})
-        self.assertEqual(settings_schema()({})["co2_action"], 1200)
+    async def test_options_constructor(self):
         self.assertIsInstance(ComfortOptionsFlow(), ComfortOptionsFlow)
 
     async def test_only_read_websocket_no_equipment_service(self):
@@ -78,21 +76,14 @@ class AdapterTests(AdapterFixture):
         await async_setup(self.hass, {})
         self.assertEqual(self.hass.services.async_services(), before)
 
-    async def test_flow_steps_create_one_zone(self):
+    async def test_panel_room_creates_one_zone(self):
+        er.async_get(self.hass).async_get_or_create("sensor", "fixture", "room", suggested_object_id="room")
+        self.hass.states.async_set("sensor.room", "21", {"unit_of_measurement": "°C", "device_class": "temperature"})
         flow = ComfortConfigFlow()
         flow.hass = self.hass
         flow.context = {"source": "user"}
-        result = await flow.async_step_user({"name": "Salon", "area_id": "salon"})
-        self.assertEqual(result["step_id"], "indoor")
-        result = await flow.async_step_indoor({"indoor_temperature": "sensor.inside"})
-        self.assertEqual(result["step_id"], "outdoor")
-        await flow.async_step_outdoor({})
-        await flow.async_step_windows({})
-        await flow.async_step_heating({})
-        result = await flow.async_step_preferences({"minimum": 30, "maximum": 20})
-        self.assertEqual(result["errors"], {"base": "invalid_settings"})
-        await flow.async_step_preferences({"minimum": 20, "maximum": 24})
-        result = await flow.async_step_finish({})
+        result = await flow.async_step_user({"panel_config": {"name": "Salon", "area_id": "salon",
+            "sources": {"indoor_temperature": "sensor.room"}, "windows": [], "settings": {"minimum": 20, "maximum": 24}}})
         self.assertEqual(result["data"]["area_id"], "salon")
         self.assertNotIn("co2", result["data"]["sources"])
 

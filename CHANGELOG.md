@@ -1,3 +1,14 @@
+## 0.4.0-beta.1 — Pièces, ouvrants et extérieur
+
+- La carte est incluse dans l’intégration : un seul téléchargement, rien à déclarer.
+- Salon proposé au départ ; pièces libres, sans pièce Home Assistant.
+- Choix des capteurs avec le sélecteur de Home Assistant.
+- Exposition, type et abri de chaque fenêtre ou porte.
+- L’extérieur s’applique à toutes les pièces ; rafales et ensoleillement ajoutés.
+- Pluie : seuls les ouvrants exposés sont à fermer.
+- Nouveaux conseils : rafales fortes, gel, chauffage en marche, soleil qui entre par une fenêtre ouverte.
+- Les capteurs confirmés ne sont plus redemandés.
+
 ## 0.3.0-beta.3 — Mon logement
 
 - Configuration dans une page Niak Confort de la barre latérale, avec Salon proposé et ajout des pièces Home Assistant.

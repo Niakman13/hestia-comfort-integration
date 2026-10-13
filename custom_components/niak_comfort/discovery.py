@@ -1,11 +1,19 @@
 """Explain candidates using registry metadata and explicit sensor provenance."""
 from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
 
-from .const import SOURCES
+from .const import OUTDOOR_AREAS, SOURCES
 
 INDOOR = ("indoor_temperature", "indoor_humidity", "co2", "windows", "heating")
-OUTDOOR = ("outdoor_temperature", "outdoor_humidity", "rain", "pollution")
-CLASSES = {"temperature": "temperature", "humidity": "humidity", "co2": "carbon_dioxide"}
+OUTDOOR = ("outdoor_temperature", "outdoor_humidity", "rain", "wind_gust", "solar", "pollution")
+CLASSES = {"temperature": "temperature", "humidity": "humidity", "co2": "carbon_dioxide",
+           "wind": "wind_speed", "irradiance": "irradiance"}
+UNITS = {"temperature": ("°C", "°F", "K"), "humidity": ("%",), "co2": ("ppm",),
+         "wind": ("km/h", "m/s", "mph", "kn", "ft/s"), "irradiance": ("W/m²",)}
+
+
+def outdoor_area(hass, area_id):
+    area = ar.async_get(hass).async_get_area(area_id) if area_id else None
+    return bool(area and area.name.strip().casefold() in OUTDOOR_AREAS)
 
 
 def effective_area(hass, entry):
@@ -38,7 +46,7 @@ def atmo_daily(hass, entry, state):
             and "J+" not in state.name and "Date de mise à jour" in attrs)
 
 
-def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False):
+def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoor_ids=()):
     entry = er.async_get(hass).async_get(entity_id)
     state = hass.states.get(entity_id)
     if not entry or entry.disabled_by or entry.entity_category is not None or not state:
@@ -72,7 +80,7 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False):
     elif domain != "sensor" or device_class != CLASSES.get(kind):
         return None
     if kind in CLASSES:
-        if attrs.get("unit_of_measurement") not in {"temperature": ("°C", "°F", "K"), "humidity": ("%",), "co2": ("ppm",)}[kind]:
+        if attrs.get("unit_of_measurement") not in UNITS[kind]:
             return None
     own_area = effective_area(hass, entry)
     chain = provenance(hass, entity_id)
@@ -87,8 +95,14 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False):
         warnings.append("derived")
     if key == "heating" and not attrs.get("hvac_action"):
         warnings.append("no_hvac_action")
+    # Niak Weather describes the outside by design; outdoor areas are the user's own statement.
+    outside = outdoor_area(hass, own_area) or entry.platform == "niak_weather"
     if key in ("outdoor_temperature", "outdoor_humidity"):
-        warnings.append("outdoor_role")
+        # A mixed station sits outside but also measures indoors: its use in a room decides.
+        if entity_id in indoor_ids:
+            warnings.append("used_indoor")
+        elif not outside:
+            warnings.append("outdoor_role")
     if adapter == "binary":
         warnings.append("binary_meaning")
     if adapter == "atmo_daily":
@@ -102,12 +116,12 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False):
     available = state.state not in ("unknown", "unavailable", "none", "")
     return {"entity_id": entity_id, "name": state.name, "value": state.state,
             "unit": attrs.get("unit_of_measurement"), "area_id": own_area,
-            "local": local, "reference": bool(reference), "available": available,
+            "local": local, "outside": outside, "reference": bool(reference), "available": available,
             "adapter": adapter, "warnings": list(dict.fromkeys(warnings)), "provenance": chain,
             "device_class": device_class, "atmo_label": attrs.get("Libellé") if adapter == "atmo_daily" else None}
 
 
-def catalog(hass, area_id=None, selected=None):
+def catalog(hass, area_id=None, selected=None, indoor_ids=()):
     selected = selected or {}
     result = {}
     for key in (*INDOOR, *OUTDOOR):
@@ -115,10 +129,12 @@ def catalog(hass, area_id=None, selected=None):
         ids = ids if isinstance(ids, list) else [ids] if ids else []
         items = []
         for entry in er.async_get(hass).entities.values():
-            c = candidate(hass, entry.entity_id, key, area_id, include_legacy=entry.entity_id in ids)
+            c = candidate(hass, entry.entity_id, key, area_id, include_legacy=entry.entity_id in ids, indoor_ids=indoor_ids)
             if c:
                 items.append(c)
-        result[key] = sorted(items, key=lambda c: (not c["reference"], not c["local"], bool(c["warnings"]), c["name"].casefold()))
+        # Outside: sensors of outdoor areas first. Inside: the room's own reference first.
+        first = (lambda c: not c["outside"]) if key in OUTDOOR else (lambda c: not c["reference"])
+        result[key] = sorted(items, key=lambda c: (first(c), not c["local"], bool(c["warnings"]), c["name"].casefold()))
     return result
 
 

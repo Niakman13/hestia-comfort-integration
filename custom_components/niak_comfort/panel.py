@@ -1,4 +1,4 @@
-"""Local bundled admin panel: available without installing the Lovelace card."""
+"""Bundled admin panel and Lovelace card: one installation, no resource to declare."""
 from pathlib import Path
 from homeassistant.components import frontend
 from homeassistant.components.http import StaticPathConfig
@@ -12,6 +12,8 @@ async def async_setup_panel(hass):
     if not hass.data.get(DOMAIN + "_panel_asset"):
         await hass.http.async_register_static_paths([StaticPathConfig(
             "/niak_comfort-assets", str(Path(__file__).parent / "frontend"), False)])
+        # The card is loaded on every dashboard, like a declared resource would be.
+        frontend.add_extra_js_url(hass, f"/niak_comfort-assets/niak-comfort-card.js?v={VERSION}")
         hass.data[DOMAIN + "_panel_asset"] = True
     if not frontend.async_panel_exists(hass, "niak-confort"):
         await async_register_panel(hass, frontend_url_path="niak-confort", webcomponent_name="niak-comfort-setup",

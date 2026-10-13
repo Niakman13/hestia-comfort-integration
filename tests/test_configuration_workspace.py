@@ -119,11 +119,11 @@ class WorkspaceTests(AdapterFixture):
         self.assertEqual(self.entry.options['sources'],{'indoor_temperature':'sensor.local'})
         self.assertNotIn('co2',result['rooms'][0]['config']['sources'])
 
-    async def test_home_requires_explicit_setup_before_room_can_join(self):
-        with self.assertRaises(ValueError):self.service.validate(self.config(use_home=True))
-        await self.service.save({'sources':{}},self.service.revision(),home=True)
-        cleaned,_=self.service.validate(self.config(use_home=True))
+    async def test_rooms_join_the_shared_exterior_even_before_it_is_configured(self):
+        cleaned,_=self.service.validate(self.config())
         self.assertTrue(cleaned['use_home'])
+        await self.service.save({'sources':{}},self.service.revision(),home=True)
+        self.assertTrue(self.service.uses_home(cleaned))
 
     async def test_all_configuration_commands_require_admin(self):
         conn=Mock(user=Mock(is_admin=False))

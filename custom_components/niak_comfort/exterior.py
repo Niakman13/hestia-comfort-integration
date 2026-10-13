@@ -2,6 +2,7 @@
 from dataclasses import replace
 import math
 from homeassistant.util import dt as dt_util
+from .const import SOURCES
 from .engine.sources import normalize, Reading
 
 
@@ -11,7 +12,7 @@ def exterior_reading(state, key, spec, *, now, max_age):
         return Reading(None, "unknown", source=entity_id, detail="unavailable")
     adapter = spec.get("adapter", "direct")
     if adapter == "direct" or adapter == "binary":
-        kind = "temperature" if key == "outdoor_temperature" else "humidity" if key == "outdoor_humidity" else key
+        kind = SOURCES.get(key, key)
         return normalize(kind, state.state, state.attributes.get("unit_of_measurement"), source=entity_id,
                          reported_at=state.last_reported, now=now, max_age=max_age)
     if adapter == "rain_rate":
