@@ -142,3 +142,21 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         cleaned, warnings = self.service.validate(self.room(sources={'indoor_temperature': 'sensor.room', 'outdoor_temperature': 'sensor.station_outdoor'}))
         self.assertEqual(cleaned['sources']['outdoor_temperature'], 'sensor.station_outdoor')
         self.assertEqual(warnings, [])
+
+    async def test_overview_proposes_every_indoor_room_in_one_pass(self):
+        ar.async_get(self.hass).async_create('Cuisine')
+        ar.async_get(self.hass).async_create('Bureau')
+        self.register('sensor.room', 'temperature')
+        self.register('binary_sensor.salon_window', 'window', unit=None, value='off')
+        self.register('sensor.kitchen', 'temperature', area='cuisine')
+        self.register('sensor.desk_a', 'temperature', area='bureau')
+        self.register('sensor.desk_b', 'temperature', area='bureau')
+        self.register('sensor.station', 'temperature', area='exterieur')
+        found = {a['name']: a for a in self.service.overview()['areas']}
+        self.assertNotIn('Extérieur', found)
+        self.assertEqual(found['Salon']['suggestions'], {'indoor_temperature': 'sensor.room', 'windows': ['binary_sensor.salon_window']})
+        self.assertEqual(found['Cuisine']['suggestions']['indoor_temperature'], 'sensor.kitchen')
+        self.assertNotIn('indoor_temperature', found['Bureau']['suggestions'])
+        self.assertEqual(found['Bureau']['temperatures'], 2)
+        self.hass.config_entries._entries[self.entry.entry_id] = self.entry
+        self.assertNotIn('salon', [a['area_id'] for a in self.service.overview()['areas']])

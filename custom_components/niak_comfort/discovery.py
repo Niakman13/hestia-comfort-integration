@@ -152,3 +152,24 @@ def suggestions(candidates, area_id):
         elif len(local) == 1:
             result[key] = local[0]["entity_id"]
     return result
+
+
+def overview(hass, exclude=()):
+    """Proposals for every indoor area at once, in a single pass over the entities."""
+    areas = {a.id: a for a in ar.async_get(hass).areas.values()
+             if a.id not in exclude and a.name.strip().casefold() not in OUTDOOR_AREAS}
+    grouped = {area_id: {key: [] for key in INDOOR} for area_id in areas}
+    for entry in er.async_get(hass).entities.values():
+        own = effective_area(hass, entry)
+        if own not in grouped:
+            continue
+        for key in INDOOR:
+            c = candidate(hass, entry.entity_id, key, own)
+            if c:
+                grouped[own][key].append(c)
+    result = []
+    for area_id, found in grouped.items():
+        proposed = suggestions(found, area_id)
+        result.append({"area_id": area_id, "name": areas[area_id].name, "suggestions": proposed,
+                       "temperatures": len(found["indoor_temperature"])})
+    return sorted(result, key=lambda r: (not bool(r["suggestions"].get("indoor_temperature")), r["name"].casefold()))

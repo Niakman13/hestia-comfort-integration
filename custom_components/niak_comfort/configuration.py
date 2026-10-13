@@ -8,7 +8,7 @@ import json
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers import area_registry as ar
 from .const import DOMAIN, OUTDOOR_AREAS, SOURCES
-from .discovery import INDOOR, OUTDOOR, candidate, catalog, suggestions
+from .discovery import INDOOR, OUTDOOR, candidate, catalog, overview, suggestions
 from .engine.assessment import EXPOSURES, KINDS, Settings
 
 DATA_CONFIG = DOMAIN + "_configuration"
@@ -74,6 +74,10 @@ class Configuration:
         candidates = catalog(self.hass, area_id, selected, indoor_ids)
         return {"version": 1, "revision": self.revision(), "candidates": candidates,
                 "suggestions": suggestions(candidates, area_id) if area_id else {}}
+
+    def overview(self):
+        used = {{**e.data, **e.options}.get("area_id") for e in self.entries()}
+        return {"version": 1, "revision": self.revision(), "areas": overview(self.hass, used)}
 
     def validate(self, payload, *, home=False):
         if not isinstance(payload, dict):

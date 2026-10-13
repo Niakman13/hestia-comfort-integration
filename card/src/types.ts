@@ -17,7 +17,7 @@ export interface Assessment {
   needs:string[]; constraints:string[]; opportunities:string[]; partial:boolean; missing:string[];
   heating_action:string; indoor_absolute_humidity:number|null; outdoor_absolute_humidity:number|null;
   temperature_delta:number|null; coordination:string;
-  openings?:Opening[]; sun?:{elevation:number;azimuth:number}|null;
+  openings?:Opening[]; sun?:{elevation:number;azimuth:number}|null; unverified?:string[];
 }
 export interface Opening {
   entity_id:string; open:boolean|null; exposure:string|null; kind:string; sheltered:boolean;

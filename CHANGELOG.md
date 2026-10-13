@@ -1,3 +1,10 @@
+## 0.4.0-beta.4 — Logement et carte plus visuelle
+
+- Première installation : toutes les pièces détectées sont proposées, cochées, et créées d’un coup.
+- Nouvelle carte « Niak Confort · logement » : la pièce qui demande le plus d’attention, la plus chaude, la plus fraîche, ce qui est ouvert.
+- Carte d’une pièce plus visuelle et deux fois plus courte : des bulles de mesures, les ouvrants en pastilles, les explications derrière « Pourquoi ? ».
+- Sans indice ATMO ni capteur de pluie, Niak conseille quand même et précise ce qu’il ne surveille pas.
+
 ## 0.4.0-beta.3 — Récapitulatif allégé
 
 - Récapitulatif court : une ligne par catégorie.

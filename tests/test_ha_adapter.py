@@ -104,7 +104,7 @@ class AdapterTests(AdapterFixture):
             "indoor_temperature": "sensor.inside", "outdoor_temperature": "sensor.outside"}})
         result = await ComfortCoordinator(self.hass, self.entry)._async_update_data()
         self.assertNotIn("co2", result["observations"])
-        self.assertTrue(result["assessment"]["partial"])
+        self.assertEqual(tuple(result["assessment"]["unverified"]), ("pollution", "rain"))
 
     async def test_state_changes_and_unload_remove_listeners(self):
         self.entry._async_set_state(self.hass, ConfigEntryState.SETUP_IN_PROGRESS, None)
