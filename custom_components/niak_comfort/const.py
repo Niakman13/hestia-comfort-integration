@@ -1,6 +1,6 @@
 """Stable keys for the first observation-only alpha."""
 DOMAIN = "niak_comfort"
-VERSION = "0.5.0-beta.1"
+VERSION = "0.5.0-beta.2"
 VIEW_VERSION = 1
 SOURCES = {
     "indoor_temperature": "temperature", "outdoor_temperature": "temperature",

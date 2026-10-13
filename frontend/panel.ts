@@ -43,6 +43,7 @@ export class ComfortSetup extends LitElement {
  @state() private proposed:string[]=[];
  @state() private advanced=false;
  @state() private confirmDiscard=false;
+ @state() private confirmRemove=false;
  @state() private freeName='';
  @state() private preview?:string;
  @state() private previewEdited=false;
@@ -90,7 +91,7 @@ export class ComfortSetup extends LitElement {
  private async discover(area_id?:string|null,entry_id?:string){
   return await this.hass!.callWS<Discovery>({type:'niak_comfort/discover',...(area_id?{area_id}:{}),...(entry_id?{entry_id}:{})});
  }
- private begin(){this.busy=true;this.error='';this.saved='';this.preview=undefined;this.search={};this.confirmed=false;}
+ private begin(){this.confirmRemove=false;this.busy=true;this.error='';this.saved='';this.preview=undefined;this.search={};this.confirmed=false;}
  private async start(area:{area_id:string;name:string}|null,name=''){
   if(!area&&!name.trim()){this.error='Donnez un nom à la pièce libre, par exemple « Étage » ou « Suite parentale ».';return;}
   this.begin();
@@ -129,6 +130,15 @@ export class ComfortSetup extends LitElement {
   try{const d=await this.discover(this.draft?.area_id,this.entryId);if(d.revision!==this.revision){this.error='La configuration a changé ailleurs. Votre brouillon est conservé ; revenez à Mon logement et rechargez avant d’enregistrer.';return;}this.discovery=d;this.saved='La liste des capteurs a été actualisée. Vos choix restent inchangés.';}
   catch(e){this.error=this.message(e);}finally{this.busy=false;}
  }
+ // Deleting a room leaves the person's devices untouched; an area room is proposed again on the home page.
+ private async removeRoom(){const id=this.entryId,d=this.draft;if(!id||!d)return;this.busy=true;this.error='';
+  try{const snapshot=await this.hass!.callWS<Snapshot>({type:'niak_comfort/remove_room',entry_id:id,revision:this.revision});this.snapshot=snapshot;this.discard();this.confirmRemove=false;
+   this.saved=`« ${d.name} » est supprimée. Vos capteurs n’ont pas été touchés.${d.area_id?' La pièce vous est de nouveau proposée ci-dessous.':''}`;if(!snapshot.rooms.length)await this.loadOverview();}
+  catch(e){this.error=this.message(e);}finally{this.busy=false;}
+ }
+ private removeBlock(){const d=this.draft!;if(!this.entryId)return nothing;
+  return this.confirmRemove?html`<section class="notice remove" role="alertdialog" aria-label="Supprimer la pièce"><h2>Supprimer « ${d.name} » ?</h2><p>Niak arrête de suivre cette pièce et sa carte n’affichera plus rien. Vos appareils et capteurs Home Assistant ne sont pas touchés.</p><p class="hint">${d.area_id?'La pièce Home Assistant vous sera de nouveau proposée dans Mon logement.':'Vous pourrez la recréer comme pièce libre.'}</p><div class="actions"><button @click=${()=>this.confirmRemove=false}>Garder la pièce</button><button class="danger" ?disabled=${this.busy} @click=${()=>this.removeRoom()}>Supprimer la pièce</button></div></section>`
+   :html`<div class="remove"><button class="link danger-link" @click=${()=>this.confirmRemove=true}>Supprimer cette pièce</button></div>`;}
  private cancel(){if(this.draft||this.exteriorDraft){this.confirmDiscard=true;return;}this.discard();}
  private discard(){this.confirmDiscard=false;this.draft=undefined;this.exteriorDraft=undefined;this.discovery=undefined;this.entryId=undefined;this.error='';this.acknowledged=[];this.proposed=[];}
  private selected(key:string):string[]{if(this.exteriorDraft)return this.exteriorDraft[key]?[this.exteriorDraft[key].entity_id]:[];if(!this.draft)return [];return key==='windows'?this.draft.windows:this.draft.sources[key]?[this.draft.sources[key]]:[];}
@@ -247,7 +257,7 @@ export class ComfortSetup extends LitElement {
   ${this.stage===0?indoor.map(key=>this.field(key)):this.stage===1?this.field('windows'):this.stage===2?this.field('co2'):this.stage===3?this.field('heating'):this.stage===4?this.preferences():this.summary()}
   ${this.stage<4?html`<button class="link" @click=${()=>this.refreshCandidates()}>Rechercher à nouveau les capteurs</button>`:nothing}
   ${this.errorBlock()}
-  <div class="bottom"><button @click=${()=>this.stage?this.go(this.stage-1):this.cancel()}>Retour</button><div>${this.stage>0&&this.stage<5?html`<button @click=${()=>this.go(this.stage+1)}>Passer</button>`:nothing}<button class="primary" ?disabled=${this.busy} @click=${()=>this.stage===5?this.save():this.next()}>${this.stage===5?'Enregistrer':'Continuer'}</button></div></div>`;}
+  <div class="bottom"><button @click=${()=>this.stage?this.go(this.stage-1):this.cancel()}>Retour</button><div>${this.stage>0&&this.stage<5?html`<button @click=${()=>this.go(this.stage+1)}>Passer</button>`:nothing}<button class="primary" ?disabled=${this.busy} @click=${()=>this.stage===5?this.save():this.next()}>${this.stage===5?'Enregistrer':'Continuer'}</button></div></div>${this.removeBlock()}`;}
  private exterior(){return html`<div class="actions"><button class="link" @click=${()=>this.cancel()}>← Mon logement</button></div><h1 tabindex="-1">L’extérieur du logement</h1><p>Choisissez une fois les mesures du dehors. Toutes vos pièces les utilisent.</p>${this.weatherBlock()}
   ${outdoor.map(key=>this.field(key))}${this.confirmBlock()}${this.errorBlock()}<div class="bottom"><button @click=${()=>this.cancel()}>Annuler</button><button class="primary" ?disabled=${this.busy} @click=${()=>this.save()}>Enregistrer l’extérieur</button></div>`;}
  private card(id:string){

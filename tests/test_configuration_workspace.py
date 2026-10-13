@@ -1,7 +1,7 @@
 """Workspace tests from the actual beta-2 failures, without household data."""
 from copy import deepcopy
 from datetime import timedelta
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 from test_ha_adapter import AdapterFixture
 from homeassistant.helpers import area_registry as ar, entity_registry as er
 from homeassistant.helpers.entity import EntityCategory
@@ -13,7 +13,7 @@ from custom_components.niak_comfort.discovery import catalog, suggestions
 from custom_components.niak_comfort.exterior import exterior_reading
 from custom_components.niak_comfort.engine.assessment import assess
 from custom_components.niak_comfort.engine.sources import normalize
-from custom_components.niak_comfort.websocket import ws_configuration, ws_discover, ws_validate, ws_save
+from custom_components.niak_comfort.websocket import ws_configuration, ws_discover, ws_validate, ws_save, ws_remove
 
 
 class WorkspaceTests(AdapterFixture):
@@ -119,6 +119,18 @@ class WorkspaceTests(AdapterFixture):
         self.assertEqual(self.entry.options['sources'],{'indoor_temperature':'sensor.local'})
         self.assertNotIn('co2',result['rooms'][0]['config']['sources'])
 
+    async def test_a_room_can_be_deleted_but_never_the_home_or_with_a_stale_revision(self):
+        self.hass.config_entries._entries[self.entry.entry_id]=self.entry
+        with patch.object(self.hass.config_entries,'async_remove',new=AsyncMock()) as remove:
+            with self.assertRaises(ValueError):await self.service.remove(self.entry.entry_id,'old')
+            with self.assertRaises(ValueError):await self.service.remove('missing',self.service.revision())
+            home=ConfigEntry(version=1,minor_version=1,domain='niak_comfort',title='Mon logement',data={'home':True},source='user',options={},unique_id='niak_home',discovery_keys={},subentries_data=[])
+            self.hass.config_entries._entries[home.entry_id]=home
+            with self.assertRaises(ValueError):await self.service.remove(home.entry_id,self.service.revision())
+            remove.assert_not_awaited()
+            await self.service.remove(self.entry.entry_id,self.service.revision())
+            remove.assert_awaited_once_with(self.entry.entry_id)
+
     async def test_rooms_join_the_shared_exterior_even_before_it_is_configured(self):
         cleaned,_=self.service.validate(self.config())
         self.assertTrue(cleaned['use_home'])
@@ -127,7 +139,7 @@ class WorkspaceTests(AdapterFixture):
 
     async def test_all_configuration_commands_require_admin(self):
         conn=Mock(user=Mock(is_admin=False))
-        for cmd,msg in ((ws_configuration,{'id':1}),(ws_discover,{'id':2}),(ws_validate,{'id':3}),(ws_save,{'id':4})):
+        for cmd,msg in ((ws_configuration,{'id':1}),(ws_discover,{'id':2}),(ws_validate,{'id':3}),(ws_save,{'id':4}),(ws_remove,{'id':5})):
             with self.assertRaises(Unauthorized):
                 cmd(self.hass,conn,msg)
         self.assertNotIn('niak_comfort_configuration',self.hass.data)

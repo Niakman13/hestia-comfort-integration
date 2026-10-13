@@ -223,6 +223,17 @@ class Configuration:
                     raise ValueError("La pièce n’a pas pu être ajoutée.")
             return self.snapshot()
 
+    async def remove(self, entry_id, revision):
+        """Deletes one room; its Home Assistant area becomes a proposal again on the home page."""
+        async with self.lock:
+            if revision != self.revision():
+                raise ValueError("La configuration a changé ailleurs. Rechargez les pièces avant de supprimer.")
+            entry = self.hass.config_entries.async_get_entry(entry_id)
+            if not entry or entry.domain != DOMAIN or entry.data.get("home"):
+                raise ValueError("Cette pièce Niak Confort n’existe plus.")
+            await self.hass.config_entries.async_remove(entry_id)
+            return self.snapshot()
+
     def uses_home(self, config):
         if self.home.get("configured") or config.get("use_home") is True:
             return True
