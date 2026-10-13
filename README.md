@@ -22,7 +22,7 @@ Le confort de chaque pièce, expliqué : ouvrir, fermer, attendre ou ne rien fai
 
 [![Ouvrir Niak Comfort dans HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Niakman13&repository=niak-comfort-integration&category=integration)
 
-La carte est incluse : rien à déclarer dans les ressources. Si vous aviez installé la carte séparément (dépôt `niak-comfort`), vous pouvez la supprimer de HACS.
+La carte est incluse : rien à déclarer dans les ressources. L’ancien dépôt séparé de la carte (`niak-comfort`) est archivé ; si vous l’aviez installé, supprimez-le de HACS.
 
 ## Mon logement
 
@@ -46,7 +46,7 @@ Volets et luminosité, taille des ouvrants et aération traversante, durée d’
 
 - Tests Python : Python 3.14, `pip install -r requirements-test.txt`, puis `python -m unittest discover -s tests -p 'test_*.py'`.
 - Panneau : `cd frontend && npm ci && npm run validate` (produit `custom_components/niak_comfort/frontend/panel.js`).
-- Carte : compilée depuis le dépôt [niak-comfort](https://github.com/Niakman13/niak-comfort), copiée dans `custom_components/niak_comfort/frontend/niak-comfort-card.js`.
+- Carte : `cd card && npm ci && npm run validate` (produit `custom_components/niak_comfort/frontend/niak-comfort-card.js`). Banc de la carte avec des données fictives : `card/preview/card.html`.
 - API WebSocket v1 en lecture : `niak_comfort/entries`, `niak_comfort/view`, `niak_comfort/subscribe`.
 
 Licence MIT — Niakman13.

@@ -1,0 +1,1351 @@
+[
+  {
+    "id": "calm",
+    "name": "La maison est bien",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-12T16:47:51.648193+00:00",
+      "assessment": {
+        "action": "ok",
+        "level": "calm",
+        "reason": "within_comfort",
+        "needs": [],
+        "constraints": [],
+        "opportunities": [
+          "cool"
+        ],
+        "partial": false,
+        "missing": [],
+        "heating_action": "idle",
+        "indoor_absolute_humidity": 9.579786193506347,
+        "outdoor_absolute_humidity": 9.674562272216052,
+        "temperature_delta": -1.7000000000000028,
+        "coordination": "not_connected"
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 21.1,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 19.4,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 52.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 58.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 760.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_0": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_0",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_1": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_1",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "heating": {
+          "value": "idle",
+          "quality": "valid",
+          "source": "climate.demo",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        }
+      }
+    }
+  },
+  {
+    "id": "potential",
+    "name": "Une amélioration est possible",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-12T16:47:51.648193+00:00",
+      "assessment": {
+        "action": "ok",
+        "level": "benefit",
+        "reason": "optional_air_change",
+        "needs": [],
+        "constraints": [],
+        "opportunities": [
+          "cool",
+          "air"
+        ],
+        "partial": false,
+        "missing": [],
+        "heating_action": "idle",
+        "indoor_absolute_humidity": 10.326853562817945,
+        "outdoor_absolute_humidity": 9.674562272216052,
+        "temperature_delta": -3.0,
+        "coordination": "not_connected"
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 22.4,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 19.4,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 52.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 58.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 1050.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_0": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_0",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_1": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_1",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "heating": {
+          "value": "idle",
+          "quality": "valid",
+          "source": "climate.demo",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        }
+      }
+    }
+  },
+  {
+    "id": "evening",
+    "name": "Profiter de la fraîcheur",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-12T16:47:51.648193+00:00",
+      "assessment": {
+        "action": "ouvrir",
+        "level": "action",
+        "reason": "cooling_possible",
+        "needs": [
+          "cool"
+        ],
+        "constraints": [],
+        "opportunities": [
+          "cool",
+          "dry"
+        ],
+        "partial": false,
+        "missing": [],
+        "heating_action": "idle",
+        "indoor_absolute_humidity": 15.407396235595156,
+        "outdoor_absolute_humidity": 12.827962155370148,
+        "temperature_delta": -4.800000000000001,
+        "coordination": "not_connected"
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 28.2,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 23.4,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 56.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 61.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 860.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_0": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_0",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_1": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_1",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "heating": {
+          "value": "idle",
+          "quality": "valid",
+          "source": "climate.demo",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        }
+      }
+    }
+  },
+  {
+    "id": "heat",
+    "name": "Conserver la fraîcheur",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-12T16:47:51.648193+00:00",
+      "assessment": {
+        "action": "fermer",
+        "level": "action",
+        "reason": "exchange_harmful",
+        "needs": [
+          "cool"
+        ],
+        "constraints": [],
+        "opportunities": [],
+        "partial": false,
+        "missing": [],
+        "heating_action": "idle",
+        "indoor_absolute_humidity": 12.757763124148505,
+        "outdoor_absolute_humidity": 12.024025951542681,
+        "temperature_delta": 7.400000000000002,
+        "coordination": "not_connected"
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 27.2,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 34.6,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 49.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 31.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 810.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_0": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_0",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_1": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_1",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "heating": {
+          "value": "idle",
+          "quality": "valid",
+          "source": "climate.demo",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        }
+      }
+    }
+  },
+  {
+    "id": "winter",
+    "name": "Aérer pendant la chauffe",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-12T16:47:51.648193+00:00",
+      "assessment": {
+        "action": "ouvrir",
+        "level": "urgent",
+        "reason": "air_needed",
+        "needs": [
+          "air"
+        ],
+        "constraints": [],
+        "opportunities": [
+          "cool",
+          "dry",
+          "air"
+        ],
+        "partial": false,
+        "missing": [],
+        "heating_action": "heating",
+        "indoor_absolute_humidity": 10.25847157875101,
+        "outdoor_absolute_humidity": 4.94330864211971,
+        "temperature_delta": -17.2,
+        "coordination": "not_connected"
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 20.4,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 3.2,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 58.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 82.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 1650.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_0": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_0",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_1": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_1",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "heating": {
+          "value": "heating",
+          "quality": "valid",
+          "source": "climate.demo",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        }
+      }
+    }
+  },
+  {
+    "id": "humidity",
+    "name": "Chasser l’humidité",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-12T16:47:51.648193+00:00",
+      "assessment": {
+        "action": "ouvrir",
+        "level": "action",
+        "reason": "drying_possible",
+        "needs": [
+          "dry"
+        ],
+        "constraints": [],
+        "opportunities": [
+          "cool",
+          "dry"
+        ],
+        "partial": false,
+        "missing": [],
+        "heating_action": "idle",
+        "indoor_absolute_humidity": 14.216746900378471,
+        "outdoor_absolute_humidity": 7.03354686503175,
+        "temperature_delta": -9.8,
+        "coordination": "not_connected"
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 22.3,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 12.5,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 72.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 64.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 880.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_0": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_0",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_1": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_1",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "heating": {
+          "value": "idle",
+          "quality": "valid",
+          "source": "climate.demo",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        }
+      }
+    }
+  },
+  {
+    "id": "rain",
+    "name": "La pluie empêche l’ouverture",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-12T16:47:51.648193+00:00",
+      "assessment": {
+        "action": "fermer",
+        "level": "urgent",
+        "reason": "rain_open_windows",
+        "needs": [
+          "air",
+          "cool"
+        ],
+        "constraints": [
+          "rain"
+        ],
+        "opportunities": [],
+        "partial": false,
+        "missing": [],
+        "heating_action": "idle",
+        "indoor_absolute_humidity": 15.87015411632583,
+        "outdoor_absolute_humidity": 14.223155746648532,
+        "temperature_delta": -6.5,
+        "coordination": "not_connected"
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 28.1,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 21.6,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 58.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 75.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 1320.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": true,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_0": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_0",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_1": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_1",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "heating": {
+          "value": "idle",
+          "quality": "valid",
+          "source": "climate.demo",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        }
+      }
+    }
+  },
+  {
+    "id": "pollution",
+    "name": "L’air extérieur est chargé",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-12T16:47:51.648193+00:00",
+      "assessment": {
+        "action": "attendre",
+        "level": "action",
+        "reason": "opening_blocked",
+        "needs": [
+          "air",
+          "cool"
+        ],
+        "constraints": [
+          "pollution"
+        ],
+        "opportunities": [],
+        "partial": false,
+        "missing": [],
+        "heating_action": "idle",
+        "indoor_absolute_humidity": 14.802692088276153,
+        "outdoor_absolute_humidity": 12.54588864754676,
+        "temperature_delta": -4.5,
+        "coordination": "not_connected"
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 27.8,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 23.3,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 55.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 60.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 1380.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": true,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_0": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_0",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_1": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_1",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "heating": {
+          "value": "idle",
+          "quality": "valid",
+          "source": "climate.demo",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        }
+      }
+    }
+  },
+  {
+    "id": "missing",
+    "name": "Le capteur CO₂ ne répond plus",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-12T16:47:51.648193+00:00",
+      "assessment": {
+        "action": "unknown",
+        "level": "neutral",
+        "reason": "incomplete_data",
+        "needs": [],
+        "constraints": [],
+        "opportunities": [
+          "cool",
+          "dry"
+        ],
+        "partial": true,
+        "missing": [
+          "co2"
+        ],
+        "heating_action": "idle",
+        "indoor_absolute_humidity": 11.053599454045784,
+        "outdoor_absolute_humidity": 6.879639792715498,
+        "temperature_delta": -6.500000000000002,
+        "coordination": "not_connected"
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 21.1,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 14.6,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 60.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 55.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": null,
+          "quality": "unknown",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": "unavailable",
+          "unit": null
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_0": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_0",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_1": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_1",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "heating": {
+          "value": "idle",
+          "quality": "valid",
+          "source": "climate.demo",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        }
+      }
+    }
+  },
+  {
+    "id": "unknown",
+    "name": "L’extérieur est inconnu",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-12T16:47:51.648193+00:00",
+      "assessment": {
+        "action": "unknown",
+        "level": "action",
+        "reason": "verify_exterior",
+        "needs": [
+          "air",
+          "cool"
+        ],
+        "constraints": [],
+        "opportunities": [
+          "air"
+        ],
+        "partial": true,
+        "missing": [
+          "outdoor_humidity",
+          "outdoor_temperature",
+          "pollution",
+          "rain"
+        ],
+        "heating_action": "idle",
+        "indoor_absolute_humidity": 15.596530769492626,
+        "outdoor_absolute_humidity": null,
+        "temperature_delta": null,
+        "coordination": "not_connected"
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 28.1,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": null,
+          "quality": "unknown",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": "unavailable",
+          "unit": null
+        },
+        "indoor_humidity": {
+          "value": 57.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": null,
+          "quality": "unknown",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": "unavailable",
+          "unit": null
+        },
+        "co2": {
+          "value": 1420.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": null,
+          "quality": "unknown",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": "unavailable",
+          "unit": null
+        },
+        "pollution": {
+          "value": null,
+          "quality": "unknown",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": "unavailable",
+          "unit": null
+        },
+        "window:binary_sensor.demo_0": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_0",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_1": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_1",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "heating": {
+          "value": "idle",
+          "quality": "valid",
+          "source": "climate.demo",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        }
+      }
+    }
+  },
+  {
+    "id": "standalone",
+    "name": "Sans Niak Weather",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-12T16:47:51.648193+00:00",
+      "assessment": {
+        "action": "ouvrir",
+        "level": "action",
+        "reason": "cooling_possible",
+        "needs": [
+          "cool"
+        ],
+        "constraints": [],
+        "opportunities": [
+          "cool",
+          "dry"
+        ],
+        "partial": false,
+        "missing": [],
+        "heating_action": "unknown",
+        "indoor_absolute_humidity": 13.500711130920765,
+        "outdoor_absolute_humidity": 10.956326775251458,
+        "temperature_delta": -4.399999999999999,
+        "coordination": "not_connected"
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 27.5,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 23.1,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 51.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 53.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 850.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_0": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_0",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_1": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_1",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        }
+      }
+    }
+  },
+  {
+    "id": "expired",
+    "name": "La liaison chauffage est périmée",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-12T16:47:51.648193+00:00",
+      "assessment": {
+        "action": "ok",
+        "level": "urgent",
+        "reason": "air_needed",
+        "needs": [
+          "air"
+        ],
+        "constraints": [],
+        "opportunities": [
+          "cool",
+          "dry",
+          "air"
+        ],
+        "partial": true,
+        "missing": [
+          "heating"
+        ],
+        "heating_action": "unknown",
+        "indoor_absolute_humidity": 10.25847157875101,
+        "outdoor_absolute_humidity": 4.94330864211971,
+        "temperature_delta": -17.2,
+        "coordination": "not_connected"
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 20.4,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 3.2,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 58.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 82.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 1650.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_0": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_0",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "window:binary_sensor.demo_1": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_1",
+          "received_at": "2026-10-12T16:47:51.648193+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "heating": {
+          "value": null,
+          "quality": "stale",
+          "source": "climate.demo",
+          "received_at": "2026-10-12T15:47:51.648193+00:00",
+          "detail": "expired",
+          "unit": null
+        }
+      }
+    }
+  }
+]
