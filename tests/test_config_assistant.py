@@ -135,3 +135,10 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         self.assertFalse(self.service.uses_home(old_room))
         self.service.home['configured'] = True
         self.assertTrue(self.service.uses_home(old_room))
+
+    async def test_hidden_exterior_of_an_older_room_never_blocks_saving(self):
+        self.register('sensor.room', 'temperature')
+        self.register('sensor.station_outdoor', 'temperature', area='exterieur')
+        cleaned, warnings = self.service.validate(self.room(sources={'indoor_temperature': 'sensor.room', 'outdoor_temperature': 'sensor.station_outdoor'}))
+        self.assertEqual(cleaned['sources']['outdoor_temperature'], 'sensor.station_outdoor')
+        self.assertEqual(warnings, [])

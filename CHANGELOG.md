@@ -1,3 +1,9 @@
+## 0.4.0-beta.3 — Récapitulatif allégé
+
+- Récapitulatif court : une ligne par catégorie.
+- Une seule case à cocher pour confirmer les capteurs à vérifier, au lieu d’une par capteur.
+- Une ancienne pièce n’est plus bloquée par des capteurs extérieurs invisibles dans la page.
+
 ## 0.4.0-beta.2 — Changer un capteur en un clic
 
 - Chaque capteur choisi peut être remplacé directement, sans le retirer d’abord ; un ouvrant garde son exposition.

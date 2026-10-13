@@ -36,6 +36,7 @@ export class ComfortSetup extends LitElement {
  @state() private saved='';
  @state() private search:Record<string,string>={};
  @state() private acknowledged:string[]=[];
+ @state() private confirmed=false;
  @state() private proposed:string[]=[];
  @state() private advanced=false;
  @state() private confirmDiscard=false;
@@ -72,7 +73,7 @@ export class ComfortSetup extends LitElement {
  private async discover(area_id?:string|null,entry_id?:string){
   return await this.hass!.callWS<Discovery>({type:'niak_comfort/discover',...(area_id?{area_id}:{}),...(entry_id?{entry_id}:{})});
  }
- private begin(){this.busy=true;this.error='';this.saved='';this.preview=undefined;this.search={};}
+ private begin(){this.busy=true;this.error='';this.saved='';this.preview=undefined;this.search={};this.confirmed=false;}
  private async start(area:Area|null,name=''){
   if(!area&&!name.trim()){this.error='Donnez un nom à la pièce libre, par exemple « Étage » ou « Suite parentale ».';return;}
   this.begin();
@@ -119,7 +120,13 @@ export class ComfortSetup extends LitElement {
  }
  private ack(id:string,on:boolean){this.acknowledged=on?[...new Set([...this.acknowledged,id])]:this.acknowledged.filter(v=>v!==id);}
  private setOpening(id:string,change:Partial<RoomConfig['openings'][string]>){const d=this.draft!;this.draft={...d,openings:{...d.openings,[id]:{...(d.openings[id]??defaultOpening()),...change}}};}
- private warnings(c:Candidate,key:string,selected:boolean){return html`${c.warnings.filter(w=>!(w==='derived'&&c.warnings.includes('alias'))).map(w=>html`<p class="warning hint">${warningText[w]??'Source à vérifier.'}</p>`)}${c.provenance.length>1?html`<p class="provenance">Origine de la mesure : ${c.provenance.map((p,i)=>html`${i?' → ':nothing}${p.name}${p.area_id?` (${this.areaName(p.area_id)})`:nothing}`)}</p>`:nothing}${selected&&c.warnings.length?html`<label class="check"><input type="checkbox" .checked=${this.acknowledged.includes(warningId(key,c.entity_id))} @change=${(e:Event)=>this.ack(warningId(key,c.entity_id),(e.target as HTMLInputElement).checked)}>J’ai vérifié : je veux utiliser ce capteur ici.</label>`:nothing}`;}
+ private warnings(c:Candidate,_key?:string,_selected?:boolean){return html`${c.warnings.filter(w=>!(w==='derived'&&c.warnings.includes('alias'))).map(w=>html`<p class="warning hint">${warningText[w]??'Source à vérifier.'}</p>`)}${c.provenance.length>1?html`<p class="provenance">Origine de la mesure : ${c.provenance.map((p,i)=>html`${i?' → ':nothing}${p.name}${p.area_id?` (${this.areaName(p.area_id)})`:nothing}`)}</p>`:nothing}`;}
+ // Sensors chosen with a warning that the person has not confirmed yet: one confirmation covers them all.
+ private pending(){const keys=this.exteriorDraft?[...outdoor]:[...indoor,'co2','heating','windows'];const out:{id:string;name:string}[]=[];
+  for(const key of keys)for(const id of this.selected(key)){const c=this.discovery?.candidates[key]?.find(x=>x.entity_id===id);if(c?.warnings.length&&!this.acknowledged.includes(warningId(key,id)))out.push({id:warningId(key,id),name:c.name});}
+  return out;}
+ private confirmBlock(){const list=this.pending();if(!list.length)return nothing;
+  return html`<div class="notice confirm"><p>${list.length===1?'Un capteur est à vérifier':list.length+' capteurs sont à vérifier'} (autre pièce, porte d’appareil ou mesure recopiée) : ${list.map(x=>x.name).join(', ')}. Les explications sont aux étapes précédentes.</p><label class="check"><input type="checkbox" .checked=${this.confirmed} @change=${(e:Event)=>{this.confirmed=(e.target as HTMLInputElement).checked;if(this.confirmed)this.error='';}}>J’ai vérifié, je confirme mes choix.</label></div>`;}
  private where(c:Candidate){return c.area_id?this.areaName(c.area_id):'Sans pièce';}
  private candidateRow(c:Candidate,key:string){return html`<div class="candidate"><div><strong>${c.name}</strong><p>${measurement(c)} · ${this.where(c)}${c.reference?' · référence de la pièce':nothing}</p>${this.warnings(c,key,false)}</div><button @click=${()=>this.choose(key,c)}>Utiliser</button></div>`;}
  private replace(key:string,old:string,id:unknown){
@@ -180,8 +187,9 @@ export class ComfortSetup extends LitElement {
  private async save(){
   const config=this.exteriorDraft?{sources:this.exteriorDraft}:this.draft;if(!config)return;
   this.busy=true;this.error='';
-  try{const validated=await this.hass!.callWS<{warnings:{key:string;entity_id:string}[]}>({type:'niak_comfort/validate_config',config,home:!!this.exteriorDraft});const missing=validated.warnings.filter(w=>!this.acknowledged.includes(warningId(w.key,w.entity_id)));
-   if(missing.length){this.error='Cochez « J’ai vérifié » pour : '+missing.map(w=>this.discovery?.candidates[w.key]?.find(c=>c.entity_id===w.entity_id)?.name??w.entity_id).join(', ')+'.';return;}
+  try{const validated=await this.hass!.callWS<{warnings:{key:string;entity_id:string}[]}>({type:'niak_comfort/validate_config',config,home:!!this.exteriorDraft});const missing=validated.warnings.map(w=>warningId(w.key,w.entity_id)).filter(id=>!this.acknowledged.includes(id));
+   if(missing.length&&!this.confirmed){this.error='Cochez « J’ai vérifié, je confirme mes choix » juste au-dessus pour enregistrer.';return;}
+   this.acknowledged=[...new Set([...this.acknowledged,...missing])];
    const before=new Set(this.snapshot?.rooms.map(r=>r.entry_id));const wasRoom=!this.exteriorDraft;const edited=this.entryId;
    this.snapshot=await this.hass!.callWS<Snapshot>({type:'niak_comfort/save_config',config,home:!!this.exteriorDraft,revision:this.revision,...(this.entryId?{entry_id:this.entryId}:{}),acknowledged:this.acknowledged});
    this.draft=undefined;this.exteriorDraft=undefined;this.discovery=undefined;this.entryId=undefined;
@@ -197,15 +205,15 @@ export class ComfortSetup extends LitElement {
    <section class="field"><h2>Votre plage de confort</h2><p>Les températures dans lesquelles vous vous sentez bien.</p>${this.number('minimum','Température minimum (°C)',20,0.5)}${this.number('maximum','Température maximum (°C)',24,0.5)}
    <button class="link" aria-expanded=${this.advanced} @click=${()=>this.advanced=!this.advanced}>${this.advanced?'Masquer':'Afficher'} les réglages avancés</button>
    ${this.advanced?html`<p class="hint">Ces seuils reprennent votre ancien template. Ce ne sont pas des références sanitaires.</p>${this.number('humidity_high','Humidité haute (%)',62)}${this.number('co2_potential','CO₂ : aérer ferait du bien (ppm)',1000)}${this.number('co2_action','CO₂ : aérer (ppm)',1200)}${this.number('co2_urgent','CO₂ : attention (ppm)',1600)}${this.number('gust_max','Rafales : ne rien laisser ouvert au-delà de (km/h)',45)}${this.number('frost','Gel : pas d’ouverture prolongée en dessous de (°C)',1,0.5)}${this.number('sun_facade','Soleil fort sur une façade (W/m²)',250,10)}${this.number('max_age_seconds','Ancienneté maximum des mesures (secondes)',1800)}`:nothing}</section>`;}
- private summary(){const d=this.draft!,home=this.snapshot!.home;const name=(key:string,id:string)=>this.discovery?.candidates[key]?.find(v=>v.entity_id===id)?.name??id;
-  const opening=(id:string)=>{const m=d.openings[id]??defaultOpening();return [kinds.find(k=>k[0]===m.kind)?.[1],m.exposure?'exposée '+exposures.find(x=>x[0]===m.exposure)![1].toLowerCase():'exposition non renseignée',m.sheltered?'abritée':''].filter(Boolean).join(' · ');};
-  const follows=[d.sources.indoor_temperature&&'la température',d.sources.indoor_humidity&&'l’humidité',d.sources.co2&&'le CO₂',d.windows.length&&(d.windows.length>1?'les ouvrants':'l’ouvrant'),d.sources.heating&&'le chauffage'].filter(Boolean) as string[];
-  return html`<p>Vérifiez avant d’enregistrer.</p><dl class="summary"><dt>Pièce</dt><dd>${d.name} · ${d.area_id?'rattachée à « '+this.areaName(d.area_id)+' »':'pièce libre'}</dd>
-   ${[...indoor,'co2','heating'].map(key=>html`<dt>${labels[key]}</dt><dd>${d.sources[key]?html`${name(key,d.sources[key])}${this.discovery?.candidates[key]?.find(v=>v.entity_id===d.sources[key])?.warnings.length?html`${this.warnings(this.discovery!.candidates[key].find(v=>v.entity_id===d.sources[key])!,key,true)}`:nothing}`:'Non configuré'}</dd>`)}
-   <dt>${labels.windows}</dt><dd>${d.windows.length?d.windows.map(id=>html`<div>${name('windows',id)} · ${opening(id)}</div>`):'Aucun : Niak ne saura pas si les fenêtres sont ouvertes.'}</dd>
-   <dt>Extérieur</dt><dd>${home.configured?'Données communes du logement : '+exteriorSummary(home.sources).toLowerCase():'Pas encore configuré : vous pourrez le faire depuis Mon logement.'}</dd>
-   <dt>Plage de confort</dt><dd>${d.settings.minimum}–${d.settings.maximum} °C</dd></dl>
-   <div class="notice"><p>Niak suivra ${follows.length>1?follows.slice(0,-1).join(', ')+' et '+follows.at(-1):follows[0]??'la température'} de cette pièce. Il conseille, il ne commande aucun équipement.</p></div>`;}
+ private summary(){const d=this.draft!,home=this.snapshot!.home;const name=(key:string,id?:string)=>id?this.discovery?.candidates[key]?.find(v=>v.entity_id===id)?.name??id:'';
+  const metas=d.windows.map(id=>d.openings[id]??defaultOpening());const counts=new Map<string,number>();for(const m of metas)if(m.exposure)counts.set(m.exposure,(counts.get(m.exposure)??0)+1);
+  const expo=[...counts].map(([e,n])=>n+' '+exposures.find(x=>x[0]===e)![1].toLowerCase()).join(', ');const unknown=metas.filter(m=>!m.exposure).length,sheltered=metas.filter(m=>m.sheltered).length;
+  const measures=[name('indoor_temperature',d.sources.indoor_temperature),name('indoor_humidity',d.sources.indoor_humidity)].filter(Boolean).join(' · ');
+  return html`<dl class="summary compact"><dt>Pièce</dt><dd>${d.name} · ${d.area_id?'rattachée à « '+this.areaName(d.area_id)+' »':'pièce libre'}</dd>
+   <dt>Mesures</dt><dd>${measures||'—'}</dd><dt>Air</dt><dd>${name('co2',d.sources.co2)||'Pas de CO₂'}</dd><dt>Chauffage</dt><dd>${name('heating',d.sources.heating)||'Non suivi'}</dd>
+   <dt>Ouvrants</dt><dd>${d.windows.length?html`${d.windows.length} ${d.windows.length>1?'ouvrants':'ouvrant'}${sheltered?' · '+sheltered+' abrité'+(sheltered>1?'s':''):''}${expo?' · '+expo:''}${unknown?' · '+unknown+' sans exposition':''}<details><summary>Voir la liste</summary>${d.windows.map(id=>html`<div>${name('windows',id)}</div>`)}</details>`:'Aucun'}</dd>
+   <dt>Extérieur</dt><dd>${home.configured?exteriorSummary(home.sources):'À configurer depuis Mon logement'}</dd><dt>Confort</dt><dd>${d.settings.minimum}–${d.settings.maximum} °C</dd></dl>
+   ${this.confirmBlock()}`;}
  private errorBlock(){return this.error?html`<p class="notice error" role="alert">${this.error}</p>`:nothing;}
  private wizard(){const d=this.draft!;return html`<div class="actions"><button class="link" @click=${()=>this.cancel()}>← Mon logement</button></div><h1 tabindex="-1">${this.entryId?'Modifier':'Configurer'} ${d.name||'la pièce'}</h1><p class="step-count">${d.area_id?'Pièce Home Assistant : '+this.areaName(d.area_id):'Pièce libre'} · étape ${this.stage+1} sur ${stages.length}</p>
   <nav class="steps" aria-label="Étapes">${stages.map((label,i)=>html`<button aria-current=${i===this.stage?'step':'false'} @click=${()=>this.go(i)}>${label}</button>`)}</nav>
@@ -214,7 +222,7 @@ export class ComfortSetup extends LitElement {
   ${this.errorBlock()}
   <div class="bottom"><button @click=${()=>this.stage?this.go(this.stage-1):this.cancel()}>Retour</button><div>${this.stage>0&&this.stage<5?html`<button @click=${()=>this.go(this.stage+1)}>Passer</button>`:nothing}<button class="primary" ?disabled=${this.busy} @click=${()=>this.stage===5?this.save():this.next()}>${this.stage===5?'Enregistrer':'Continuer'}</button></div></div>`;}
  private exterior(){return html`<div class="actions"><button class="link" @click=${()=>this.cancel()}>← Mon logement</button></div><h1 tabindex="-1">L’extérieur du logement</h1><p>Choisissez une fois les mesures du dehors. Toutes vos pièces les utilisent.</p>
-  ${outdoor.map(key=>this.field(key))}${this.errorBlock()}<div class="bottom"><button @click=${()=>this.cancel()}>Annuler</button><button class="primary" ?disabled=${this.busy} @click=${()=>this.save()}>Enregistrer l’extérieur</button></div>`;}
+  ${outdoor.map(key=>this.field(key))}${this.confirmBlock()}${this.errorBlock()}<div class="bottom"><button @click=${()=>this.cancel()}>Annuler</button><button class="primary" ?disabled=${this.busy} @click=${()=>this.save()}>Enregistrer l’extérieur</button></div>`;}
  private card(id:string){
   if(!customElements.get('niak-comfort-card'))return html`<p class="notice">L’aperçu de la carte apparaîtra après un rechargement de la page.</p>`;
   if(this.previewCard?.id!==id){const el=document.createElement('niak-comfort-card') as HTMLElement&{hass?:unknown;setConfig?:(c:object)=>void};el.setConfig?.({type:'custom:niak-comfort-card',entry_id:id,format:'full'});el.hass=this.hass;this.previewCard={id,el};}
