@@ -131,4 +131,7 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         cleaned, _ = self.service.validate(self.room())
         self.assertTrue(cleaned['use_home'])
         self.assertTrue(self.service.uses_home(cleaned))
-        self.assertFalse(self.service.uses_home({'sources': {'outdoor_temperature': 'sensor.outside'}}))
+        old_room = {'sources': {'outdoor_temperature': 'sensor.outside'}}
+        self.assertFalse(self.service.uses_home(old_room))
+        self.service.home['configured'] = True
+        self.assertTrue(self.service.uses_home(old_room))

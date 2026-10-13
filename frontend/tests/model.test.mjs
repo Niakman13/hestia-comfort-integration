@@ -33,7 +33,7 @@ test('exterior summary names what is configured',()=>{
 test('binary contact and ATMO daily values are readable and never 1 or off',()=>{
  assert.equal(measurement({available:true,value:'off',device_class:'window'}),'Fermé');
  assert.equal(measurement({available:true,value:'2',atmo_label:'Moyen'}),'Moyen · indice du jour');
- assert.equal(measurement({available:false}),'Temporairement indisponible');
+ assert.equal(measurement({available:false}),'Ne répond pas en ce moment');
 });
 test('coverage describes absent windows rather than implying a fault',()=>{
  assert.match(coverage({sources:{indoor_temperature:'sensor.room'},windows:[]}),/fenêtres non mesurées/);

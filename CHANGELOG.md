@@ -1,3 +1,10 @@
+## 0.4.0-beta.2 — Changer un capteur en un clic
+
+- Chaque capteur choisi peut être remplacé directement, sans le retirer d’abord ; un ouvrant garde son exposition.
+- Les anciennes pièces utilisent elles aussi l’extérieur commun dès qu’il est configuré.
+- La carte s’appelle « Niak Confort » dans la liste des cartes.
+- Un capteur qui ne répond pas est indiqué plus clairement.
+
 ## 0.4.0-beta.1 — Pièces, ouvrants et extérieur
 
 - La carte est incluse dans l’intégration : un seul téléchargement, rien à déclarer.

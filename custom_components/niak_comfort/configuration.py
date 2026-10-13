@@ -135,8 +135,8 @@ class Configuration:
             if kind not in KINDS or not isinstance(sheltered, bool):
                 raise ValueError("Type d’ouvrant invalide pour " + entity_id)
             cleaned_openings[entity_id] = {"exposure": exposure, "kind": kind, "sheltered": sheltered}
-        # Rooms always use the shared exterior, except older rooms that kept their own sources.
-        legacy = payload.get("use_home") is not True and any(sources.get(k) for k in OUTDOOR)
+        # Rooms use the shared exterior. Older rooms keep their own sources only until it is configured.
+        legacy = not self.uses_home(payload)
         cleaned_sources = {}
         for key, value in {**sources, "windows": windows}.items():
             if key in OUTDOOR and not legacy:
@@ -178,7 +178,7 @@ class Configuration:
                 await self.store.async_save(updated)
                 self.home = updated
                 for entry in self.entries():
-                    if self.uses_home({**entry.data, **entry.options}) and entry.state.value == "loaded":
+                    if entry.state.value == "loaded":
                         await self.hass.config_entries.async_reload(entry.entry_id)
                 return self.snapshot()
             cleaned["acknowledged"] = remembered
@@ -201,9 +201,10 @@ class Configuration:
                     raise ValueError("La pièce n’a pas pu être ajoutée.")
             return self.snapshot()
 
-    @staticmethod
-    def uses_home(config):
-        return config.get("use_home") is True or not any(config.get("sources", {}).get(k) for k in OUTDOOR)
+    def uses_home(self, config):
+        if self.home.get("configured") or config.get("use_home") is True:
+            return True
+        return not any(config.get("sources", {}).get(k) for k in OUTDOOR)
 
     def effective_sources(self, config):
         if self.uses_home(config):

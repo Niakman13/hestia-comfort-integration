@@ -32,7 +32,7 @@ export const warningText:Record<string,string>={
 const livingNames=['salon','séjour','sejour','living','living room','pièce de vie','piece de vie'];
 export function livingArea(areas:Area[],used:Set<string>):Area|undefined {return areas.find(a=>!a.outdoor&&!used.has(a.area_id)&&livingNames.includes(a.name.trim().toLowerCase()));}
 export function measurement(c:Candidate):string {
- if(!c.available)return 'Temporairement indisponible';
+ if(!c.available)return 'Ne répond pas en ce moment';
  if(c.atmo_label)return c.atmo_label+' · indice du jour';
  if(c.value==='on'||c.value==='off')return c.device_class==='window'||c.device_class==='door'||c.device_class==='opening'?(c.value==='on'?'Ouvert':'Fermé'):(c.value==='on'?'Actif':'Inactif');
  const n=Number(c.value);
