@@ -5,6 +5,7 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import callback
 
 from .const import DOMAIN
+from .engine.home import synthesis
 
 
 @callback
@@ -12,7 +13,8 @@ def async_setup_websocket(hass):
     websocket_api.async_register_command(hass, ws_view)
     websocket_api.async_register_command(hass, ws_entries)
     websocket_api.async_register_command(hass, ws_subscribe)
-    for command in (ws_configuration, ws_discover, ws_validate, ws_save):
+    websocket_api.async_register_command(hass, ws_home_subscribe)
+    for command in (ws_configuration, ws_discover, ws_overview, ws_validate, ws_save):
         websocket_api.async_register_command(hass, command)
 
 
@@ -69,6 +71,42 @@ def ws_subscribe(hass, connection, msg):
     send()
 
 
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/home_subscribe"})
+@callback
+def ws_home_subscribe(hass, connection, msg):
+    """The home card: every room view plus the synthesis, refreshed when any room changes."""
+    entries = loaded_entries(hass)
+    if not entries:
+        connection.send_error(msg["id"], "not_configured", "Aucune pièce Niak Comfort chargée")
+        return
+    coordinators = [e.runtime_data for e in entries]
+
+    @callback
+    def send():
+        views = [c.data for c in coordinators if c.last_update_success and c.data]
+        connection.send_message(websocket_api.event_message(msg["id"], {"version": 1, "rooms": views, "home": synthesis(views)}))
+
+    @callback
+    def stopped():
+        connection.send_message(websocket_api.event_message(msg["id"], {"version": 1, "reload": True}))
+
+    removers = [c.async_add_listener(send) for c in coordinators]
+    for c in coordinators:
+        c.stop_listeners.add(stopped)
+
+    @callback
+    def unsubscribe():
+        for remove in removers:
+            remove()
+        removers.clear()
+        for c in coordinators:
+            c.stop_listeners.discard(stopped)
+
+    connection.subscriptions[msg["id"]] = unsubscribe
+    connection.send_result(msg["id"])
+    send()
+
+
 @websocket_api.websocket_command({vol.Required("type"): "niak_comfort/view", vol.Required("entry_id"): str})
 @callback
 def ws_view(hass, connection, msg):
@@ -101,6 +139,14 @@ async def ws_discover(hass, connection, msg):
         connection.send_error(msg["id"], "invalid_config", str(err))
     else:
         connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/overview"})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_overview(hass, connection, msg):
+    service = await get_configuration(hass)
+    connection.send_result(msg["id"], service.overview())
 
 
 @websocket_api.websocket_command({vol.Required("type"): "niak_comfort/validate_config", vol.Required("config"): dict, vol.Optional("home", default=False): bool})

@@ -11,14 +11,15 @@
 
 Le confort de chaque pièce, expliqué : ouvrir, fermer, attendre ou ne rien faire, et pourquoi. Une seule intégration contient le moteur, la page de configuration **Niak Confort** et la carte.
 
-**Version 0.4.0-beta.3 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
+**Version 0.4.0-beta.4 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
 
 ## Installation
 
 1. Dans HACS, ouvrir le bouton ci-dessous (ou ⋮ → **Dépôts personnalisés** : `https://github.com/Niakman13/niak-comfort-integration`, catégorie **Intégration**), puis télécharger. Afficher les versions bêta si nécessaire.
 2. Redémarrer Home Assistant.
 3. Ajouter **Niak Comfort** dans Paramètres → Appareils et services.
-4. Ouvrir **Niak Confort** dans la barre latérale et suivre le guide : le Salon est proposé en premier.
+4. Ouvrir **Niak Confort** dans la barre latérale : Niak propose toutes les pièces où il trouve une température. Décochez celles à ne pas suivre et créez-les d’un coup.
+5. Dans un tableau de bord, ajoutez la carte **Niak Confort** (une pièce) ou **Niak Confort · logement** (toutes les pièces).
 
 [![Ouvrir Niak Comfort dans HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Niakman13&repository=niak-comfort-integration&category=integration)
 
@@ -36,7 +37,12 @@ La carte est incluse : rien à déclarer dans les ressources. L’ancien dépôt
 
 Trop chaud, trop froid, air à renouveler (CO₂), air trop humide : Niak compare dedans et dehors et dit si ouvrir aide. Il conseille de fermer les ouvrants exposés à la pluie (pas ceux qui sont abrités), de ne rien laisser ouvert au-delà de 45 km/h de rafales, de limiter l’aération quand il gèle ou que le chauffage tourne (une aération courte reste conseillée si le CO₂ est élevé), et signale la fenêtre ouverte par laquelle le soleil chauffe la pièce. Tous les seuils se règlent dans les réglages avancés de chaque pièce.
 
-Une mesure absente reste inconnue : aucune valeur de remplacement.
+Une mesure absente reste inconnue : aucune valeur de remplacement. Si la pluie ou la qualité de l’air ne sont pas suivies, Niak conseille quand même et le précise sur la carte.
+
+## Les cartes
+
+- **Niak Confort** : une pièce, avec son conseil, ses mesures en bulles et ses ouvrants.
+- **Niak Confort · logement** : la synthèse de toutes les pièces (celle qui demande le plus d’attention, la plus chaude et la plus fraîche, ce qui est ouvert, l’air qui traverse, par où commencer pour rafraîchir).
 
 ## À venir
 

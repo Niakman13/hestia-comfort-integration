@@ -53,13 +53,19 @@ class EngineTests(unittest.TestCase):
         result = assess(zone(co2=1800, outdoor_temperature=None))
         self.assertEqual((result.action, result.level), ("unknown", "urgent"))
 
-    def test_unconfigured_protections_do_not_allow_opening(self):
+    def test_unconfigured_protections_are_named_but_do_not_block(self):
         values = zone(indoor_temperature=28)
         values.pop("rain")
         values.pop("pollution")
         result = assess(values)
-        self.assertEqual((result.action, result.level), ("unknown", "action"))
-        self.assertTrue(result.partial)
+        self.assertEqual((result.action, result.level), ("ouvrir", "action"))
+        self.assertEqual(result.unverified, ("pollution", "rain"))
+        self.assertFalse(result.partial)
+
+    def test_a_configured_protection_that_does_not_answer_still_blocks(self):
+        result = assess(zone(indoor_temperature=28, rain=None))
+        self.assertEqual(result.action, "unknown")
+        self.assertIn("rain", result.missing)
 
     def test_missing_contacts_never_claim_closed(self):
         values = zone(rain=True)

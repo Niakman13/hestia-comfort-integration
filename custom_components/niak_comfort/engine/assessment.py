@@ -88,6 +88,7 @@ class Assessment:
     coordination: str = "not_connected"
     openings: tuple[dict, ...] = ()
     sun: dict | None = None
+    unverified: tuple[str, ...] = ()
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -180,15 +181,15 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
                                             ("frost", frost), ("heating_running", heating_running)) if active)
     hard = [c for c in constraints if c in ("rain", "gust", "pollution")]
     soft = [c for c in constraints if c in ("frost", "heating_running")]
-    # An unconfigured protection is not proof that opening is safe.
-    checked = rain is False and pollution is False
+    # A configured protection that does not answer blocks the advice; one never configured does not.
+    checked = (rain is False or ("rain" not in readings and rain is None)) and (pollution is False or ("pollution" not in readings and pollution is None))
     thermal_known = ti is not None and te is not None
     optional_wet_exchange = ai is not None and ae is not None and ae > ai + 1
     useful = air or (hot and cool and not optional_wet_exchange) or (wet and dry and not cold)
     opportunities = tuple(k for k, active in (("cool", cool and not optional_wet_exchange), ("dry", dry),
         ("air", co2 is not None and co2 >= settings.co2_potential)) if active) if not hard and not soft else ()
     missing = tuple(sorted(k for k in ({k for k, r in readings.items() if r.source and not r.usable}
-                                       | {k for k in ("indoor_temperature", "outdoor_temperature", "rain", "pollution") if value(k) is None})
+                                       | {k for k in ("indoor_temperature", "outdoor_temperature") if value(k) is None})
                            if not (k == "rain" and all_sheltered)))
     partial = bool(missing)
     urgent = (co2 is not None and co2 >= settings.co2_urgent) or exposed_open or (windy and opened)
@@ -232,6 +233,8 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     elif opportunities and not opened and co2 is not None and co2 >= settings.co2_potential:
         level, reason = "benefit", "optional_air_change"
     heating = (value("heating") or "unknown") if "heating" in readings else "not_configured"
+    # Protections never configured: the advice stands, the card says what Niak does not watch.
+    unverified = tuple(k for k in ("pollution", "rain") if k not in readings and not (k == "rain" and all_sheltered))
     return Assessment(action, level, reason, needs, constraints, opportunities, partial, missing,
-                      heating, ai, ae, delta, openings=tuple(details),
+                      heating, ai, ae, delta, openings=tuple(details), unverified=unverified,
                       sun={"elevation": round(sun.elevation, 1), "azimuth": round(sun.azimuth, 1)} if sun else None)

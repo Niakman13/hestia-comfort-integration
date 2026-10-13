@@ -10,57 +10,6 @@ function contactState(v:View) {
   const known=contacts.filter(r=>r.quality==='valid'&&typeof r.value==='boolean').length;
   return {opened,known,total:contacts.length,label:!contacts.length?'Ouverture non mesurée':known<contacts.length?`${opened} ouverte${opened>1?'s':''} · contacts incomplets`:opened?`${opened} ouverte${opened>1?'s':''}`:'Fenêtres fermées'};
 }
-export function exchange(v:View) {
-  const o=v.observations,a=v.assessment;
-  return html`<div class="exchange" aria-label="Comparaison dedans et dehors">
-    <div><div class="measure-name">Dedans</div><div class="measure-value">${number(numeric(o.indoor_temperature))}<small>°C</small></div><div class="measure-detail">${number(numeric(o.indoor_humidity))} % · ${number(a.indoor_absolute_humidity)} g/m³</div></div>
-    <div class="exchange-line">${icon('arrow')}${a.temperature_delta===null?'Écart inconnu':`${a.temperature_delta>0?'+':''}${number(a.temperature_delta)} °C`}<span>dehors − dedans</span></div>
-    <div class="outside"><div class="measure-name">Dehors</div><div class="measure-value">${number(numeric(o.outdoor_temperature))}<small>°C</small></div><div class="measure-detail">${number(numeric(o.outdoor_humidity))} % · ${number(a.outdoor_absolute_humidity)} g/m³</div></div>
-  </div>`;
-}
-const flagText:Record<string,string>={rain_exposed:'pluie : à fermer',gust:'rafales : à fermer',sun_entering:'le soleil entre par là'};
-function openingList(v:View) {
-  const list=v.assessment.openings??[];
-  if(!list.length) return nothing;
-  return html`<ul class="openings">${list.map(o=>html`<li data-flag=${o.flags[0]??''}><strong>${v.names?.[o.entity_id]??o.entity_id}</strong>
-    <span>${o.open===null?'état inconnu':o.open?'ouvert':'fermé'} · ${kindLabels[o.kind]??'Ouvrant'}${o.exposure?` · exposé ${exposureLabels[o.exposure]??o.exposure}`:' · exposition non renseignée'}${o.sheltered?' · abrité':''}${o.sun_wm2!==null&&o.sun_wm2>=50?` · soleil ${o.sun_wm2} W/m²`:''}</span>
-    ${o.flags.length?html`<em>${o.flags.map(f=>flagText[f]??f).join(' · ')}</em>`:nothing}</li>`)}</ul>`;
-}
-function sunText(v:View) {
-  const s=v.assessment.sun,list=v.assessment.openings??[];
-  if(!s) return 'Position du soleil indisponible.';
-  if(s.elevation<=0) return 'Il fait nuit : aucun apport solaire.';
-  const sunny=list.filter(o=>o.sun_wm2!==null&&o.sun_wm2>=50);
-  if(!list.some(o=>o.exposure)) return 'Renseignez l’exposition des ouvrants dans Niak Confort pour savoir lesquels reçoivent le soleil.';
-  if(!list.some(o=>o.sun_wm2!==null)) return 'Ajoutez un capteur d’ensoleillement à l’extérieur du logement pour mesurer le soleil sur chaque façade.';
-  return sunny.length?'Au soleil : '+sunny.map(o=>`${v.names?.[o.entity_id]??o.entity_id} (${o.sun_wm2} W/m²)`).join(' · '):'Aucun ouvrant suivi ne reçoit de soleil direct maintenant.';
-}
-export function moduleRow(id:Module,v:View) {
-  const o=v.observations,a=v.assessment,w=contactState(v);
-  const info={windows:'window',air:'air',temperature:'temp',humidity:'drop',shutters:'sun',coordination:'heat'};
-  let label='',body;
-  if(id==='windows'){
-    label=w.total?`${w.opened} ouverte${w.opened>1?'s':''} / ${w.total}`:'Non mesuré';
-    body=html`<p>${w.label}. ${w.total?'Le constat repose sur les contacts de cette pièce.':'Sans contact, aucune fermeture ni geste effectué n’est présumé.'}</p>${openingList(v)}`;
-  }else if(id==='air'){
-    label=numeric(o.co2)===null?`CO₂ · ${readingStatus(o.co2).toLowerCase()}`:'CO₂ mesuré';
-    body=html`<div class="air-values"><span><strong>${number(numeric(o.co2))}</strong>ppm de CO₂</span><span><strong>${number(numeric(o.indoor_humidity))}</strong>% d’humidité</span></div><p>${a.needs.includes('air')?'Le besoin de renouvellement d’air reste présent, même si une contrainte empêche l’ouverture.':'Aucun besoin de renouvellement par CO₂ n’est établi avec les mesures disponibles.'}</p><p>Particules et COV : pas de diagnostic dans cette version.</p>`;
-  }else if(id==='temperature'){
-    label=`${number(numeric(o.indoor_temperature))} °C`;
-    body=html`<p>${a.needs.includes('cool')?'La pièce appelle de la fraîcheur.':a.needs.includes('heat')?'La pièce appelle de la chaleur.':'Aucun besoin thermique prioritaire parmi les mesures connues.'}</p><p>Évaluation locale à cette pièce. Les repères se règlent dans l’intégration.</p>`;
-  }else if(id==='humidity'){
-    label=`${number(numeric(o.indoor_humidity))} % dedans`;
-    body=html`<p>${a.indoor_absolute_humidity===null||a.outdoor_absolute_humidity===null?'La comparaison de l’eau contenue dans l’air nécessite les températures et humidités dedans/dehors.':`${number(a.indoor_absolute_humidity)} g/m³ dedans · ${number(a.outdoor_absolute_humidity)} g/m³ dehors.`}</p><p>${a.opportunities.includes('dry')?'L’air extérieur contient suffisamment moins d’eau pour offrir un potentiel d’assèchement.':'Un bénéfice d’assèchement par l’extérieur n’est pas confirmé.'}</p>`;
-  }else if(id==='shutters'){
-    const sunny=(v.assessment.openings??[]).filter(o=>o.sun_wm2!==null&&o.sun_wm2>=50).length;
-    label=v.assessment.sun&&v.assessment.sun.elevation>0?(sunny?`${sunny} ouvrant${sunny>1?'s':''} au soleil`:'Soleil suivi'):'Nuit';
-    body=html`<p>${sunText(v)}</p><p>Volets et luminosité : à venir dans une prochaine version.</p>`;
-  }else{
-    label=o.heating?heatingLabels[a.heating_action]??'Action inconnue':'Non relié';
-    body=html`<p>${o.heating?`Action observée : ${heatingLabels[a.heating_action]??'inconnue'}.`:'Aucun équipement de chauffage sélectionné.'}</p><p>Aucune pause demandée ni confirmée. Le futur pilote recevra les besoins de cette pièce ; il conservera ses protections et la responsabilité des commandes.</p>`;
-  }
-  return html`<section class="module" data-module=${id}><div class="module-head">${icon(info[id])}<h3>${moduleLabels[id]}</h3><span class="chip">${label}</span></div>${body}</section>`;
-}
 export function why(v:View,c:Controls) {
   return html`<section class="explanation" id=${'why-'+c.uid} ?hidden=${!c.why}><h3>Pourquoi ce conseil ?</h3>
     <div class="reason-row"><strong>Les besoins</strong><p>${v.assessment.needs.length?v.assessment.needs.map(n=>needs[n]??n).join(' · '):'Aucun besoin prioritaire parmi les mesures connues. Les polluants non mesurés restent inconnus.'}</p></div>
@@ -77,16 +26,44 @@ export function sources(v:View,c:Controls) {
 export function hero(v:View,config:Config,c:Controls) {
   const [title,text]=summary(v),w=contactState(v),a=v.assessment;
   return html`<div class="hero"><div class="hero-head"><h2>${config.title||`Confort · ${v.title}`}</h2><span class="source-chip">${icon('home')}${v.title}</span></div>
-    <div class="hero-text"><span class="status">${icon(a.action==='ouvrir'?'open':a.action==='ok'?'check':a.action==='unknown'?'info':'alert')}${levelLabels[a.level]}</span><h3>${title}</h3><p>${text}</p>
-      <div class="hero-actions"><button @click=${c.toggleWhy} aria-expanded=${c.why} aria-controls=${'why-'+c.uid}>${icon('info')}Pourquoi ?</button><button @click=${c.toggleSources} aria-expanded=${c.sources} aria-controls=${'sources-'+c.uid}>${icon('source')}Les sources</button></div>
+    <div class="hero-text"><span class="status">${icon(a.action==='ouvrir'?'open':a.action==='ok'?'check':a.action==='unknown'?'info':'alert')}${levelLabels[a.level]}</span><h3>${title}</h3><p>${text}</p>${(a.action==='ouvrir'||a.action==='ok')&&a.unverified?.length?html`<p class="unverified">${icon('info')}${a.unverified.map(k=>k==='rain'?'Pluie':'Qualité de l’air dehors').join(' et ')} non suivie${a.unverified.length>1?'s':''} : vérifiez avant d’ouvrir.</p>`:nothing}
     </div><div class="window-scene" aria-hidden="true"><div class="window-disk">${icon(a.action==='ouvrir'||w.opened?'open':'window')}</div>${w.opened?html`<div class="air-stream"><i></i><i></i><i></i></div>`:nothing}<span>${w.label}</span></div>
+      <div class="hero-actions wide"><button @click=${c.toggleWhy} aria-expanded=${c.why} aria-controls=${'why-'+c.uid}>${icon('info')}Pourquoi ?</button><button @click=${c.toggleSources} aria-expanded=${c.sources} aria-controls=${'sources-'+c.uid}>${icon('source')}Les sources</button></div>
   </div>`;
 }
-export function details(v:View,config:Config,c:Controls,full:boolean) {
-  const modules=full?config.modules??[]:(config.modules??[]).filter(id=>['windows','air','coordination'].includes(id));
-  return html`${why(v,c)}${exchange(v)}<section class="events"><div class="section-head"><h3>Événements</h3><span>Anticipation indisponible</span></div><p class="event-text">Les prévisions ne sont pas encore raccordées. Le conseil actuel repose sur les observations connues.</p></section>
-    ${modules.length?modules.map(id=>moduleRow(id,v)):html`<p class="empty-rubrics">Rubriques masquées. Les observations et le conseil restent disponibles.</p>`}`;
+type MetricState='need'|'alert'|'ok'|'off';
+function metric(ic:string,label:string,value:string,unit:string,note:string,state:MetricState,tone:string) {
+  return html`<div class="metric" data-state=${state} style=${'--tone:var(--'+tone+')'}><span class="metric-head">${icon(ic)}${label}</span><strong>${value}${unit?html`<small>${unit}</small>`:nothing}</strong><span class="metric-note">${note}</span></div>`;
 }
-export function quality(v:View,c:Controls) {
-  return html`<div class="quality-foot">${icon('source')}<span>${coverageText(v)}</span><button @click=${c.toggleSources} aria-expanded=${c.sources} aria-controls=${'sources-'+c.uid}>Sources</button></div>${sources(v,c)}`;
+/** One bubble per measure: an icon, a value and a short note. Explanations stay behind « Pourquoi ? ». */
+export function metrics(v:View,config:Config) {
+  const o=v.observations,a=v.assessment,mods=new Set(config.modules??[]),out=[];
+  if(mods.has('temperature')){const t=numeric(o.indoor_temperature),hot=a.needs.includes('cool'),cold=a.needs.includes('heat');
+    out.push(metric('temp','Température',number(t),'°C',hot?'Trop chaud':cold?'Trop frais':t===null?readingStatus(o.indoor_temperature):'Dans vos repères',hot||cold?'need':t===null?'off':'ok','heat'));}
+  if(mods.has('temperature')){const te=numeric(o.outdoor_temperature),d=a.temperature_delta;
+    out.push(metric('cloud','Dehors',number(te),'°C',te===null?(o.outdoor_temperature?readingStatus(o.outdoor_temperature):'Non configuré'):d===null?'—':`${d>0?'+':''}${number(d)} °C vs dedans`,te===null?'off':'ok','cold'));}
+  if(mods.has('humidity')&&o.indoor_humidity){const h=numeric(o.indoor_humidity),wet=a.needs.includes('dry');
+    out.push(metric('drop','Humidité',number(h),'%',wet?'Trop humide':a.indoor_absolute_humidity!==null?number(a.indoor_absolute_humidity)+' g/m³':o.indoor_humidity?readingStatus(o.indoor_humidity):'Non suivie',wet?'need':h===null?'off':'ok','cold'));}
+  if(mods.has('air')&&o.co2){const co2=numeric(o.co2),air=a.needs.includes('air');
+    out.push(metric('air','CO₂',number(co2),'ppm',air?'Air à renouveler':co2===null?(o.co2?readingStatus(o.co2):'Non suivi'):'Air correct',air?(a.level==='urgent'?'alert':'need'):co2===null?'off':'ok','calm'));}
+  if(mods.has('windows')){const w=contactState(v),flagged=(a.openings??[]).some(x=>x.flags.length);
+    out.push(metric(w.opened?'open':'window','Ouvrants',w.total?`${w.opened}/${w.total}`:'—','',w.total?(w.opened?`${w.opened} ouvert${w.opened>1?'s':''}`:'Tout fermé'):'Non suivis',flagged?'alert':w.total?'ok':'off','accent'));}
+  if(mods.has('shutters')){const s=a.sun,list=a.openings??[],sunny=list.filter(x=>x.sun_wm2!==null&&x.sun_wm2>=50),top=Math.max(0,...sunny.map(x=>x.sun_wm2??0));
+    const night=!s||s.elevation<=0;
+    out.push(metric(night?'moon':'sun','Soleil',night?'Nuit':sunny.length?String(top):'—',night||!sunny.length?'':'W/m²',night?'Pas d’apport':!list.some(x=>x.exposure)?'Exposition à renseigner':sunny.length?`${sunny.length} ouvrant${sunny.length>1?'s':''} au soleil`:'Pas de soleil direct',list.some(x=>x.flags.includes('sun_entering'))?'need':night||!sunny.length?'off':'ok','heat'));}
+  if(mods.has('coordination')&&o.heating){out.push(metric('heat','Chauffage',o.heating?heatingLabels[a.heating_action]??'Inconnu':'—','',o.heating?'Observé, jamais commandé':'Non suivi',a.heating_action==='heating'?'need':o.heating?'ok':'off','heat'));}
+  return out.length?html`<div class="metrics">${out}</div>`:html`<p class="empty-rubrics">Rubriques masquées. Le conseil reste disponible.</p>`;
+}
+const flagShort:Record<string,string>={rain_exposed:'pluie',gust:'rafales',sun_entering:'soleil'};
+/** Openings as small chips: open ones stand out, a flag says why it matters now. */
+export function openingChips(v:View) {
+  const list=v.assessment.openings??[];
+  if(!list.length) return nothing;
+  return html`<div class="opening-chips" aria-label="Ouvrants">${list.map(x=>html`<span class="opening-chip" ?data-open=${x.open===true} ?data-flag=${x.flags.length>0} title=${[kindLabels[x.kind],x.exposure?'exposé '+exposureLabels[x.exposure]:'',x.sheltered?'abrité':''].filter(Boolean).join(' · ')}>${icon(x.open?'open':'window')}${v.names?.[x.entity_id]??x.entity_id}${x.exposure?html`<em>${x.exposure}</em>`:nothing}${x.flags.length?html`<b>${x.flags.map(f=>flagShort[f]??f).join(' · ')}</b>`:nothing}</span>`)}</div>`;
+}
+export function details(v:View,config:Config,c:Controls,full:boolean) {
+  return html`${why(v,c)}${metrics(v,config)}${full&&(config.modules??[]).includes('windows')?openingChips(v):nothing}`;
+}
+export function quality(v:View,c:Controls,configure?:()=>void) {
+  return html`<div class="quality-foot">${icon('source')}<span>${coverageText(v)}</span><button @click=${c.toggleSources} aria-expanded=${c.sources} aria-controls=${'sources-'+c.uid}>Sources</button>${configure?html`<button class="configure" @click=${configure} aria-label="Configurer cette pièce" title="Configurer cette pièce">${icon('settings')}</button>`:nothing}</div>${sources(v,c)}`;
 }

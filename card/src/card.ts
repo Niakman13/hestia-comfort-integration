@@ -7,6 +7,7 @@ import {icon} from './ui/icons';
 import {details,hero,quality,type Controls} from './views/panel';
 import {LiveView} from './live';
 import './editor';
+import './home';
 
 let instances=0;
 const problems:Record<string,[string,string]>={
@@ -81,9 +82,8 @@ export class NiakComfortCard extends LitElement {
         @click=${this.tap} @keydown=${this.key} @pointerdown=${this.down} @pointermove=${this.move} @pointerup=${this.cancelPress} @pointercancel=${this.cancelPress} @pointerleave=${this.cancelPress} @contextmenu=${(e:Event)=>{e.preventDefault();this.cancelPress();}}>
         ${icon(v.assessment.action==='ouvrir'?'open':'window')}<span class="tile-copy"><span class="situation-label">${levelLabels[v.assessment.level]}</span><strong>${title}</strong><span>${config.title||v.title} · ${mini?(v.assessment.partial?'Bilan partiel':'Confort observé'):text}</span></span><span class="tile-now">${number(numeric(v.observations.indoor_temperature))}<small> °C</small></span>${icon('chevron','tile-chevron')}
       </button>`}
-      ${mini?nothing:html`${full||this.expanded?html`${full?nothing:html`<div class="hero-actions" style="padding:0 16px 12px"><button @click=${c.toggleWhy} aria-expanded=${c.why} aria-controls=${'why-'+c.uid}>${icon('info')}Pourquoi ?</button></div>`}${details(v,config,c,full)}`:nothing}${quality(v,c)}
+      ${mini?nothing:html`${full||this.expanded?html`${full?nothing:html`<div class="hero-actions" style="padding:0 16px 12px"><button @click=${c.toggleWhy} aria-expanded=${c.why} aria-controls=${'why-'+c.uid}>${icon('info')}Pourquoi ?</button></div>`}${details(v,config,c,full)}`:nothing}${quality(v,c,this.hass?.user?.is_admin?()=>this.configure():undefined)}
         ${full?nothing:html`<div class="tile-footer"><span>Appui long : vue complète</span><button @click=${this.openFull}>Ouvrir la complète</button></div>`}`}
-      ${this.hass?.user?.is_admin?html`<div class="tile-footer"><button @click=${()=>this.configure()}>${icon("settings")}Configurer cette pièce</button></div>`:nothing}
     </ha-card>`;
   }
   protected render(){
