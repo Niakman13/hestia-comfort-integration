@@ -9,7 +9,7 @@ const root=new URL('../',import.meta.url),temp=await mkdtemp(join(tmpdir(),'niak
 await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
   bundle:true,platform:'node',format:'esm',outExtension:{'.js':'.mjs'},logLevel:'silent'});
 const {cleanConfig}=await import(pathToFileURL(join(temp,'types.mjs')));
-const {isView,numeric,summary,readingStatus,coverageText}=await import(pathToFileURL(join(temp,'view.mjs')));
+const {isView,numeric,summary,readingStatus,coverageText,windFrom}=await import(pathToFileURL(join(temp,'view.mjs')));
 const {LiveView}=await import(pathToFileURL(join(temp,'live.mjs')));
 const fixtures=JSON.parse(await readFile(new URL('../preview/card-fixtures.json',import.meta.url),'utf8'));
 const fresh=()=>({...structuredClone(fixtures[0].view),computed_at:new Date().toISOString()});
@@ -95,4 +95,11 @@ test('intentional absence differs from unavailable, stale and invalid readings',
   assert.match(coverageText(v),/non configuré/);assert.doesNotMatch(coverageText(v),/à vérifier/);
   v.assessment.missing=['co2'];v.observations.co2={quality:'unknown',source:'sensor.co2',value:null};
   assert.match(coverageText(v),/Mesures à vérifier : CO₂/);
+});
+test('wind names say where the wind comes from, in plain French',()=>{
+  assert.equal(windFrom(270),'vent d’ouest');
+  assert.equal(windFrom(0),'vent du nord');
+  assert.equal(windFrom(359),'vent du nord');
+  assert.equal(windFrom(45),'vent de nord-est');
+  assert.equal(windFrom(null),'');
 });

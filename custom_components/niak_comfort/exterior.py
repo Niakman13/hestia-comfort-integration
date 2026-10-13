@@ -38,4 +38,14 @@ def exterior_reading(state, key, spec, *, now, max_age):
         # that the air at these windows is currently suitable for ventilation.
         return Reading(labels.index(label)+1 >= spec.get("block_from", 4), "estimated",
                        source=entity_id, received_at=reported.isoformat(), detail="atmo_daily_forecast")
+    if adapter == "niak_index":
+        try:
+            index = float(state.state)
+        except (TypeError, ValueError):
+            return Reading(None, "unknown", source=entity_id, detail="invalid_air_index")
+        if not 1 <= index <= 6:
+            return Reading(None, "unknown", source=entity_id, detail="invalid_air_index")
+        # Like ATMO: a regional daily index can flag the precaution, never prove the air is good now.
+        return Reading(index >= spec.get("block_from", 4), "estimated", source=entity_id,
+                       received_at=state.last_reported.isoformat(), detail="atmo_daily_forecast")
     return Reading(None, "unknown", source=entity_id, detail="unsupported_adapter")

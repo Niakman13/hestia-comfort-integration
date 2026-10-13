@@ -23,8 +23,15 @@ export const levelLabels = {calm:'Tout va bien',benefit:'Potentiel détecté',ac
 export const needs:Record<string,string> = {air:'Renouveler l’air',cool:'Rafraîchir',heat:'Préserver la chaleur',dry:'Réduire l’humidité'};
 export const heatingLabels:Record<string,string> = {heating:'Chauffe en cours',idle:'Au repos',off:'Arrêté',cooling:'Rafraîchit',unknown:'Action indisponible',not_configured:'Non configuré'};
 export const sourceLabels:Record<string,string> = {indoor_temperature:'Température intérieure',outdoor_temperature:'Température extérieure',indoor_humidity:'Humidité intérieure',outdoor_humidity:'Humidité extérieure',co2:'CO₂',rain:'Pluie sur les ouvrants',wind_gust:'Rafales',solar:'Ensoleillement',pollution:'Contrainte d’air extérieur',heating:'Chauffage observé'};
-export const constraintLabels:Record<string,string> = {rain:'Pluie sur les ouvrants exposés',gust:'Rafales trop fortes',pollution:'Air extérieur défavorable',frost:'Gel dehors',heating_running:'Chauffage en marche'};
+export const constraintLabels:Record<string,string> = {rain:'Pluie sur les ouvrants exposés',storm:'Orage',vigilance:'Vigilance météo orange ou rouge',gust:'Rafales trop fortes',pollution:'Air extérieur défavorable',frost:'Gel dehors',heating_running:'Chauffage en marche'};
 export const exposureLabels:Record<string,string> = {N:'nord',NE:'nord-est',E:'est',SE:'sud-est',S:'sud',SO:'sud-ouest',O:'ouest',NO:'nord-ouest'};
+const compass=['nord','nord-est','est','sud-est','sud','sud-ouest','ouest','nord-ouest'];
+/** « vent d’ouest », « vent du nord » : where the wind comes from. */
+export function windFrom(bearing:number|null|undefined):string {
+  if(bearing==null||!Number.isFinite(bearing)) return '';
+  const name=compass[Math.round(((bearing%360)+360)%360/45)%8];
+  return 'vent '+(name==='est'||name==='ouest'?'d’'+name:name==='nord'||name==='sud'?'du '+name:'de '+name);
+}
 export const kindLabels:Record<string,string> = {window:'Fenêtre',french:'Porte-fenêtre',skylight:'Vasistas',door:'Porte'};
 export const reasons:Record<string,[string,string]> = {
   within_comfort:['Vous êtes bien','Les mesures disponibles sont dans vos repères de confort. Cela ne renseigne pas les polluants non mesurés.'],
@@ -42,9 +49,14 @@ export const reasons:Record<string,[string,string]> = {
   optional_air_change:['Un renouvellement peut faire du bien','Une aération est une possibilité d’amélioration, sans besoin prioritaire détecté.'],
   gust_open_windows:['Fermez, le vent est trop fort','Les rafales dépassent votre seuil : rien ne doit rester ouvert.'],
   short_air_change:['Aérez quelques minutes','De l’air neuf en quelques minutes, pour très peu de confort perdu. Refermez ensuite.'],
+  rain_soon:['Refermez avant la pluie','La pluie arrive bientôt sur les ouvrants exposés.'],
+  precool_later:['Pas encore, demain sera chaud','Ouvrez dès que l’air dehors sera plus frais que dedans : la maison stockera ce frais pour demain.'],
+  precool_possible:['Ouvrez pour la nuit','Il fera chaud demain : la maison stocke le frais de la nuit.'],
   sun_entering:['Fermez côté soleil','Une fenêtre ouverte reçoit le soleil alors que la pièce a déjà trop chaud : c’est par là que la chaleur entre.'],
 };
 const blockedText:Record<string,[string,string]> = {
+  storm:['Gardez fermé, orage','Un orage est en cours ou prévu dans les 6 heures.'],
+  vigilance:['Gardez fermé, vigilance météo','Météo-France a placé le département en vigilance orange ou rouge.'],
   gust:['Gardez fermé, le vent est fort','Les rafales dépassent votre seuil. L’aération attendra qu’elles retombent.'],
   frost:['Gardez fermé, il gèle dehors','Une ouverture prolongée refroidirait la pièce sans bénéfice.'],
   heating_running:['Gardez fermé, le chauffage tourne','Ouvrir maintenant ferait perdre la chaleur produite.'],
@@ -55,9 +67,14 @@ export function summary(v:View):[string,string] {
   if(a.action==='ok'&&a.needs.includes('air')) return ['L’aération est en cours','Le CO₂ reste à surveiller : une ouverture observée ne signifie pas que le besoin d’air est résolu.'];
   if(a.reason==='opening_blocked'){
     const main=a.constraints.find(k=>k in blockedText);
-    if(a.action==='fermer') return [main==='frost'?'Refermez, il gèle dehors':main==='heating_running'?'Refermez, le chauffage tourne':'Fermez les ouvrants concernés',main?blockedText[main][1]:reasons.opening_blocked[1]];
+    if(a.action==='fermer') return [main==='storm'?'Fermez, orage':main==='vigilance'?'Fermez, vigilance météo':main==='frost'?'Refermez, il gèle dehors':main==='heating_running'?'Refermez, le chauffage tourne':'Fermez les ouvrants concernés',main?blockedText[main][1]:reasons.opening_blocked[1]];
     if(main&&!a.constraints.some(k=>k==='rain'||k==='pollution')) return blockedText[main];
   }
+  if(a.slot&&a.slot.kind==='open'&&(a.reason==='cooling_unavailable'||a.reason==='precool_later')){
+    const h=new Date(a.slot.time).getHours(),at=h===0?'minuit':h===12?'midi':h+' h';
+    return [a.reason==='precool_later'?'Pas encore, demain sera chaud':'Attendez un air plus frais',`Ouvrez vers ${at} : il fera ${number(a.slot.temperature)} °C dehors${a.slot.wind_bearing!=null?', '+windFrom(a.slot.wind_bearing):''}.`];
+  }
+  if(a.reason==='rain_soon'&&a.rain_soon_minutes!=null) return ['Refermez avant la pluie',`La pluie arrive dans ${a.rain_soon_minutes<60?a.rain_soon_minutes+' min':'une heure'} sur les ouvrants exposés.`];
   if(a.reason==='short_air_change'){
     const why=a.constraints.includes('frost')?'il gèle dehors':'le chauffage tourne';
     return [a.action==='ok'?'Aération en cours, pas trop longtemps':'Aérez quelques minutes',`Le CO₂ demande de l’air neuf, mais ${why} : une aération courte suffit.`];

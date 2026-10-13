@@ -1,6 +1,6 @@
-export const labels:Record<string,string>={indoor_temperature:'Température de la pièce',indoor_humidity:'Humidité de la pièce',co2:'CO₂',windows:'Fenêtres et portes vers l’extérieur',heating:'Chauffage',outdoor_temperature:'Température dehors',outdoor_humidity:'Humidité dehors',rain:'Pluie actuelle',wind_gust:'Rafales de vent',solar:'Ensoleillement',pollution:'Qualité de l’air extérieur'};
+export const labels:Record<string,string>={indoor_temperature:'Température de la pièce',indoor_humidity:'Humidité de la pièce',co2:'CO₂',windows:'Fenêtres et portes vers l’extérieur',heating:'Chauffage',outdoor_temperature:'Température dehors',outdoor_humidity:'Humidité dehors',rain:'Pluie actuelle',wind_gust:'Rafales de vent',wind_bearing:'Direction du vent',solar:'Ensoleillement',pollution:'Qualité de l’air extérieur'};
 export const indoor=['indoor_temperature','indoor_humidity'] as const;
-export const outdoor=['outdoor_temperature','outdoor_humidity','rain','wind_gust','solar','pollution'] as const;
+export const outdoor=['outdoor_temperature','outdoor_humidity','rain','wind_gust','wind_bearing','solar','pollution'] as const;
 export const multiple=new Set(['windows']);
 export const exposures:[string,string][]=[['N','Nord'],['NE','Nord-est'],['E','Est'],['SE','Sud-est'],['S','Sud'],['SO','Sud-ouest'],['O','Ouest'],['NO','Nord-ouest']];
 export const kinds:[string,string][]=[['window','Fenêtre'],['french','Porte-fenêtre ou baie'],['skylight','Vasistas ou petite fenêtre'],['door','Porte']];
@@ -14,7 +14,7 @@ export interface OpeningMeta {exposure:string|null;kind:string;sheltered:boolean
 export interface RoomConfig {area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean}
 export interface Room {entry_id:string;title:string;loaded:boolean;config:RoomConfig}
 export interface Area {area_id:string;name:string;outdoor:boolean}
-export interface Snapshot {version:1;revision:string;areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[]}}
+export interface Snapshot {version:1;revision:string;areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null};niak_weather?:{installed:boolean;places:{entry_id:string;title:string}[]}}
 export interface Discovery {version:1;revision:string;candidates:Record<string,Candidate[]>;suggestions:Record<string,string|string[]>}
 export interface Hass {callWS<T>(msg:Record<string,unknown>):Promise<T>;user?:{is_admin:boolean};themes?:{darkMode?:boolean};connection?:unknown}
 export const warningText:Record<string,string>={
@@ -49,7 +49,7 @@ export function coverage(room:RoomConfig):string {
  const n=room.windows.length;
  return (parts.join(', ')||'Mesures à compléter')+' · '+(n?n+' ouvrant'+(n>1?'s':''):'fenêtres non mesurées');
 }
-const shortNames:Record<string,string>={outdoor_temperature:'température',outdoor_humidity:'humidité',rain:'pluie',wind_gust:'rafales',solar:'ensoleillement',pollution:'qualité de l’air'};
+const shortNames:Record<string,string>={outdoor_temperature:'température',outdoor_humidity:'humidité',rain:'pluie',wind_gust:'rafales',wind_bearing:'direction du vent',solar:'ensoleillement',pollution:'qualité de l’air'};
 export function exteriorSummary(sources:Record<string,Spec>):string {
  const names=outdoor.filter(k=>sources[k]).map(k=>shortNames[k]);
  return names.length?names.join(', ').replace(/^./,c=>c.toUpperCase()):'Rien de configuré';

@@ -1,3 +1,12 @@
+## 0.5.0-beta.1 — Niak Weather et le vent
+
+- Niak Weather est détecté : un clic reprend sa station pour l’extérieur (avec Niak Weather 2.1.0b1 ou plus récent).
+- Le vent compte : Niak dit quelles fenêtres ouvrir, au vent et sous le vent, pour faire traverser l’air.
+- La pluie poussée par le vent est repérée, même sous un avant-toit.
+- Créneaux d’ouverture : « Ouvrez vers 21 h : il fera 18 °C, vent d’ouest ».
+- Orage, vigilance orange ou rouge, pluie qui arrive : Niak conseille de fermer à temps.
+- La nuit avant une journée chaude, Niak propose de stocker le frais.
+
 ## 0.4.0-beta.4 — Logement et carte plus visuelle
 
 - Première installation : toutes les pièces détectées sont proposées, cochées, et créées d’un coup.

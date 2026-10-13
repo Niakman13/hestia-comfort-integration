@@ -4,7 +4,7 @@ import {live} from 'lit/directives/live.js';
 import styles from './styles.css';
 import {labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,type Area,type Candidate,type Discovery,type Snapshot,type Hass,type Room,type RoomConfig,type Spec} from './model';
 const stages=['Mesures','Ouvrants','Air','Chauffage','Préférences','Récapitulatif'];
-const help:Record<string,string>={indoor_temperature:'La mesure de l’air de cette pièce. Seule information obligatoire. La température d’un appareil ou du sol d’une plante peut être différente.',indoor_humidity:'Permet de repérer un air trop humide et de savoir si aérer l’assèche vraiment.',co2:'Permet de savoir quand renouveler l’air. Ce capteur ne mesure pas tous les polluants.',windows:'Les contacts des fenêtres et portes qui donnent sur l’extérieur. Pas les portes de meubles ou d’appareils.',heating:'Permet de savoir si le chauffage tourne vraiment, pour ne pas conseiller d’ouvrir à ce moment-là. Niak ne commande rien.',outdoor_temperature:'Permet de savoir si ouvrir rafraîchit ou réchauffe, et s’il gèle.',outdoor_humidity:'Avec les températures, permet de comparer l’eau contenue dans l’air dedans et dehors.',rain:'Une intensité en mm/h dit s’il pleut maintenant. Un cumul de la journée ne le dit pas.',wind_gust:'Au-delà de vos réglages (45 km/h par défaut), Niak conseille de ne rien laisser ouvert.',solar:'Un capteur d’ensoleillement en W/m² permet de calculer le soleil reçu par chaque façade.',pollution:'L’indice ATMO du jour (intégration Atmo France) sert de précaution régionale. Ce n’est pas une mesure à vos fenêtres.'};
+const help:Record<string,string>={indoor_temperature:'La mesure de l’air de cette pièce. Seule information obligatoire. La température d’un appareil ou du sol d’une plante peut être différente.',indoor_humidity:'Permet de repérer un air trop humide et de savoir si aérer l’assèche vraiment.',co2:'Permet de savoir quand renouveler l’air. Ce capteur ne mesure pas tous les polluants.',windows:'Les contacts des fenêtres et portes qui donnent sur l’extérieur. Pas les portes de meubles ou d’appareils.',heating:'Permet de savoir si le chauffage tourne vraiment, pour ne pas conseiller d’ouvrir à ce moment-là. Niak ne commande rien.',outdoor_temperature:'Permet de savoir si ouvrir rafraîchit ou réchauffe, et s’il gèle.',outdoor_humidity:'Avec les températures, permet de comparer l’eau contenue dans l’air dedans et dehors.',rain:'Une intensité en mm/h dit s’il pleut maintenant. Un cumul de la journée ne le dit pas.',wind_gust:'Au-delà de vos réglages (45 km/h par défaut), Niak conseille de ne rien laisser ouvert.',wind_bearing:'D’où vient le vent, en degrés. Avec l’exposition des ouvrants, Niak sait lesquels sont au vent, fait traverser l’air et repère la pluie poussée sous un avant-toit.',solar:'Un capteur d’ensoleillement en W/m² permet de calculer le soleil reçu par chaque façade.',pollution:'L’indice ATMO du jour (intégration Atmo France) sert de précaution régionale. Ce n’est pas une mesure à vos fenêtres.'};
 let pickerLoad:Promise<string|null>|undefined;
 // Home Assistant loads its entity picker lazily; a card editor makes it available to this page.
 function loadPicker():Promise<string|null>{
@@ -39,6 +39,7 @@ export class ComfortSetup extends LitElement {
  @state() private confirmed=false;
  @state() private overview?:{area_id:string;name:string;suggestions:Record<string,string|string[]>;temperatures:number}[];
  @state() private picked:string[]=[];
+ @state() private weatherEntry:string|null=null;
  @state() private proposed:string[]=[];
  @state() private advanced=false;
  @state() private confirmDiscard=false;
@@ -105,9 +106,19 @@ export class ComfortSetup extends LitElement {
  }
  private async editExterior(){
   this.begin();
-  try{const d=await this.discover();this.discovery=d;this.revision=d.revision;this.exteriorDraft=structuredClone(this.snapshot!.home.sources);this.acknowledged=[...(this.snapshot!.home.acknowledged??[])];this.proposed=[];}
+  try{const d=await this.discover();this.discovery=d;this.revision=d.revision;this.exteriorDraft=structuredClone(this.snapshot!.home.sources);this.weatherEntry=this.snapshot!.home.weather??null;this.acknowledged=[...(this.snapshot!.home.acknowledged??[])];this.proposed=[];}
   catch(e){this.error=this.message(e);}finally{this.busy=false;}
  }
+ // Takes Niak Weather's station and signals as the exterior: one setting place for the whole home.
+ private async useWeather(entry_id:string){
+  this.busy=true;this.error='';
+  try{const p=await this.hass!.callWS<{entry_id:string;title:string;sources:Record<string,Spec>}>({type:'niak_comfort/weather_proposal',entry_id});
+   this.exteriorDraft={...(this.exteriorDraft??{}),...p.sources};this.weatherEntry=p.entry_id;this.saved=`Station de Niak Weather (${p.title}) reprise : vérifiez puis enregistrez.`;}
+  catch(e){this.error=this.message(e);}finally{this.busy=false;}
+ }
+ private weatherBlock(){const nw=this.snapshot?.niak_weather;if(!nw?.installed||!nw.places.length)return nothing;
+  const linked=nw.places.find(p=>p.entry_id===this.weatherEntry);
+  return html`<section class="notice weather">${linked?html`<p><strong>Relié à Niak Weather · ${linked.title}</strong></p><p class="hint">Niak Confort lit aussi ses alertes (orage, vigilance, pluie qui arrive) et ses prévisions pour les créneaux d’ouverture.</p>`:html`<p><strong>Niak Weather est installé.</strong> Reprenez sa station et profitez de ses alertes et prévisions : pluie qui arrive, orage, vigilance, créneaux d’ouverture.</p><div class="actions">${nw.places.map(p=>html`<button class="primary" @click=${()=>this.useWeather(p.entry_id)}>Utiliser Niak Weather${nw.places.length>1?' · '+p.title:''}</button>`)}</div>`}</section>`;}
  private async changeArea(area_id:string){
   if(!this.draft)return;this.busy=true;this.error='';
   try{const d=await this.discover(area_id||null,this.entryId);this.discovery=d;this.revision=d.revision;this.draft={...this.draft,area_id:area_id||null};}
@@ -201,7 +212,7 @@ export class ComfortSetup extends LitElement {
   this.go(this.stage+1);
  }
  private async save(){
-  const config=this.exteriorDraft?{sources:this.exteriorDraft}:this.draft;if(!config)return;
+  const config=this.exteriorDraft?{sources:this.exteriorDraft,weather:this.weatherEntry}:this.draft;if(!config)return;
   this.busy=true;this.error='';
   try{const validated=await this.hass!.callWS<{warnings:{key:string;entity_id:string}[]}>({type:'niak_comfort/validate_config',config,home:!!this.exteriorDraft});const missing=validated.warnings.map(w=>warningId(w.key,w.entity_id)).filter(id=>!this.acknowledged.includes(id));
    if(missing.length&&!this.confirmed){this.error='Cochez « J’ai vérifié, je confirme mes choix » juste au-dessus pour enregistrer.';return;}
@@ -237,7 +248,7 @@ export class ComfortSetup extends LitElement {
   ${this.stage<4?html`<button class="link" @click=${()=>this.refreshCandidates()}>Rechercher à nouveau les capteurs</button>`:nothing}
   ${this.errorBlock()}
   <div class="bottom"><button @click=${()=>this.stage?this.go(this.stage-1):this.cancel()}>Retour</button><div>${this.stage>0&&this.stage<5?html`<button @click=${()=>this.go(this.stage+1)}>Passer</button>`:nothing}<button class="primary" ?disabled=${this.busy} @click=${()=>this.stage===5?this.save():this.next()}>${this.stage===5?'Enregistrer':'Continuer'}</button></div></div>`;}
- private exterior(){return html`<div class="actions"><button class="link" @click=${()=>this.cancel()}>← Mon logement</button></div><h1 tabindex="-1">L’extérieur du logement</h1><p>Choisissez une fois les mesures du dehors. Toutes vos pièces les utilisent.</p>
+ private exterior(){return html`<div class="actions"><button class="link" @click=${()=>this.cancel()}>← Mon logement</button></div><h1 tabindex="-1">L’extérieur du logement</h1><p>Choisissez une fois les mesures du dehors. Toutes vos pièces les utilisent.</p>${this.weatherBlock()}
   ${outdoor.map(key=>this.field(key))}${this.confirmBlock()}${this.errorBlock()}<div class="bottom"><button @click=${()=>this.cancel()}>Annuler</button><button class="primary" ?disabled=${this.busy} @click=${()=>this.save()}>Enregistrer l’extérieur</button></div>`;}
  private card(id:string){
   if(!customElements.get('niak-comfort-card'))return html`<p class="notice">L’aperçu de la carte apparaîtra après un rechargement de la page.</p>`;
@@ -258,7 +269,7 @@ export class ComfortSetup extends LitElement {
   ${!s.rooms.length&&this.overview?.some(a=>typeof a.suggestions.indoor_temperature==='string')?this.foundRooms():!s.rooms.length?html`<section class="start"><h2>Commençons par le Salon</h2>${living?html`<p>Niak a trouvé la pièce « ${living.name} » dans Home Assistant. Il vous proposera ses capteurs ; vous gardez, retirez ou complétez.</p><button class="primary" @click=${()=>this.start(living)}>Configurer le Salon</button>`:html`<p>Aucune pièce « Salon » dans Home Assistant : Niak crée une pièce libre et vous choisissez ses capteurs.</p><button class="primary" @click=${()=>this.start(null,'Salon')}>Créer le Salon</button>`}</section>`:html`<h2>Vos pièces</h2>${s.rooms.map(room=>html`<section class="room"><div><h3>${room.title}</h3><p class="hint">${coverage(room.config)}${room.config.area_id?'':' · pièce libre'}</p>${!room.loaded?html`<p class="warning hint">Le calcul de cette pièce n’est pas chargé. Vérifiez ses capteurs et les journaux de l’intégration.</p>`:nothing}</div><button @click=${()=>this.editRoom(room)}>Modifier</button></section>`)}`}
   <section class="field"><h3>${s.rooms.length?'Ajouter une pièce':this.overview?'Une pièce sans pièce Home Assistant ?':'Ou commencer par une autre pièce'}</h3>${areas.length&&!(this.overview&&!s.rooms.length)?html`<p class="hint">Vos pièces Home Assistant : Niak proposera leurs capteurs.</p><div class="area-buttons">${areas.map(a=>html`<button @click=${()=>this.start(a)}>${a.name}</button>`)}</div>`:nothing}
    <form class="free" @submit=${(e:Event)=>{e.preventDefault();void this.start(null,this.freeName);}}><label>Pièce libre, sans pièce Home Assistant<input type="text" maxlength="100" placeholder="Par exemple : Étage" .value=${this.freeName} @input=${(e:Event)=>this.freeName=(e.target as HTMLInputElement).value}></label><button type="submit">Créer</button></form></section>
-  ${s.rooms.length?html`<section class="field"><h2>Les cartes</h2><p>Dans un tableau de bord : <strong>Ajouter une carte</strong>, puis <strong>Niak Confort</strong> pour une pièce, ou <strong>Niak Confort · logement</strong> pour la synthèse de toutes les pièces.</p></section>`:nothing}<section class="field"><h2>L’extérieur du logement</h2><p>Température, humidité, pluie, vent, soleil et qualité de l’air dehors : vous les choisissez une fois, toutes vos pièces les utilisent.</p><p class="hint">${s.home.configured?exteriorSummary(s.home.sources):'Pas encore configuré'}</p><button @click=${()=>this.editExterior()}>${s.home.configured?'Modifier l’extérieur':'Configurer l’extérieur'}</button></section>`;}
+  ${s.rooms.length?html`<section class="field"><h2>Les cartes</h2><p>Dans un tableau de bord : <strong>Ajouter une carte</strong>, puis <strong>Niak Confort</strong> pour une pièce, ou <strong>Niak Confort · logement</strong> pour la synthèse de toutes les pièces.</p></section>`:nothing}<section class="field"><h2>L’extérieur du logement</h2><p>Température, humidité, pluie, vent, soleil et qualité de l’air dehors : vous les choisissez une fois, toutes vos pièces les utilisent.</p><p class="hint">${s.home.configured?exteriorSummary(s.home.sources):'Pas encore configuré'}${s.home.weather?' · relié à Niak Weather':s.niak_weather?.installed?' · Niak Weather peut le remplir pour vous':''}</p><button @click=${()=>this.editExterior()}>${s.home.configured?'Modifier l’extérieur':'Configurer l’extérieur'}</button></section>`;}
  protected render(){if(this.hass?.user?.is_admin===false)return html`<main><h1>Niak Confort</h1><p>La configuration du logement est réservée aux administrateurs Home Assistant.</p></main>`;
   const editing=!!(this.draft||this.exteriorDraft);
   return html`<header><button aria-label="Ouvrir le menu Home Assistant" @click=${()=>this.menu()}><span class="menu-icon"></span></button><strong>Niak Confort</strong></header><main>${this.confirmDiscard?html`<section class="notice" role="alertdialog" aria-label="Abandonner le brouillon"><h2>Quitter sans enregistrer ?</h2><p>Vos choix de cette page seront perdus.</p><div class="actions"><button @click=${()=>this.confirmDiscard=false}>Continuer la configuration</button><button @click=${()=>this.discard()}>Quitter sans enregistrer</button></div></section>`:nothing}
