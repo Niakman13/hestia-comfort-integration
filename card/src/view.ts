@@ -22,7 +22,7 @@ export const number = (v:number|null) => v===null?'—':new Intl.NumberFormat('f
 export const levelLabels = {calm:'Tout va bien',benefit:'Potentiel détecté',action:'Geste conseillé',urgent:'Attention nécessaire',neutral:'Information incomplète'};
 export const needs:Record<string,string> = {air:'Renouveler l’air',cool:'Rafraîchir',heat:'Préserver la chaleur',dry:'Réduire l’humidité'};
 export const heatingLabels:Record<string,string> = {heating:'Chauffe en cours',idle:'Au repos',off:'Arrêté',cooling:'Rafraîchit',unknown:'Action indisponible',not_configured:'Non configuré'};
-export const sourceLabels:Record<string,string> = {indoor_temperature:'Température intérieure',outdoor_temperature:'Température extérieure',indoor_humidity:'Humidité intérieure',outdoor_humidity:'Humidité extérieure',co2:'CO₂',rain:'Pluie sur les ouvrants',wind_gust:'Rafales',solar:'Ensoleillement',pollution:'Contrainte d’air extérieur',heating:'Chauffage observé'};
+export const sourceLabels:Record<string,string> = {indoor_temperature:'Température intérieure',outdoor_temperature:'Température extérieure',indoor_humidity:'Humidité intérieure',outdoor_humidity:'Humidité extérieure',co2:'CO₂',rain:'Pluie sur les ouvrants',wind_gust:'Rafales',solar:'Ensoleillement',pollution:'Qualité de l’air dehors',wind_bearing:'Direction du vent',heating:'Chauffage observé'};
 export const constraintLabels:Record<string,string> = {rain:'Pluie sur les ouvrants exposés',storm:'Orage',vigilance:'Vigilance météo orange ou rouge',gust:'Rafales trop fortes',pollution:'Air extérieur défavorable',frost:'Gel dehors',heating_running:'Chauffage en marche'};
 export const exposureLabels:Record<string,string> = {N:'nord',NE:'nord-est',E:'est',SE:'sud-est',S:'sud',SO:'sud-ouest',O:'ouest',NO:'nord-ouest'};
 const compass=['nord','nord-est','est','sud-est','sud','sud-ouest','ouest','nord-ouest'];
@@ -64,6 +64,11 @@ const blockedText:Record<string,[string,string]> = {
 export function summary(v:View):[string,string] {
   const a=v.assessment;
   if(a.reason==='incomplete_data'&&numeric(v.observations.indoor_temperature)!==null&&!a.missing.some(k=>!!v.observations[k])) return ['Les mesures connues sont dans vos repères','Les conditions extérieures non configurées restent à vérifier avant d’ouvrir. Ce bilan porte sur les mesures disponibles.'];
+  if(a.reason==='incomplete_data'){
+    // Name what is missing: a person can fix « Qualité de l’air dehors », not « certaines informations ».
+    const failed=a.missing.filter(k=>!!v.observations[k]).map(k=>sourceLabels[k]??(k.startsWith('window:')?'Contact de fenêtre':k));
+    if(failed.length) return [failed.length>1?'Des mesures ne sont pas à jour':'Une mesure n’est pas à jour',`${failed.join(', ')} : ${failed.length>1?'ne répondent pas ou sont trop anciennes':'ne répond pas ou est trop ancienne'}. Niak attend son retour pour conseiller.`];
+  }
   if(a.action==='ok'&&a.needs.includes('air')) return ['L’aération est en cours','Le CO₂ reste à surveiller : une ouverture observée ne signifie pas que le besoin d’air est résolu.'];
   if(a.reason==='opening_blocked'){
     const main=a.constraints.find(k=>k in blockedText);
