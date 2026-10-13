@@ -122,15 +122,35 @@ export class ComfortSetup extends LitElement {
  private warnings(c:Candidate,key:string,selected:boolean){return html`${c.warnings.filter(w=>!(w==='derived'&&c.warnings.includes('alias'))).map(w=>html`<p class="warning hint">${warningText[w]??'Source à vérifier.'}</p>`)}${c.provenance.length>1?html`<p class="provenance">Origine de la mesure : ${c.provenance.map((p,i)=>html`${i?' → ':nothing}${p.name}${p.area_id?` (${this.areaName(p.area_id)})`:nothing}`)}</p>`:nothing}${selected&&c.warnings.length?html`<label class="check"><input type="checkbox" .checked=${this.acknowledged.includes(warningId(key,c.entity_id))} @change=${(e:Event)=>this.ack(warningId(key,c.entity_id),(e.target as HTMLInputElement).checked)}>J’ai vérifié : je veux utiliser ce capteur ici.</label>`:nothing}`;}
  private where(c:Candidate){return c.area_id?this.areaName(c.area_id):'Sans pièce';}
  private candidateRow(c:Candidate,key:string){return html`<div class="candidate"><div><strong>${c.name}</strong><p>${measurement(c)} · ${this.where(c)}${c.reference?' · référence de la pièce':nothing}</p>${this.warnings(c,key,false)}</div><button @click=${()=>this.choose(key,c)}>Utiliser</button></div>`;}
+ private replace(key:string,old:string,id:unknown){
+  if(id===''||id===undefined||id===null){this.clear(key,old);return;}  // the picker's cross removes the sensor
+  if(typeof id!=='string'||id===old)return;
+  const c=this.discovery?.candidates[key]?.find(x=>x.entity_id===id);if(!c)return;
+  if(key==='windows'&&this.draft){
+   // The replacement keeps the exposure, type and shelter already described for this opening.
+   const d=this.draft,openings={...d.openings,[id]:d.openings[old]??defaultOpening()};delete openings[old];
+   this.draft={...d,windows:d.windows.map(w=>w===old?id:w),openings};
+   this.acknowledged=this.acknowledged.filter(a=>a!==warningId(key,old));this.proposed=this.proposed.filter(p=>p!==old);
+  }else this.choose(key,c);
+ }
+ private selector(key:string,ids:string[],value:string,label:string,changed:(id:unknown)=>void){
+  if(this.pickerTag==='ha-selector')return html`<ha-selector .hass=${this.hass} .selector=${{entity:{include_entities:ids}}} .value=${live(value)} .required=${false} .label=${label} @value-changed=${(e:CustomEvent)=>changed(e.detail?.value)}></ha-selector>`;
+  return html`<ha-entity-picker .hass=${this.hass} .includeEntities=${ids} .value=${live(value)} .required=${false} .label=${label} @value-changed=${(e:CustomEvent)=>changed(e.detail?.value)}></ha-entity-picker>`;
+ }
  private picker(key:string,all:Candidate[],selected:string[]){
   const free=all.filter(c=>!selected.includes(c.entity_id));
   if(!free.length)return html`<p class="hint">Aucun autre capteur compatible dans Home Assistant.</p>`;
-  const label=selected.length&&!multiple.has(key)?'Remplacer par un autre capteur':multiple.has(key)&&selected.length?'Ajouter un autre ouvrant':'Choisir un autre capteur';
-  const ids=free.map(c=>c.entity_id);
-  if(this.pickerTag==='ha-selector')return html`<div class="picker"><ha-selector .hass=${this.hass} .selector=${{entity:{include_entities:ids}}} .value=${live('')} .required=${false} .label=${label} @value-changed=${(e:CustomEvent)=>this.pick(key,e.detail?.value)}></ha-selector></div>`;
-  if(this.pickerTag==='ha-entity-picker')return html`<div class="picker"><ha-entity-picker .hass=${this.hass} .includeEntities=${ids} .value=${live('')} .required=${false} .label=${label} @value-changed=${(e:CustomEvent)=>this.pick(key,e.detail?.value)}></ha-entity-picker></div>`;
+  const label=multiple.has(key)&&selected.length?'Ajouter un autre ouvrant':'Choisir un autre capteur';
+  if(this.pickerTag)return html`<div class="picker">${this.selector(key,free.map(c=>c.entity_id),'',label,id=>this.pick(key,id))}</div>`;
   const text=(this.search[key]??'').toLowerCase();
   return html`<div class="picker"><label>${label}<input type="search" placeholder="Tapez un nom, une pièce…" .value=${this.search[key]??''} @input=${(e:Event)=>this.search={...this.search,[key]:(e.target as HTMLInputElement).value}}></label>${text?html`<div class="search-results">${free.filter(c=>(c.name+' '+c.entity_id+' '+this.where(c)).toLowerCase().includes(text)).slice(0,8).map(c=>this.candidateRow(c,key))}</div>`:nothing}</div>`;
+ }
+ private chosen(key:string,id:string,all:Candidate[],selected:string[]){
+  const c=all.find(x=>x.entity_id===id);
+  // Each chosen sensor is itself a picker: choosing another one replaces it in place.
+  const ids=[id,...all.filter(x=>!selected.includes(x.entity_id)).map(x=>x.entity_id)];
+  return html`<div class="choice">${this.pickerTag?html`<div class="chosen">${this.selector(key,ids,id,labels[key]===labels.windows?'Ouvrant':labels[key],v=>this.replace(key,id,v))}</div>`:html`<strong>${c?.name??id}</strong>`}
+   <span>${c?measurement(c)+' · '+this.where(c):'Capteur introuvable ou incompatible · choisissez-en un autre'}</span>${this.proposed.includes(id)?html`<span>Proposé par Niak · gardez-le, changez-le ou retirez-le</span>`:nothing}${c?.reference?html`<span>Référence de cette pièce dans Home Assistant</span>`:nothing}${c?this.warnings(c,key,true):nothing}${key==='windows'?this.openingDetails(id):nothing}<button class="link" @click=${()=>this.clear(key,id)}>Retirer</button></div>`;
  }
  private openingDetails(id:string){const m=this.draft!.openings[id]??defaultOpening();return html`<div class="opening">
   <label>Exposition<select @change=${(e:Event)=>this.setOpening(id,{exposure:(e.target as HTMLSelectElement).value||null})}><option value="" ?selected=${!m.exposure}>Je ne sais pas</option>${exposures.map(([v,l])=>html`<option value=${v} ?selected=${m.exposure===v}>${l}</option>`)}</select></label>
@@ -143,10 +163,10 @@ export class ComfortSetup extends LitElement {
   const where=this.exteriorDraft?'dans vos pièces extérieures':room?.area_id?'dans la pièce '+this.areaName(room.area_id):'';
   return html`<section class="field" aria-label=${labels[key]}><div class="field-top"><h3>${labels[key]}</h3><span>${key==='indoor_temperature'?'Obligatoire':'Facultatif'}</span></div><p class="hint">${help[key]}</p>
    ${key==='windows'&&selected.length?html`<p class="hint">L’exposition est le côté vers lequel regarde l’ouvrant. Elle permet de savoir quand le soleil y entre.</p>`:nothing}
-   ${selected.map(id=>{const c=all.find(x=>x.entity_id===id);return html`<div class="choice"><strong>${c?.name??id}</strong><span>${c?measurement(c)+' · '+this.where(c):'Capteur indisponible ou incompatible · à remplacer'}</span>${this.proposed.includes(id)?html`<span>Proposé par Niak · gardez-le ou retirez-le</span>`:nothing}${c?.reference?html`<span>Référence de cette pièce dans Home Assistant</span>`:nothing}${c?this.warnings(c,key,true):nothing}${key==='windows'?this.openingDetails(id):nothing}<button class="link" @click=${()=>this.clear(key,id)}>Retirer</button></div>`;})}
+   ${selected.map(id=>this.chosen(key,id,all,selected))}
    ${canAdd&&proposals.length?html`<p class="hint strong">${proposals.length===1?'Trouvé '+where:'Trouvés '+where+' : choisissez '+(multiple.has(key)?'ceux qui conviennent':'celui qui convient')}</p><div class="candidates">${proposals.slice(0,5).map(c=>this.candidateRow(c,key))}</div>`:nothing}
    ${canAdd&&!proposals.length&&!selected.length?html`<p class="notice">${where?'Rien trouvé '+where+'.':'Pièce libre : choisissez le capteur ci-dessous.'}${where?' Vous pouvez en choisir un ailleurs ci-dessous.':''}</p>`:nothing}
-   ${canAdd||!multiple.has(key)?this.picker(key,all,selected):nothing}
+   ${canAdd?this.picker(key,all,selected):nothing}
    ${key!=='indoor_temperature'&&!selected.length?html`<button class="link" @click=${()=>{this.clear(key);this.saved=labels[key]+' : laissé vide pour l’instant.';}}>Continuer sans</button>`:nothing}
    ${this.exteriorDraft?.[key]?.adapter==='atmo_daily'?html`<label>Prudence à partir du niveau<select @change=${(e:Event)=>{this.exteriorDraft={...this.exteriorDraft!,[key]:{...this.exteriorDraft![key],block_from:Number((e.target as HTMLSelectElement).value)}};}}>${['Moyen','Dégradé','Mauvais','Très mauvais','Extrêmement mauvais'].map((label,i)=>html`<option value=${i+2} ?selected=${(this.exteriorDraft![key].block_from??4)===i+2}>${label}</option>`)}</select></label><p class="hint">C’est votre préférence de prudence, pas une consigne sanitaire.</p>`:nothing}
   </section>`;
