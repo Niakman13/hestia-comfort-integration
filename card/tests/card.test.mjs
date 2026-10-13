@@ -38,6 +38,12 @@ test('an airing underway keeps the measured need and red situation',()=>{
   const v=fixtures.find(f=>f.id==='expired').view;
   assert.equal(summary(v)[0],'L’aération est en cours');assert.equal(v.assessment.level,'urgent');
 });
+test('an incomplete bilan names the measure that is out of date',()=>{
+  const v=fresh();v.assessment={...v.assessment,reason:'incomplete_data',level:'neutral',action:'unknown',partial:true,missing:['pollution']};
+  v.observations.pollution={value:null,quality:'stale',source:'sensor.atmo',received_at:null,detail:'expired',unit:null};
+  const [title,body]=summary(v);
+  assert.equal(title,'Une mesure n’est pas à jour');assert.match(body,/^Qualité de l’air dehors : /);
+});
 test('late old-room callbacks and pending subscriptions cannot leak',async()=>{
   let finish,oldCallback,newCallback,removed=0,shown=[];
   const old={subscribeMessage:async cb=>{oldCallback=cb;return await new Promise(resolve=>finish=resolve);}};

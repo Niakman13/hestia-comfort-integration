@@ -90,6 +90,16 @@ class WorkspaceTests(AdapterFixture):
         r=exterior_reading(self.hass.states.get('sensor.atmo_day'),'pollution',{**spec,'block_from':2},now=self.now,max_age=1800)
         self.assertIn('pollution',assess({'indoor_temperature':ti,'outdoor_temperature':te,'rain':rain,'pollution':r}).constraints)
 
+    async def test_atmo_index_published_yesterday_still_covers_today(self):
+        local=dt_util.as_local(self.now).replace(hour=0,minute=5)
+        def reading(published):
+            self.register('sensor.atmo_day',None,area=None,value='2',platform='atmofrance',
+                attrs={'Libellé':'Moyen','Date de mise à jour':published.isoformat()})
+            spec={'entity_id':'sensor.atmo_day','adapter':'atmo_daily','block_from':4}
+            return exterior_reading(self.hass.states.get('sensor.atmo_day'),'pollution',spec,now=local,max_age=1800)
+        self.assertEqual(reading(local-timedelta(hours=9)).quality,'estimated')
+        self.assertEqual(reading(local-timedelta(days=2)).quality,'stale')
+
     async def test_home_save_is_explicit_and_room_preservation_is_real(self):
         self.hass.config_entries._entries[self.entry.entry_id]=self.entry
         before=deepcopy(dict(self.entry.data))

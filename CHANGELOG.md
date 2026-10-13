@@ -1,3 +1,8 @@
+## 0.5.0-beta.3 — Indice ATMO du matin
+
+- L’indice ATMO du jour, publié la veille, est de nouveau pris en compte le matin : fini « Information incomplète » entre minuit et la mise à jour d’ATMO.
+- Quand une mesure n’est pas à jour, la carte dit laquelle (« Qualité de l’air dehors : ne répond pas ou est trop ancienne »).
+
 ## 0.5.0-beta.2 — Supprimer une pièce
 
 - Une pièce peut être supprimée depuis son assistant (« Supprimer cette pièce », avec confirmation).

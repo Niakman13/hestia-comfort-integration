@@ -32,7 +32,10 @@ def exterior_reading(state, key, spec, *, now, max_age):
         reported = dt_util.parse_datetime(stamp) if isinstance(stamp, str) else None
         if not reported or not reported.tzinfo or label not in labels:
             return Reading(None, "unknown", source=entity_id, detail="invalid_atmo_index")
-        if reported > now or dt_util.as_local(reported).date() != dt_util.as_local(now).date():
+        # Today's index is published the day before (early afternoon), so yesterday's
+        # publication still covers this morning; anything older is a past day's index.
+        age_days = (dt_util.as_local(now).date() - dt_util.as_local(reported).date()).days
+        if reported > now or age_days not in (0, 1):
             return Reading(None, "stale", source=entity_id, received_at=reported.isoformat(), detail="expired")
         # A daily regional forecast can flag a configured precaution, but never prove
         # that the air at these windows is currently suitable for ventilation.
