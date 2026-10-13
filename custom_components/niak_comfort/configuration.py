@@ -148,7 +148,8 @@ class Configuration:
                 c = candidate(self.hass, entity_id, key, area_id, include_legacy=True)
                 if not c:
                     raise ValueError("Capteur incompatible ou retiré : " + entity_id)
-                if c["warnings"]:
+                # Exterior sources kept by an older room are not shown in the page: never ask to confirm them.
+                if c["warnings"] and key not in OUTDOOR:
                     warnings.append({"key": key, "entity_id": entity_id, "warnings": c["warnings"]})
             if key != "windows":
                 cleaned_sources[key] = value
