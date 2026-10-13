@@ -80,7 +80,10 @@
           "optional_air_change": "Renouvellement d’air facultatif",
           "gust_open_windows": "Rafales : fermer",
           "short_air_change": "Aération courte",
-          "sun_entering": "Soleil qui entre"
+          "sun_entering": "Soleil qui entre",
+          "rain_soon": "Pluie imminente",
+          "precool_possible": "Pré-rafraîchir la nuit",
+          "precool_later": "Pré-rafraîchir plus tard"
         }
       },
       "heating_action": {

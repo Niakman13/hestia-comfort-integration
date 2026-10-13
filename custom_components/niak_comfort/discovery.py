@@ -4,11 +4,11 @@ from homeassistant.helpers import area_registry as ar, device_registry as dr, en
 from .const import OUTDOOR_AREAS, SOURCES
 
 INDOOR = ("indoor_temperature", "indoor_humidity", "co2", "windows", "heating")
-OUTDOOR = ("outdoor_temperature", "outdoor_humidity", "rain", "wind_gust", "solar", "pollution")
+OUTDOOR = ("outdoor_temperature", "outdoor_humidity", "rain", "wind_gust", "wind_bearing", "solar", "pollution")
 CLASSES = {"temperature": "temperature", "humidity": "humidity", "co2": "carbon_dioxide",
-           "wind": "wind_speed", "irradiance": "irradiance"}
+           "wind": "wind_speed", "irradiance": "irradiance", "bearing": "wind_direction"}
 UNITS = {"temperature": ("°C", "°F", "K"), "humidity": ("%",), "co2": ("ppm",),
-         "wind": ("km/h", "m/s", "mph", "kn", "ft/s"), "irradiance": ("W/m²",)}
+         "wind": ("km/h", "m/s", "mph", "kn", "ft/s"), "irradiance": ("W/m²",), "bearing": ("°",)}
 
 
 def outdoor_area(hass, area_id):
@@ -34,6 +34,11 @@ def provenance(hass, entity_id):
         external = state.attributes.get("external_sensor") if state else None
         current = external if isinstance(external, str) else None
     return chain
+
+
+def niak_weather(entry, key):
+    """A Niak Weather entity, recognised by its stable unique id, never by its name."""
+    return entry.platform == "niak_weather" and (entry.unique_id or "").endswith("_" + key)
 
 
 def atmo_daily(hass, entry, state):
@@ -66,6 +71,8 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
     elif key == "rain":
         if domain == "sensor" and device_class == "precipitation_intensity" and attrs.get("unit_of_measurement") in ("mm/h", "in/h"):
             adapter = "rain_rate"
+        elif domain == "binary_sensor" and niak_weather(entry, "pluie_en_cours"):
+            adapter = "binary"  # Niak Weather's own « it is raining now »
         elif include_legacy and domain == "binary_sensor" and device_class not in ("problem", "battery", "connectivity"):
             adapter = "binary"
         else:
@@ -73,6 +80,8 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
     elif key == "pollution":
         if atmo_daily(hass, entry, state):
             adapter = "atmo_daily"
+        elif domain == "sensor" and niak_weather(entry, "qualite_air"):
+            adapter = "niak_index"  # Niak Weather's Atmo index of the day, 1 to 6
         elif include_legacy and domain == "binary_sensor" and device_class not in ("problem", "battery", "connectivity"):
             adapter = "binary"
         else:
@@ -105,7 +114,7 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
             warnings.append("outdoor_role")
     if adapter == "binary":
         warnings.append("binary_meaning")
-    if adapter == "atmo_daily":
+    if adapter in ("atmo_daily", "niak_index"):
         warnings.append("daily_forecast")
     area = ar.async_get(hass).async_get_area(area_id) if area_id else None
     reference = area and ((key == "indoor_temperature" and area.temperature_entity_id == entity_id)

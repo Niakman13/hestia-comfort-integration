@@ -11,7 +11,7 @@
 
 Le confort de chaque pièce, expliqué : ouvrir, fermer, attendre ou ne rien faire, et pourquoi. Une seule intégration contient le moteur, la page de configuration **Niak Confort** et la carte.
 
-**Version 0.4.0-beta.4 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
+**Version 0.5.0-beta.1 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
 
 ## Installation
 
@@ -35,7 +35,11 @@ La carte est incluse : rien à déclarer dans les ressources. L’ancien dépôt
 
 ## Ce que Niak conseille
 
-Trop chaud, trop froid, air à renouveler (CO₂), air trop humide : Niak compare dedans et dehors et dit si ouvrir aide. Il conseille de fermer les ouvrants exposés à la pluie (pas ceux qui sont abrités), de ne rien laisser ouvert au-delà de 45 km/h de rafales, de limiter l’aération quand il gèle ou que le chauffage tourne (une aération courte reste conseillée si le CO₂ est élevé), et signale la fenêtre ouverte par laquelle le soleil chauffe la pièce. Tous les seuils se règlent dans les réglages avancés de chaque pièce.
+Trop chaud, trop froid, air à renouveler (CO₂), air trop humide : Niak compare dedans et dehors et dit si ouvrir aide. Il conseille de fermer les ouvrants exposés à la pluie (pas ceux qui sont abrités), de ne rien laisser ouvert au-delà de 45 km/h de rafales, de limiter l’aération quand il gèle ou que le chauffage tourne (une aération courte reste conseillée si le CO₂ est élevé), et signale la fenêtre ouverte par laquelle le soleil chauffe la pièce. Avec l’exposition des ouvrants et la direction du vent, il dit **quelles fenêtres ouvrir** (au vent et sous le vent) pour faire traverser l’air, et repère la pluie poussée sous un avant-toit. Tous les seuils se règlent dans les réglages avancés de chaque pièce.
+
+## Avec Niak Weather
+
+Si [Niak Weather](https://github.com/Niakman13/niak-weather-integration) (2.1.0b1 ou plus récent) est installé, la page de l’extérieur propose de reprendre sa station en un clic. Niak Confort lit alors aussi ses alertes et ses prévisions : orage, vigilance orange ou rouge, pluie qui arrive (« refermez avant la pluie »), créneau d’ouverture (« ouvrez vers 21 h, vent d’ouest ») et pré-rafraîchissement la nuit avant une journée chaude.
 
 Une mesure absente reste inconnue : aucune valeur de remplacement. Si la pluie ou la qualité de l’air ne sont pas suivies, Niak conseille quand même et le précise sur la carte.
 

@@ -17,11 +17,12 @@ export interface Assessment {
   needs:string[]; constraints:string[]; opportunities:string[]; partial:boolean; missing:string[];
   heating_action:string; indoor_absolute_humidity:number|null; outdoor_absolute_humidity:number|null;
   temperature_delta:number|null; coordination:string;
-  openings?:Opening[]; sun?:{elevation:number;azimuth:number}|null; unverified?:string[];
+  openings?:Opening[]; sun?:{elevation:number;azimuth:number}|null; unverified?:string[]; wind_bearing?:number|null; crossing?:string|null; open_first?:string[];
+  slot?:{kind:'open'|'close';time:string;temperature:number;wind_bearing:number|null}|null; rain_soon_minutes?:number|null;
 }
 export interface Opening {
   entity_id:string; open:boolean|null; exposure:string|null; kind:string; sheltered:boolean;
-  sun_share:number; sun_wm2:number|null; flags:string[];
+  sun_share:number; sun_wm2:number|null; wind_side?:string|null; flags:string[];
 }
 export interface View {
   version:1; entry_id:string; area_id:string|null; title:string; computed_at:string;

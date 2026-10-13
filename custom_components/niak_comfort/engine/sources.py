@@ -74,9 +74,11 @@ def normalize(kind: str, value: object, unit: str | None = None, *,
             bounds = (0, 500)
         elif kind == "irradiance" and unit == "W/m²":
             bounds = (0, 2000)
+        elif kind == "bearing" and unit == "°":
+            bounds = (0, 360)
         else:
             return invalid("incompatible_unit")
         if not bounds[0] <= result <= bounds[1]:
             return invalid("out_of_range")
-    canonical_unit = {"temperature": "°C", "humidity": "%", "co2": "ppm", "wind": "km/h", "irradiance": "W/m²"}.get(kind)
+    canonical_unit = {"temperature": "°C", "humidity": "%", "co2": "ppm", "wind": "km/h", "irradiance": "W/m²", "bearing": "°"}.get(kind)
     return Reading(result, "valid", source, stamp, unit=canonical_unit)

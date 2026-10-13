@@ -7,6 +7,7 @@ import json
 
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers import area_registry as ar
+from . import weather_link
 from .const import DOMAIN, OUTDOOR_AREAS, SOURCES
 from .discovery import INDOOR, OUTDOOR, candidate, catalog, overview, suggestions
 from .engine.assessment import EXPOSURES, KINDS, Settings
@@ -55,7 +56,7 @@ class Configuration:
             entries.append({"entry_id": e.entry_id, "title": e.title, "loaded": e.state.value == "loaded", "config": config})
         areas = [{"area_id": a.id, "name": a.name, "outdoor": a.name.strip().casefold() in OUTDOOR_AREAS}
                  for a in ar.async_get(self.hass).areas.values()]
-        return {"version": 1, "revision": self.revision(), "home": {"sources": self.home_sources(), "configured": bool(self.home.get("configured")), "acknowledged": self.home.get("acknowledged", [])}, "rooms": entries, "areas": sorted(areas, key=lambda a: (a["name"].casefold() != "salon", a["name"].casefold()))}
+        return {"version": 1, "revision": self.revision(), "home": {"sources": self.home_sources(), "configured": bool(self.home.get("configured")), "acknowledged": self.home.get("acknowledged", []), "weather": self.home.get("weather")}, "niak_weather": weather_link.status(self.hass), "rooms": entries, "areas": sorted(areas, key=lambda a: (a["name"].casefold() != "salon", a["name"].casefold()))}
 
     def discover(self, area_id=None, entry_id=None):
         if area_id and not ar.async_get(self.hass).async_get_area(area_id):
@@ -74,6 +75,17 @@ class Configuration:
         candidates = catalog(self.hass, area_id, selected, indoor_ids)
         return {"version": 1, "revision": self.revision(), "candidates": candidates,
                 "suggestions": suggestions(candidates, area_id) if area_id else {}}
+
+    def weather_proposal(self, entry_id=None):
+        """Niak Weather's station as exterior sources, ready for the exterior page."""
+        found = weather_link.exterior(self.hass, entry_id)
+        if not found:
+            raise ValueError("Niak Weather n’a pas de lieu disponible.")
+        sources = {}
+        for key, entity_id in found["proposals"].items():
+            if c := candidate(self.hass, entity_id, key):
+                sources[key] = {"entity_id": entity_id, "adapter": c["adapter"], **({"block_from": 4} if c["adapter"] == "niak_index" else {})}
+        return {"entry_id": found["entry_id"], "title": found["title"], "sources": sources}
 
     def overview(self):
         used = {{**e.data, **e.options}.get("area_id") for e in self.entries()}
@@ -95,13 +107,18 @@ class Configuration:
                 if not c or spec.get("adapter") != c["adapter"]:
                     raise ValueError("Source extérieure incompatible : " + key)
                 threshold = spec.get("block_from", 4)
-                if c["adapter"] == "atmo_daily" and (isinstance(threshold, bool) or not isinstance(threshold, int) or not 2 <= threshold <= 6):
+                daily = c["adapter"] in ("atmo_daily", "niak_index")
+                if daily and (isinstance(threshold, bool) or not isinstance(threshold, int) or not 2 <= threshold <= 6):
                     raise ValueError("Choisissez un niveau ATMO entre Moyen et Extrêmement mauvais.")
                 cleaned["sources"][key] = {"entity_id": c["entity_id"], "adapter": c["adapter"]}
-                if c["adapter"] == "atmo_daily":
+                if daily:
                     cleaned["sources"][key]["block_from"] = threshold
                 if c["warnings"]:
                     warnings.append({"key": key, "entity_id": c["entity_id"], "warnings": c["warnings"]})
+            weather = payload.get("weather")
+            if weather is not None and weather not in {p["entry_id"] for p in weather_link.status(self.hass)["places"]}:
+                raise ValueError("Ce lieu Niak Weather n’est plus disponible.")
+            cleaned["weather"] = weather
             return cleaned, warnings
         area_id = payload.get("area_id") or None
         area = ar.async_get(self.hass).async_get_area(area_id) if isinstance(area_id, str) else None

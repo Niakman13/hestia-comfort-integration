@@ -13,6 +13,7 @@ from .engine.assessment import Opening, Settings, Sun, assess
 from .engine.sources import normalize, Reading
 from .configuration import DATA_CONFIG
 from .exterior import exterior_reading
+from . import weather_link
 
 
 class ComfortCoordinator(DataUpdateCoordinator):
@@ -34,6 +35,9 @@ class ComfortCoordinator(DataUpdateCoordinator):
         ids.discard("")
         if ids:
             self.config_entry.async_on_unload(async_track_state_change_event(self.hass, sorted(ids), self._changed))
+        # Linked to Niak Weather: recompute when its forecasts or alerts change.
+        if (link := weather_link.api(self.hass)) and (place := self._weather_place()):
+            self.config_entry.async_on_unload(link.add_listener(place, lambda: self.hass.async_create_task(self.async_request_refresh())))
         await self.async_config_entry_first_refresh()
 
     @callback
@@ -65,12 +69,17 @@ class ComfortCoordinator(DataUpdateCoordinator):
         openings = {e: Opening(**{"sheltered": sheltered, **declared.get(e, {})}) for e in windows}
         for entity_id in windows:
             readings[f"window:{entity_id}"] = self._reading(entity_id, "window", now)
-        self.previous = assess(readings, self.settings, self.previous, openings, self._sun())
+        outlook = weather_link.outlook(self.hass, self._weather_place())
+        self.previous = assess(readings, self.settings, self.previous, openings, self._sun(), outlook, now)
         return {"version": VIEW_VERSION, "entry_id": self.entry_id,
                 "area_id": self.config.get("area_id"), "title": self.config.get("name"),
                 "computed_at": now.isoformat(), "assessment": self.previous.to_dict(),
                 "observations": {k: asdict(v) for k, v in readings.items()},
                 "names": {e: (state.name if (state := self.hass.states.get(e)) else e) for e in windows}}
+
+    def _weather_place(self):
+        home = self.home_configuration.home if self.home_configuration else {}
+        return home.get("weather") if home.get("configured") else None
 
     def _sun(self):
         state = self.hass.states.get("sun.sun")

@@ -14,7 +14,7 @@ def async_setup_websocket(hass):
     websocket_api.async_register_command(hass, ws_entries)
     websocket_api.async_register_command(hass, ws_subscribe)
     websocket_api.async_register_command(hass, ws_home_subscribe)
-    for command in (ws_configuration, ws_discover, ws_overview, ws_validate, ws_save):
+    for command in (ws_configuration, ws_discover, ws_overview, ws_weather, ws_validate, ws_save):
         websocket_api.async_register_command(hass, command)
 
 
@@ -147,6 +147,17 @@ async def ws_discover(hass, connection, msg):
 async def ws_overview(hass, connection, msg):
     service = await get_configuration(hass)
     connection.send_result(msg["id"], service.overview())
+
+
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/weather_proposal", vol.Optional("entry_id"): str})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_weather(hass, connection, msg):
+    service = await get_configuration(hass)
+    try:
+        connection.send_result(msg["id"], service.weather_proposal(msg.get("entry_id")))
+    except ValueError as err:
+        connection.send_error(msg["id"], "not_available", str(err))
 
 
 @websocket_api.websocket_command({vol.Required("type"): "niak_comfort/validate_config", vol.Required("config"): dict, vol.Optional("home", default=False): bool})

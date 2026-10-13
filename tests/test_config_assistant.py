@@ -160,3 +160,55 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         self.assertEqual(found['Bureau']['temperatures'], 2)
         self.hass.config_entries._entries[self.entry.entry_id] = self.entry
         self.assertNotIn('salon', [a['area_id'] for a in self.service.overview()['areas']])
+
+    def link_weather(self, sensors, hours=()):
+        """A Niak Weather place as its published interface v1 presents it."""
+        listeners = []
+        class Api:
+            version = 1
+            def places(self): return [{"entry_id": "nw1", "title": "Gardanne"}]
+            def station(self, entry_id=None): return {"entry_id": "nw1", "title": "Gardanne", "sensors": sensors}
+            def hourly(self, entry_id=None): return list(hours)
+            def add_listener(self, entry_id, cb): listeners.append(cb); return lambda: listeners.remove(cb)
+        self.hass.data['niak_weather_api'] = Api()
+        return listeners
+
+    def niak_entity(self, domain, key, object_id, state, attrs=None):
+        er.async_get(self.hass).async_get_or_create(domain, 'niak_weather', f'nw1_{key}', suggested_object_id=object_id)
+        self.hass.states.async_set(f'{domain}.{object_id}', state, attrs or {})
+
+    async def test_niak_weather_station_fills_the_exterior(self):
+        self.register('sensor.gw_out', 'temperature', area='exterieur')
+        self.register('sensor.gw_dir', 'wind_direction', area='exterieur', unit='°', value='270')
+        self.link_weather({'temperature': 'sensor.gw_out', 'wind_bearing': 'sensor.gw_dir', 'pressure': 'sensor.p'})
+        self.niak_entity('binary_sensor', 'pluie_en_cours', 'niak_weather_pluie_en_cours', 'off')
+        self.niak_entity('sensor', 'qualite_air', 'niak_weather_qualite_air', '2')
+        found = self.service.weather_proposal()
+        self.assertEqual(found['title'], 'Gardanne')
+        self.assertEqual(found['sources']['outdoor_temperature'], {'entity_id': 'sensor.gw_out', 'adapter': 'direct'})
+        self.assertEqual(found['sources']['wind_bearing']['entity_id'], 'sensor.gw_dir')
+        self.assertEqual(found['sources']['rain'], {'entity_id': 'binary_sensor.niak_weather_pluie_en_cours', 'adapter': 'binary'})
+        self.assertEqual(found['sources']['pollution']['adapter'], 'niak_index')
+        cleaned, _ = self.service.validate({'sources': found['sources'], 'weather': 'nw1'}, home=True)
+        self.assertEqual(cleaned['weather'], 'nw1')
+        with self.assertRaises(ValueError):
+            self.service.validate({'sources': {}, 'weather': 'gone'}, home=True)
+
+    async def test_without_niak_weather_nothing_is_invented(self):
+        self.assertFalse(self.service.snapshot()['niak_weather']['installed'])
+        with self.assertRaises(ValueError):
+            self.service.weather_proposal()
+        self.hass.data['niak_weather_api'] = type('Old', (), {'version': 2})()
+        self.assertFalse(self.service.snapshot()['niak_weather']['installed'])
+
+    async def test_outlook_reads_niak_weather_by_stable_keys(self):
+        from custom_components.niak_comfort import weather_link
+        self.link_weather({}, hours=[{'time': '2026-10-14T21:00:00+00:00', 'temperature': 18}])
+        self.niak_entity('binary_sensor', 'orage', 'niak_weather_orage', 'on')
+        self.niak_entity('sensor', 'vigilance', 'niak_weather_vigilance', 'orange')
+        self.niak_entity('sensor', 'next_rain', 'niak_weather_pluie_dans', '0.5')
+        self.niak_entity('sensor', 'maximale_demain', 'niak_weather_maximale_demain', '31.2')
+        found = weather_link.outlook(self.hass, 'nw1')
+        self.assertEqual((found['storm'], found['vigilance'], found['rain_in_hours'], found['tomorrow_max']), (True, 2, 0.5, 31.2))
+        self.assertEqual(len(found['hours']), 1)
+        self.assertEqual(weather_link.outlook(self.hass, None), {})
