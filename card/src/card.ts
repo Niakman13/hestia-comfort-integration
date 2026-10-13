@@ -13,7 +13,7 @@ let instances=0;
 const problems:Record<string,[string,string]>={
   choose_entry:['Choisissez une pièce','Plusieurs pièces Niak Comfort sont configurées. Choisissez celle de cette carte dans ses réglages.'],
   not_configured:['Ajoutez Niak Comfort','Ouvrez Niak Confort dans la barre latérale pour configurer votre première pièce après installation de l’intégration.'],
-  not_found:['Pièce introuvable','Cette pièce n’est pas chargée. Vérifiez l’intégration ou choisissez une autre pièce dans les réglages de la carte.'],
+  not_found:['Pièce introuvable','Cette pièce a été supprimée ou n’est pas chargée. Choisissez une autre pièce dans les réglages de la carte.'],
   unknown_command:['Installez la version compatible de l’intégration','La carte nécessite l’intégration Niak Comfort avec la vue v1. Installez ou mettez à jour les deux fichiers ensemble, puis redémarrez Home Assistant.'],
   version:['Vue incompatible','La réponse reçue ne correspond pas à cette carte. Mettez à jour la carte et l’intégration ensemble.'],
   stale:['Le conseil n’est plus actuel','Le lien n’a pas fourni de résultat récent. Les anciennes mesures sont retirées jusqu’au retour des mises à jour.'],

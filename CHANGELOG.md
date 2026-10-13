@@ -1,3 +1,9 @@
+## 0.5.0-beta.2 — Supprimer une pièce
+
+- Une pièce peut être supprimée depuis son assistant (« Supprimer cette pièce », avec confirmation).
+- Vos capteurs et appareils Home Assistant ne sont pas touchés.
+- La pièce Home Assistant supprimée est de nouveau proposée dans Mon logement.
+
 ## 0.5.0-beta.1 — Niak Weather et le vent
 
 - Niak Weather est détecté : un clic reprend sa station pour l’extérieur (avec Niak Weather 2.1.0b1 ou plus récent).

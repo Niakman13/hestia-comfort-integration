@@ -14,7 +14,7 @@ def async_setup_websocket(hass):
     websocket_api.async_register_command(hass, ws_entries)
     websocket_api.async_register_command(hass, ws_subscribe)
     websocket_api.async_register_command(hass, ws_home_subscribe)
-    for command in (ws_configuration, ws_discover, ws_overview, ws_weather, ws_validate, ws_save):
+    for command in (ws_configuration, ws_discover, ws_overview, ws_weather, ws_validate, ws_save, ws_remove):
         websocket_api.async_register_command(hass, command)
 
 
@@ -183,6 +183,19 @@ async def ws_save(hass, connection, msg):
     try:
         result = await service.save(msg["config"], msg["revision"], msg.get("entry_id"), home=msg["home"], acknowledged=msg["acknowledged"])
     except (ValueError, TypeError) as err:
+        connection.send_error(msg["id"], "invalid_config", str(err))
+    else:
+        connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/remove_room", vol.Required("entry_id"): str, vol.Required("revision"): str})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_remove(hass, connection, msg):
+    service = await get_configuration(hass)
+    try:
+        result = await service.remove(msg["entry_id"], msg["revision"])
+    except ValueError as err:
         connection.send_error(msg["id"], "invalid_config", str(err))
     else:
         connection.send_result(msg["id"], result)
