@@ -37,6 +37,20 @@ jobs:
       - run: npm run validate
         working-directory: frontend
       - run: git diff --exit-code -- custom_components/niak_comfort/frontend/panel.js
+  card:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: card/package-lock.json
+      - run: npm ci
+        working-directory: card
+      - run: npm run validate
+        working-directory: card
+      - run: git diff --exit-code -- custom_components/niak_comfort/frontend/niak-comfort-card.js
   hassfest:
     runs-on: ubuntu-latest
     steps:

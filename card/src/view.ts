@@ -1,0 +1,83 @@
+import {ACTIONS, LEVELS, type View, type Reading} from './types';
+const record = (x:unknown):x is Record<string,unknown> => !!x && typeof x==='object' && !Array.isArray(x);
+const strings = (x:unknown):x is string[] => Array.isArray(x) && x.every(i=>typeof i==='string');
+const finiteOrNull = (x:unknown) => x===null || typeof x==='number' && Number.isFinite(x);
+export function isView(x:unknown):x is View {
+  if(!record(x) || x.version!==1 || typeof x.entry_id!=='string' || typeof x.title!=='string'
+    || !(x.area_id===null||typeof x.area_id==='string') || typeof x.computed_at!=='string' || !Number.isFinite(Date.parse(x.computed_at))
+    || !record(x.assessment) || !record(x.observations)) return false;
+  const a=x.assessment;
+  if(!ACTIONS.includes(a.action as never)||!LEVELS.includes(a.level as never)||typeof a.reason!=='string'||typeof a.partial!=='boolean'
+    || !['needs','constraints','opportunities','missing'].every(k=>strings(a[k]))
+    || !['indoor_absolute_humidity','outdoor_absolute_humidity','temperature_delta'].every(k=>finiteOrNull(a[k]))
+    || typeof a.heating_action!=='string'||typeof a.coordination!=='string') return false;
+  return Object.values(x.observations).every(r=>record(r) && ['valid','unknown','stale','estimated'].includes(r.quality as string)
+    && (r.value===null||typeof r.value==='boolean'||typeof r.value==='string'||typeof r.value==='number'&&Number.isFinite(r.value))
+    && (r.source===null||typeof r.source==='string') && (r.received_at===null||typeof r.received_at==='string'&&Number.isFinite(Date.parse(r.received_at)))
+    && (r.detail===null||typeof r.detail==='string') && (r.unit===null||typeof r.unit==='string')
+    && !(r.quality==='unknown'&&r.value!==null));
+}
+export const numeric = (r:Reading|undefined):number|null => r?.quality==='valid'&&typeof r.value==='number'&&Number.isFinite(r.value)?r.value:null;
+export const number = (v:number|null) => v===null?'—':new Intl.NumberFormat('fr-FR',{maximumFractionDigits:1}).format(v);
+export const levelLabels = {calm:'Tout va bien',benefit:'Potentiel détecté',action:'Geste conseillé',urgent:'Attention nécessaire',neutral:'Information incomplète'};
+export const needs:Record<string,string> = {air:'Renouveler l’air',cool:'Rafraîchir',heat:'Préserver la chaleur',dry:'Réduire l’humidité'};
+export const heatingLabels:Record<string,string> = {heating:'Chauffe en cours',idle:'Au repos',off:'Arrêté',cooling:'Rafraîchit',unknown:'Action indisponible',not_configured:'Non configuré'};
+export const sourceLabels:Record<string,string> = {indoor_temperature:'Température intérieure',outdoor_temperature:'Température extérieure',indoor_humidity:'Humidité intérieure',outdoor_humidity:'Humidité extérieure',co2:'CO₂',rain:'Pluie sur les ouvrants',wind_gust:'Rafales',solar:'Ensoleillement',pollution:'Contrainte d’air extérieur',heating:'Chauffage observé'};
+export const constraintLabels:Record<string,string> = {rain:'Pluie sur les ouvrants exposés',gust:'Rafales trop fortes',pollution:'Air extérieur défavorable',frost:'Gel dehors',heating_running:'Chauffage en marche'};
+export const exposureLabels:Record<string,string> = {N:'nord',NE:'nord-est',E:'est',SE:'sud-est',S:'sud',SO:'sud-ouest',O:'ouest',NO:'nord-ouest'};
+export const kindLabels:Record<string,string> = {window:'Fenêtre',french:'Porte-fenêtre',skylight:'Vasistas',door:'Porte'};
+export const reasons:Record<string,[string,string]> = {
+  within_comfort:['Vous êtes bien','Les mesures disponibles sont dans vos repères de confort. Cela ne renseigne pas les polluants non mesurés.'],
+  rain_open_windows:['Fermez les ouvrants exposés','La pluie concerne cette pièce et au moins un contact indique une ouverture. Les autres besoins restent visibles.'],
+  opening_blocked:['L’aération doit attendre','Une contrainte extérieure empêche une ouverture favorable. Un besoin intérieur éventuel reste à traiter.'],
+  verify_exterior:['L’extérieur reste à vérifier','Le besoin intérieur est connu. Les conditions manquantes empêchent de confirmer le bénéfice ou les contraintes d’une ouverture.'],
+  air_needed:['Aérez quelques minutes','Le CO₂ mesuré appelle un renouvellement d’air. Surveillez les mesures pour décider de la suite ; aucune durée ne garantit le résultat.'],
+  cooling_possible:['Profitez de la fraîcheur','L’air extérieur est suffisamment plus frais pour aider cette pièce à retrouver votre plage de confort.'],
+  drying_possible:['Un aérage peut assécher','L’air extérieur contient moins d’eau. L’effet dans la pièce dépend du renouvellement réel et reste à suivre.'],
+  exchange_harmful:['Refermez les fenêtres','La comparaison dedans/dehors montre un échange thermique défavorable au confort de cette pièce.'],
+  cooling_unavailable:['Attendez un air plus frais','La pièce a besoin de fraîcheur, mais ouvrir maintenant ne fournit pas un échange suffisamment favorable.'],
+  heat_needed:['Préservez la chaleur','La température intérieure est sous votre repère. Le chauffage reste responsable de sa réponse thermique.'],
+  drying_unavailable:['L’humidité reste à surveiller','Le besoin existe, mais un bénéfice d’assèchement par l’extérieur n’est pas confirmé.'],
+  incomplete_data:['Les mesures restent à vérifier','Certaines informations sont manquantes ou périmées. Aucun chiffre de remplacement ne complète le bilan.'],
+  optional_air_change:['Un renouvellement peut faire du bien','Une aération est une possibilité d’amélioration, sans besoin prioritaire détecté.'],
+  gust_open_windows:['Fermez, le vent est trop fort','Les rafales dépassent votre seuil : rien ne doit rester ouvert.'],
+  short_air_change:['Aérez quelques minutes','De l’air neuf en quelques minutes, pour très peu de confort perdu. Refermez ensuite.'],
+  sun_entering:['Fermez côté soleil','Une fenêtre ouverte reçoit le soleil alors que la pièce a déjà trop chaud : c’est par là que la chaleur entre.'],
+};
+const blockedText:Record<string,[string,string]> = {
+  gust:['Gardez fermé, le vent est fort','Les rafales dépassent votre seuil. L’aération attendra qu’elles retombent.'],
+  frost:['Gardez fermé, il gèle dehors','Une ouverture prolongée refroidirait la pièce sans bénéfice.'],
+  heating_running:['Gardez fermé, le chauffage tourne','Ouvrir maintenant ferait perdre la chaleur produite.'],
+};
+export function summary(v:View):[string,string] {
+  const a=v.assessment;
+  if(a.reason==='incomplete_data'&&numeric(v.observations.indoor_temperature)!==null&&!a.missing.some(k=>!!v.observations[k])) return ['Les mesures connues sont dans vos repères','Les conditions extérieures non configurées restent à vérifier avant d’ouvrir. Ce bilan porte sur les mesures disponibles.'];
+  if(a.action==='ok'&&a.needs.includes('air')) return ['L’aération est en cours','Le CO₂ reste à surveiller : une ouverture observée ne signifie pas que le besoin d’air est résolu.'];
+  if(a.reason==='opening_blocked'){
+    const main=a.constraints.find(k=>k in blockedText);
+    if(a.action==='fermer') return [main==='frost'?'Refermez, il gèle dehors':main==='heating_running'?'Refermez, le chauffage tourne':'Fermez les ouvrants concernés',main?blockedText[main][1]:reasons.opening_blocked[1]];
+    if(main&&!a.constraints.some(k=>k==='rain'||k==='pollution')) return blockedText[main];
+  }
+  if(a.reason==='short_air_change'){
+    const why=a.constraints.includes('frost')?'il gèle dehors':'le chauffage tourne';
+    return [a.action==='ok'?'Aération en cours, pas trop longtemps':'Aérez quelques minutes',`Le CO₂ demande de l’air neuf, mais ${why} : une aération courte suffit.`];
+  }
+  return reasons[a.reason]??['Conseil à vérifier','Cette raison n’est pas reconnue par la carte. Mettez à jour la carte et l’intégration ensemble.'];
+}
+
+export function coverageText(v:View):string {
+  const failed=v.assessment.missing.filter(k=>!!v.observations[k]);
+  const absent=v.assessment.missing.filter(k=>!v.observations[k]);
+  if(failed.length) return 'Mesures à vérifier : '+failed.map(k=>sourceLabels[k]??(k.startsWith('window:')?'Contact de fenêtre':k)).join(' · ');
+  if(absent.length) return 'Bilan limité : '+absent.map(k=>sourceLabels[k]??k).join(' · ')+' non configuré';
+  return 'Sources configurées disponibles';
+}
+export function readingStatus(r:Reading|undefined):string {
+  if(!r) return 'Non configuré';
+  if(r.quality==='stale') return 'Mesure trop ancienne';
+  if(r.detail==='atmo_daily_forecast' && r.quality==='estimated') return 'Indice prévu du jour';
+  if(r.detail==='user_declared' && r.quality==='valid') return 'Déclaré par vous';
+  if(r.quality==='estimated') return 'Estimation';
+  if(r.quality==='valid') return 'Disponible';
+  return r.detail==='incompatible_unit'?'Unité incompatible':r.detail==='out_of_range'?'Valeur hors plage':r.detail==='unknown_action'?'Action non fournie par le chauffage':'Temporairement indisponible';
+}
