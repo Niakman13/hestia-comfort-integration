@@ -10,83 +10,9 @@
           "name": "Nom affiché (facultatif)"
         }
       },
-      "preferences": {
-        "title": "6 · Vos préférences",
-        "description": "Choisissez la plage de température dans laquelle vous vous sentez bien. Les autres réglages restent accessibles ensuite dans Réglages avancés.",
-        "data": {
-          "minimum": "Confort minimum (°C)",
-          "maximum": "Confort maximum (°C)"
-        }
-      },
-      "indoor": {
-        "title": "2 · Le confort intérieur",
-        "description": "Confirmez les mesures de votre pièce. La température est nécessaire ; humidité et CO₂ sont facultatifs. Un champ vide reste vide. Vous pouvez choisir un capteur de toute l’installation.",
-        "data": {
-          "indoor_temperature": "Température intérieure",
-          "indoor_humidity": "Humidité intérieure",
-          "co2": "CO₂"
-        },
-        "data_description": {
-          "indoor_temperature": "Pour évaluer la température de la pièce. Plusieurs candidats peuvent mesurer un appareil plutôt que l’air ambiant.\n\n{indoor_temperature}",
-          "indoor_humidity": "Facultatif. Pour suivre l’humidité de la pièce.\n\n{indoor_humidity}",
-          "co2": "Facultatif. Pour détecter un besoin de renouvellement d’air ; cela ne mesure pas tous les polluants.\n\n{co2}"
-        }
-      },
-      "outdoor": {
-        "title": "3 · Les conditions extérieures",
-        "description": "Ces informations aident à comparer dedans et dehors. Vous pouvez continuer sans elles. Les mesures communes déjà choisies sont proposées ; la pluie doit concerner les fenêtres de cette pièce.",
-        "data": {
-          "outdoor_temperature": "Température extérieure",
-          "outdoor_humidity": "Humidité extérieure",
-          "rain": "Pluie concernant ces ouvrants",
-          "pollution": "Air extérieur défavorable à l’aération"
-        },
-        "data_description": {
-          "outdoor_temperature": "Facultatif. Sans cette mesure, le bénéfice thermique d’une ouverture reste inconnu.\n\n{outdoor_temperature}",
-          "outdoor_humidity": "Facultatif. Avec les températures et l’humidité intérieure, permet de comparer l’eau contenue dans l’air.\n\n{outdoor_humidity}",
-          "rain": "Facultatif. Choisissez un signal binaire : actif signifie pluie sur ces fenêtres. Sans signal, vérifiez dehors avant d’ouvrir.\n\n{rain}",
-          "pollution": "Facultatif. Choisissez un signal binaire : actif signifie aération déconseillée. Un indice ATMO ou une concentration ne convient pas directement.\n\n{pollution}"
-        }
-      },
-      "windows": {
-        "title": "4 · Vos fenêtres",
-        "description": "Les contacts permettent de savoir si vos fenêtres sont ouvertes. Confirmez les contacts détectés et retirez les doublons ou états de thermostat. Sans contact, Niak ne suppose jamais les fenêtres fermées.",
-        "data": {
-          "windows": "Contacts des ouvrants"
-        },
-        "data_description": {
-          "windows": "Facultatif. Retirez les contacts qui ne concernent pas cette pièce.\n\n{windows}"
-        }
-      },
-      "heating": {
-        "title": "5 · Votre chauffage",
-        "description": "Facultatif. Choisissez un équipement pour observer s’il chauffe réellement. Niak ne commande pas le chauffage. Sans équipement, l’observation reste non configurée.",
-        "data": {
-          "heating": "Chauffage (action observée)"
-        },
-        "data_description": {
-          "heating": "Facultatif. L’action réelle doit être fournie par l’équipement ; son mode seul ne suffit pas.\n\n{heating}"
-        }
-      },
-      "review": {
-        "title": "Votre récapitulatif",
-        "description": "**Votre configuration**\n\nTempérature intérieure : {indoor_temperature}\n\nHumidité intérieure : {indoor_humidity}\n\nCO₂ : {co2}\n\nTempérature extérieure : {outdoor_temperature}\n\nHumidité extérieure : {outdoor_humidity}\n\nPluie : {rain}\n\nAir extérieur : {pollution}\n\nFenêtres : {windows}\n\nChauffage : {heating}\n\n{capabilities}",
-        "menu_options": {
-          "finish": "Confirmer la configuration",
-          "indoor": "Confort intérieur",
-          "outdoor": "Conditions extérieures",
-          "windows": "Fenêtres",
-          "heating": "Chauffage observé",
-          "preferences": "Préférences de confort"
-        }
-      },
-      "finish": {
-        "title": "Confirmer votre pièce",
-        "description": "**Votre configuration**\n\nTempérature intérieure : {indoor_temperature}\n\nHumidité intérieure : {indoor_humidity}\n\nCO₂ : {co2}\n\nTempérature extérieure : {outdoor_temperature}\n\nHumidité extérieure : {outdoor_humidity}\n\nPluie : {rain}\n\nAir extérieur : {pollution}\n\nFenêtres : {windows}\n\nChauffage : {heating}\n\n{capabilities}\n\nAprès validation, vous pourrez ajouter une pièce depuis la page de l’intégration avec « Ajouter un service »."
-      },
       "home": {
-        "title": "Votre espace Niak Confort",
-        "description": "Validez pour activer la page Niak Confort dans la barre latérale. Vous y configurerez le Salon, les données extérieures du logement et les autres pièces, avec des propositions expliquées."
+        "title": "Activer Niak Confort",
+        "description": "Validez pour ajouter la page Niak Confort dans la barre latérale. Vous y configurerez le Salon, puis vos autres pièces et l’extérieur du logement, avec des propositions expliquées."
       }
     },
     "error": {
@@ -96,113 +22,15 @@
       "invalid_area": "Choisissez une pièce Home Assistant existante."
     },
     "abort": {
-      "already_configured": "Cette pièce possède déjà une configuration Niak Comfort."
+      "already_configured": "Cette pièce possède déjà une configuration Niak Comfort.",
+      "use_panel": "Niak Confort est déjà activé. Ajoutez et modifiez vos pièces depuis la page Niak Confort de la barre latérale."
     }
   },
   "options": {
     "step": {
-      "preferences": {
-        "title": "Vos préférences",
-        "description": "Choisissez la plage de température dans laquelle vous vous sentez bien. Les autres réglages restent accessibles ensuite dans Réglages avancés.",
-        "data": {
-          "minimum": "Confort minimum (°C)",
-          "maximum": "Confort maximum (°C)"
-        }
-      },
-      "advanced": {
-        "title": "Réglages avancés",
-        "description": "Valeurs initiales reprises des scénarios historiques ; ce ne sont pas des références sanitaires. La fraîcheur mesure la dernière réception Home Assistant. À adapter à la cadence de vos capteurs.",
-        "data": {
-          "humidity_high": "Humidité haute (%)",
-          "co2_potential": "CO₂ potentiel (ppm)",
-          "co2_action": "CO₂ conseil (ppm)",
-          "co2_urgent": "CO₂ attention (ppm)",
-          "temperature_hysteresis": "Hystérésis de température (°C)",
-          "co2_hysteresis": "Hystérésis de CO₂ (ppm)",
-          "humidity_hysteresis": "Hystérésis d’humidité (%)",
-          "cooling_delta": "Écart minimum de fraîcheur (°C)",
-          "drying_delta": "Écart minimum d’eau (g/m³)",
-          "max_age_seconds": "Ancienneté maximum de réception (secondes)"
-        }
-      },
-      "indoor": {
-        "title": "Le confort intérieur",
-        "description": "Confirmez les mesures de votre pièce. La température est nécessaire ; humidité et CO₂ sont facultatifs. Un champ vide reste vide. Vous pouvez choisir un capteur de toute l’installation.",
-        "data": {
-          "indoor_temperature": "Température intérieure",
-          "indoor_humidity": "Humidité intérieure",
-          "co2": "CO₂"
-        },
-        "data_description": {
-          "indoor_temperature": "Pour évaluer la température de la pièce. Plusieurs candidats peuvent mesurer un appareil plutôt que l’air ambiant.\n\n{indoor_temperature}",
-          "indoor_humidity": "Facultatif. Pour suivre l’humidité de la pièce.\n\n{indoor_humidity}",
-          "co2": "Facultatif. Pour détecter un besoin de renouvellement d’air ; cela ne mesure pas tous les polluants.\n\n{co2}"
-        }
-      },
-      "outdoor": {
-        "title": "Les conditions extérieures",
-        "description": "Ces informations aident à comparer dedans et dehors. Vous pouvez continuer sans elles. Les mesures communes déjà choisies sont proposées ; la pluie doit concerner les fenêtres de cette pièce.",
-        "data": {
-          "outdoor_temperature": "Température extérieure",
-          "outdoor_humidity": "Humidité extérieure",
-          "rain": "Pluie concernant ces ouvrants",
-          "pollution": "Air extérieur défavorable à l’aération"
-        },
-        "data_description": {
-          "outdoor_temperature": "Facultatif. Sans cette mesure, le bénéfice thermique d’une ouverture reste inconnu.\n\n{outdoor_temperature}",
-          "outdoor_humidity": "Facultatif. Avec les températures et l’humidité intérieure, permet de comparer l’eau contenue dans l’air.\n\n{outdoor_humidity}",
-          "rain": "Facultatif. Choisissez un signal binaire : actif signifie pluie sur ces fenêtres. Sans signal, vérifiez dehors avant d’ouvrir.\n\n{rain}",
-          "pollution": "Facultatif. Choisissez un signal binaire : actif signifie aération déconseillée. Un indice ATMO ou une concentration ne convient pas directement.\n\n{pollution}"
-        }
-      },
-      "windows": {
-        "title": "Vos fenêtres",
-        "description": "Les contacts permettent de savoir si vos fenêtres sont ouvertes. Confirmez les contacts détectés et retirez les doublons ou états de thermostat. Sans contact, Niak ne suppose jamais les fenêtres fermées.",
-        "data": {
-          "windows": "Contacts des ouvrants"
-        },
-        "data_description": {
-          "windows": "Facultatif. Retirez les contacts qui ne concernent pas cette pièce.\n\n{windows}"
-        }
-      },
-      "heating": {
-        "title": "Votre chauffage",
-        "description": "Facultatif. Choisissez un équipement pour observer s’il chauffe réellement. Niak ne commande pas le chauffage. Sans équipement, l’observation reste non configurée.",
-        "data": {
-          "heating": "Chauffage (action observée)"
-        },
-        "data_description": {
-          "heating": "Facultatif. L’action réelle doit être fournie par l’équipement ; son mode seul ne suffit pas.\n\n{heating}"
-        }
-      },
-      "finish": {
-        "title": "Confirmer votre pièce",
-        "description": "**Votre configuration**\n\nTempérature intérieure : {indoor_temperature}\n\nHumidité intérieure : {indoor_humidity}\n\nCO₂ : {co2}\n\nTempérature extérieure : {outdoor_temperature}\n\nHumidité extérieure : {outdoor_humidity}\n\nPluie : {rain}\n\nAir extérieur : {pollution}\n\nFenêtres : {windows}\n\nChauffage : {heating}\n\n{capabilities}\n\nAprès validation, vous pourrez ajouter une pièce depuis la page de l’intégration avec « Ajouter un service »."
-      },
-      "discover": {
-        "title": "Rechercher des capteurs",
-        "description": "Capteurs proposés :\n\n{detected}\n\nCochez uniquement les propositions à ajouter. Vos choix existants restent conservés. Les catégories permettent aussi de choisir manuellement parmi plusieurs candidats.",
-        "data": {
-          "indoor_temperature": "Température intérieure",
-          "indoor_humidity": "Humidité intérieure",
-          "co2": "CO₂",
-          "windows": "Contacts des ouvrants",
-          "heating": "Chauffage (action observée)"
-        }
-      },
       "init": {
-        "title": "Configurer votre pièce",
-        "description": "Ouvrez Niak Confort dans la barre latérale pour retrouver les pièces, leurs propositions et les données extérieures communes. Ce menu reste disponible pour les réglages classiques.",
-        "menu_options": {
-          "finish": "Confirmer la configuration",
-          "indoor": "Confort intérieur",
-          "outdoor": "Conditions extérieures",
-          "windows": "Fenêtres",
-          "heating": "Chauffage observé",
-          "preferences": "Préférences de confort",
-          "advanced": "Réglages avancés",
-          "discover": "Rechercher des capteurs"
-        }
+        "title": "Configurer dans Niak Confort",
+        "description": "Les pièces, leurs capteurs et l’extérieur se règlent dans {workspace}, depuis la barre latérale."
       }
     },
     "error": {
@@ -249,7 +77,10 @@
           "heat_needed": "Besoin de chaleur",
           "drying_unavailable": "Assèchement indisponible",
           "incomplete_data": "Information incomplète",
-          "optional_air_change": "Renouvellement d’air facultatif"
+          "optional_air_change": "Renouvellement d’air facultatif",
+          "gust_open_windows": "Rafales : fermer",
+          "short_air_change": "Aération courte",
+          "sun_entering": "Soleil qui entre"
         }
       },
       "heating_action": {

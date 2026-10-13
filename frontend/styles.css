@@ -4,3 +4,4 @@
 @media(prefers-reduced-motion:no-preference){button{transition:background-color .15s ease-out}}
 
 :host([data-theme=light]){--nc-accent:#285f87}
+.opening{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:4px 16px;margin:8px 0 4px}.opening label.check{grid-column:1/-1;margin:4px 0}.picker{margin:16px 0 8px}.picker ha-selector,.picker ha-entity-picker{display:block}.strong{font-weight:600;color:var(--primary-text-color)}.free{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-top:12px}.free label{flex:1;min-width:220px;margin:0}.preview{max-width:640px;margin:20px 0}.howto{padding-left:22px}.howto li{margin:6px 0}.start{border:1px solid var(--nc-border);border-radius:12px;padding:4px 20px 20px;margin:20px 0}.busy{position:fixed;bottom:16px;right:16px;margin:0;padding:8px 14px;border-radius:8px;background:var(--nc-surface);border:1px solid var(--nc-border);color:var(--nc-muted);font-size:14px}

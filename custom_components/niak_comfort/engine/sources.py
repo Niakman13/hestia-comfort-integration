@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from datetime import datetime
 import math
 
+WIND_TO_KMH = {"km/h": 1.0, "m/s": 3.6, "mph": 1.609344, "kn": 1.852, "ft/s": 1.09728}
+
 
 @dataclass(frozen=True)
 class Reading:
@@ -67,9 +69,14 @@ def normalize(kind: str, value: object, unit: str | None = None, *,
             bounds = (0, 100)
         elif kind == "co2" and unit == "ppm":
             bounds = (0, 100000)
+        elif kind == "wind" and unit in WIND_TO_KMH:
+            result *= WIND_TO_KMH[unit]
+            bounds = (0, 500)
+        elif kind == "irradiance" and unit == "W/m²":
+            bounds = (0, 2000)
         else:
             return invalid("incompatible_unit")
         if not bounds[0] <= result <= bounds[1]:
             return invalid("out_of_range")
-    canonical_unit = {"temperature": "°C", "humidity": "%", "co2": "ppm"}.get(kind)
+    canonical_unit = {"temperature": "°C", "humidity": "%", "co2": "ppm", "wind": "km/h", "irradiance": "W/m²"}.get(kind)
     return Reading(result, "valid", source, stamp, unit=canonical_unit)
