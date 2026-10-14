@@ -9,3 +9,26 @@
 .summary.compact{display:grid;grid-template-columns:max-content 1fr;gap:10px 20px;align-items:baseline}.summary.compact dt{margin:0}.summary.compact dd{margin:0;color:var(--primary-text-color)}.summary details{margin-top:4px;color:var(--nc-muted);font-size:14px}.summary summary{cursor:pointer;color:var(--nc-accent)}.confirm p{margin:0 0 8px}@media(max-width:600px){.summary.compact{grid-template-columns:1fr;gap:2px}.summary.compact dd{margin-bottom:10px}}
 .found{display:grid;gap:2px;margin:12px 0 16px}.found-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--nc-border);padding:6px 0}.found-row label{margin:6px 0;flex:1}.found-row label>span{display:grid}.found-row .hint{margin:0;font-size:14px}
 .notice.weather{margin:16px 0;border-color:var(--nc-accent)}.notice.weather p{margin:4px 0}.remove{margin-top:28px}.danger{color:var(--error-color,#efb1ab);border-color:currentColor;background:transparent}.danger:hover{background:color-mix(in srgb,transparent,var(--error-color,#efb1ab) 12%)}button.link.danger-link{color:var(--error-color,#efb1ab);font-size:14px}
+
+/* The tab's home page: the home's technical state, in frames (same look as Niak Weather's « Météo » tab) */
+:host{--nc-todo:#f2a65a;--nc-off:#8a93a3;--nc-frame:var(--ha-card-background,var(--card-background-color,#222932))}:host([data-theme=light]){--nc-todo:#b25a00}
+.hl-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:12px}.hl-head h1{margin:0}
+.hl-state{display:flex;align-items:center;gap:8px;margin:6px 0 0;font-weight:600;color:var(--lv);flex-wrap:wrap}.hl-state .muted{font-weight:400}
+.ok{--lv:var(--nc-accent)}.bad{--lv:var(--nc-todo)}.tip{--lv:var(--nc-accent)}.none{--lv:var(--nc-off)}
+.hl-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--lv,var(--nc-accent));flex-shrink:0}
+.tip>.hl-dot,.hl-legend .tip .hl-dot{background:transparent;border:2px solid var(--nc-accent)}
+.hl-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--nc-muted);margin:4px 0 16px;max-width:none}.hl-legend>span{display:flex;gap:6px;align-items:center}
+.hl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.hl-card{background:var(--nc-frame);border:1px solid var(--nc-border);border-radius:12px;padding:18px 20px;min-width:0}.hl-card.wide{grid-column:1/-1}
+.hl-card.todo{border-color:color-mix(in srgb,var(--nc-todo) 60%,var(--nc-border))}.hl-card.todo h2{color:var(--nc-todo)}
+.hl-card h2{font-size:18px;margin:0 0 10px;display:flex;justify-content:space-between;gap:12px;align-items:baseline}.hl-card h2 small{font-size:14px;font-weight:400;color:var(--nc-muted)}
+.hl-lines{list-style:none;margin:0;padding:0}.hl-lines li{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--nc-border)}
+.hl-lines li:first-child{border-top:0;padding-top:2px}.hl-lines li>.hl-dot{margin-top:7px}.hl-lines li>div{flex:1;min-width:0}.hl-lines strong{font-weight:500}
+.hl-why{display:block;font-size:14px;color:var(--nc-muted);overflow-wrap:anywhere}
+.hl-go{font-size:14px;min-height:32px;padding:2px 0 0;white-space:nowrap}
+.hl-table{overflow-x:auto}.hl-table table{width:100%;border-collapse:collapse;font-size:14px}
+.hl-table th,.hl-table td{text-align:left;padding:8px;border-bottom:1px solid var(--nc-border);vertical-align:middle;white-space:nowrap}
+.hl-table thead th{color:var(--nc-muted);font-weight:500}.hl-table tr:last-child>*{border-bottom:0}
+.hl-table td .hl-dot{margin-right:8px;width:8px;height:8px}.hl-table td.none{color:var(--nc-muted)}.hl-table td.bad{color:var(--nc-todo)}
+.hl-table th button.link{min-height:32px;padding:0;font-weight:600}
+@media(max-width:720px){.hl-grid{grid-template-columns:1fr}.hl-lines li{flex-wrap:wrap}.hl-go{margin-left:22px}}

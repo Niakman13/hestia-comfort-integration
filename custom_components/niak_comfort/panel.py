@@ -3,9 +3,10 @@
 The settings live in the shared « Niak » panel (socle, see socle.py), as the « Confort » tab.
 """
 from pathlib import Path
-from homeassistant.components import frontend
+import voluptuous as vol
+from homeassistant.components import frontend, websocket_api
 from homeassistant.components.http import StaticPathConfig
-from . import weather_link
+from . import health, weather_link
 from .configuration import get_configuration
 from .const import DOMAIN, VERSION
 from .socle import async_register_brick
@@ -21,6 +22,7 @@ async def async_setup_panel(hass):
             ASSETS, str(Path(__file__).parent / "frontend"), False)])
         # The card is loaded on every dashboard, like a declared resource would be.
         frontend.add_extra_js_url(hass, f"{ASSETS}/niak-comfort-card.js?v={VERSION}")
+        websocket_api.async_register_command(hass, ws_health)
         hass.data[DOMAIN + "_panel_asset"] = True
     await async_register_brick(hass, {
         "domain": DOMAIN, "name": "Niak Confort", "slug": "confort", "version": VERSION,
@@ -64,3 +66,11 @@ async def comfort_status(hass):
         return {"level": "action", "summary": f"{followed}, " + _plural(len(todo), "point") + " à régler.",
                 "details": todo + details, "links": links}
     return {"level": "ok", "summary": f"{followed}, rien à régler.", "details": details, "links": links}
+
+
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/health"})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_health(hass, connection, msg):
+    """The home page of the « Confort » tab: what works, what to fix, what could be set better."""
+    connection.send_result(msg["id"], health.report(await health.facts(hass, VERSION)))
