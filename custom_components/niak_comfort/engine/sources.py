@@ -22,7 +22,7 @@ class Reading:
 
 def normalize(kind: str, value: object, unit: str | None = None, *,
               source: str | None = None, reported_at: datetime | None = None,
-              now: datetime, max_age: float = 1800) -> Reading:
+              now: datetime, max_age: float | None = 1800) -> Reading:
     stamp = reported_at.isoformat() if reported_at else None
     def invalid(detail: str, quality: str = "unknown") -> Reading:
         return Reading(None, quality, source, stamp, detail)
@@ -35,7 +35,8 @@ def normalize(kind: str, value: object, unit: str | None = None, *,
     age = (now - reported_at).total_seconds()
     if age < -60:
         return invalid("future_timestamp")
-    if age > max_age:
+    # A state (contact, heating action) holds until it changes: only measurements expire.
+    if max_age is not None and age > max_age:
         return invalid("expired", "stale")
     if kind in ("window", "rain", "pollution"):
         if isinstance(value, bool):

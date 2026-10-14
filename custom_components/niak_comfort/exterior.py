@@ -14,7 +14,7 @@ def exterior_reading(state, key, spec, *, now, max_age):
     if adapter == "direct" or adapter == "binary":
         kind = SOURCES.get(key, key)
         return normalize(kind, state.state, state.attributes.get("unit_of_measurement"), source=entity_id,
-                         reported_at=state.last_reported, now=now, max_age=max_age)
+                         reported_at=state.last_reported, now=now, max_age=None if adapter == "binary" else max_age)
     if adapter == "rain_rate":
         unit = state.attributes.get("unit_of_measurement")
         try:

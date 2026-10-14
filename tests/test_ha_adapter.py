@@ -96,6 +96,9 @@ class AdapterTests(AdapterFixture):
         self.assertEqual(expired["observations"]["co2"]["quality"], "stale")
         self.assertEqual(expired["assessment"]["action"], "unknown")
         self.assertNotIn("air", expired["assessment"]["needs"])
+        # The window contact and the heating action are states: an hour without change keeps them known.
+        self.assertEqual(expired["observations"]["window:binary_sensor.window"]["quality"], "valid")
+        self.assertEqual(expired["observations"]["heating"]["quality"], "valid")
 
     async def test_options_can_remove_optional_source(self):
         # Register the fixture without bootstrapping platforms or a server.

@@ -66,7 +66,7 @@ export function summary(v:View):[string,string] {
   if(a.reason==='incomplete_data'&&numeric(v.observations.indoor_temperature)!==null&&!a.missing.some(k=>!!v.observations[k])) return ['Les mesures connues sont dans vos repères','Les conditions extérieures non configurées restent à vérifier avant d’ouvrir. Ce bilan porte sur les mesures disponibles.'];
   if(a.reason==='incomplete_data'){
     // Name what is missing: a person can fix « Qualité de l’air dehors », not « certaines informations ».
-    const failed=a.missing.filter(k=>!!v.observations[k]).map(k=>sourceLabels[k]??(k.startsWith('window:')?'Contact de fenêtre':k));
+    const failed=a.missing.filter(k=>!!v.observations[k]).map(k=>label(v,k));
     if(failed.length) return [failed.length>1?'Des mesures ne sont pas à jour':'Une mesure n’est pas à jour',`${failed.join(', ')} : ${failed.length>1?'ne répondent pas ou sont trop anciennes':'ne répond pas ou est trop ancienne'}. Niak attend son retour pour conseiller.`];
   }
   if(a.action==='ok'&&a.needs.includes('air')) return ['L’aération est en cours','Le CO₂ reste à surveiller : une ouverture observée ne signifie pas que le besoin d’air est résolu.'];
@@ -87,10 +87,12 @@ export function summary(v:View):[string,string] {
   return reasons[a.reason]??['Conseil à vérifier','Cette raison n’est pas reconnue par la carte. Mettez à jour la carte et l’intégration ensemble.'];
 }
 
+// A contact is named as the person knows it (« Fenêtre Ouest »), never as a generic « Contact de fenêtre ».
+function label(v:View,k:string):string{if(k.startsWith('window:')){const id=k.slice(7);return v.names?.[id]??'Contact de fenêtre';}return sourceLabels[k]??k;}
 export function coverageText(v:View):string {
   const failed=v.assessment.missing.filter(k=>!!v.observations[k]);
   const absent=v.assessment.missing.filter(k=>!v.observations[k]);
-  if(failed.length) return 'Mesures à vérifier : '+failed.map(k=>sourceLabels[k]??(k.startsWith('window:')?'Contact de fenêtre':k)).join(' · ');
+  if(failed.length) return 'Mesures à vérifier : '+failed.map(k=>label(v,k)).join(' · ');
   if(absent.length) return 'Bilan limité : '+absent.map(k=>sourceLabels[k]??k).join(' · ')+' non configuré';
   return 'Sources configurées disponibles';
 }

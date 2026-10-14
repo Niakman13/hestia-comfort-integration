@@ -44,6 +44,11 @@ test('an incomplete bilan names the measure that is out of date',()=>{
   const [title,body]=summary(v);
   assert.equal(title,'Une mesure n’est pas à jour');assert.match(body,/^Qualité de l’air dehors : /);
 });
+test('a stale contact is named as the person knows it',()=>{
+  const v=fresh();v.names={'binary_sensor.w':'Fenêtre Ouest'};v.assessment={...v.assessment,missing:['window:binary_sensor.w']};
+  v.observations['window:binary_sensor.w']={value:null,quality:'stale',source:'binary_sensor.w',received_at:null,detail:'expired',unit:null};
+  assert.equal(coverageText(v),'Mesures à vérifier : Fenêtre Ouest');
+});
 test('late old-room callbacks and pending subscriptions cannot leak',async()=>{
   let finish,oldCallback,newCallback,removed=0,shown=[];
   const old={subscribeMessage:async cb=>{oldCallback=cb;return await new Promise(resolve=>finish=resolve);}};
