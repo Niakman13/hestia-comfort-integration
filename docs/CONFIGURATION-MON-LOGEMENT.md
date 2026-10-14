@@ -2,7 +2,7 @@
 
 Validation de la version 0.3.0-beta.3 avant publication. Elle n’a pas été installée sur le Home Assistant de production.
 
-La page est fournie par l’intégration dans la barre latérale **Niak Confort**. Elle propose le Salon en premier, puis les pièces Home Assistant. La carte ouvre directement la pièce concernée. Le parcours comporte Intérieur, Extérieur, Fenêtres, Chauffage, Préférences et Récapitulatif ; les catégories peuvent être revisitées avant enregistrement.
+La page est fournie par l’intégration : onglet **Confort** du panneau commun **Niak** de la barre latérale (l’ancienne adresse `/niak-confort` y mène). Elle propose le Salon en premier, puis les pièces Home Assistant. La carte ouvre directement la pièce concernée. Le parcours comporte Intérieur, Extérieur, Fenêtres, Chauffage, Préférences et Récapitulatif ; les catégories peuvent être revisitées avant enregistrement.
 
 Les sources présentent valeur, pièce et provenance. Une référence de température ou humidité définie dans Home Assistant est privilégiée. Plusieurs candidats restent à choisir ; une absence facultative peut rester vide. Les alias vers une autre pièce, sources calculées, portes ambiguës et rôle extérieur demandent une confirmation explicite. L’affectation d’une station à une pièce ne détermine pas le rôle de chacune de ses mesures.
 
@@ -15,7 +15,7 @@ Les sauvegardes sont réservées aux administrateurs, vérifiées côté intégr
 - 62 tests Python : moteur, adaptation HA, configuration, provenance, absence et ambiguïté, diagnostics, références HA, sauvegarde et restrictions administrateur.
 - 3 tests du modèle d’interface et compilation du module intégré ; 11 tests de carte et compilation du fichier distribué.
 - Instance HA locale isolée, données fictives : activation initiale, barre latérale, fichier intégré servi, découverte, sauvegarde commune, ajout de pièce, lecture réelle du moteur et suppression du CO₂ sans changer l’identité de la pièce.
-- Navigation réelle depuis la carte vers `/niak-confort/<pièce>` ; annulation du brouillon depuis la page sans enregistrer.
+- Navigation réelle depuis la carte vers `/niak/confort/<pièce>` ; annulation du brouillon depuis la page sans enregistrer.
 - Interface HA locale : modification du Salon, maintien des champs vides, contacts et récapitulatif, enregistrement effectif depuis la page.
 - Aperçu reproduisant les cas Cuisine et station avec données fictives : étapes jusqu’à l’enregistrement, portes de réfrigérateur et alias CO₂ non sélectionnés, pluie et ATMO lisibles, thèmes et largeur mobile.
 

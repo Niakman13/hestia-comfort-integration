@@ -1,3 +1,10 @@
+## 0.5.0-beta.5 — Le panneau Niak
+
+- Les réglages sont dans **Niak** (barre latérale), onglet **Confort**.
+- Un onglet **Accueil** montre l’état de Niak Confort : en bleu si tout est suivi, en orange s’il y a quelque chose à régler.
+- Les autres briques Niak installées (Niak Weather) y apparaissent aussi.
+- L’ancienne adresse et le bouton « Configurer » mènent toujours aux réglages.
+
 ## 0.5.0-beta.4 — Fenêtres ouvertes depuis longtemps
 
 - Une fenêtre ouverte (ou fermée) depuis plus de 30 minutes n’est plus considérée comme « à vérifier » : un contact ne parle que quand il change.

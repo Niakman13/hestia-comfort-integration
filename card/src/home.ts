@@ -48,7 +48,7 @@ export class NiakComfortHomeCard extends LitElement {
       .catch((e:{code?:string})=>{if(generation===this.generation){this.problem=e?.code??'connection';this.later();}});
   }
   private later(){if(this.retry)return;this.retry=setTimeout(()=>{this.retry=undefined;this.connection=undefined;this.connect();},4000);}
-  private open(view:View){history.pushState(null,'','/niak-confort/'+encodeURIComponent(view.entry_id));window.dispatchEvent(new CustomEvent('location-changed',{detail:{replace:false}}));}
+  private open(view:View){history.pushState(null,'','/niak/confort/'+encodeURIComponent(view.entry_id));window.dispatchEvent(new CustomEvent('location-changed',{detail:{replace:false}}));}
   private facts(h:Home){
     const f=[];
     if(h.hottest&&h.coolest)f.push(html`<span class="chip">${icon('temp')}Plus chaude : ${h.hottest.title} ${number(h.hottest.temperature)} °C</span><span class="chip">${icon('cold')}Plus fraîche : ${h.coolest.title} ${number(h.coolest.temperature)} °C</span>`);
