@@ -1,3 +1,10 @@
+## 0.5.0-beta.6 — L’état technique du logement
+
+- L’onglet Confort du panneau Niak s’ouvre sur l’état du logement, en cadres : ce qui fonctionne, ce qui est à régler, ce qu’on peut améliorer.
+- À régler : un capteur d’une pièce ou de l’extérieur qui ne répond pas, avec ce que ça interrompt.
+- À améliorer : un capteur disponible dans une pièce, des fenêtres non mesurées, une pièce pas encore suivie.
+- Un tableau montre les capteurs de chaque pièce. Le bouton Modifier mène aux pièces ; chaque ligne ouvre la bonne pièce.
+
 ## 0.5.0-beta.5 — Le panneau Niak
 
 - Les réglages sont dans **Niak** (barre latérale), onglet **Confort**.

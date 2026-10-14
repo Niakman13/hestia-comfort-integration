@@ -16,6 +16,12 @@ export interface Room {entry_id:string;title:string;loaded:boolean;config:RoomCo
 export interface Area {area_id:string;name:string;outdoor:boolean}
 export interface Snapshot {version:1;revision:string;areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null};niak_weather?:{installed:boolean;places:{entry_id:string;title:string}[]}}
 export interface Discovery {version:1;revision:string;candidates:Record<string,Candidate[]>;suggestions:Record<string,string|string[]>}
+// The technical state of the home (health.py): orange (bad) stops something, tip could be better, none is not used.
+export type Level='ok'|'bad'|'tip'|'none';
+export type Target={kind:'room';entry_id:string;label:string}|{kind:'exterior';label:string}|{kind:'area';area_id:string;label:string};
+export interface HealthLine {level:Level;text:string;why:string;target?:Target|null}
+export interface Health {level:'ok'|'action';summary:string;tips_summary:string;rooms_summary:string;todo:HealthLine[];tips:HealthLine[];
+ sources:{label:string;level:Level;text:string}[];columns:string[];rooms:{entry_id:string;title:string;cells:{level:Level;text:string}[]}[];versions:HealthLine[]}
 export interface Hass {callWS<T>(msg:Record<string,unknown>):Promise<T>;user?:{is_admin:boolean};themes?:{darkMode?:boolean};connection?:unknown}
 export const warningText:Record<string,string>={
  alias:'Cette entité recopie une autre mesure. Vérifiez sa provenance ci-dessous.',

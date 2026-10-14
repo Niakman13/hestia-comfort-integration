@@ -2,7 +2,7 @@ import {LitElement,html,unsafeCSS,nothing,type PropertyValues} from 'lit';
 import {customElement,property,state} from 'lit/decorators.js';
 import {live} from 'lit/directives/live.js';
 import styles from './styles.css';
-import {labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,type Area,type Candidate,type Discovery,type Snapshot,type Hass,type Room,type RoomConfig,type Spec} from './model';
+import {labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,type Area,type Candidate,type Discovery,type Health,type HealthLine,type Target,type Snapshot,type Hass,type Room,type RoomConfig,type Spec} from './model';
 const stages=['Mesures','Ouvrants','Air','Chauffage','Préférences','Récapitulatif'];
 const help:Record<string,string>={indoor_temperature:'La mesure de l’air de cette pièce. Seule information obligatoire. La température d’un appareil ou du sol d’une plante peut être différente.',indoor_humidity:'Permet de repérer un air trop humide et de savoir si aérer l’assèche vraiment.',co2:'Permet de savoir quand renouveler l’air. Ce capteur ne mesure pas tous les polluants.',windows:'Les contacts des fenêtres et portes qui donnent sur l’extérieur. Pas les portes de meubles ou d’appareils.',heating:'Permet de savoir si le chauffage tourne vraiment, pour ne pas conseiller d’ouvrir à ce moment-là. Niak ne commande rien.',outdoor_temperature:'Permet de savoir si ouvrir rafraîchit ou réchauffe, et s’il gèle.',outdoor_humidity:'Avec les températures, permet de comparer l’eau contenue dans l’air dedans et dehors.',rain:'Une intensité en mm/h dit s’il pleut maintenant. Un cumul de la journée ne le dit pas.',wind_gust:'Au-delà de vos réglages (45 km/h par défaut), Niak conseille de ne rien laisser ouvert.',wind_bearing:'D’où vient le vent, en degrés. Avec l’exposition des ouvrants, Niak sait lesquels sont au vent, fait traverser l’air et repère la pluie poussée sous un avant-toit.',solar:'Un capteur d’ensoleillement en W/m² permet de calculer le soleil reçu par chaque façade.',pollution:'L’indice ATMO du jour (intégration Atmo France) sert de précaution régionale. Ce n’est pas une mesure à vos fenêtres.'};
 let pickerLoad:Promise<string|null>|undefined;
@@ -37,6 +37,9 @@ export class ComfortSetup extends LitElement {
  @state() private search:Record<string,string>={};
  @state() private acknowledged:string[]=[];
  @state() private confirmed=false;
+ @state() private health?:Health;
+ // The tab opens on the home's technical state; « Modifier » leads to the rooms.
+ @state() private page:'health'|'rooms'='health';
  @state() private overview?:{area_id:string;name:string;suggestions:Record<string,string|string[]>;temperatures:number}[];
  @state() private picked:string[]=[];
  @state() private weatherEntry:string|null=null;
@@ -61,6 +64,8 @@ export class ComfortSetup extends LitElement {
   if(changed.has('hass')&&this.hass?.connection!==this.connection){this.connection=this.hass?.connection;void this.load();}
   if(changed.has('hass')&&this.previewCard)this.previewCard.el.hass=this.hass;
   if(changed.has('route')&&this.snapshot&&!this.draft&&!this.exteriorDraft)void this.followRoute();
+  // Fresh state after every change of the home (a room saved, the exterior changed…).
+  if(changed.has('snapshot')&&this.snapshot)void this.loadHealth();
   // An error appears next to what the person was doing, never only at the top of a long page.
   if(changed.has('error')&&this.error)this.renderRoot.querySelector('.error')?.scrollIntoView({block:'center',behavior:'smooth'});
  }
@@ -70,6 +75,33 @@ export class ComfortSetup extends LitElement {
   catch(e){if(generation===this.generation)this.error=this.message(e);}
   finally{if(generation===this.generation)this.busy=false;}
  }
+ private async loadHealth(){
+  try{this.health=await this.hass!.callWS<Health>({type:'niak_comfort/health'});}
+  catch{this.health=undefined;}  // the rooms page stays available
+ }
+ private async goTo(t:Target){
+  if(t.kind==='exterior')return this.editExterior();
+  if(t.kind==='area')return this.start({area_id:t.area_id,name:this.areaName(t.area_id)});
+  const room=this.snapshot?.rooms.find(r=>r.entry_id===t.entry_id);if(room)return this.editRoom(room);
+ }
+ private hline(l:HealthLine){
+  return html`<li class=${l.level}><span class="hl-dot"></span><div><strong>${l.text}</strong>${l.why?html`<span class="hl-why">${l.why}</span>`:nothing}</div>
+   ${l.target?html`<button class="link hl-go" ?disabled=${this.busy} @click=${()=>void this.goTo(l.target!)}>${l.target.label}</button>`:nothing}</li>`;
+ }
+ private healthPage(){const h=this.health!;
+  return html`<div class="hl-head"><div><h1>Mon logement</h1>
+    <p class="hl-state ${h.level==='ok'?'ok':'bad'}"><span class="hl-dot"></span>${h.summary}<span class="muted"> · ${h.rooms_summary}${h.tips_summary?` · ${h.tips_summary}`:''}</span></p></div>
+   <button class="primary" @click=${()=>{this.page='rooms';this.saved='';}}>Modifier</button></div>
+  <p class="hl-legend"><span class="ok"><span class="hl-dot"></span>fonctionne</span><span class="bad"><span class="hl-dot"></span>à régler</span><span class="tip"><span class="hl-dot"></span>à améliorer</span><span class="none"><span class="hl-dot"></span>non utilisé</span></p>
+  <div class="hl-grid">
+   ${h.todo.length?html`<section class="hl-card wide todo"><h2>À régler</h2><ul class="hl-lines">${h.todo.map(l=>this.hline(l))}</ul></section>`:nothing}
+   ${h.tips.length?html`<section class="hl-card wide"><h2>À améliorer <small>facultatif</small></h2><ul class="hl-lines">${h.tips.map(l=>this.hline(l))}</ul></section>`:nothing}
+   <section class="hl-card"><h2>Sources</h2><ul class="hl-lines">${h.sources.map(s=>html`<li class=${s.level}><span class="hl-dot"></span><div><strong>${s.label}</strong><span class="hl-why">${s.text}</span></div></li>`)}</ul></section>
+   <section class="hl-card"><h2>Versions et liens</h2><ul class="hl-lines">${h.versions.map(l=>this.hline(l))}</ul></section>
+   <section class="hl-card wide"><h2>Capteurs par pièce</h2><div class="hl-table"><table><thead><tr><th scope="col">Pièce</th>${h.columns.map(c=>html`<th scope="col">${c}</th>`)}</tr></thead>
+    <tbody>${h.rooms.map(r=>html`<tr><th scope="row"><button class="link" @click=${()=>void this.goTo({kind:'room',entry_id:r.entry_id,label:r.title})}>${r.title}</button></th>
+     ${r.cells.map(c=>html`<td class=${c.level}><span class="hl-dot"></span>${c.text}</td>`)}</tr>`)}</tbody></table></div></section>
+  </div>`;}
  private message(e:unknown){return typeof e==='object'&&e&&'message' in e?String(e.message):'La connexion est indisponible. Réessayez sans quitter votre brouillon.';}
  private async followRoute(){const path=this.route?.path??'';if(this.routeHandled===path)return;this.routeHandled=path;const id=path.split('/').filter(Boolean)[0];const room=this.snapshot?.rooms.find(r=>r.entry_id===id);if(room)await this.editRoom(room);}
  private async loadOverview(){
@@ -275,7 +307,8 @@ export class ComfortSetup extends LitElement {
    <div class="found">${list.map(a=>{const ok=typeof a.suggestions.indoor_temperature==='string';return html`<div class="found-row"><label class="check"><input type="checkbox" ?disabled=${!ok} .checked=${this.picked.includes(a.area_id)} @change=${(e:Event)=>{const on=(e.target as HTMLInputElement).checked;this.picked=on?[...this.picked,a.area_id]:this.picked.filter(x=>x!==a.area_id);}}><span><strong>${a.name}</strong><span class="hint">${ok?this.detected(a.suggestions):a.temperatures>1?'Plusieurs températures : à choisir':'Aucune température trouvée'}</span></span></label>${ok?nothing:html`<button @click=${()=>this.start(a)}>Configurer</button>`}</div>`;})}</div>
    ${this.errorBlock()}<button class="primary" ?disabled=${this.busy||!n} @click=${()=>this.createAll()}>${n?`Créer ${n>1?'les '+n+' pièces':'la pièce'}`:'Cochez une pièce'}</button></section>`;}
  private home(){const s=this.snapshot!;const used=new Set(s.rooms.map(r=>r.config.area_id).filter((a):a is string=>!!a));const living=livingArea(s.areas,used);const areas=s.areas.filter(a=>!a.outdoor&&!used.has(a.area_id)&&(s.rooms.length||a!==living));
-  return html`<h1>Mon logement</h1><p class="muted">Vos pièces et les mesures qui aident Niak à expliquer leur confort. Aucun équipement n’est commandé.</p>
+  return html`${s.rooms.length&&this.health?html`<button class="link" @click=${()=>{this.page='health';this.saved='';}}>← État du logement</button>`:nothing}
+  <h1>${s.rooms.length?'Modifier le logement':'Mon logement'}</h1><p class="muted">Vos pièces et les mesures qui aident Niak à expliquer leur confort. Aucun équipement n’est commandé.</p>
   ${!s.rooms.length&&this.overview?.some(a=>typeof a.suggestions.indoor_temperature==='string')?this.foundRooms():!s.rooms.length?html`<section class="start"><h2>Commençons par le Salon</h2>${living?html`<p>Niak a trouvé la pièce « ${living.name} » dans Home Assistant. Il vous proposera ses capteurs ; vous gardez, retirez ou complétez.</p><button class="primary" @click=${()=>this.start(living)}>Configurer le Salon</button>`:html`<p>Aucune pièce « Salon » dans Home Assistant : Niak crée une pièce libre et vous choisissez ses capteurs.</p><button class="primary" @click=${()=>this.start(null,'Salon')}>Créer le Salon</button>`}</section>`:html`<h2>Vos pièces</h2>${s.rooms.map(room=>html`<section class="room"><div><h3>${room.title}</h3><p class="hint">${coverage(room.config)}${room.config.area_id?'':' · pièce libre'}</p>${!room.loaded?html`<p class="warning hint">Le calcul de cette pièce n’est pas chargé. Vérifiez ses capteurs et les journaux de l’intégration.</p>`:nothing}</div><button @click=${()=>this.editRoom(room)}>Modifier</button></section>`)}`}
   <section class="field"><h3>${s.rooms.length?'Ajouter une pièce':this.overview?'Une pièce sans pièce Home Assistant ?':'Ou commencer par une autre pièce'}</h3>${areas.length&&!(this.overview&&!s.rooms.length)?html`<p class="hint">Vos pièces Home Assistant : Niak proposera leurs capteurs.</p><div class="area-buttons">${areas.map(a=>html`<button @click=${()=>this.start(a)}>${a.name}</button>`)}</div>`:nothing}
    <form class="free" @submit=${(e:Event)=>{e.preventDefault();void this.start(null,this.freeName);}}><label>Pièce libre, sans pièce Home Assistant<input type="text" maxlength="100" placeholder="Par exemple : Étage" .value=${this.freeName} @input=${(e:Event)=>this.freeName=(e.target as HTMLInputElement).value}></label><button type="submit">Créer</button></form></section>
@@ -286,6 +319,6 @@ export class ComfortSetup extends LitElement {
   const header=this.hasAttribute('embedded')?nothing:html`<header><button aria-label="Ouvrir le menu Home Assistant" @click=${()=>this.menu()}><span class="menu-icon"></span></button><strong>Niak Confort</strong></header>`;
   return html`${header}<main>${this.confirmDiscard?html`<section class="notice" role="alertdialog" aria-label="Abandonner le brouillon"><h2>Quitter sans enregistrer ?</h2><p>Vos choix de cette page seront perdus.</p><div class="actions"><button @click=${()=>this.confirmDiscard=false}>Continuer la configuration</button><button @click=${()=>this.discard()}>Quitter sans enregistrer</button></div></section>`:nothing}
    ${!editing?html`${this.errorBlock()}${this.error&&!this.snapshot?html`<button @click=${()=>this.load()}>Réessayer</button>`:nothing}`:nothing}${this.saved?html`<p class="notice success" role="status">${this.saved}</p>`:nothing}${this.busy&&!this.snapshot?html`<p class="loading" role="status">Chargement de votre logement…</p>`:nothing}
-   ${this.snapshot?(this.exteriorDraft?this.exterior():this.draft?this.wizard():this.preview?this.previewScreen():this.home()):nothing}${this.busy&&this.snapshot?html`<p class="busy" role="status">Un instant…</p>`:nothing}</main>`;
+   ${this.snapshot?(this.exteriorDraft?this.exterior():this.draft?this.wizard():this.preview?this.previewScreen():this.page==='health'&&this.health&&this.snapshot.rooms.length?this.healthPage():this.home()):nothing}${this.busy&&this.snapshot?html`<p class="busy" role="status">Un instant…</p>`:nothing}</main>`;
  }
 }
