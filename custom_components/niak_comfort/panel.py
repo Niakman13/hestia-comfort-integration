@@ -1,9 +1,16 @@
-"""Bundled admin panel and Lovelace card: one installation, no resource to declare."""
+"""Bundled admin panel and Lovelace card: one installation, no resource to declare.
+
+The settings live in the shared « Niak » panel (socle, see socle.py), as the « Confort » tab.
+"""
 from pathlib import Path
 from homeassistant.components import frontend
 from homeassistant.components.http import StaticPathConfig
-from homeassistant.components.panel_custom import async_register_panel
+from . import weather_link
+from .configuration import get_configuration
 from .const import DOMAIN, VERSION
+from .socle import async_register_brick
+
+ASSETS = "/niak_comfort-assets"
 
 
 async def async_setup_panel(hass):
@@ -11,12 +18,49 @@ async def async_setup_panel(hass):
         return  # Isolated engine tests and headless HA setups have no frontend.
     if not hass.data.get(DOMAIN + "_panel_asset"):
         await hass.http.async_register_static_paths([StaticPathConfig(
-            "/niak_comfort-assets", str(Path(__file__).parent / "frontend"), False)])
+            ASSETS, str(Path(__file__).parent / "frontend"), False)])
         # The card is loaded on every dashboard, like a declared resource would be.
-        frontend.add_extra_js_url(hass, f"/niak_comfort-assets/niak-comfort-card.js?v={VERSION}")
+        frontend.add_extra_js_url(hass, f"{ASSETS}/niak-comfort-card.js?v={VERSION}")
         hass.data[DOMAIN + "_panel_asset"] = True
-    if not frontend.async_panel_exists(hass, "niak-confort"):
-        await async_register_panel(hass, frontend_url_path="niak-confort", webcomponent_name="niak-comfort-setup",
-            sidebar_title="Niak Confort", sidebar_icon="mdi:home-thermometer-outline",
-            module_url=f"/niak_comfort-assets/panel.js?v={VERSION}", require_admin=True,
-            config_panel_domain=DOMAIN)
+    await async_register_brick(hass, {
+        "domain": DOMAIN, "name": "Niak Confort", "slug": "confort", "version": VERSION,
+        "icon": "mdi:home-thermometer-outline", "module_url": f"{ASSETS}/panel.js?v={VERSION}",
+        "element": "niak-comfort-setup", "status": comfort_status, "legacy_path": "niak-confort",
+    }, f"{ASSETS}/niak-socle.js?v={VERSION}")
+
+
+def _plural(n, word):
+    return f"{n} {word}{'s' if n > 1 else ''}"
+
+
+async def comfort_status(hass):
+    """What the « Niak » home page says about Niak Confort, from its own settings only."""
+    service = await get_configuration(hass)
+    rooms = [{"title": e.title, "loaded": e.state.value == "loaded", "entry": e} for e in service.entries()]
+    weather = weather_link.status(hass)
+    if not rooms:
+        return {"level": "action", "summary": "Aucune pièce suivie pour l’instant.",
+                "details": ["Commencez par le Salon dans l’onglet Confort."], "links": []}
+    followed = _plural(len(rooms), "pièce") + (" suivies" if len(rooms) > 1 else " suivie")
+    todo, details, links = [], [], []
+    stopped = [r["title"] for r in rooms if not r["loaded"]]
+    if stopped:
+        todo.append("Calcul arrêté : " + ", ".join(stopped))
+    incomplete = []
+    for room in rooms:
+        data = getattr(getattr(room["entry"], "runtime_data", None), "data", None)
+        if isinstance(data, dict) and data.get("assessment", {}).get("reason") == "incomplete_data":
+            incomplete.append(room["title"])
+    if incomplete:
+        todo.append("Information incomplète : " + ", ".join(incomplete) + " (un capteur ne répond pas)")
+    if not service.home.get("configured"):
+        todo.append("Extérieur à configurer")
+    linked = next((p for p in weather.get("places", []) if p["entry_id"] == service.home.get("weather")), None)
+    if linked:
+        links.append(f"Relié à Niak Weather · {linked['title']}")
+    elif weather.get("installed") and weather.get("places"):
+        details.append("Niak Weather est installé : il peut remplir l’extérieur pour vous.")
+    if todo:
+        return {"level": "action", "summary": f"{followed}, " + _plural(len(todo), "point") + " à régler.",
+                "details": todo + details, "links": links}
+    return {"level": "ok", "summary": f"{followed}, rien à régler.", "details": details, "links": links}

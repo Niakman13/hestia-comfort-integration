@@ -71,7 +71,7 @@ export class NiakComfortCard extends LitElement {
   private tap(e:Event){this.cancelPress();if(this.held){this.held=false;return;}if(this.config?.format==='mini')this.openFull(e);else this.expanded=!this.expanded;}
   private key(e:KeyboardEvent){if(e.key==='Enter'&&e.shiftKey){e.preventDefault();this.openFull(e);}}
   private configure(){
-    const path="/niak-confort"+(this.view?.entry_id?"/"+encodeURIComponent(this.view.entry_id):"");
+    const path="/niak/confort"+(this.view?.entry_id?"/"+encodeURIComponent(this.view.entry_id):"");
     // Navigate inside Home Assistant, without reloading the whole page.
     history.pushState(null,'',path);window.dispatchEvent(new CustomEvent('location-changed',{detail:{replace:false}}));
   }

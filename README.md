@@ -11,14 +11,14 @@
 
 Le confort de chaque pièce, expliqué : ouvrir, fermer, attendre ou ne rien faire, et pourquoi. Une seule intégration contient le moteur, la page de configuration **Niak Confort** et la carte.
 
-**Version 0.5.0-beta.4 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
+**Version 0.5.0-beta.5 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
 
 ## Installation
 
 1. Dans HACS, ouvrir le bouton ci-dessous (ou ⋮ → **Dépôts personnalisés** : `https://github.com/Niakman13/niak-comfort-integration`, catégorie **Intégration**), puis télécharger. Afficher les versions bêta si nécessaire.
 2. Redémarrer Home Assistant.
 3. Ajouter **Niak Comfort** dans Paramètres → Appareils et services.
-4. Ouvrir **Niak Confort** dans la barre latérale : Niak propose toutes les pièces où il trouve une température. Décochez celles à ne pas suivre et créez-les d’un coup.
+4. Ouvrir **Niak** dans la barre latérale, onglet **Confort** : Niak propose toutes les pièces où il trouve une température. Décochez celles à ne pas suivre et créez-les d’un coup.
 5. Dans un tableau de bord, ajoutez la carte **Niak Confort** (une pièce) ou **Niak Confort · logement** (toutes les pièces).
 
 [![Ouvrir Niak Comfort dans HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Niakman13&repository=niak-comfort-integration&category=integration)
