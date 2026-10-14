@@ -13,10 +13,13 @@ import logging
 import voluptuous as vol
 from homeassistant.components import frontend, websocket_api
 from homeassistant.components.panel_custom import async_register_panel
+from homeassistant.helpers.start import async_at_started
 
-SOCLE_VERSION = (1, 0)
+SOCLE_VERSION = (1, 2)
+# 1.1: an optional `tab`, the tab's own name when it is not the brick's (« Météo » for Niak Weather).
+# 1.2: async_register_card, the brick's card on every dashboard, also as a dashboard resource.
 # The shell's custom element carries its version: two copies never fight over one name.
-ELEMENT = "niak-socle-1-0"
+ELEMENT = "niak-socle-1-2"
 KEY = "niak_socle"
 PANEL = "niak"
 TITLE = "Niak"
@@ -35,7 +38,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_register_brick(hass, brick, shell_url):
-    """Register a brick: {domain, name, slug, version, icon, module_url, element, status, legacy_path}."""
+    """Register a brick: {domain, name, slug, version, icon, module_url, element, status, legacy_path} and, since 1.1, `tab`."""
     data = hass.data.setdefault(KEY, {"bricks": {}, "panel": None})
     data["bricks"][brick["domain"]] = {**brick, "socle": SOCLE_VERSION}
     if brick.get("legacy_path"):
@@ -66,6 +69,61 @@ async def _legacy_panel(hass, brick, shell_url):
                                config_panel_domain=brick["domain"])
 
 
+async def async_register_card(hass, url, version):
+    """The brick's card on every dashboard, at the brick's version (`url` without query: /niak_x-assets/niak-x-card.js).
+
+    Loaded twice on purpose. As an extra module, with Home Assistant's page: it works with resources written in YAML.
+    As a dashboard resource, which the frontend always asks the server for: the Companion app shows a cached copy of
+    the page after an update, which knows no new module, but it still finds the card. Both are the same address, so the
+    browser loads the file once; the card defines its elements only when missing anyway.
+    """
+    frontend.add_extra_js_url(hass, f"{url}?v={version}")
+
+    async def resource(_hass):
+        try:
+            await _card_resource(hass, url, f"{url}?v={version}")
+        except Exception:  # noqa: BLE001 - the extra module still loads the card
+            _LOGGER.warning("Ressource de tableau de bord %s non enregistrée", url, exc_info=True)
+
+    async_at_started(hass, resource)
+
+
+def _resources(hass):
+    """The dashboard resources kept by the user interface; None when they are written in YAML."""
+    lovelace = hass.data.get("lovelace")
+    resources = lovelace.get("resources") if isinstance(lovelace, dict) else getattr(lovelace, "resources", None)
+    return resources if hasattr(resources, "async_create_item") else None
+
+
+async def _card_resource(hass, url, wanted):
+    """One resource for the card, at its current address: created, updated after a new version, duplicates removed."""
+    resources = _resources(hass)
+    if resources is None:
+        return
+    if not getattr(resources, "loaded", True):
+        await resources.async_load()
+        resources.loaded = True
+    mine = [item for item in resources.async_items() if str(item.get("url", "")).split("?")[0] == url]
+    for extra in mine[1:]:
+        await resources.async_delete_item(extra["id"])
+    if not mine:
+        await resources.async_create_item({"res_type": "module", "url": wanted})
+    elif mine[0].get("url") != wanted:
+        await resources.async_update_item(mine[0]["id"], {"res_type": "module", "url": wanted})
+
+
+async def async_remove_card(hass, url):
+    """The card's dashboard resource goes when the brick's last place or room does: nothing left points to it."""
+    resources = _resources(hass)
+    if resources is None:
+        return
+    if not getattr(resources, "loaded", True):
+        await resources.async_load()
+        resources.loaded = True
+    for item in [i for i in resources.async_items() if str(i.get("url", "")).split("?")[0] == url]:
+        await resources.async_delete_item(item["id"])
+
+
 async def _status(hass, brick):
     try:
         async with asyncio.timeout(5):
@@ -86,7 +144,7 @@ async def async_overview(hass):
     listed = sorted(bricks.values(), key=lambda b: (order.index(b["domain"]) if b["domain"] in order else len(order), b["name"]))
     result = []
     for brick in listed:
-        result.append({**{k: brick.get(k) for k in ("domain", "name", "slug", "version", "icon", "module_url", "element")},
+        result.append({**{k: brick.get(k) for k in ("domain", "name", "slug", "version", "icon", "module_url", "element", "tab")},
                        "status": await _status(hass, brick)})
     others = [{**c, "installed": c["domain"] in hass.config.components,
                "settings_path": f"/config/integrations/integration/{c['domain']}"}

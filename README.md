@@ -11,7 +11,7 @@
 
 Le confort de chaque pièce, expliqué : ouvrir, fermer, attendre ou ne rien faire, et pourquoi. Une seule intégration contient le moteur, la page de configuration **Niak Confort** et la carte.
 
-**Version 0.5.0-beta.6 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
+**Version 0.5.0-beta.7 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
 
 ## Installation
 
@@ -23,7 +23,7 @@ Le confort de chaque pièce, expliqué : ouvrir, fermer, attendre ou ne rien fai
 
 [![Ouvrir Niak Comfort dans HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Niakman13&repository=niak-comfort-integration&category=integration)
 
-La carte est incluse : rien à déclarer dans les ressources. L’ancien dépôt séparé de la carte (`niak-comfort`) est archivé ; si vous l’aviez installé, supprimez-le de HACS.
+La carte est incluse : rien à déclarer. Niak Confort l’ajoute lui-même aux ressources des tableaux de bord et la tient à jour, pour que l’application mobile la trouve aussi. L’ancien dépôt séparé de la carte (`niak-comfort`) est archivé ; si vous l’aviez installé, supprimez-le de HACS.
 
 ## Mon logement
 
