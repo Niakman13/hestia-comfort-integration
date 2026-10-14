@@ -74,7 +74,7 @@ class WorkspaceTests(AdapterFixture):
         self.assertEqual(reading.detail,'rain_rate_observed')
         with self.assertRaises(ValueError):self.service.validate({'sources':{'rain':{'entity_id':'binary_sensor.sentinel','adapter':'binary'}}},home=True)
 
-    async def test_atmo_current_daily_index_never_proves_air_currently_safe(self):
+    async def test_atmo_daily_index_checks_the_precaution_and_blocks_above_threshold(self):
         attrs={'Libellé':'Moyen','Date de mise à jour':(self.now-timedelta(minutes=1)).isoformat()}
         self.register('sensor.atmo_day',None,area=None,value='2',platform='atmofrance',attrs=attrs)
         self.register('sensor.atmo_day_j_1',None,area=None,value='2',platform='atmofrance',attrs=attrs)
@@ -86,9 +86,16 @@ class WorkspaceTests(AdapterFixture):
         te=normalize('temperature',18,'°C',source='sensor.te',reported_at=self.now,now=self.now)
         rain=normalize('rain',False,source='sensor.rain',reported_at=self.now,now=self.now)
         result=assess({'indoor_temperature':ti,'outdoor_temperature':te,'rain':rain,'pollution':r})
-        self.assertEqual(result.reason,'verify_exterior')
+        # Below the chosen threshold the precaution is checked: it neither blocks nor makes the bilan partial.
+        self.assertEqual(result.reason,'cooling_possible');self.assertFalse(result.partial)
         r=exterior_reading(self.hass.states.get('sensor.atmo_day'),'pollution',{**spec,'block_from':2},now=self.now,max_age=1800)
         self.assertIn('pollution',assess({'indoor_temperature':ti,'outdoor_temperature':te,'rain':rain,'pollution':r}).constraints)
+
+    async def test_a_contact_unchanged_for_hours_is_still_known(self):
+        later=self.now+timedelta(hours=5)
+        contact=normalize('window','on',source='binary_sensor.w',reported_at=self.now,now=later,max_age=None)
+        self.assertEqual((contact.quality,contact.value),('valid',True))
+        self.assertEqual(normalize('temperature',20,'°C',source='sensor.t',reported_at=self.now,now=later).quality,'stale')
 
     async def test_atmo_index_published_yesterday_still_covers_today(self):
         local=dt_util.as_local(self.now).replace(hour=0,minute=5)

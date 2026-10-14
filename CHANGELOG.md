@@ -1,3 +1,10 @@
+## 0.5.0-beta.4 — Fenêtres ouvertes depuis longtemps
+
+- Une fenêtre ouverte (ou fermée) depuis plus de 30 minutes n’est plus considérée comme « à vérifier » : un contact ne parle que quand il change.
+- Même chose pour l’état du chauffage.
+- L’indice ATMO sous votre seuil ne rend plus le bilan incomplet : Niak conseille normalement, et bloque toujours au-dessus du seuil.
+- La carte nomme la fenêtre en cause (« Fenêtre Ouest ») au lieu de « Contact de fenêtre ».
+
 ## 0.5.0-beta.3 — Indice ATMO du matin
 
 - L’indice ATMO du jour, publié la veille, est de nouveau pris en compte le matin : fini « Information incomplète » entre minuit et la mise à jour d’ATMO.

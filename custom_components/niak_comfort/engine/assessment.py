@@ -151,8 +151,10 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     rain = False if all_sheltered else value("rain")
     pollution = value("pollution")
     daily_air = readings.get("pollution")
-    if daily_air and daily_air.quality == "estimated" and daily_air.value is True:
-        pollution = True  # Configured daily precaution can block; it never clears an opening.
+    if daily_air and daily_air.quality == "estimated" and daily_air.value is not None:
+        # The daily index the person chose as precaution: above their threshold it blocks,
+        # below it the precaution is checked, like an unconfigured one would not block.
+        pollution = daily_air.value
     old = previous.needs if previous else ()
     hot = ti is not None and ti > settings.maximum - (settings.temperature_hysteresis if "cool" in old else 0)
     cold = ti is not None and ti < settings.minimum + (settings.temperature_hysteresis if "heat" in old else 0)
@@ -211,7 +213,8 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     useful = air or ((hot or precool) and cool and not optional_wet_exchange) or (wet and dry and not cold)
     opportunities = tuple(k for k, active in (("cool", cool and not optional_wet_exchange), ("dry", dry),
         ("air", co2 is not None and co2 >= settings.co2_potential)) if active) if not hard and not soft else ()
-    missing = tuple(sorted(k for k in ({k for k, r in readings.items() if r.source and not r.usable}
+    missing = tuple(sorted(k for k in ({k for k, r in readings.items() if r.source and not r.usable
+                                        and not (k == "pollution" and r.quality == "estimated" and r.value is not None)}
                                        | {k for k in ("indoor_temperature", "outdoor_temperature") if value(k) is None})
                            if not (k == "rain" and all_sheltered)))
     partial = bool(missing)

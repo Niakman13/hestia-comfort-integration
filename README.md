@@ -11,7 +11,7 @@
 
 Le confort de chaque pièce, expliqué : ouvrir, fermer, attendre ou ne rien faire, et pourquoi. Une seule intégration contient le moteur, la page de configuration **Niak Confort** et la carte.
 
-**Version 0.5.0-beta.3 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
+**Version 0.5.0-beta.4 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
 
 ## Installation
 

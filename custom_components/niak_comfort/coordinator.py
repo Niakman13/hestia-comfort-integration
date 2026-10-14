@@ -15,6 +15,8 @@ from .configuration import DATA_CONFIG
 from .exterior import exterior_reading
 from . import weather_link
 
+STATE_KINDS = ("window", "heating", "rain", "pollution")
+
 
 class ComfortCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, entry):
@@ -88,6 +90,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
         except (KeyError, TypeError, ValueError):
             return None
 
+    # Contacts and heating report only when they change; Home Assistant marks them
+    # unavailable when the device is lost, so their age says nothing about validity.
     def _reading(self, entity_id, kind, now):
         state = self.hass.states.get(entity_id)
         raw = state.attributes.get("hvac_action") if state and kind == "heating" else state.state if state else None
@@ -95,4 +99,4 @@ class ComfortCoordinator(DataUpdateCoordinator):
         # It is not the sensor's physical sampling time.
         return normalize(kind, raw, state.attributes.get("unit_of_measurement") if state else None,
                          source=entity_id, reported_at=state.last_reported if state else None,
-                         now=now, max_age=self.settings.max_age_seconds)
+                         now=now, max_age=None if kind in STATE_KINDS else self.settings.max_age_seconds)
