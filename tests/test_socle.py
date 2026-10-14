@@ -137,5 +137,61 @@ class ComfortStatusTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(any(d.startswith("Information incomplète : Salon") for d in status["details"]))
 
 
+class Resources:
+    """Dashboard resources as the user interface keeps them (lovelace's storage collection), not loaded yet."""
+    def __init__(self, *urls):
+        self.loaded, self.items = False, [{"id": str(i), "type": "module", "url": u} for i, u in enumerate(urls)]
+    async def async_load(self):
+        pass
+    def async_items(self):
+        return list(self.items)
+    async def async_create_item(self, data):
+        self.items.append({"id": f"n{len(self.items)}", "type": data["res_type"], "url": data["url"]})
+    async def async_update_item(self, item_id, data):
+        next(i for i in self.items if i["id"] == item_id)["url"] = data["url"]
+    async def async_delete_item(self, item_id):
+        self.items = [i for i in self.items if i["id"] != item_id]
+
+
+class CardResourceTests(unittest.IsolatedAsyncioTestCase):
+    URL = "/niak_comfort-assets/niak-comfort-card.js"
+
+    async def asyncSetUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.hass = HomeAssistant(self.temp.name)
+
+    async def asyncTearDown(self):
+        await self.hass.async_stop()
+        self.temp.cleanup()
+
+    def urls(self, resources):
+        return [i["url"] for i in resources.items]
+
+    async def test_the_card_becomes_a_dashboard_resource_at_its_version(self):
+        resources = self.hass.data["lovelace"] = SimpleNamespace(resources=Resources("/hacsfiles/other/other.js"))
+        await socle._card_resource(self.hass, self.URL, self.URL + "?v=1.0")
+        self.assertTrue(resources.resources.loaded)
+        self.assertEqual(self.urls(resources.resources), ["/hacsfiles/other/other.js", self.URL + "?v=1.0"])
+
+    async def test_a_new_version_updates_it_and_duplicates_go(self):
+        resources = Resources(self.URL + "?v=0.9", "/other.js", self.URL)
+        self.hass.data["lovelace"] = SimpleNamespace(resources=resources)
+        await socle._card_resource(self.hass, self.URL, self.URL + "?v=1.0")
+        self.assertEqual(self.urls(resources), [self.URL + "?v=1.0", "/other.js"])
+        await socle._card_resource(self.hass, self.URL, self.URL + "?v=1.0")
+        self.assertEqual(self.urls(resources), [self.URL + "?v=1.0", "/other.js"])
+
+    async def test_resources_written_in_yaml_are_left_alone(self):
+        self.hass.data["lovelace"] = SimpleNamespace(resources=SimpleNamespace(async_items=lambda: []))
+        await socle._card_resource(self.hass, self.URL, self.URL + "?v=1.0")  # nothing to create there: no error
+        await socle.async_remove_card(self.hass, self.URL)
+
+    async def test_removing_the_card_keeps_the_other_resources(self):
+        resources = Resources("/other.js", self.URL + "?v=1.0")
+        self.hass.data["lovelace"] = SimpleNamespace(resources=resources)
+        await socle.async_remove_card(self.hass, self.URL)
+        self.assertEqual(self.urls(resources), ["/other.js"])
+
+
 if __name__ == "__main__":
     unittest.main()

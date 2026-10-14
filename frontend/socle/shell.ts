@@ -1,11 +1,11 @@
-// Niak shared panel (socle v1): header, tabs and the home page listing every Niak brick.
+// Niak shared panel (socle v1.1): header, tabs and the home page listing every Niak brick.
 // Copied unchanged into each brick from niak-ecosysteme/socle/ (see ECOSYSTEME.md § 8).
 import {LitElement,html,css,nothing,type PropertyValues} from 'lit';
 
-export const ELEMENT='niak-socle-1-0';
+export const ELEMENT='niak-socle-1-2';
 type Level='ok'|'action'|'unknown';
 export interface BrickStatus {level:Level;summary:string;details:string[];links:string[]}
-export interface Brick {domain:string;name:string;slug:string;version:string;icon:string;module_url:string;element:string;status:BrickStatus}
+export interface Brick {domain:string;name:string;slug:string;version:string;icon:string;module_url:string;element:string;status:BrickStatus;tab?:string|null}
 export interface Other {domain:string;name:string;pitch:string;url:string;installed:boolean;settings_path:string}
 export interface Overview {version:1;socle:number[];bricks:Brick[];others:Other[]}
 interface Hass {callWS<T>(msg:Record<string,unknown>):Promise<T>;themes?:{darkMode?:boolean}}
@@ -18,6 +18,8 @@ export function splitPath(path:string|undefined):[string,string]{
  return [parts[0]??'',parts.length>1?'/'+parts.slice(1).join('/'):''];
 }
 export function shortName(name:string){return name.replace(/^Niak /,'');}
+// The tab's name: its own (since socle 1.1, « Météo » for Niak Weather), else the brick's without « Niak ».
+export function tabName(b:{name:string;tab?:string|null}){return b.tab||shortName(b.name);}
 function navigate(path:string,replace=false){
  history[replace?'replaceState':'pushState'](null,'',path);
  window.dispatchEvent(new CustomEvent('location-changed',{detail:{replace}}));
@@ -55,7 +57,7 @@ export class NiakShell extends LitElement {
   let el=this.tabs.get(brick.slug);
   if(!el){
    try{if(!customElements.get(brick.element))await import(/* @vite-ignore */ brick.module_url);}
-   catch{this.error=`L’onglet ${shortName(brick.name)} ne s’est pas chargé. Rechargez la page.`;return;}
+   catch{this.error=`L’onglet ${tabName(brick)} ne s’est pas chargé. Rechargez la page.`;return;}
    if(this.tabs.has(brick.slug))return;
    el=document.createElement(brick.element) as Tab;el.setAttribute('embedded','');this.tabs.set(brick.slug,el);this.requestUpdate();
   }
@@ -70,14 +72,14 @@ export class NiakShell extends LitElement {
     <p class="level"><span class="dot"></span>${levelText[b.status.level]}${b.status.summary?html`<span class="summary">${b.status.summary}</span>`:nothing}</p>
     ${b.status.details.length?html`<ul>${b.status.details.map(d=>html`<li>${d}</li>`)}</ul>`:nothing}
     ${b.status.links.length?html`<p class="links">${b.status.links.map(l=>html`<span>${l}</span>`)}</p>`:nothing}
-    <button class="primary" @click=${()=>this.go(b.slug)}>Ouvrir ${shortName(b.name)}</button></section>`)}
+    <button class="primary" @click=${()=>this.go(b.slug)}>Ouvrir ${tabName(b)}</button></section>`)}
    ${o.others.length?html`<h2 class="others-title">Les autres briques Niak</h2>${o.others.map(x=>html`<section class="other"><div><h3>${x.name}</h3><p class="muted">${x.installed?'Installée. Ses réglages restent dans Paramètres, en attendant qu’elle rejoigne ce panneau.':x.pitch}</p></div>
     ${x.installed?html`<a class="button" href=${x.settings_path}>Ouvrir ses réglages</a>`:html`<a class="button" href=${x.url} target="_blank" rel="noreferrer">Découvrir</a>`}</section>`)}`:nothing}</main>`;}
  protected render(){
   if(this.panel?.config?.redirect)return nothing;
   const [slug]=splitPath(this.route?.path);const o=this.overview;
   const active=o?.bricks.some(b=>b.slug===slug)?slug:'';
-  const tabs=[{slug:'',name:'Accueil'},...(o?.bricks??[]).map(b=>({slug:b.slug,name:shortName(b.name)}))];
+  const tabs=[{slug:'',name:'Accueil'},...(o?.bricks??[]).map(b=>({slug:b.slug,name:tabName(b)}))];
   return html`<header><div class="bar"><button class="icon" aria-label="Ouvrir le menu Home Assistant" @click=${()=>this.menu()}><span class="menu-icon"></span></button><strong>Niak</strong></div>
    <nav role="tablist" aria-label="Briques Niak">${tabs.map(t=>html`<button role="tab" aria-selected=${t.slug===active?'true':'false'} @click=${()=>this.go(t.slug)}>${t.name}</button>`)}</nav></header>
    <div class="content">${this.error?html`<main><p class="notice" role="alert">${this.error}</p><button @click=${()=>{this.error='';void this.load();}}>Réessayer</button></main>`

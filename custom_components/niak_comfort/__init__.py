@@ -6,7 +6,8 @@ from .const import DOMAIN
 from .coordinator import ComfortCoordinator
 from .websocket import async_setup_websocket
 from .configuration import get_configuration
-from .panel import async_setup_panel
+from .panel import CARD_URL, async_setup_panel
+from .socle import async_remove_card
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -35,6 +36,12 @@ async def async_unload_entry(hass, entry):
     if entry.data.get("home"):
         return True
     return await hass.config_entries.async_unload_platforms(entry, [Platform.SENSOR])
+
+
+async def async_remove_entry(hass, entry):
+    """With the last room gone, the card's dashboard resource goes too."""
+    if not [e for e in hass.config_entries.async_entries(DOMAIN) if e.entry_id != entry.entry_id]:
+        await async_remove_card(hass, CARD_URL)
 
 
 async def _reload(hass, entry):

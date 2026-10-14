@@ -1,3 +1,8 @@
+## 0.5.0-beta.7 — La carte visible dans l’application mobile
+
+- La carte Niak Confort s’affiche aussi dans l’application Home Assistant, même juste après une mise à jour.
+- Elle apparaît désormais dans Paramètres → Tableaux de bord → Ressources : c’est Niak Confort qui la tient à jour, rien à faire.
+
 ## 0.5.0-beta.6 — L’état technique du logement
 
 - L’onglet Confort du panneau Niak s’ouvre sur l’état du logement, en cadres : ce qui fonctionne, ce qui est à régler, ce qu’on peut améliorer.

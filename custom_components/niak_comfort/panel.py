@@ -1,17 +1,18 @@
-"""Bundled admin panel and Lovelace card: one installation, no resource to declare.
+"""Bundled admin panel and Lovelace card: one installation, nothing to declare by hand.
 
 The settings live in the shared « Niak » panel (socle, see socle.py), as the « Confort » tab.
 """
 from pathlib import Path
 import voluptuous as vol
-from homeassistant.components import frontend, websocket_api
+from homeassistant.components import websocket_api
 from homeassistant.components.http import StaticPathConfig
 from . import health, weather_link
 from .configuration import get_configuration
 from .const import DOMAIN, VERSION
-from .socle import async_register_brick
+from .socle import async_register_brick, async_register_card
 
 ASSETS = "/niak_comfort-assets"
+CARD_URL = f"{ASSETS}/niak-comfort-card.js"
 
 
 async def async_setup_panel(hass):
@@ -20,8 +21,8 @@ async def async_setup_panel(hass):
     if not hass.data.get(DOMAIN + "_panel_asset"):
         await hass.http.async_register_static_paths([StaticPathConfig(
             ASSETS, str(Path(__file__).parent / "frontend"), False)])
-        # The card is loaded on every dashboard, like a declared resource would be.
-        frontend.add_extra_js_url(hass, f"{ASSETS}/niak-comfort-card.js?v={VERSION}")
+        # The card on every dashboard, always at the integration's version (an extra module and a dashboard resource).
+        await async_register_card(hass, CARD_URL, VERSION)
         websocket_api.async_register_command(hass, ws_health)
         hass.data[DOMAIN + "_panel_asset"] = True
     await async_register_brick(hass, {
