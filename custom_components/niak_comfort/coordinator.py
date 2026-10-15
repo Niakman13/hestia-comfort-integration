@@ -38,8 +38,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
         if ids:
             self.config_entry.async_on_unload(async_track_state_change_event(self.hass, sorted(ids), self._changed))
         # Linked to Niak Weather: recompute when its forecasts or alerts change.
-        if (link := weather_link.api(self.hass)) and (place := self._weather_place()):
-            self.config_entry.async_on_unload(link.add_listener(place, lambda: self.hass.async_create_task(self.async_request_refresh())))
+        if weather_link.api(self.hass) and (place := self._weather_place()):
+            self.config_entry.async_on_unload(weather_link.listen(self.hass, place, lambda: self.hass.async_create_task(self.async_request_refresh())))
         await self.async_config_entry_first_refresh()
 
     @callback

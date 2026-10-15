@@ -2,7 +2,8 @@
   "domain": "niak_comfort",
   "name": "Niak Comfort",
   "after_dependencies": [
-    "lovelace"
+    "lovelace",
+    "niak_weather"
   ],
   "codeowners": [
     "@Niakman13"
