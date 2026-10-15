@@ -5,6 +5,7 @@ import test_ha_adapter
 from custom_components.niak_comfort.config_flow import ComfortConfigFlow
 from custom_components.niak_comfort.configuration import Configuration
 from custom_components.niak_comfort.discovery import catalog, suggestions
+from custom_components.niak_comfort import weather_link
 
 
 class AssistantTests(test_ha_adapter.AdapterFixture):
@@ -193,6 +194,23 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         self.assertEqual(cleaned['weather'], 'nw1')
         with self.assertRaises(ValueError):
             self.service.validate({'sources': {}, 'weather': 'gone'}, home=True)
+
+    async def test_niak_weather_knows_niak_comfort_listens(self):
+        """Niak Weather 2.1+ is told who listens, so its settings show « Relié à Niak Confort »."""
+        heard = []
+        class Api:
+            version = 1
+            def add_listener(self, entry_id, update, brick=None): heard.append((entry_id, brick)); return lambda: None
+        self.hass.data['niak_weather_api'] = Api()
+        weather_link.listen(self.hass, 'nw1', lambda: None)
+        self.assertEqual(heard, [('nw1', 'niak_comfort')])
+
+    async def test_an_older_niak_weather_is_still_followed(self):
+        listeners = self.link_weather({})
+        stop = weather_link.listen(self.hass, 'nw1', lambda: None)
+        self.assertEqual(len(listeners), 1)
+        stop()
+        self.assertEqual(listeners, [])
 
     async def test_without_niak_weather_nothing_is_invented(self):
         self.assertFalse(self.service.snapshot()['niak_weather']['installed'])

@@ -2,6 +2,8 @@
 
 - La carte Niak Confort s’affiche aussi dans l’application Home Assistant, même juste après une mise à jour.
 - Elle apparaît désormais dans Paramètres → Tableaux de bord → Ressources : c’est Niak Confort qui la tient à jour, rien à faire.
+- Niak Weather affiche lui aussi « Relié à Niak Confort ».
+- Le lien avec Niak Weather tient dès le démarrage de Home Assistant.
 
 ## 0.5.0-beta.6 — L’état technique du logement
 

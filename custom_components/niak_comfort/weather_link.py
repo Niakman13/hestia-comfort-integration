@@ -3,7 +3,11 @@
 Its entities are found by their stable unique id `<entry>_<key>`, never by name, and its
 settings are read through `hass.data["niak_weather_api"]` (version 1), never directly.
 """
+import inspect
+
 from homeassistant.helpers import entity_registry as er
+
+from .const import DOMAIN
 
 API_KEY = "niak_weather_api"
 API_VERSION = 1
@@ -22,6 +26,18 @@ def status(hass):
     """What « Mon logement » shows: is Niak Weather there, and which places it offers."""
     link = api(hass)
     return {"installed": link is not None, "places": link.places() if link else []}
+
+
+def listen(hass, entry_id, update):
+    """Calls `update` when Niak Weather recomputes this place. Saying who listens lets Niak Weather
+    show the link too; a Niak Weather older than 2.1 does not take `brick` yet."""
+    link = api(hass)
+    if link is None:
+        return lambda: None
+    parameters = inspect.signature(link.add_listener).parameters
+    if "brick" in parameters or any(p.kind is p.VAR_KEYWORD for p in parameters.values()):
+        return link.add_listener(entry_id, update, brick=DOMAIN)
+    return link.add_listener(entry_id, update)
 
 
 def entity(hass, entry_id, key):
