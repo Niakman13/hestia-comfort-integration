@@ -114,3 +114,8 @@ test('wind names say where the wind comes from, in plain French',()=>{
   assert.equal(windFrom(45),'vent de nord-est');
   assert.equal(windFrom(null),'');
 });
+
+const floorFixtures=JSON.parse(await readFile(new URL('../preview/floors.json',import.meta.url),'utf8'));
+test('floor scenarios keep every room compatible with the card, including missing temperatures',()=>{
+  for(const scene of floorFixtures)for(const room of scene.event.rooms)assert.equal(isView(room),true,scene.id+':'+room.title);
+});

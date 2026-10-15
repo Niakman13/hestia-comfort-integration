@@ -1,3 +1,13 @@
+## 0.6.0-beta.1 — Logement et étages
+
+- La carte logement regroupe les pièces par étage Home Assistant, avec moyenne, nombre de mesures disponibles et pièce la plus chaude.
+- Une pièce libre peut choisir un étage existant ; les pièces rattachées reprennent automatiquement celui de Home Assistant.
+- Les logements de plain-pied gardent une synthèse complète et les possibilités d’aération traversante, sans réglage d’étage obligatoire.
+- Les conseils proposent, lorsque les conditions le permettent, deux ouvertures pour l’effet cheminée ou une aération traversante. Ils expliquent les conditions et les limites du passage de l’air.
+- Une pièce devenue indisponible reste visible ; sa température est exclue des moyennes. Les changements d’étage se répercutent sur la carte.
+
+Bêta en observation, vérifiée localement. Niak conseille, sans commander les équipements.
+
 ## 0.5.0-beta.9 — Des étapes plus claires dans l’onglet Confort
 
 - Les étapes d’une pièce disent ce qu’on règle : Température et humidité, Fenêtres et portes, CO₂, Chauffage, Pièce et confort.

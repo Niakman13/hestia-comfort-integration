@@ -1,0 +1,16 @@
+<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Niak Confort · Réglage des étages</title><style>body{background:#151c25;color:#edf1f7;font:14px system-ui;margin:0}body>p{padding:12px}</style><p>Banc local · configuration fictive</p><niak-comfort-setup embedded></niak-comfort-setup><script type="module">
+import '../../custom_components/niak_comfort/frontend/panel.js';
+const panel=document.querySelector('niak-comfort-setup');
+const config={area_id:null,name:'Bureau libre',sources:{indoor_temperature:'sensor.demo'},windows:[],openings:{},settings:{minimum:20,maximum:24},use_home:true};
+const snapshot={version:1,revision:'demo',home:{configured:true,sources:{}},floors:[{floor_id:'low',name:'Rez-de-chaussée',level:0},{floor_id:'high',name:'Étage 1',level:1}],areas:[{area_id:'salon',name:'Salon',floor_id:'low',outdoor:false}],rooms:[{entry_id:'demo',title:config.name,loaded:true,config}]};
+let saved;
+panel.route={path:'/demo'};
+panel.hass={connection:{},user:{is_admin:true},themes:{darkMode:true},callWS:async m=>{
+if(m.type==='niak_comfort/configuration')return snapshot;
+if(m.type==='niak_comfort/discover')return {version:1,revision:'demo',candidates:{},suggestions:{}};
+if(m.type==='niak_comfort/validate_config')return {warnings:[]};
+if(m.type==='niak_comfort/save_config'){saved=m.config;snapshot.rooms[0].config=saved;return snapshot;}
+if(m.type==='niak_comfort/health')throw Error('Banc de réglage');
+return {};
+}};
+</script></html>
