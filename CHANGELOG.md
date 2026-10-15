@@ -1,3 +1,11 @@
+## 0.5.0-beta.9 — Des étapes plus claires dans l’onglet Confort
+
+- Les étapes d’une pièce disent ce qu’on règle : Température et humidité, Fenêtres et portes, CO₂, Chauffage, Pièce et confort.
+- En haut de chaque étape, un cadre « À quoi sert cet onglet ? » ; replié, il le reste.
+- À l’extérieur, les mesures sont rangées en cadres : Température et humidité, Pluie et vent, Soleil.
+- Les mesures du dehors viennent de Niak Weather ou de vos capteurs ; la qualité de l’air, d’Atmo France ou de Niak Weather, puis sa zone.
+- Une intégration absente est grisée, avec un lien pour l’installer.
+
 ## 0.5.0-beta.8 — Le lien avec Niak Weather des deux côtés
 
 - Niak Weather affiche lui aussi « Relié à Niak Confort ».
