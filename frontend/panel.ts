@@ -2,8 +2,8 @@ import {LitElement,html,unsafeCSS,nothing,type PropertyValues} from 'lit';
 import {customElement,property,state} from 'lit/decorators.js';
 import {live} from 'lit/directives/live.js';
 import styles from './styles.css';
-import {labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,type Area,type Candidate,type Discovery,type Health,type HealthLine,type Target,type Snapshot,type Hass,type Room,type RoomConfig,type Spec} from './model';
-const stages=['Mesures','Ouvrants','Air','Chauffage','Préférences','Récapitulatif'];
+import {labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,stages,intros,outdoorGroups,changedAdvanced,advancedDefaults,airSource,airChoices,exteriorChoices,type Choice,type Area,type Candidate,type Discovery,type Health,type HealthLine,type Target,type Snapshot,type Hass,type Room,type RoomConfig,type Spec} from './model';
+const FOLDED='niak-confort-folded-intros';
 const help:Record<string,string>={indoor_temperature:'La mesure de l’air de cette pièce. Seule information obligatoire. La température d’un appareil ou du sol d’une plante peut être différente.',indoor_humidity:'Permet de repérer un air trop humide et de savoir si aérer l’assèche vraiment.',co2:'Permet de savoir quand renouveler l’air. Ce capteur ne mesure pas tous les polluants.',windows:'Les contacts des fenêtres et portes qui donnent sur l’extérieur. Pas les portes de meubles ou d’appareils.',heating:'Permet de savoir si le chauffage tourne vraiment, pour ne pas conseiller d’ouvrir à ce moment-là. Niak ne commande rien.',outdoor_temperature:'Permet de savoir si ouvrir rafraîchit ou réchauffe, et s’il gèle.',outdoor_humidity:'Avec les températures, permet de comparer l’eau contenue dans l’air dedans et dehors.',rain:'Une intensité en mm/h dit s’il pleut maintenant. Un cumul de la journée ne le dit pas.',wind_gust:'Au-delà de vos réglages (45 km/h par défaut), Niak conseille de ne rien laisser ouvert.',wind_bearing:'D’où vient le vent, en degrés. Avec l’exposition des ouvrants, Niak sait lesquels sont au vent, fait traverser l’air et repère la pluie poussée sous un avant-toit.',solar:'Un capteur d’ensoleillement en W/m² permet de calculer le soleil reçu par chaque façade.',pollution:'L’indice ATMO du jour (intégration Atmo France) sert de précaution régionale. Ce n’est pas une mesure à vos fenêtres.'};
 let pickerLoad:Promise<string|null>|undefined;
 // Home Assistant loads its entity picker lazily; a card editor makes it available to this page.
@@ -44,7 +44,8 @@ export class ComfortSetup extends LitElement {
  @state() private picked:string[]=[];
  @state() private weatherEntry:string|null=null;
  @state() private proposed:string[]=[];
- @state() private advanced=false;
+ // The step explanations folded by the user, kept in this browser.
+ @state() private folded:string[]=(()=>{try{const v=JSON.parse(localStorage.getItem(FOLDED)??'[]');return Array.isArray(v)?v.map(String):[];}catch{return [];}})();
  @state() private confirmDiscard=false;
  @state() private confirmRemove=false;
  @state() private freeName='';
@@ -149,9 +150,45 @@ export class ComfortSetup extends LitElement {
    this.exteriorDraft={...(this.exteriorDraft??{}),...p.sources};this.weatherEntry=p.entry_id;this.saved=`Station de Niak Weather (${p.title}) reprise : vérifiez puis enregistrez.`;}
   catch(e){this.error=this.message(e);}finally{this.busy=false;}
  }
- private weatherBlock(){const nw=this.snapshot?.niak_weather;if(!nw?.installed||!nw.places.length)return nothing;
-  const linked=nw.places.find(p=>p.entry_id===this.weatherEntry);
-  return html`<section class="notice weather">${linked?html`<p><strong>Relié à Niak Weather · ${linked.title}</strong></p><p class="hint">Niak Confort lit aussi ses alertes (orage, vigilance, pluie qui arrive) et ses prévisions pour les créneaux d’ouverture.</p>`:html`<p><strong>Niak Weather est installé.</strong> Reprenez sa station et profitez de ses alertes et prévisions : pluie qui arrive, orage, vigilance, créneaux d’ouverture.</p><div class="actions">${nw.places.map(p=>html`<button class="primary" @click=${()=>this.useWeather(p.entry_id)}>Utiliser Niak Weather${nw.places.length>1?' · '+p.title:''}</button>`)}</div>`}</section>`;}
+ private ownSensors(){this.weatherEntry=null;this.saved='';}
+ // The exterior: its source by integration first, then the place of Niak Weather.
+ private exteriorSource(){const s=this.snapshot!,nw=s.niak_weather,from=this.weatherEntry?'weather':'own';
+  return html`<section class="field"><div class="field-top"><h3 id="l-from">D’où viennent les mesures du dehors ?</h3></div>
+   ${this.choiceList('from','l-from',exteriorChoices(s),from,v=>v==='weather'?void this.useWeather(nw!.places[0].entry_id):this.ownSensors())}
+   ${from==='weather'?this.zone('Lieu Niak Weather',(nw?.places??[]).map(p=>({value:p.entry_id,label:p.title})),this.weatherEntry!,id=>void this.useWeather(id),
+    'Niak Confort lit aussi ses alertes (orage, vigilance, pluie qui arrive) et ses prévisions pour les créneaux d’ouverture.'):nothing}</section>`;}
+ // The outdoor air quality: the integration first, then its zone or place, then the person's caution.
+ private airBlock(){const all=this.discovery?.candidates.pollution??[],spec=this.exteriorDraft!.pollution,current=airSource(spec);
+  const pickSource=(v:string)=>{if(v===current)return;if(v==='none'){this.clear('pollution');return;}
+   const first=all.find(c=>c.adapter===(v==='atmo'?'atmo_daily':'niak_index'));if(first)this.choose('pollution',first);};
+  const zones=spec&&current!=='other'?all.filter(c=>c.adapter===spec.adapter):[],c=all.find(x=>x.entity_id===spec?.entity_id);
+  return html`<section class="field"><div class="field-top"><h3 id="l-air">${labels.pollution}</h3><span>Facultatif</span></div><p class="hint">Une précaution régionale du jour, pas une mesure à vos fenêtres.</p>
+   ${this.choiceList('air','l-air',airChoices(this.snapshot!,all,current),current,pickSource)}
+   ${spec&&current!=='other'?this.zone(current==='atmo'?'Zone Atmo France':'Lieu Niak Weather',zones.map(z=>({value:z.entity_id,label:z.name+' · '+measurement(z)})),spec.entity_id,id=>this.pick('pollution',id)):nothing}
+   ${current==='other'?html`<p class="hint">${c?.name??spec!.entity_id}</p>`:nothing}${c?this.warnings(c):nothing}
+   ${spec?.adapter==='atmo_daily'?html`<label>Prudence à partir du niveau<select @change=${(e:Event)=>{this.exteriorDraft={...this.exteriorDraft!,pollution:{...spec,block_from:Number((e.target as HTMLSelectElement).value)}};}}>${['Moyen','Dégradé','Mauvais','Très mauvais','Extrêmement mauvais'].map((label,i)=>html`<option value=${i+2} ?selected=${(spec.block_from??4)===i+2}>${label}</option>`)}</select></label><p class="hint">C’est votre préférence de prudence, pas une consigne sanitaire.</p>`:nothing}</section>`;}
+ // ---- Pieces shared by every step (charte des onglets de réglage) ----
+ // What the step is for, in a frame that folds and stays folded.
+ private intro(id:string){const open=!this.folded.includes(id);
+  const toggle=(e:Event)=>{const now=(e.target as HTMLDetailsElement).open;if(now===open)return;
+   this.folded=now?this.folded.filter(s=>s!==id):[...this.folded,id];
+   try{localStorage.setItem(FOLDED,JSON.stringify(this.folded));}catch{/* private window: folded for this visit only */}};
+  return html`<details class="intro" ?open=${open} @toggle=${toggle}><summary>À quoi sert cet onglet ?</summary><ul>${intros[id].map(l=>html`<li>${l}</li>`)}</ul></details>`;}
+ // A source chosen by integration: greyed with a link to install it when it is missing.
+ private choiceList(name:string,label:string,choices:Choice[],value:string,pick:(v:string)=>void){
+  return html`<div class="sources" role="radiogroup" aria-labelledby=${label}>${choices.map(c=>html`<label class="source ${c.value===value?'on':''} ${c.available?'':'off'}">
+   <input type="radio" name=${name} .checked=${c.value===value} ?disabled=${!c.available||this.busy} @change=${()=>pick(c.value)}>
+   <span><strong>${c.label}</strong><span>${c.hint}</span>${c.available?nothing:html`<span>${c.missing}${c.url?html` · <a href=${c.url} target="_blank" rel="noreferrer">installer ${c.label}</a>`:nothing}</span>`}</span></label>`)}</div>`;}
+ // The zone, place or device of the chosen source, shown even when there is only one.
+ private zone(label:string,options:{value:string;label:string}[],value:string,pick:(v:string)=>void,hint=''){
+  const known=options.some(o=>o.value===value);
+  return html`<label class="zone">${label}<select ?disabled=${this.busy} @change=${(e:Event)=>pick((e.target as HTMLSelectElement).value)}>
+   ${known?nothing:html`<option value="" selected disabled>Introuvable · choisissez-en un autre</option>`}
+   ${options.map(o=>html`<option value=${o.value} ?selected=${o.value===value}>${o.label}</option>`)}</select></label>${hint?html`<p class="hint">${hint}</p>`:nothing}`;}
+ // A part that folds, in a frame of its own: title, « x sur y », and what is left to check.
+ private group(title:string,keys:string[]){
+  const on=keys.filter(k=>this.selected(k).length).length,check=this.pending().some(p=>keys.some(k=>p.id.startsWith(k+':')));
+  return html`<details class="group" open><summary><strong>${title}</strong><span class="hint">${on} sur ${keys.length}${check?html` · <span class="warn-inline">à vérifier</span>`:nothing}</span></summary>${keys.map(k=>this.field(k))}</details>`;}
  private async changeArea(area_id:string){
   if(!this.draft)return;this.busy=true;this.error='';
   try{const d=await this.discover(area_id||null,this.entryId);this.discovery=d;this.revision=d.revision;this.draft={...this.draft,area_id:area_id||null};}
@@ -176,7 +213,7 @@ export class ComfortSetup extends LitElement {
  private selected(key:string):string[]{if(this.exteriorDraft)return this.exteriorDraft[key]?[this.exteriorDraft[key].entity_id]:[];if(!this.draft)return [];return key==='windows'?this.draft.windows:this.draft.sources[key]?[this.draft.sources[key]]:[];}
  private choose(key:string,c:Candidate){
   const previous=this.selected(key);
-  if(this.exteriorDraft){this.exteriorDraft={...this.exteriorDraft,[key]:{entity_id:c.entity_id,adapter:c.adapter,...(c.adapter==='atmo_daily'?{block_from:4}:{})}};}
+  if(this.exteriorDraft){this.exteriorDraft={...this.exteriorDraft,[key]:{entity_id:c.entity_id,adapter:c.adapter,...(c.adapter==='atmo_daily'?{block_from:this.exteriorDraft[key]?.block_from??4}:{})}};}
   else if(this.draft){if(key==='windows'){this.draft={...this.draft,windows:[...new Set([...this.draft.windows,c.entity_id])],openings:{...this.draft.openings,[c.entity_id]:this.draft.openings[c.entity_id]??defaultOpening()}};}else this.draft={...this.draft,sources:{...this.draft.sources,[key]:c.entity_id}};}
   if(!multiple.has(key))this.acknowledged=this.acknowledged.filter(id=>!previous.some(p=>id===warningId(key,p)));
   this.proposed=this.proposed.filter(id=>id!==c.entity_id);this.search={...this.search,[key]:''};this.error='';
@@ -195,7 +232,7 @@ export class ComfortSetup extends LitElement {
   for(const key of keys)for(const id of this.selected(key)){const c=this.discovery?.candidates[key]?.find(x=>x.entity_id===id);if(c?.warnings.length&&!this.acknowledged.includes(warningId(key,id)))out.push({id:warningId(key,id),name:c.name});}
   return out;}
  private confirmBlock(){const list=this.pending();if(!list.length)return nothing;
-  return html`<div class="notice confirm"><p>${list.length===1?'Un capteur est à vérifier':list.length+' capteurs sont à vérifier'} (autre pièce, porte d’appareil ou mesure recopiée) : ${list.map(x=>x.name).join(', ')}. Les explications sont aux étapes précédentes.</p><label class="check"><input type="checkbox" .checked=${this.confirmed} @change=${(e:Event)=>{this.confirmed=(e.target as HTMLInputElement).checked;if(this.confirmed)this.error='';}}>J’ai vérifié, je confirme mes choix.</label></div>`;}
+  return html`<div class="notice confirm"><p>${list.length===1?'Un capteur est à vérifier':list.length+' capteurs sont à vérifier'} (autre pièce, porte d’appareil ou mesure recopiée) : ${list.map(x=>x.name).join(', ')}.${this.exteriorDraft?' Les explications sont plus haut.':' Les explications sont aux étapes précédentes.'}</p><label class="check"><input type="checkbox" .checked=${this.confirmed} @change=${(e:Event)=>{this.confirmed=(e.target as HTMLInputElement).checked;if(this.confirmed)this.error='';}}>J’ai vérifié, je confirme mes choix.</label></div>`;}
  private where(c:Candidate){return c.area_id?this.areaName(c.area_id):'Sans pièce';}
  private candidateRow(c:Candidate,key:string){return html`<div class="candidate"><div><strong>${c.name}</strong><p>${measurement(c)} · ${this.where(c)}${c.reference?' · référence de la pièce':nothing}</p>${this.warnings(c,key,false)}</div><button @click=${()=>this.choose(key,c)}>Utiliser</button></div>`;}
  private replace(key:string,old:string,id:unknown){
@@ -244,7 +281,6 @@ export class ComfortSetup extends LitElement {
    ${canAdd&&!proposals.length&&!selected.length?html`<p class="notice">${where?'Rien trouvé '+where+'.':'Pièce libre : choisissez le capteur ci-dessous.'}${where?' Vous pouvez en choisir un ailleurs ci-dessous.':''}</p>`:nothing}
    ${canAdd?this.picker(key,all,selected):nothing}
    ${key!=='indoor_temperature'&&!selected.length?html`<button class="link" @click=${()=>{this.clear(key);this.saved=labels[key]+' : laissé vide pour l’instant.';}}>Continuer sans</button>`:nothing}
-   ${this.exteriorDraft?.[key]?.adapter==='atmo_daily'?html`<label>Prudence à partir du niveau<select @change=${(e:Event)=>{this.exteriorDraft={...this.exteriorDraft!,[key]:{...this.exteriorDraft![key],block_from:Number((e.target as HTMLSelectElement).value)}};}}>${['Moyen','Dégradé','Mauvais','Très mauvais','Extrêmement mauvais'].map((label,i)=>html`<option value=${i+2} ?selected=${(this.exteriorDraft![key].block_from??4)===i+2}>${label}</option>`)}</select></label><p class="hint">C’est votre préférence de prudence, pas une consigne sanitaire.</p>`:nothing}
   </section>`;
  }
  private go(stage:number){this.stage=stage;this.error='';this.saved='';this.updateComplete.then(()=>this.renderRoot.querySelector<HTMLElement>('h1')?.focus());}
@@ -272,26 +308,28 @@ export class ComfortSetup extends LitElement {
    <label>Pièce Home Assistant<select @change=${(e:Event)=>this.changeArea((e.target as HTMLSelectElement).value)}><option value="" ?selected=${!d.area_id}>Aucune (pièce libre)</option>${this.snapshot!.areas.filter(a=>!a.outdoor&&(!used.has(a.area_id)||a.area_id===d.area_id)).map(a=>html`<option value=${a.area_id} ?selected=${a.area_id===d.area_id}>${a.name}</option>`)}</select></label>
    <p class="hint">Rattacher la pièce permet à Niak de proposer ses capteurs. Vous pouvez toujours en choisir ailleurs.</p></section>
    <section class="field"><h2>Votre plage de confort</h2><p>Les températures dans lesquelles vous vous sentez bien.</p>${this.number('minimum','Température minimum (°C)',20,0.5)}${this.number('maximum','Température maximum (°C)',24,0.5)}
-   <button class="link" aria-expanded=${this.advanced} @click=${()=>this.advanced=!this.advanced}>${this.advanced?'Masquer':'Afficher'} les réglages avancés</button>
-   ${this.advanced?html`<p class="hint">Ces seuils reprennent votre ancien template. Ce ne sont pas des références sanitaires.</p>${this.number('humidity_high','Humidité haute (%)',62)}${this.number('co2_potential','CO₂ : aérer ferait du bien (ppm)',1000)}${this.number('co2_action','CO₂ : aérer (ppm)',1200)}${this.number('co2_urgent','CO₂ : attention (ppm)',1600)}${this.number('gust_max','Rafales : ne rien laisser ouvert au-delà de (km/h)',45)}${this.number('frost','Gel : pas d’ouverture prolongée en dessous de (°C)',1,0.5)}${this.number('sun_facade','Soleil fort sur une façade (W/m²)',250,10)}${this.number('max_age_seconds','Ancienneté maximum des mesures (secondes)',1800)}`:nothing}</section>`;}
+   <details class="group"><summary><strong>Réglages avancés</strong><span class="hint">${changedAdvanced(d.settings)?`${changedAdvanced(d.settings)} sur ${Object.keys(advancedDefaults).length} modifiés`:'par défaut'}</span></summary>
+    <p class="hint">Ces seuils reprennent votre ancien template. Ce ne sont pas des références sanitaires.</p>${this.number('humidity_high','Humidité haute (%)',62)}${this.number('co2_potential','CO₂ : aérer ferait du bien (ppm)',1000)}${this.number('co2_action','CO₂ : aérer (ppm)',1200)}${this.number('co2_urgent','CO₂ : attention (ppm)',1600)}${this.number('gust_max','Rafales : ne rien laisser ouvert au-delà de (km/h)',45)}${this.number('frost','Gel : pas d’ouverture prolongée en dessous de (°C)',1,0.5)}${this.number('sun_facade','Soleil fort sur une façade (W/m²)',250,10)}${this.number('max_age_seconds','Ancienneté maximum des mesures (secondes)',1800)}</details></section>`;}
  private summary(){const d=this.draft!,home=this.snapshot!.home;const name=(key:string,id?:string)=>id?this.discovery?.candidates[key]?.find(v=>v.entity_id===id)?.name??id:'';
   const metas=d.windows.map(id=>d.openings[id]??defaultOpening());const counts=new Map<string,number>();for(const m of metas)if(m.exposure)counts.set(m.exposure,(counts.get(m.exposure)??0)+1);
   const expo=[...counts].map(([e,n])=>n+' '+exposures.find(x=>x[0]===e)![1].toLowerCase()).join(', ');const unknown=metas.filter(m=>!m.exposure).length,sheltered=metas.filter(m=>m.sheltered).length;
   const measures=[name('indoor_temperature',d.sources.indoor_temperature),name('indoor_humidity',d.sources.indoor_humidity)].filter(Boolean).join(' · ');
-  return html`<dl class="summary compact"><dt>Pièce</dt><dd>${d.name} · ${d.area_id?'rattachée à « '+this.areaName(d.area_id)+' »':'pièce libre'}</dd>
-   <dt>Mesures</dt><dd>${measures||'—'}</dd><dt>Air</dt><dd>${name('co2',d.sources.co2)||'Pas de CO₂'}</dd><dt>Chauffage</dt><dd>${name('heating',d.sources.heating)||'Non suivi'}</dd>
-   <dt>Ouvrants</dt><dd>${d.windows.length?html`${d.windows.length} ${d.windows.length>1?'ouvrants':'ouvrant'}${sheltered?' · '+sheltered+' abrité'+(sheltered>1?'s':''):''}${expo?' · '+expo:''}${unknown?' · '+unknown+' sans exposition':''}<details><summary>Voir la liste</summary>${d.windows.map(id=>html`<div>${name('windows',id)}</div>`)}</details>`:'Aucun'}</dd>
-   <dt>Extérieur</dt><dd>${home.configured?exteriorSummary(home.sources):'À configurer depuis Mon logement'}</dd><dt>Confort</dt><dd>${d.settings.minimum}–${d.settings.maximum} °C</dd></dl>
+  return html`<dl class="summary compact"><dt>${stages[0]}</dt><dd>${measures||'—'}</dd>
+   <dt>${stages[1]}</dt><dd>${d.windows.length?html`${d.windows.length} ${d.windows.length>1?'ouvrants':'ouvrant'}${sheltered?' · '+sheltered+' abrité'+(sheltered>1?'s':''):''}${expo?' · '+expo:''}${unknown?' · '+unknown+' sans exposition':''}<details><summary>Voir la liste</summary>${d.windows.map(id=>html`<div>${name('windows',id)}</div>`)}</details>`:'Aucun'}</dd>
+   <dt>${stages[2]}</dt><dd>${name('co2',d.sources.co2)||'Pas de CO₂'}</dd><dt>${stages[3]}</dt><dd>${name('heating',d.sources.heating)||'Non suivi'}</dd>
+   <dt>${stages[4]}</dt><dd>${d.name} · ${d.area_id?'rattachée à « '+this.areaName(d.area_id)+' »':'pièce libre'} · ${d.settings.minimum}–${d.settings.maximum} °C</dd>
+   <dt>Extérieur</dt><dd>${home.configured?exteriorSummary(home.sources):'À configurer depuis Mon logement'}</dd></dl>
    ${this.confirmBlock()}`;}
  private errorBlock(){return this.error?html`<p class="notice error" role="alert">${this.error}</p>`:nothing;}
  private wizard(){const d=this.draft!;return html`<div class="actions"><button class="link" @click=${()=>this.cancel()}>← Mon logement</button></div><h1 tabindex="-1">${this.entryId?'Modifier':'Configurer'} ${d.name||'la pièce'}</h1><p class="step-count">${d.area_id?'Pièce Home Assistant : '+this.areaName(d.area_id):'Pièce libre'} · étape ${this.stage+1} sur ${stages.length}</p>
   <nav class="steps" aria-label="Étapes">${stages.map((label,i)=>html`<button aria-current=${i===this.stage?'step':'false'} @click=${()=>this.go(i)}>${label}</button>`)}</nav>
+  ${this.intro(String(this.stage))}
   ${this.stage===0?indoor.map(key=>this.field(key)):this.stage===1?this.field('windows'):this.stage===2?this.field('co2'):this.stage===3?this.field('heating'):this.stage===4?this.preferences():this.summary()}
   ${this.stage<4?html`<button class="link" @click=${()=>this.refreshCandidates()}>Rechercher à nouveau les capteurs</button>`:nothing}
   ${this.errorBlock()}
   <div class="bottom"><button @click=${()=>this.stage?this.go(this.stage-1):this.cancel()}>Retour</button><div>${this.stage>0&&this.stage<5?html`<button @click=${()=>this.go(this.stage+1)}>Passer</button>`:nothing}<button class="primary" ?disabled=${this.busy} @click=${()=>this.stage===5?this.save():this.next()}>${this.stage===5?'Enregistrer':'Continuer'}</button></div></div>${this.removeBlock()}`;}
- private exterior(){return html`<div class="actions"><button class="link" @click=${()=>this.cancel()}>← Mon logement</button></div><h1 tabindex="-1">L’extérieur du logement</h1><p>Choisissez une fois les mesures du dehors. Toutes vos pièces les utilisent.</p>${this.weatherBlock()}
-  ${outdoor.map(key=>this.field(key))}${this.confirmBlock()}${this.errorBlock()}<div class="bottom"><button @click=${()=>this.cancel()}>Annuler</button><button class="primary" ?disabled=${this.busy} @click=${()=>this.save()}>Enregistrer l’extérieur</button></div>`;}
+ private exterior(){return html`<div class="actions"><button class="link" @click=${()=>this.cancel()}>← Mon logement</button></div><h1 tabindex="-1">L’extérieur du logement</h1>${this.intro('exterior')}${this.exteriorSource()}
+  ${outdoorGroups.map(([title,keys])=>this.group(title,keys))}${this.airBlock()}${this.confirmBlock()}${this.errorBlock()}<div class="bottom"><button @click=${()=>this.cancel()}>Annuler</button><button class="primary" ?disabled=${this.busy} @click=${()=>this.save()}>Enregistrer l’extérieur</button></div>`;}
  private card(id:string){
   if(!customElements.get('niak-comfort-card'))return html`<p class="notice">L’aperçu de la carte apparaîtra après un rechargement de la page.</p>`;
   if(this.previewCard?.id!==id){const el=document.createElement('niak-comfort-card') as HTMLElement&{hass?:unknown;setConfig?:(c:object)=>void};el.setConfig?.({type:'custom:niak-comfort-card',entry_id:id,format:'full'});el.hass=this.hass;this.previewCard={id,el};}

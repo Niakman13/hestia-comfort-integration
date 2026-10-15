@@ -219,6 +219,14 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         self.hass.data['niak_weather_api'] = type('Old', (), {'version': 2})()
         self.assertFalse(self.service.snapshot()['niak_weather']['installed'])
 
+    async def test_the_page_knows_whether_atmo_france_is_installed(self):
+        from homeassistant.config_entries import ConfigEntry
+        self.assertFalse(self.service.snapshot()['integrations']['atmofrance'])
+        atmo = ConfigEntry(domain='atmofrance', title='Marseille', unique_id='13055', version=1, minor_version=1, source='user',
+                           data={}, options={}, discovery_keys={}, subentries_data=[])
+        self.hass.config_entries._entries[atmo.entry_id] = atmo
+        self.assertTrue(self.service.snapshot()['integrations']['atmofrance'])
+
     async def test_outlook_reads_niak_weather_by_stable_keys(self):
         from custom_components.niak_comfort import weather_link
         self.link_weather({}, hours=[{'time': '2026-10-14T21:00:00+00:00', 'temperature': 18}])
