@@ -7,6 +7,7 @@ from unittest.mock import Mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import area_registry as ar, floor_registry as fr
 from homeassistant.config_entries import ConfigEntries, ConfigEntry, ConfigEntryState
 from custom_components.niak_comfort.coordinator import ComfortCoordinator
 from custom_components.niak_comfort.websocket import ws_entries, ws_subscribe
@@ -18,6 +19,8 @@ class WebsocketTests(unittest.IsolatedAsyncioTestCase):
         self.hass = HomeAssistant(self.temp.name)
         self.hass.config_entries = ConfigEntries(self.hass, {})
         await self.hass.config_entries.async_initialize()
+        await fr.async_load(self.hass)
+        await ar.async_load(self.hass)
         self.conn = Mock(subscriptions={})
 
     async def asyncTearDown(self):
@@ -65,6 +68,27 @@ class WebsocketTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.conn.send_result.call_args.args[1][0]["entry_id"], entry.entry_id)
         ws_subscribe(self.hass, self.conn, {"id": 2, "type": "niak_comfort/subscribe", "entry_id": "missing"})
         self.assertEqual(self.conn.send_error.call_args.args[1], "not_found")
+
+    async def test_registry_changes_refresh_and_failed_room_remains(self):
+        from custom_components.niak_comfort.websocket import ws_home_subscribe
+        entry = await self.add('salon')
+        ar.async_get(self.hass).async_create('Salon')
+        floor = fr.async_get(self.hass).async_create('RDC', level=0)
+        ws_home_subscribe(self.hass, self.conn, {'id':2,'type':'niak_comfort/home_subscribe'})
+        self.assertIsNone(self.conn.send_message.call_args.args[0]['event']['home']['floors'][0]['floor_id'])
+        ar.async_get(self.hass).async_update('salon',floor_id=floor.floor_id)
+        await self.hass.async_block_till_done()
+        self.assertEqual(self.conn.send_message.call_args.args[0]['event']['home']['floors'][0]['name'],'RDC')
+        entry.runtime_data.async_set_update_error(ValueError('fixture unavailable'))
+        event=self.conn.send_message.call_args.args[0]['event']
+        self.assertEqual(len(event['rooms']),1)
+        self.assertTrue(event['home']['partial'])
+        self.assertEqual(event['home']['floors'][0]['measured'],0)
+        self.conn.subscriptions[2]()
+        count=self.conn.send_message.call_count
+        fr.async_get(self.hass).async_update(floor.floor_id,name='Renommé')
+        await self.hass.async_block_till_done()
+        self.assertEqual(self.conn.send_message.call_count,count)
 
 
 if __name__ == "__main__":

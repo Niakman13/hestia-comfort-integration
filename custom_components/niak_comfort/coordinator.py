@@ -75,6 +75,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.previous = assess(readings, self.settings, self.previous, openings, self._sun(), outlook, now)
         return {"version": VIEW_VERSION, "entry_id": self.entry_id,
                 "area_id": self.config.get("area_id"), "title": self.config.get("name"),
+                "comfort_minimum": self.settings.minimum,
                 "computed_at": now.isoformat(), "assessment": self.previous.to_dict(),
                 "observations": {k: asdict(v) for k, v in readings.items()},
                 "names": {e: (state.name if (state := self.hass.states.get(e)) else e) for e in windows}}

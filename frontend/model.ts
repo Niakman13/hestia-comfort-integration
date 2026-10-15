@@ -11,10 +11,10 @@ export interface Candidate {
 }
 export interface Spec {entity_id:string;adapter:string;block_from?:number}
 export interface OpeningMeta {exposure:string|null;kind:string;sheltered:boolean}
-export interface RoomConfig {area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean}
+export interface RoomConfig {floor_id?:string|null;area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean}
 export interface Room {entry_id:string;title:string;loaded:boolean;config:RoomConfig}
-export interface Area {area_id:string;name:string;outdoor:boolean}
-export interface Snapshot {version:1;revision:string;areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null};niak_weather?:{installed:boolean;places:{entry_id:string;title:string}[]};integrations?:{atmofrance?:boolean}}
+export interface Area {floor_id?:string|null;area_id:string;name:string;outdoor:boolean}
+export interface Snapshot {version:1;revision:string;floors?:{floor_id:string;name:string;level:number|null}[];areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null};niak_weather?:{installed:boolean;places:{entry_id:string;title:string}[]};integrations?:{atmofrance?:boolean}}
 export interface Discovery {version:1;revision:string;candidates:Record<string,Candidate[]>;suggestions:Record<string,string|string[]>}
 // The technical state of the home (health.py): orange (bad) stops something, tip could be better, none is not used.
 export type Level='ok'|'bad'|'tip'|'none';

@@ -3,9 +3,13 @@ import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import callback
+from homeassistant.helpers import area_registry as ar, floor_registry as fr
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .engine.home import synthesis
+from .engine.assessment import assess
+from .floors import room_floor
 
 
 @callback
@@ -83,7 +87,15 @@ def ws_home_subscribe(hass, connection, msg):
 
     @callback
     def send():
-        views = [c.data for c in coordinators if c.last_update_success and c.data]
+        views = []
+        for entry in entries:
+            c = entry.runtime_data
+            view = c.data if c.last_update_success and c.data else {
+                "version": 1, "entry_id": entry.entry_id, "title": entry.title,
+                "area_id": {**entry.data, **entry.options}.get("area_id"),
+                "computed_at": dt_util.utcnow().isoformat(),
+                "observations": {}, "assessment": assess({}).to_dict()}
+            views.append({**view, "floor": room_floor(hass, {**entry.data, **entry.options})})
         connection.send_message(websocket_api.event_message(msg["id"], {"version": 1, "rooms": views, "home": synthesis(views)}))
 
     @callback
@@ -91,6 +103,8 @@ def ws_home_subscribe(hass, connection, msg):
         connection.send_message(websocket_api.event_message(msg["id"], {"version": 1, "reload": True}))
 
     removers = [c.async_add_listener(send) for c in coordinators]
+    removers.extend(hass.bus.async_listen(event, lambda _: send()) for event in
+                    (ar.EVENT_AREA_REGISTRY_UPDATED, fr.EVENT_FLOOR_REGISTRY_UPDATED))
     for c in coordinators:
         c.stop_listeners.add(stopped)
 

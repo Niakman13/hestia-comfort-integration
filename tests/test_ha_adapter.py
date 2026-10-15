@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntries, ConfigEntryState
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
+from homeassistant.helpers import area_registry as ar, floor_registry as fr, device_registry as dr, entity_registry as er
 from custom_components.niak_comfort.config_flow import ComfortOptionsFlow, ComfortConfigFlow
 from custom_components.niak_comfort.coordinator import ComfortCoordinator
 from custom_components.niak_comfort.sensor import ComfortSensor, DESCRIPTIONS
@@ -24,6 +24,7 @@ class AdapterFixture(unittest.IsolatedAsyncioTestCase):
         self.hass = HomeAssistant(self.directory.name)
         self.hass.config_entries = ConfigEntries(self.hass, {})
         await self.hass.config_entries.async_initialize()
+        await fr.async_load(self.hass)
         await ar.async_load(self.hass)
         dr.async_setup(self.hass)
         await dr.async_load(self.hass)

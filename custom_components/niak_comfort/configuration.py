@@ -8,6 +8,7 @@ import json
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers import area_registry as ar
 from . import weather_link
+from .floors import floor_catalog, room_floor
 from .const import DOMAIN, OUTDOOR_AREAS, SOURCES
 from .discovery import INDOOR, OUTDOOR, candidate, catalog, overview, suggestions
 from .engine.assessment import EXPOSURES, KINDS, Settings
@@ -53,10 +54,10 @@ class Configuration:
         entries = []
         for e in self.entries():
             config = deepcopy({**e.data, **e.options})
-            entries.append({"entry_id": e.entry_id, "title": e.title, "loaded": e.state.value == "loaded", "config": config})
-        areas = [{"area_id": a.id, "name": a.name, "outdoor": a.name.strip().casefold() in OUTDOOR_AREAS}
+            entries.append({"entry_id": e.entry_id, "title": e.title, "loaded": e.state.value == "loaded", "config": config, "floor": room_floor(self.hass, config)})
+        areas = [{"area_id": a.id, "name": a.name, "floor_id": a.floor_id, "outdoor": a.name.strip().casefold() in OUTDOOR_AREAS}
                  for a in ar.async_get(self.hass).areas.values()]
-        return {"version": 1, "revision": self.revision(), "home": {"sources": self.home_sources(), "configured": bool(self.home.get("configured")), "acknowledged": self.home.get("acknowledged", []), "weather": self.home.get("weather")}, "niak_weather": weather_link.status(self.hass), "integrations": {"atmofrance": bool(self.hass.config_entries.async_entries("atmofrance"))}, "rooms": entries, "areas": sorted(areas, key=lambda a: (a["name"].casefold() != "salon", a["name"].casefold()))}
+        return {"version": 1, "revision": self.revision(), "home": {"sources": self.home_sources(), "configured": bool(self.home.get("configured")), "acknowledged": self.home.get("acknowledged", []), "weather": self.home.get("weather")}, "niak_weather": weather_link.status(self.hass), "integrations": {"atmofrance": bool(self.hass.config_entries.async_entries("atmofrance"))}, "rooms": entries, "floors": floor_catalog(self.hass), "areas": sorted(areas, key=lambda a: (a["name"].casefold() != "salon", a["name"].casefold()))}
 
     def discover(self, area_id=None, entry_id=None):
         if area_id and not ar.async_get(self.hass).async_get_area(area_id):
@@ -124,6 +125,11 @@ class Configuration:
         area = ar.async_get(self.hass).async_get_area(area_id) if isinstance(area_id, str) else None
         if area_id is not None and not area:
             raise ValueError("Cette pièce Home Assistant n’existe plus. Choisissez-en une autre ou une pièce libre.")
+        floor_id = payload.get("floor_id") or None
+        if area_id:
+            floor_id = None  # Home Assistant owns the floor of a linked area.
+        elif floor_id is not None and (not isinstance(floor_id, str) or floor_id not in {f["floor_id"] for f in floor_catalog(self.hass)}):
+            raise ValueError("Cet étage n’existe plus. Choisissez un étage existant ou aucun étage.")
         sources = payload.get("sources", {})
         if not isinstance(sources, dict) or set(sources) - set(SOURCES):
             raise ValueError("Sources de pièce invalides.")
@@ -174,7 +180,7 @@ class Configuration:
                     warnings.append({"key": key, "entity_id": entity_id, "warnings": c["warnings"]})
             if key != "windows":
                 cleaned_sources[key] = value
-        cleaned = {"name": name.strip(), "area_id": area_id, "sources": cleaned_sources,
+        cleaned = {"name": name.strip(), "area_id": area_id, "floor_id": floor_id, "sources": cleaned_sources,
                    "windows": list(dict.fromkeys(windows)), "openings": cleaned_openings, "settings": settings,
                    "use_home": not legacy}
         return cleaned, warnings

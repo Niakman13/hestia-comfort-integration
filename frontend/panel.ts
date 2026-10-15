@@ -191,7 +191,7 @@ export class ComfortSetup extends LitElement {
   return html`<details class="group" open><summary><strong>${title}</strong><span class="hint">${on} sur ${keys.length}${check?html` · <span class="warn-inline">à vérifier</span>`:nothing}</span></summary>${keys.map(k=>this.field(k))}</details>`;}
  private async changeArea(area_id:string){
   if(!this.draft)return;this.busy=true;this.error='';
-  try{const d=await this.discover(area_id||null,this.entryId);this.discovery=d;this.revision=d.revision;this.draft={...this.draft,area_id:area_id||null};}
+  try{const d=await this.discover(area_id||null,this.entryId);this.discovery=d;this.revision=d.revision;this.draft={...this.draft,area_id:area_id||null,floor_id:null};}
   catch(e){this.error=this.message(e);}finally{this.busy=false;}
  }
  private async refreshCandidates(){
@@ -303,9 +303,12 @@ export class ComfortSetup extends LitElement {
   catch(e){this.error=this.message(e);}finally{this.busy=false;}
  }
  private number(key:string,label:string,initial:number,step=1){const d=this.draft!;return html`<label>${label}<input type="number" step=${step} .value=${String(d.settings[key]??initial)} @input=${(e:Event)=>this.draft={...d,settings:{...d.settings,[key]:Number((e.target as HTMLInputElement).value)}}}></label>`;}
+ private floorName(){const d=this.draft!;const id=d.area_id?this.snapshot?.areas.find(a=>a.area_id===d.area_id)?.floor_id:d.floor_id;return this.snapshot?.floors?.find(f=>f.floor_id===id)?.name??'Non renseigné';}
  private preferences(){const d=this.draft!,used=new Set(this.snapshot!.rooms.filter(r=>r.entry_id!==this.entryId).map(r=>r.config.area_id));
   return html`<section class="field"><h2>La pièce</h2><label>Nom<input type="text" maxlength="100" .value=${d.name} @input=${(e:Event)=>this.draft={...d,name:(e.target as HTMLInputElement).value}}></label>
    <label>Pièce Home Assistant<select @change=${(e:Event)=>this.changeArea((e.target as HTMLSelectElement).value)}><option value="" ?selected=${!d.area_id}>Aucune (pièce libre)</option>${this.snapshot!.areas.filter(a=>!a.outdoor&&(!used.has(a.area_id)||a.area_id===d.area_id)).map(a=>html`<option value=${a.area_id} ?selected=${a.area_id===d.area_id}>${a.name}</option>`)}</select></label>
+   ${d.area_id?html`<p>Étage : <strong>${this.floorName()}</strong></p><p class="hint">Repris de Home Assistant. Pour le modifier, changez l’étage de cette pièce dans Home Assistant.</p>`:html`<label>Étage (facultatif)<select @change=${(e:Event)=>this.draft={...d,floor_id:(e.target as HTMLSelectElement).value||null}}><option value="" ?selected=${!this.snapshot?.floors?.some(f=>f.floor_id===d.floor_id)}>Non renseigné</option>${(this.snapshot?.floors??[]).map(f=>html`<option value=${f.floor_id} ?selected=${d.floor_id===f.floor_id}>${f.name}</option>`)}</select></label>`}
+   <p class="hint">Le suivi fonctionne aussi de plain-pied, sans étage à configurer.</p>
    <p class="hint">Rattacher la pièce permet à Niak de proposer ses capteurs. Vous pouvez toujours en choisir ailleurs.</p></section>
    <section class="field"><h2>Votre plage de confort</h2><p>Les températures dans lesquelles vous vous sentez bien.</p>${this.number('minimum','Température minimum (°C)',20,0.5)}${this.number('maximum','Température maximum (°C)',24,0.5)}
    <details class="group"><summary><strong>Réglages avancés</strong><span class="hint">${changedAdvanced(d.settings)?`${changedAdvanced(d.settings)} sur ${Object.keys(advancedDefaults).length} modifiés`:'par défaut'}</span></summary>
@@ -317,7 +320,7 @@ export class ComfortSetup extends LitElement {
   return html`<dl class="summary compact"><dt>${stages[0]}</dt><dd>${measures||'—'}</dd>
    <dt>${stages[1]}</dt><dd>${d.windows.length?html`${d.windows.length} ${d.windows.length>1?'ouvrants':'ouvrant'}${sheltered?' · '+sheltered+' abrité'+(sheltered>1?'s':''):''}${expo?' · '+expo:''}${unknown?' · '+unknown+' sans exposition':''}<details><summary>Voir la liste</summary>${d.windows.map(id=>html`<div>${name('windows',id)}</div>`)}</details>`:'Aucun'}</dd>
    <dt>${stages[2]}</dt><dd>${name('co2',d.sources.co2)||'Pas de CO₂'}</dd><dt>${stages[3]}</dt><dd>${name('heating',d.sources.heating)||'Non suivi'}</dd>
-   <dt>${stages[4]}</dt><dd>${d.name} · ${d.area_id?'rattachée à « '+this.areaName(d.area_id)+' »':'pièce libre'} · ${d.settings.minimum}–${d.settings.maximum} °C</dd>
+   <dt>${stages[4]}</dt><dd>${d.name} · ${d.area_id?'rattachée à « '+this.areaName(d.area_id)+' »':'pièce libre'} · étage : ${this.floorName()} · ${d.settings.minimum}–${d.settings.maximum} °C</dd>
    <dt>Extérieur</dt><dd>${home.configured?exteriorSummary(home.sources):'À configurer depuis Mon logement'}</dd></dl>
    ${this.confirmBlock()}`;}
  private errorBlock(){return this.error?html`<p class="notice error" role="alert">${this.error}</p>`:nothing;}
