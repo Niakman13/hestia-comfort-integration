@@ -14,7 +14,7 @@ export interface OpeningMeta {exposure:string|null;kind:string;sheltered:boolean
 export interface RoomConfig {area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean}
 export interface Room {entry_id:string;title:string;loaded:boolean;config:RoomConfig}
 export interface Area {area_id:string;name:string;outdoor:boolean}
-export interface Snapshot {version:1;revision:string;areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null};niak_weather?:{installed:boolean;places:{entry_id:string;title:string}[]}}
+export interface Snapshot {version:1;revision:string;areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null};niak_weather?:{installed:boolean;places:{entry_id:string;title:string}[]};integrations?:{atmofrance?:boolean}}
 export interface Discovery {version:1;revision:string;candidates:Record<string,Candidate[]>;suggestions:Record<string,string|string[]>}
 // The technical state of the home (health.py): orange (bad) stops something, tip could be better, none is not used.
 export type Level='ok'|'bad'|'tip'|'none';
@@ -61,3 +61,57 @@ export function exteriorSummary(sources:Record<string,Spec>):string {
  return names.length?names.join(', ').replace(/^./,c=>c.toUpperCase()):'Rien de configuré';
 }
 export function warningId(key:string,id:string){return key+':'+id;}
+
+// The steps of a room, named by what they set (charte des onglets de réglage, ECOSYSTEME.md § 8).
+export const stages=['Température et humidité','Fenêtres et portes','CO₂','Chauffage','Pièce et confort','Récapitulatif'];
+// What each step is for, shown on top of it in a frame that folds: one idea per line.
+export const intros:Record<string,string[]>={
+ 0:['La température de la pièce : la seule mesure obligatoire.',
+  'L’humidité est facultative : elle repère un air trop humide.',
+  'Niak propose les capteurs de la pièce ; vous les gardez, les changez ou les retirez.'],
+ 1:['Les contacts des fenêtres et portes qui donnent dehors.',
+  'Niak sait ce qui est ouvert ; l’exposition dit quand le soleil entre.',
+  'Facultatif : sans contact, les conseils ne savent pas ce qui est ouvert.'],
+ 2:['Le CO₂ dit quand renouveler l’air de la pièce.',
+  'Facultatif : sans capteur, pas de conseil pour un air confiné.'],
+ 3:['Le thermostat ou la vanne de la pièce, pour savoir si le chauffage tourne.',
+  'Niak évite alors de conseiller d’ouvrir pendant qu’il chauffe. Il ne commande rien.',
+  'Facultatif.'],
+ 4:['Le nom de la pièce et sa pièce Home Assistant.',
+  'Les températures dans lesquelles vous vous sentez bien.',
+  'Les réglages avancés sont facultatifs.'],
+ 5:['Tout ce que vous avez choisi, onglet par onglet.',
+  'Rien ne change tant que vous n’avez pas enregistré ; un oubli, revenez à l’onglet voulu.'],
+ exterior:['Les mesures du dehors : température, pluie, vent, soleil, qualité de l’air.',
+  'Choisies une fois, elles servent à toutes vos pièces.',
+  'Toutes sont facultatives ; chacune rend les conseils plus justes.'],
+};
+// The exterior sensors, by frame: title and keys.
+export const outdoorGroups:[string,string[]][]=[['Température et humidité',['outdoor_temperature','outdoor_humidity']],['Pluie et vent',['rain','wind_gust','wind_bearing']],['Soleil',['solar']]];
+// The advanced thresholds of a room and their defaults (template repris, cahier des charges § 8.3).
+export const advancedDefaults:Record<string,number>={humidity_high:62,co2_potential:1000,co2_action:1200,co2_urgent:1600,gust_max:45,frost:1,sun_facade:250,max_age_seconds:1800};
+export function changedAdvanced(settings:Record<string,number>):number{return Object.entries(advancedDefaults).filter(([k,v])=>settings[k]!==undefined&&settings[k]!==v).length;}
+// One source in a list chosen by integration: its name, what it gives, and how to install it when missing.
+export interface Choice {value:string;label:string;hint:string;available:boolean;missing?:string;url?:string}
+export const links={atmofrance:'https://github.com/sebcaps/atmofrance',niak_weather:'https://github.com/Niakman13/niak-weather-integration'};
+// The integration behind an outdoor air quality source.
+export function airSource(spec?:Spec):string{return !spec?'none':spec.adapter==='atmo_daily'?'atmo':spec.adapter==='niak_index'?'niak':'other';}
+// The air quality sources, by integration, « Pas de … » last.
+export function airChoices(s:Pick<Snapshot,'niak_weather'|'integrations'>,all:Candidate[],current:string):Choice[]{
+ const atmo=all.some(c=>c.adapter==='atmo_daily'),niak=all.some(c=>c.adapter==='niak_index'),nw=!!s.niak_weather?.installed;
+ const list:Choice[]=[
+  {value:'atmo',label:'Atmo France',hint:'L’indice ATMO du jour, pour votre zone.',available:atmo,
+   ...(atmo?{}:s.integrations?.atmofrance?{missing:'Aucune zone trouvée : ajoutez-en une dans l’intégration Atmo France.'}:{missing:'Pas encore installée',url:links.atmofrance})},
+  {value:'niak',label:'Niak Weather',hint:'L’indice de qualité de l’air de votre lieu Niak Weather.',available:niak,
+   ...(niak?{}:nw?{missing:'Activez la qualité de l’air dans l’onglet Météo.'}:{missing:'Pas encore installée',url:links.niak_weather})}];
+ if(current==='other')list.push({value:'other',label:'Autre signal',hint:'Un capteur choisi avant cette version.',available:true});
+ list.push({value:'none',label:'Pas de qualité de l’air',hint:'Les conseils ne tiennent pas compte de la pollution.',available:true});
+ return list;
+}
+// Where the exterior measures come from: Niak Weather's station, or the person's own sensors.
+export function exteriorChoices(s:Pick<Snapshot,'niak_weather'>):Choice[]{
+ const nw=s.niak_weather,ready=!!nw?.installed&&!!nw.places.length;
+ return [{value:'weather',label:'Niak Weather',hint:'Reprend la station de votre lieu, ses alertes et ses prévisions.',available:ready,
+   ...(ready?{}:nw?.installed?{missing:'Aucun lieu dans l’onglet Météo pour l’instant.'}:{missing:'Pas encore installée',url:links.niak_weather})},
+  {value:'own',label:'Vos propres capteurs',hint:'Choisissez-les un par un ci-dessous ; tous sont facultatifs.',available:true}];
+}
