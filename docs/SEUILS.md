@@ -1,6 +1,6 @@
 # Repères d’interprétation — 16 octobre 2026
 
-Évolution locale, pas encore publiée. Le capteur, ses seuils modifiables et « Pourquoi ces valeurs ? » partagent le même cadre. La plage de température et l’humidité restent dans Température et humidité ; CO₂, PM2.5, COV et délai de présence dans Air et présence. Réglages / autres conserve l’identité de la pièce et les paramètres transversaux. L’aide sur les cartes reste une évolution ultérieure.
+Livré dans la bêta 0.9.0-beta.3. Le capteur, ses seuils modifiables et « Pourquoi ces valeurs ? » partagent le même cadre. La plage de température et l’humidité restent dans Température et humidité ; CO₂, PM2.5, COV et délai de présence dans Air et présence. Réglages / autres conserve l’identité de la pièce et les paramètres transversaux. L’aide sur les cartes reste une évolution ultérieure.
 
 | Mesure | Proposition Niak | Justification et portée |
 |---|---|---|
