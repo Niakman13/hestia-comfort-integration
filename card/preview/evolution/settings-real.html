@@ -1,0 +1,5 @@
+<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Niak Confort · Réglages réels 7 à 9</title><style>body{margin:0;background:#151c25;color:#edf1f7;font:14px/1.6 system-ui}body>p{margin:12px}</style><p>Banc local · vrais réglages · réponses HA fictives, aucun enregistrement réel</p><niak-comfort-setup embedded></niak-comfort-setup><script type="module">
+import '../../../custom_components/niak_comfort/frontend/panel.js';
+const fixture=await(await fetch('./setup-fixture.json')).json();const panel=document.querySelector('niak-comfort-setup');
+panel.route={path:'/'+fixture.snapshot.rooms[0].entry_id};panel.hass={connection:{},user:{is_admin:true},themes:{darkMode:true},callWS:async msg=>{switch(msg.type){case 'niak_comfort/configuration':return fixture.snapshot;case 'niak_comfort/discover':return fixture.discovery;case 'niak_comfort/health':throw Error('Banc local');case 'niak_comfort/validate_config':return {warnings:[]};case 'niak_comfort/save_config':fixture.snapshot.rooms[0].config=msg.config;return fixture.snapshot;default:return {};}}};
+</script></html>

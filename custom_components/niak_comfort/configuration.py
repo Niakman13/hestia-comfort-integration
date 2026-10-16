@@ -4,6 +4,7 @@ from copy import deepcopy
 from dataclasses import asdict
 import hashlib
 import json
+import math
 
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers import area_registry as ar
@@ -68,7 +69,7 @@ class Configuration:
             if not entry or entry.domain != DOMAIN or entry.data.get("home"):
                 raise ValueError("Pièce Niak Confort introuvable.")
             config = {**entry.data, **entry.options}
-            selected = {**config.get("sources", {}), "windows": config.get("windows", [])}
+            selected = {**config.get("sources", {}), "windows": config.get("windows", []), "presence": config.get("presence", [])}
         for key, spec in self.home_sources().items():
             selected.setdefault(key, spec["entity_id"])
         indoor_ids = {{**e.data, **e.options}.get("sources", {}).get(k) for e in self.entries()
@@ -138,6 +139,30 @@ class Configuration:
         windows = payload.get("windows", [])
         if not isinstance(windows, list) or any(not isinstance(e, str) for e in windows):
             raise ValueError("Contacts de fenêtres invalides.")
+        presence = payload.get("presence", [])
+        if not isinstance(presence, list) or any(not isinstance(e, str) for e in presence):
+            raise ValueError("Capteurs de présence invalides.")
+        evolution = payload.get("evolution", {})
+        if not isinstance(evolution, dict) or set(evolution) - {"voc_threshold", "glazing_factor", "presence_delay_minutes"}:
+            raise ValueError("Préférences avancées invalides.")
+        cleaned_evolution = {}
+        for key, default, low, high in (("glazing_factor", 0.7, 0, 1), ("presence_delay_minutes", 5, 0, 120)):
+            value = evolution.get(key, default)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not low <= value <= high:
+                raise ValueError("Valeur avancée invalide : " + key)
+            cleaned_evolution[key] = value
+        threshold = evolution.get("voc_threshold")
+        if threshold is not None:
+            value = threshold.get("value") if isinstance(threshold, dict) else None
+            unit = threshold.get("unit") if isinstance(threshold, dict) else None
+            state = self.hass.states.get(sources.get("voc", ""))
+            source_unit = state.attributes.get("unit_of_measurement") if state else None
+            explicit_index = bool(state and state.attributes.get("device_class") == "volatile_organic_compounds_index")
+            expected_unit = "" if source_unit is None and explicit_index else source_unit
+            if (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0
+                or not isinstance(unit, str) or not state or unit != expected_unit):
+                raise ValueError("Le seuil COV doit correspondre à l’unité exacte du capteur choisi.")
+            cleaned_evolution["voc_threshold"] = {"value": value, "unit": unit}
         name = payload.get("name", area.name if area else "")
         if not isinstance(name, str) or not name.strip() or len(name) > 100:
             raise ValueError("Donnez un nom à la pièce (1 à 100 caractères).")
@@ -161,14 +186,36 @@ class Configuration:
                 raise ValueError("Exposition inconnue pour " + entity_id)
             if kind not in KINDS or not isinstance(sheltered, bool):
                 raise ValueError("Type d’ouvrant invalide pour " + entity_id)
-            cleaned_openings[entity_id] = {"exposure": exposure, "kind": kind, "sheltered": sheltered}
+            shutter = meta.get("shutter", "none")
+            if shutter not in ("none", "manual", "connected"):
+                raise ValueError("Type de volet invalide pour " + entity_id)
+            item = {"exposure": exposure, "kind": kind, "sheltered": sheltered}
+            if "shutter" in meta:
+                item["shutter"] = shutter
+            for field, role in (("cover_entity", "covers"), ("auto_entity", "shutter_auto"), ("override_entity", "shutter_override")):
+                value = meta.get(field)
+                if value:
+                    found = candidate(self.hass, value, role, area_id) if isinstance(value, str) else None
+                    if shutter != "connected" or not found:
+                        raise ValueError("Source du volet incompatible : " + field)
+                    if found["warnings"]:
+                        warnings.append({"key": role, "entity_id": value, "warnings": found["warnings"]})
+                    item[field] = value
+            for field in ("width", "height", "overhang_depth", "overhang_gap"):
+                value = meta.get(field)
+                if value is not None:
+                    minimum = 0 if field.startswith("overhang") else 0.01
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not minimum <= value <= 20:
+                        raise ValueError("Dimension invalide : " + field)
+                    item[field] = value
+            cleaned_openings[entity_id] = item
         # Rooms use the shared exterior. Older rooms keep their own sources only until it is configured.
         legacy = not self.uses_home(payload)
         cleaned_sources = {}
-        for key, value in {**sources, "windows": windows}.items():
+        for key, value in {**sources, "windows": windows, "presence": presence}.items():
             if key in OUTDOOR and not legacy:
                 continue
-            ids = value if key == "windows" else [value]
+            ids = value if key in ("windows", "presence") else [value]
             for entity_id in ids:
                 if not isinstance(entity_id, str):
                     raise ValueError("Choisissez une entité existante pour chaque source.")
@@ -178,11 +225,11 @@ class Configuration:
                 # Exterior sources kept by an older room are not shown in the page: never ask to confirm them.
                 if c["warnings"] and key not in OUTDOOR:
                     warnings.append({"key": key, "entity_id": entity_id, "warnings": c["warnings"]})
-            if key != "windows":
+            if key not in ("windows", "presence"):
                 cleaned_sources[key] = value
         cleaned = {"name": name.strip(), "area_id": area_id, "floor_id": floor_id, "sources": cleaned_sources,
                    "windows": list(dict.fromkeys(windows)), "openings": cleaned_openings, "settings": settings,
-                   "use_home": not legacy}
+                   "presence": list(dict.fromkeys(presence)), "evolution": cleaned_evolution, "use_home": not legacy}
         return cleaned, warnings
 
     @staticmethod

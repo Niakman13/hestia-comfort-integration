@@ -2,7 +2,7 @@
 
 Threshold defaults replay historical settings; they are not health standards.
 """
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 import math
 from datetime import datetime
 from typing import Mapping
@@ -32,6 +32,8 @@ class Settings:
     gust_max: float = 45
     frost: float = 1.0
     sun_facade: float = 250
+    pm25_action: float = 25
+    illuminance_low: float = 100
 
     def __post_init__(self) -> None:
         if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v)
@@ -49,7 +51,7 @@ class Settings:
             raise ValueError("invalid_co2_hysteresis")
         if not (0 <= self.humidity_hysteresis < self.humidity_high):
             raise ValueError("invalid_humidity_hysteresis")
-        if min(self.cooling_delta, self.drying_delta, self.max_age_seconds, self.gust_max, self.sun_facade) <= 0:
+        if min(self.cooling_delta, self.drying_delta, self.max_age_seconds, self.gust_max, self.sun_facade, self.pm25_action, self.illuminance_low) <= 0:
             raise ValueError("positive_settings_required")
         if not -30 <= self.frost <= 15:
             raise ValueError("invalid_frost_threshold")
@@ -61,6 +63,14 @@ class Opening:
     exposure: str | None = None
     kind: str = "window"
     sheltered: bool = False
+    shutter: str = "none"
+    cover_entity: str | None = None
+    auto_entity: str | None = None
+    override_entity: str | None = None
+    width: float | None = None
+    height: float | None = None
+    overhang_depth: float | None = None
+    overhang_gap: float | None = None
 
 
 @dataclass(frozen=True)
@@ -97,6 +107,7 @@ class Assessment:
     open_first: tuple[str, ...] = ()
     slot: dict | None = None
     rain_soon_minutes: int | None = None
+    features: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -129,7 +140,8 @@ def facade_irradiance(share: float, sun: Sun | None, solar: float | None) -> flo
 
 def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
            previous: Assessment | None = None, openings: Mapping[str, Opening] | None = None,
-           sun: Sun | None = None, outlook: Mapping | None = None, now: datetime | None = None) -> Assessment:
+           sun: Sun | None = None, outlook: Mapping | None = None, now: datetime | None = None,
+           context: Mapping | None = None) -> Assessment:
     def value(key: str):
         reading = readings.get(key)
         return reading.value if reading and reading.usable else None
@@ -155,10 +167,18 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         # The daily index the person chose as precaution: above their threshold it blocks,
         # below it the precaution is checked, like an unconfigured one would not block.
         pollution = daily_air.value
+    from .evolution import air_features, features, _shade
+    context = context or {}
+    air_detail = air_features(readings, settings, context)
     old = previous.needs if previous else ()
     hot = ti is not None and ti > settings.maximum - (settings.temperature_hysteresis if "cool" in old else 0)
     cold = ti is not None and ti < settings.minimum + (settings.temperature_hysteresis if "heat" in old else 0)
-    air = co2 is not None and co2 >= settings.co2_action - (settings.co2_hysteresis if "air" in old else 0)
+    previous_co2 = previous.features.get("air", {}).get("co2_status") if previous else None
+    co2_was_high = previous_co2 == "high" if previous_co2 is not None else "air" in old
+    co2_air = co2 is not None and co2 >= settings.co2_action - (settings.co2_hysteresis if co2_was_high else 0)
+    air_detail["co2_status"] = ("not_configured" if "co2" not in readings else "unknown" if co2 is None
+                               else "high" if co2_air else "ok")
+    air = co2_air or air_detail["pm25_status"] == "high" or air_detail["voc_status"] == "high"
     wet = hi is not None and hi > settings.humidity_high - (settings.humidity_hysteresis if "dry" in old else 0)
     # Pre-cooling (template « prérefroidir »): at night, when tomorrow is announced well above the comfort range.
     tomorrow_max = outlook.get("tomorrow_max")
@@ -180,7 +200,10 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         is_open = reading.usable and reading.value is True
         share = facade_share(meta.exposure, sun)
         watts = facade_irradiance(share, sun, solar)
-        if watts is not None and meta.sheltered:
+        shade, shade_model = _shade(meta, sun)
+        if watts is not None and shade_model == "geometry":
+            watts = round(watts * (1 - shade))
+        elif watts is not None and meta.sheltered:
             watts = round(watts / SHELTER_ATTENUATION)
         flags = []
         facing = wind_side(meta.exposure, bearing)
@@ -266,12 +289,23 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         action, reason = "unknown", "incomplete_data"
     elif opportunities and not opened and co2 is not None and co2 >= settings.co2_potential:
         level, reason = "benefit", "optional_air_change"
+    if (opened and optional_wet_exchange and not air and not hard and not soft
+            and action != "fermer" and not rain_coming):
+        action, reason, level = "fermer", "rehumidification_risk", "action"
     heating = (value("heating") or "unknown") if "heating" in readings else "not_configured"
     first = tuple(open_first(details)) if action == "ouvrir" else ()
     coming = next_slot(outlook.get("hours") or [], now, ti, hot=hot or precool, cool_now=cool, margin=settings.cooling_delta) if now else None
     # Protections never configured: the advice stands, the card says what Niak does not watch.
     unverified = tuple(k for k in ("pollution", "rain") if k not in readings and not (k == "rain" and all_sheltered))
+    extended = features(readings, settings, context, openings, sun, details,
+                        needs, action, reason, now, ai, ae, air_detail)
+    # A solar protection opportunity does not change the contact action. Existing
+    # room needs and safety reasons retain their original priority.
+    if (not constraints and reason == "within_comfort" and level == "calm"
+            and any(s["advice"] for s in extended["shutters"])):
+        level, reason = "benefit", "shutter_protection"
     return Assessment(action, level, reason, needs, constraints, opportunities, partial, missing,
                       heating, ai, ae, delta, openings=tuple(details), unverified=unverified, wind_bearing=bearing,
                       crossing=wind_crossing(details), open_first=first, slot=coming, rain_soon_minutes=soon,
-                      sun={"elevation": round(sun.elevation, 1), "azimuth": round(sun.azimuth, 1)} if sun else None)
+                      sun={"elevation": round(sun.elevation, 1), "azimuth": round(sun.azimuth, 1)} if sun else None,
+                      features=extended)

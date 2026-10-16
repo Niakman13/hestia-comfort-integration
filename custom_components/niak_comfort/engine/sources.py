@@ -23,6 +23,7 @@ class Reading:
 def normalize(kind: str, value: object, unit: str | None = None, *,
               source: str | None = None, reported_at: datetime | None = None,
               now: datetime, max_age: float | None = 1800) -> Reading:
+    kind = {"switch": "shutter_auto", "position": "cover", "percentage": "purifier_speed"}.get(kind, kind)
     stamp = reported_at.isoformat() if reported_at else None
     def invalid(detail: str, quality: str = "unknown") -> Reading:
         return Reading(None, quality, source, stamp, detail)
@@ -36,15 +37,22 @@ def normalize(kind: str, value: object, unit: str | None = None, *,
     if age < -60:
         return invalid("future_timestamp")
     # A state (contact, heating action) holds until it changes: only measurements expire.
+    state_kind = kind.split(":", 1)[0]
+    if state_kind in ("window", "rain", "pollution", "heating", "presence", "purifier", "cover", "cover_state", "shutter_auto", "shutter_override"):
+        max_age = None
     if max_age is not None and age > max_age:
         return invalid("expired", "stale")
-    if kind in ("window", "rain", "pollution"):
+    if state_kind in ("window", "rain", "pollution", "presence", "purifier", "shutter_auto", "shutter_override"):
         if isinstance(value, bool):
             result = value
         elif str(value).lower() in ("on", "off"):
             result = str(value).lower() == "on"
         else:
             return invalid("invalid_boolean")
+    elif state_kind == "cover_state":
+        if value not in ("closed", "open", "opening", "closing"):
+            return invalid("unknown_cover_state")
+        result = str(value)
     elif kind == "heating":
         if value not in ("heating", "idle", "off", "cooling"):
             return invalid("unknown_action")
@@ -66,6 +74,16 @@ def normalize(kind: str, value: object, unit: str | None = None, *,
             elif unit != "°C":
                 return invalid("incompatible_unit")
             bounds = (-80, 80)
+        elif state_kind in ("cover", "purifier_speed") and unit in ("%", None):
+            bounds = (0, 100)
+        elif kind == "illuminance" and unit in ("lx", "lux"):
+            bounds = (0, 1000000)
+        elif kind == "pm25" and unit in ("µg/m³", "μg/m³", "ug/m³", "mg/m³"):
+            if unit == "mg/m³":
+                result *= 1000
+            bounds = (0, 1000000)
+        elif kind == "voc" and unit in ("µg/m³", "μg/m³", "mg/m³", "ppb", "ppm", "indice", "index", "VOC index", None):
+            bounds = (0, 1000000000)
         elif kind == "humidity" and unit == "%":
             bounds = (0, 100)
         elif kind == "co2" and unit == "ppm":
@@ -81,5 +99,7 @@ def normalize(kind: str, value: object, unit: str | None = None, *,
             return invalid("incompatible_unit")
         if not bounds[0] <= result <= bounds[1]:
             return invalid("out_of_range")
-    canonical_unit = {"temperature": "°C", "humidity": "%", "co2": "ppm", "wind": "km/h", "irradiance": "W/m²", "bearing": "°"}.get(kind)
+    canonical_unit = {"temperature": "°C", "humidity": "%", "co2": "ppm", "wind": "km/h", "irradiance": "W/m²", "bearing": "°", "pm25": "µg/m³", "illuminance": "lx", "purifier_speed": "%", "cover": "%"}.get(state_kind)
+    if kind == "voc":
+        canonical_unit = unit
     return Reading(result, "valid", source, stamp, unit=canonical_unit)

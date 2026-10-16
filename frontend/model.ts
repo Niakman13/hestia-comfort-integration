@@ -1,7 +1,7 @@
-export const labels:Record<string,string>={indoor_temperature:'Température de la pièce',indoor_humidity:'Humidité de la pièce',co2:'CO₂',windows:'Fenêtres et portes vers l’extérieur',heating:'Chauffage',outdoor_temperature:'Température dehors',outdoor_humidity:'Humidité dehors',rain:'Pluie actuelle',wind_gust:'Rafales de vent',wind_bearing:'Direction du vent',solar:'Ensoleillement',pollution:'Qualité de l’air extérieur'};
+export const labels:Record<string,string>={indoor_temperature:'Température de la pièce',indoor_humidity:'Humidité de la pièce',co2:'CO₂',pm25:'Particules fines PM2.5',voc:'Composés organiques volatils (COV)',purifier:'Purificateur',presence:'Présence dans la pièce',illuminance:'Luminosité',windows:'Fenêtres et portes vers l’extérieur',heating:'Chauffage',outdoor_temperature:'Température dehors',outdoor_humidity:'Humidité dehors',rain:'Pluie actuelle',wind_gust:'Rafales de vent',wind_bearing:'Direction du vent',solar:'Ensoleillement',pollution:'Qualité de l’air extérieur'};
 export const indoor=['indoor_temperature','indoor_humidity'] as const;
 export const outdoor=['outdoor_temperature','outdoor_humidity','rain','wind_gust','wind_bearing','solar','pollution'] as const;
-export const multiple=new Set(['windows']);
+export const multiple=new Set(['windows','presence']);
 export const exposures:[string,string][]=[['N','Nord'],['NE','Nord-est'],['E','Est'],['SE','Sud-est'],['S','Sud'],['SO','Sud-ouest'],['O','Ouest'],['NO','Nord-ouest']];
 export const kinds:[string,string][]=[['window','Fenêtre'],['french','Porte-fenêtre ou baie'],['skylight','Vasistas ou petite fenêtre'],['door','Porte']];
 export interface Candidate {
@@ -10,8 +10,9 @@ export interface Candidate {
  provenance:{entity_id:string;name:string;area_id:string|null}[];device_class:string|null;atmo_label:string|null;
 }
 export interface Spec {entity_id:string;adapter:string;block_from?:number}
-export interface OpeningMeta {exposure:string|null;kind:string;sheltered:boolean}
-export interface RoomConfig {floor_id?:string|null;area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean}
+export interface OpeningMeta {exposure:string|null;kind:string;sheltered:boolean;shutter?:'none'|'manual'|'connected';cover_entity?:string;auto_entity?:string;override_entity?:string;width?:number;height?:number;overhang_depth?:number;overhang_gap?:number}
+export interface EvolutionConfig {voc_threshold?:{value:number;unit:string};glazing_factor?:number;presence_delay_minutes?:number}
+export interface RoomConfig {presence?:string[];evolution?:EvolutionConfig;floor_id?:string|null;area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean}
 export interface Room {entry_id:string;title:string;loaded:boolean;config:RoomConfig}
 export interface Area {floor_id?:string|null;area_id:string;name:string;outdoor:boolean}
 export interface Snapshot {version:1;revision:string;floors?:{floor_id:string;name:string;level:number|null}[];areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null};niak_weather?:{installed:boolean;places:{entry_id:string;title:string}[]};integrations?:{atmofrance?:boolean}}
@@ -46,9 +47,9 @@ export function measurement(c:Candidate):string {
 }
 export function defaultOpening():OpeningMeta {return {exposure:null,kind:'window',sheltered:false};}
 export function newRoom(area:{area_id:string;name:string}|null,name:string,d:Discovery):RoomConfig {
- const sources:Record<string,string>={};for(const key of [...indoor,'co2','heating']){const value=d.suggestions[key];if(typeof value==='string')sources[key]=value;}
+ const sources:Record<string,string>={};for(const key of [...indoor,'illuminance','co2','pm25','voc','purifier','heating']){const value=d.suggestions[key];if(typeof value==='string')sources[key]=value;}
  const windows=Array.isArray(d.suggestions.windows)?[...d.suggestions.windows]:[];
- return {area_id:area?.area_id??null,name:area?.name??name,sources,windows,openings:Object.fromEntries(windows.map(id=>[id,defaultOpening()])),settings:{minimum:20,maximum:24},acknowledged:[]};
+ return {area_id:area?.area_id??null,name:area?.name??name,sources,presence:Array.isArray(d.suggestions.presence)?[...d.suggestions.presence]:[],windows,openings:Object.fromEntries(windows.map(id=>[id,defaultOpening()])),settings:{minimum:20,maximum:24},acknowledged:[]};
 }
 export function coverage(room:RoomConfig):string {
  const parts=[];if(room.sources.indoor_temperature)parts.push('Température');if(room.sources.indoor_humidity)parts.push('humidité');if(room.sources.co2)parts.push('CO₂');
@@ -63,7 +64,7 @@ export function exteriorSummary(sources:Record<string,Spec>):string {
 export function warningId(key:string,id:string){return key+':'+id;}
 
 // The steps of a room, named by what they set (charte des onglets de réglage, ECOSYSTEME.md § 8).
-export const stages=['Température et humidité','Fenêtres et portes','CO₂','Chauffage','Pièce et confort','Récapitulatif'];
+export const stages=['Température et humidité','Fenêtres et portes','Air et présence','Chauffage','Pièce et confort','Récapitulatif'];
 // What each step is for, shown on top of it in a frame that folds: one idea per line.
 export const intros:Record<string,string[]>={
  0:['La température de la pièce : la seule mesure obligatoire.',
@@ -72,8 +73,9 @@ export const intros:Record<string,string[]>={
  1:['Les contacts des fenêtres et portes qui donnent dehors.',
   'Niak sait ce qui est ouvert ; l’exposition dit quand le soleil entre.',
   'Facultatif : sans contact, les conseils ne savent pas ce qui est ouvert.'],
- 2:['Le CO₂ dit quand renouveler l’air de la pièce.',
-  'Facultatif : sans capteur, pas de conseil pour un air confiné.'],
+ 2:['Le CO₂, les particules et les COV suivent chacun une partie de la qualité de l’air.',
+  'La présence adapte les conseils ; le suivi et les alertes restent actifs dans une pièce vide.',
+  'Tout est facultatif. Un purificateur ne retire pas le CO₂.'],
  3:['Le thermostat ou la vanne de la pièce, pour savoir si le chauffage tourne.',
   'Niak évite alors de conseiller d’ouvrir pendant qu’il chauffe. Il ne commande rien.',
   'Facultatif.'],
@@ -89,7 +91,7 @@ export const intros:Record<string,string[]>={
 // The exterior sensors, by frame: title and keys.
 export const outdoorGroups:[string,string[]][]=[['Température et humidité',['outdoor_temperature','outdoor_humidity']],['Pluie et vent',['rain','wind_gust','wind_bearing']],['Soleil',['solar']]];
 // The advanced thresholds of a room and their defaults (template repris, cahier des charges § 8.3).
-export const advancedDefaults:Record<string,number>={humidity_high:62,co2_potential:1000,co2_action:1200,co2_urgent:1600,gust_max:45,frost:1,sun_facade:250,max_age_seconds:1800};
+export const advancedDefaults:Record<string,number>={pm25_action:25,illuminance_low:100,humidity_high:62,co2_potential:1000,co2_action:1200,co2_urgent:1600,gust_max:45,frost:1,sun_facade:250,max_age_seconds:1800};
 export function changedAdvanced(settings:Record<string,number>):number{return Object.entries(advancedDefaults).filter(([k,v])=>settings[k]!==undefined&&settings[k]!==v).length;}
 // One source in a list chosen by integration: its name, what it gives, and how to install it when missing.
 export interface Choice {value:string;label:string;hint:string;available:boolean;missing?:string;url?:string}

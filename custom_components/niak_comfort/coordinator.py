@@ -1,5 +1,6 @@
 """Event-driven inputs plus a clock tick for freshness, per configured zone."""
-from dataclasses import asdict
+from collections import deque
+from dataclasses import asdict, replace
 from datetime import timedelta
 import logging
 
@@ -15,7 +16,7 @@ from .configuration import DATA_CONFIG
 from .exterior import exterior_reading
 from . import weather_link
 
-STATE_KINDS = ("window", "heating", "rain", "pollution")
+STATE_KINDS = ("window", "heating", "rain", "pollution", "presence", "purifier", "cover", "cover_state", "shutter_auto", "shutter_override", "purifier_speed")
 
 
 class ComfortCoordinator(DataUpdateCoordinator):
@@ -28,10 +29,17 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.previous = None
         self.entry_id = entry.entry_id
         self.stop_listeners = set()
+        self.opened_since = {}
+        self.absent_since = {}
+        self.history_reports = {}
+        self.histories = {"temperature_history": deque(maxlen=360), "outdoor_history": deque(maxlen=360)}
 
     async def async_start(self):
         self.config_entry.async_on_unload(self.async_stopped)
-        ids = set(self.config.get("sources", {}).values()) | set(self.config.get("windows", []))
+        ids = set(self.config.get("sources", {}).values()) | set(self.config.get("windows", [])) | set(self.config.get("presence", []))
+        for meta in self.config.get("openings", {}).values():
+            ids.update(meta[k] for k in ("cover_entity", "auto_entity", "override_entity") if meta.get(k))
+        ids.add("sun.sun")
         if self.home_configuration:
             ids |= {s["entity_id"] for s in self.home_configuration.effective_sources(self.config).values()}
         ids.discard("")
@@ -49,7 +57,49 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.stop_listeners.clear()
 
     async def _changed(self, event):
+        entity_id = event.data.get("entity_id")
+        old, new = event.data.get("old_state"), event.data.get("new_state")
+        before, after = old.state if old else None, new.state if new else None
+        now = dt_util.utcnow()
+        if entity_id in self.config.get("windows", []):
+            if after != "on" or before not in ("on", "off"):
+                self.opened_since.pop(entity_id, None)
+            elif before == "off":
+                self.opened_since[entity_id] = now
+        if entity_id in self.config.get("presence", []):
+            kind = new.attributes.get("device_class") if new else None
+            if kind not in ("occupancy", "presence") or after != "off" or before not in ("on", "off"):
+                self.absent_since.pop(entity_id, None)
+            elif before == "on":
+                self.absent_since[entity_id] = now
         await self.async_request_refresh()
+
+    def _context(self, now, readings):
+        for key, source in (("temperature_history", "indoor_temperature"), ("outdoor_history", "outdoor_temperature")):
+            history = self.histories[key]
+            reading = readings.get(source)
+            # Keep samples received during this session; repeated clock refreshes do not invent samples.
+            if reading and reading.usable and reading.received_at:
+                stamp = dt_util.parse_datetime(reading.received_at)
+                if stamp and stamp.tzinfo and -60 <= (now - stamp).total_seconds() <= 1800:
+                    previous_report = self.history_reports.get(key)
+                    if previous_report is None or stamp > previous_report:
+                        # Coverage starts when this session observed the source. A sensor
+                        # last reported before startup must not fabricate a long history.
+                        history.append((now.isoformat(), reading.value))
+                        self.history_reports[key] = stamp
+            while history and (now - dt_util.parse_datetime(history[0][0])).total_seconds() > 10800:
+                history.popleft()
+        def minutes(eid, starts, expected):
+            state = self.hass.states.get(eid)
+            if not state or state.state != expected:
+                starts.pop(eid, None)
+            start = starts.get(eid)
+            return max(0, (now - start).total_seconds() / 60) if start else None
+        return {**self.config.get("evolution", {}),
+                "opening_minutes": {e: minutes(e, self.opened_since, "on") for e in self.config.get("windows", [])},
+                "presence_off_minutes": {e: minutes(e, self.absent_since, "off") for e in self.config.get("presence", [])},
+                **{k: list(v) for k, v in self.histories.items()}}
 
     async def _async_update_data(self):
         now = dt_util.utcnow()
@@ -71,8 +121,32 @@ class ComfortCoordinator(DataUpdateCoordinator):
         openings = {e: Opening(**{"sheltered": sheltered, **declared.get(e, {})}) for e in windows}
         for entity_id in windows:
             readings[f"window:{entity_id}"] = self._reading(entity_id, "window", now)
+        for entity_id in self.config.get("presence", []):
+            state = self.hass.states.get(entity_id)
+            reading = self._reading(entity_id, "presence", now)
+            readings[f"presence:{entity_id}"] = replace(reading, detail=state.attributes.get("device_class") if state else "unavailable")
+        for entity_id in windows:
+            meta = declared.get(entity_id, {})
+            if meta.get("shutter") != "connected":
+                continue
+            cover = meta.get("cover_entity")
+            if cover:
+                state = self.hass.states.get(cover)
+                # Some covers report only open/closed. Their absent position is an
+                # optional capability, while cover_state still tracks availability.
+                if state and state.attributes.get("current_position") is not None:
+                    readings[f"cover:{entity_id}"] = self._reading(cover, "cover", now)
+                readings[f"cover_state:{entity_id}"] = self._reading(cover, "cover_state", now)
+            for field, kind in (("auto_entity", "shutter_auto"), ("override_entity", "shutter_override")):
+                if meta.get(field):
+                    readings[f"{kind}:{meta[field]}"] = self._reading(meta[field], kind, now)
+        if selected.get("purifier"):
+            state = self.hass.states.get(selected["purifier"])
+            # A purifier's on/off state is useful even without speed reporting.
+            if state and state.attributes.get("percentage") is not None:
+                readings["purifier_speed"] = self._reading(selected["purifier"], "purifier_speed", now)
         outlook = weather_link.outlook(self.hass, self._weather_place())
-        self.previous = assess(readings, self.settings, self.previous, openings, self._sun(), outlook, now)
+        self.previous = assess(readings, self.settings, self.previous, openings, self._sun(), outlook, now, context=self._context(now, readings))
         return {"version": VIEW_VERSION, "entry_id": self.entry_id,
                 "area_id": self.config.get("area_id"), "title": self.config.get("name"),
                 "comfort_minimum": self.settings.minimum,
@@ -95,9 +169,18 @@ class ComfortCoordinator(DataUpdateCoordinator):
     # unavailable when the device is lost, so their age says nothing about validity.
     def _reading(self, entity_id, kind, now):
         state = self.hass.states.get(entity_id)
-        raw = state.attributes.get("hvac_action") if state and kind == "heating" else state.state if state else None
+        raw = state.state if state else None
+        unit = state.attributes.get("unit_of_measurement") if state else None
+        if state:
+            if kind == "voc" and unit is None and state.attributes.get("device_class") != "volatile_organic_compounds_index":
+                return Reading(None, "unknown", entity_id, state.last_reported.isoformat(), "incompatible_unit")
+            if kind == "heating":
+                raw = state.attributes.get("hvac_action")
+            elif kind in ("cover", "purifier_speed"):
+                raw = state.attributes.get("current_position" if kind == "cover" else "percentage") if state.state not in ("unknown", "unavailable") else None
+                unit = "%"
         # HA last_reported tracks reception even when the measured value is unchanged.
         # It is not the sensor's physical sampling time.
-        return normalize(kind, raw, state.attributes.get("unit_of_measurement") if state else None,
+        return normalize(kind, raw, unit,
                          source=entity_id, reported_at=state.last_reported if state else None,
                          now=now, max_age=None if kind in STATE_KINDS else self.settings.max_age_seconds)

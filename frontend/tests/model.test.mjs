@@ -65,3 +65,10 @@ test('the exterior comes from Niak Weather only when it has a place',()=>{
 test('advanced settings count only what differs from the defaults',()=>{
  assert.equal(changedAdvanced({minimum:20}),0);assert.equal(changedAdvanced({humidity_high:62,frost:2}),1);
 });
+test('new room copies optional presence independently and discovers extra measurements',()=>{
+ const d={suggestions:{presence:['binary_sensor.motion'],pm25:'sensor.pm',illuminance:'sensor.lux'}};
+ const room=newRoom(null,'Bureau',d);assert.deepEqual(room.presence,['binary_sensor.motion']);
+ assert.equal(room.sources.pm25,'sensor.pm');assert.equal(room.sources.illuminance,'sensor.lux');
+ room.presence.push('binary_sensor.other');assert.equal(d.suggestions.presence.length,1);
+ assert.equal(stages[2],'Air et présence');
+});

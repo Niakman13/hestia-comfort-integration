@@ -3,7 +3,8 @@ from homeassistant.helpers import area_registry as ar, device_registry as dr, en
 
 from .const import OUTDOOR_AREAS, SOURCES
 
-INDOOR = ("indoor_temperature", "indoor_humidity", "co2", "windows", "heating")
+INDOOR = ("indoor_temperature", "indoor_humidity", "co2", "windows", "heating", "illuminance", "pm25", "voc", "purifier", "presence")
+OPENING_SOURCES = ("covers", "shutter_auto", "shutter_override")
 OUTDOOR = ("outdoor_temperature", "outdoor_humidity", "rain", "wind_gust", "wind_bearing", "solar", "pollution")
 CLASSES = {"temperature": "temperature", "humidity": "humidity", "co2": "carbon_dioxide",
            "wind": "wind_speed", "irradiance": "irradiance", "bearing": "wind_direction"}
@@ -63,6 +64,31 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
     adapter = "direct"
     if key == "windows":
         if domain != "binary_sensor" or device_class not in ("window", "door", "opening"):
+            return None
+    elif key == "presence":
+        if domain != "binary_sensor" or device_class not in ("occupancy", "presence", "motion"):
+            return None
+    elif key == "covers":
+        if domain != "cover":
+            return None
+    elif key in ("shutter_auto", "shutter_override"):
+        if domain not in ("switch", "binary_sensor") or device_class in ("problem", "battery", "connectivity"):
+            return None
+    elif key == "purifier":
+        if domain != "fan":
+            return None
+    elif key == "illuminance":
+        if domain != "sensor" or device_class != "illuminance" or attrs.get("unit_of_measurement") not in ("lx", "lux"):
+            return None
+    elif key == "pm25":
+        if domain != "sensor" or device_class != "pm25" or attrs.get("unit_of_measurement") not in ("µg/m³", "μg/m³", "mg/m³"):
+            return None
+    elif key == "voc":
+        if domain != "sensor" or device_class not in ("volatile_organic_compounds", "volatile_organic_compounds_parts", "volatile_organic_compounds_index"):
+            return None
+        if attrs.get("unit_of_measurement") not in ("µg/m³", "μg/m³", "mg/m³", "ppb", "ppm", "index", "indice", "VOC index", None):
+            return None
+        if attrs.get("unit_of_measurement") is None and device_class != "volatile_organic_compounds_index":
             return None
     elif key == "heating":
         if domain != "climate" or not any(m in attrs.get("hvac_modes", []) for m in ("heat", "heat_cool")):
@@ -133,7 +159,7 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
 def catalog(hass, area_id=None, selected=None, indoor_ids=()):
     selected = selected or {}
     result = {}
-    for key in (*INDOOR, *OUTDOOR):
+    for key in (*INDOOR, *OUTDOOR, *OPENING_SOURCES):
         ids = selected.get(key, [])
         ids = ids if isinstance(ids, list) else [ids] if ids else []
         items = []
@@ -153,7 +179,7 @@ def suggestions(candidates, area_id):
         items = candidates[key]
         local = [c for c in items if c["local"] and c["available"] and not c["warnings"]]
         references = [c for c in local if c["reference"]]
-        if key == "windows":
+        if key in ("windows", "presence"):
             if local:
                 result[key] = [c["entity_id"] for c in local]
         elif references:

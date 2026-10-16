@@ -1,3 +1,13 @@
+## 0.9.0-beta.1 — Soleil, aération et présence
+
+- Volets manuels en bois ou autres, volets reliés à Home Assistant, ou aucun volet : conseils par ouvrant, position inconnue conservée et dérogation suivie lorsqu’elle est renseignée.
+- Soleil, luminosité et ombre estimée d’une avancée de toit ; dimensions facultatives.
+- Durée d’aération indicative, temps d’ouverture lorsqu’il est connu, tendances de température et risque de buée estimé.
+- PM2.5 et COV avec leurs unités et leurs seuils ; purificateur observé sans le confondre avec un renouvellement d’air.
+- Présence facultative : une pièce vide reste suivie et les besoins mesurés restent visibles.
+
+Bêta en observation. Niak conseille et ne commande aucun équipement. Après mise à jour HACS, redémarrez Home Assistant.
+
 ## 0.6.0-beta.2 — Chargement fiable des cartes
 
 - Les cartes du logement et des pièces attendent que Home Assistant soit prêt avant de s’enregistrer, y compris après un rechargement ou à la réouverture des onglets.
