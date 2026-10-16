@@ -7,7 +7,7 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 const temp=await mkdtemp(join(tmpdir(),'niak-setup-'));
 await build({entryPoints:['model.ts'],bundle:true,platform:'node',format:'esm',outfile:join(temp,'model.mjs')});
-const {newRoom,measurement,coverage,livingArea,exteriorSummary,stages,intros,airSource,airChoices,exteriorChoices,changedAdvanced}=await import(pathToFileURL(join(temp,'model.mjs')));
+const {newRoom,measurement,coverage,livingArea,exteriorSummary,stages,intros,airSource,airChoices,exteriorChoices,changedAdvanced,vocPreset,airReferenceDefaults}=await import(pathToFileURL(join(temp,'model.mjs')));
 after(()=>rm(temp,{recursive:true,force:true}));
 test('new room copies proposals, describes each opening and freezes no data',()=>{
  const d={suggestions:{indoor_temperature:'sensor.room',windows:['binary_sensor.window']}};
@@ -64,6 +64,7 @@ test('the exterior comes from Niak Weather only when it has a place',()=>{
 });
 test('advanced settings count only what differs from the defaults',()=>{
  assert.equal(changedAdvanced({minimum:20}),0);assert.equal(changedAdvanced({humidity_high:62,frost:2}),1);
+ assert.equal(changedAdvanced({co2_action:1000,pm25_action:15,humidity_high:60}),0);
 });
 test('new room copies optional presence independently and discovers extra measurements',()=>{
  const d={suggestions:{presence:['binary_sensor.motion'],pm25:'sensor.pm',illuminance:'sensor.lux'}};
@@ -71,4 +72,16 @@ test('new room copies optional presence independently and discovers extra measur
  assert.equal(room.sources.pm25,'sensor.pm');assert.equal(room.sources.illuminance,'sensor.lux');
  room.presence.push('binary_sensor.other');assert.equal(d.suggestions.presence.length,1);
  assert.equal(stages[2],'Air et présence');
+});
+test('new rooms start with explained air references and only identified VOC presets',()=>{
+ const voc={entity_id:'sensor.ikea',unit:null,voc_reference:{id:'sensirion_index',value:150,unit:''}};
+ const d={suggestions:{voc:'sensor.ikea'},candidates:{voc:[voc]}};
+ const room=newRoom(null,'Salon',d);
+ for(const [key,value] of Object.entries(airReferenceDefaults))assert.equal(room.settings[key],value);
+ assert.deepEqual(room.evolution.voc_threshold,{value:150,unit:''});
+ room.evolution.voc_threshold.value=200;assert.equal(voc.voc_reference.value,150);
+ assert.equal(vocPreset({...voc,unit:'ppb'}),undefined);
+ assert.equal(vocPreset({unit:null}),undefined);
+ assert.equal(newRoom(null,'Autre',{suggestions:{voc:'sensor.other'},candidates:{voc:[{entity_id:'sensor.other',unit:'ppb'}]}}).evolution,undefined);
+ assert.equal(stages[4],'Réglages / autres');
 });

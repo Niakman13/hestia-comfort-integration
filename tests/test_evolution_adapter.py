@@ -9,6 +9,7 @@ from homeassistant.util import dt as dt_util
 from custom_components.niak_comfort.configuration import Configuration
 from custom_components.niak_comfort.coordinator import ComfortCoordinator
 from custom_components.niak_comfort.discovery import catalog, suggestions, candidate
+from custom_components.niak_comfort.air_references import apply_air_references, AIR_DEFAULTS
 
 
 class EvolutionAdapterTests(AdapterFixture):
@@ -64,6 +65,26 @@ class EvolutionAdapterTests(AdapterFixture):
         self.assertTrue(selected['local'])
         self.assertEqual(selected['device_class'], 'volatile_organic_compounds_index')
         self.assertIsNone(selected['unit'])
+        self.assertEqual(selected['voc_reference'], {'id': 'sensirion_index', 'value': 150, 'unit': ''})
+        # A unitless index alone is not enough to apply Sensirion's example.
+        dr.async_get(self.hass).async_update_device(device.id, manufacturer='Other')
+        self.assertIsNone(candidate(self.hass, item.entity_id, 'voc', 'salon')['voc_reference'])
+        dr.async_get(self.hass).async_update_device(device.id, manufacturer='IKEA')
+        legacy = self.config(evolution={'voc_threshold': {'value': 200, 'unit': ''}})
+        legacy['sources']['voc'] = item.entity_id
+        self.hass.config_entries.async_update_entry(self.entry, options=legacy)
+        self.hass.states.async_remove(item.entity_id)
+        self.assertTrue(apply_air_references(self.hass, self.entry))
+        self.assertEqual(self.entry.options['evolution']['voc_threshold'], {'value': 150, 'unit': ''})
+        customized = {**self.entry.options, 'evolution': {'voc_threshold': {'value': 180, 'unit': ''}}}
+        self.hass.config_entries.async_update_entry(self.entry, options=customized)
+        self.assertFalse(apply_air_references(self.hass, self.entry))
+        self.assertEqual(self.entry.options['evolution']['voc_threshold']['value'], 180)
+        cleared = {**self.entry.options, 'evolution': {}}
+        self.hass.config_entries.async_update_entry(self.entry, options=cleared)
+        self.assertFalse(apply_air_references(self.hass, self.entry))
+        self.assertNotIn('voc_threshold', self.entry.options['evolution'])
+        self.hass.states.async_set(item.entity_id, '144', {'state_class': 'measurement'})
         config = self.config(evolution={'voc_threshold': {'value': 150, 'unit': ''}})
         config['sources']['voc'] = item.entity_id
         cleaned, _ = self.service.validate(config)
@@ -98,6 +119,31 @@ class EvolutionAdapterTests(AdapterFixture):
         for key, eid in [('pm25', 'sensor.pm'), ('voc', 'sensor.voc'), ('illuminance', 'sensor.light'), ('purifier', 'fan.purifier'), ('covers', 'cover.shutter'), ('shutter_override', 'switch.override')]:
             self.assertIn(eid, [c['entity_id'] for c in found[key]])
         self.assertEqual(set(suggestions(found, 'salon')['presence']), {'binary_sensor.occupied', 'binary_sensor.motion'})
+
+    async def test_air_references_migrate_once_then_preserve_personal_edits(self):
+        self.hass.config_entries._entries[self.entry.entry_id] = self.entry
+        old = self.config(settings={'minimum': 19, 'maximum': 25, 'co2_action': 1300, 'gust_max': 55})
+        self.hass.config_entries.async_update_entry(self.entry, options=old)
+        self.assertTrue(apply_air_references(self.hass, self.entry))
+        for key, value in AIR_DEFAULTS.items():
+            self.assertEqual(self.entry.options['settings'][key], value)
+        self.assertEqual(self.entry.options['settings']['minimum'], 19)
+        self.assertEqual(self.entry.options['settings']['gust_max'], 55)
+        # Unknown ppb device: preserve its configured threshold, never use index 150.
+        self.assertEqual(self.entry.options['evolution']['voc_threshold'], {'value': 300, 'unit': 'ppb'})
+        customized = {**self.entry.options, 'settings': {**self.entry.options['settings'], 'co2_action': 1100}}
+        self.hass.config_entries.async_update_entry(self.entry, options=customized)
+        self.assertFalse(apply_air_references(self.hass, self.entry))
+        self.assertEqual(self.entry.options['settings']['co2_action'], 1100)
+        saved, _ = self.service.validate(customized)
+        self.assertEqual(saved['air_reference_version'], 1)
+        self.assertEqual(saved['settings']['co2_action'], 1100)
+
+    async def test_new_saved_room_gets_references_unless_explicitly_customized(self):
+        config = self.config(settings={'minimum': 20, 'maximum': 24})
+        cleaned, _ = self.service.validate(config)
+        for key, value in AIR_DEFAULTS.items():
+            self.assertEqual(cleaned['settings'][key], value)
 
     async def test_configuration_roundtrip_and_invalid_dimensions(self):
         cleaned, _ = self.service.validate(self.config())

@@ -8,6 +8,7 @@ export interface Candidate {
  entity_id:string;name:string;value:string;unit:string|null;area_id:string|null;
  local:boolean;outside:boolean;reference:boolean;available:boolean;adapter:string;warnings:string[];
  provenance:{entity_id:string;name:string;area_id:string|null}[];device_class:string|null;atmo_label:string|null;
+ voc_reference?:{id:'sensirion_index';value:number;unit:string}|null;
 }
 export interface Spec {entity_id:string;adapter:string;block_from?:number}
 export interface OpeningMeta {exposure:string|null;kind:string;sheltered:boolean;shutter?:'none'|'manual'|'connected';cover_entity?:string;auto_entity?:string;override_entity?:string;width?:number;height?:number;overhang_depth?:number;overhang_gap?:number}
@@ -49,8 +50,23 @@ export function defaultOpening():OpeningMeta {return {exposure:null,kind:'window
 export function newRoom(area:{area_id:string;name:string}|null,name:string,d:Discovery):RoomConfig {
  const sources:Record<string,string>={};for(const key of [...indoor,'illuminance','co2','pm25','voc','purifier','heating']){const value=d.suggestions[key];if(typeof value==='string')sources[key]=value;}
  const windows=Array.isArray(d.suggestions.windows)?[...d.suggestions.windows]:[];
- return {area_id:area?.area_id??null,name:area?.name??name,sources,presence:Array.isArray(d.suggestions.presence)?[...d.suggestions.presence]:[],windows,openings:Object.fromEntries(windows.map(id=>[id,defaultOpening()])),settings:{minimum:20,maximum:24},acknowledged:[]};
+ const voc= d.candidates?.voc?.find(c=>c.entity_id===sources.voc),preset=vocPreset(voc);
+ return {area_id:area?.area_id??null,name:area?.name??name,sources,presence:Array.isArray(d.suggestions.presence)?[...d.suggestions.presence]:[],windows,openings:Object.fromEntries(windows.map(id=>[id,defaultOpening()])),settings:{minimum:20,maximum:24,...airReferenceDefaults},...(preset?{evolution:{voc_threshold:preset}}:{}),acknowledged:[]};
 }
+// New rooms use these explained operating choices. Existing settings are never
+// replaced when opening the editor; backend defaults preserve older rooms.
+export const airReferenceDefaults={co2_potential:800,co2_action:1000,co2_urgent:1500,pm25_action:15,humidity_high:60};
+export function vocPreset(c?:Candidate):{value:number;unit:string}|undefined {
+ const r=c?.voc_reference;
+ return r?.id==='sensirion_index'&&r.unit===(c?.unit??'')?{value:r.value,unit:r.unit}:undefined;
+}
+export const thresholdSources={
+ co2:'https://www.hcsp.fr/hcspi/Explore.cgi/avisrapportsdomaine?clefr=1154',
+ pm25:'https://www.who.int/fr/news-room/questions-and-answers/item/who-global-air-quality-guidelines',
+ voc:'https://sensirion.com/en/media/documents/02232963/6294E043/Info_Note_VOC_Index.pdf',
+ tvoc:'https://www.umweltbundesamt.de/en/topics/health/commissions-working-groups/german-committee-on-indoor-air-guide-values',
+ humidity:'https://agirpourlatransition.ademe.fr/particuliers/proteger-sante/eviter-polluants/respirer-air-sain-chez-soi',
+};
 export function coverage(room:RoomConfig):string {
  const parts=[];if(room.sources.indoor_temperature)parts.push('Température');if(room.sources.indoor_humidity)parts.push('humidité');if(room.sources.co2)parts.push('CO₂');
  const n=room.windows.length;
@@ -64,7 +80,7 @@ export function exteriorSummary(sources:Record<string,Spec>):string {
 export function warningId(key:string,id:string){return key+':'+id;}
 
 // The steps of a room, named by what they set (charte des onglets de réglage, ECOSYSTEME.md § 8).
-export const stages=['Température et humidité','Fenêtres et portes','Air et présence','Chauffage','Pièce et confort','Récapitulatif'];
+export const stages=['Température et humidité','Fenêtres et portes','Air et présence','Chauffage','Réglages / autres','Récapitulatif'];
 // What each step is for, shown on top of it in a frame that folds: one idea per line.
 export const intros:Record<string,string[]>={
  0:['La température de la pièce : la seule mesure obligatoire.',
@@ -80,8 +96,8 @@ export const intros:Record<string,string[]>={
   'Niak évite alors de conseiller d’ouvrir pendant qu’il chauffe. Il ne commande rien.',
   'Facultatif.'],
  4:['Le nom de la pièce et sa pièce Home Assistant.',
-  'Les températures dans lesquelles vous vous sentez bien.',
-  'Les réglages avancés sont facultatifs.'],
+  'Les précautions et les autres paramètres de fonctionnement, facultatifs.',
+  'Chaque seuil d’interprétation se règle avec son capteur, dans les étapes précédentes.'],
  5:['Tout ce que vous avez choisi, onglet par onglet.',
   'Rien ne change tant que vous n’avez pas enregistré ; un oubli, revenez à l’onglet voulu.'],
  exterior:['Les mesures du dehors : température, pluie, vent, soleil, qualité de l’air.',
@@ -90,8 +106,8 @@ export const intros:Record<string,string[]>={
 };
 // The exterior sensors, by frame: title and keys.
 export const outdoorGroups:[string,string[]][]=[['Température et humidité',['outdoor_temperature','outdoor_humidity']],['Pluie et vent',['rain','wind_gust','wind_bearing']],['Soleil',['solar']]];
-// The advanced thresholds of a room and their defaults (template repris, cahier des charges § 8.3).
-export const advancedDefaults:Record<string,number>={pm25_action:25,illuminance_low:100,humidity_high:62,co2_potential:1000,co2_action:1200,co2_urgent:1600,gust_max:45,frost:1,sun_facade:250,max_age_seconds:1800};
+// Only the settings still displayed inside the "Autres réglages" advanced frame.
+export const advancedDefaults:Record<string,number>={illuminance_low:100,gust_max:45,frost:1,sun_facade:250,max_age_seconds:1800};
 export function changedAdvanced(settings:Record<string,number>):number{return Object.entries(advancedDefaults).filter(([k,v])=>settings[k]!==undefined&&settings[k]!==v).length;}
 // One source in a list chosen by integration: its name, what it gives, and how to install it when missing.
 export interface Choice {value:string;label:string;hint:string;available:boolean;missing?:string;url?:string}

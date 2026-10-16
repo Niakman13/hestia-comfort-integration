@@ -46,7 +46,7 @@ Le purificateur est choisi explicitement et observé (marche, vitesse si connue)
 
 Conserver les précautions locales et le besoin le plus important, même en présence d’une opportunité solaire. Expliquer les besoins et les contraintes séparément : une aération bloquée ne fait pas disparaître le CO₂ élevé. Ne pas masquer un problème connu quand une autre source manque. Réutiliser les prévisions Niak Weather déjà raccordées ; ne pas refaire son travail dans Confort. Un seul résultat de calcul alimente la carte pièce et la synthèse logement.
 
-Les réglages restent des étapes nommées par leur rôle : Température et humidité, Fenêtres et portes (volets par ouvrant), Air et présence, Chauffage, Pièce et confort, Récapitulatif. Les dimensions et modèles restent facultatifs dans des cadres avancés. L’accueil technique du panneau conserve son rôle ; les conseils du jour restent sur les cartes.
+Les réglages restent des étapes nommées par leur rôle : Température et humidité, Fenêtres et portes (volets par ouvrant), Air et présence, Chauffage, Réglages / autres, Récapitulatif. Les dimensions et modèles restent facultatifs dans des cadres avancés. L’accueil technique du panneau conserve son rôle ; les conseils du jour restent sur les cartes.
 
 ## Situations à rejouer
 
@@ -92,3 +92,6 @@ Les durées fiables et tendances commencent avec les observations connues de la 
 Une dérogation de volet n’est suivie que si sa source est choisie. L’historique est borné en mémoire. Les tendances exigent au moins trois mesures sur dix minutes, dans une fenêtre de trente minutes. Le vitrage utilise un modèle réglable, pas une mesure physique. La durée proposée dépend des ouvrants sélectionnés ou réellement ouverts et doit être réévaluée selon les mesures.
 
 Les contrôles complémentaires utilisent la vraie carte compilée et des vues produites par le moteur Python (`scripts/evolution_fixtures.py`, `card/preview/evolution/real.html`). Le panneau compilé utilise des réponses de configuration et de découverte exportées depuis Home Assistant isolé (`scripts/evolution_setup_fixture.py`, `settings-real.html`). Ces bancs visuels n’accèdent pas au logement réel. Les tests de calcul et d’adaptation HA, les vérifications TypeScript et les tests des deux interfaces sont exécutés avant publication.
+
+
+Évolution locale du 16 octobre 2026 : les seuils sont placés avec leur capteur, accompagnés des références détaillées dans [SEUILS.md](SEUILS.md). Les nouveaux repères sont appliqués une seule fois aux pièces existantes, puis les personnalisations sont conservées. Cette évolution n’est pas encore publiée.

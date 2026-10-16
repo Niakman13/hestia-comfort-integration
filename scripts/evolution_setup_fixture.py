@@ -26,6 +26,8 @@ async def main():
   service=Configuration(hass);cleaned,_=service.validate(config)
   entry=ConfigEntry(domain='niak_comfort',title='Salon',unique_id=area.id,version=1,minor_version=1,source='user',data=cleaned,options={},discovery_keys={},subentries_data=[])
   hass.config_entries._entries[entry.entry_id]=entry;entry._async_set_state(hass,ConfigEntryState.LOADED,None)
+  device=dr.async_get(hass).async_get_or_create(config_entry_id=entry.entry_id,identifiers={('demo','ikea-voc')},manufacturer='IKEA',model='VINDSTYRKA air quality and humidity sensor')
+  er.async_get(hass).async_update_entity('sensor.demo_voc',device_id=device.id)
   result={'snapshot':service.snapshot(),'discovery':service.discover(area.id,entry.entry_id)}
   (ROOT/'card/preview/evolution/setup-fixture.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
   await hass.async_stop()
