@@ -36,7 +36,7 @@ jobs:
         working-directory: frontend
       - run: npm run validate
         working-directory: frontend
-      - run: git diff --exit-code -- custom_components/niak_comfort/frontend/panel.js
+      - run: git diff --exit-code -- custom_components/niak_comfort/frontend/
   card:
     runs-on: ubuntu-latest
     steps:
@@ -57,6 +57,10 @@ jobs:
         working-directory: card
         env:
           NIAK_TEST_FIREFOX: "1"
+      - run: node ../frontend/tests/navigation.browser.mjs
+        working-directory: card
+        env:
+          NIAK_TEST_COMFORT_ONLY: "1"
   hassfest:
     runs-on: ubuntu-latest
     steps:

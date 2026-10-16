@@ -1,0 +1,33 @@
+// Isolated hub preview: real built interfaces and fictitious payloads only.
+import {readFileSync} from 'node:fs';
+export const comfort=JSON.parse(readFileSync(new URL('../../card/preview/evolution/setup-fixture.json',import.meta.url)));
+export const weather=JSON.parse(readFileSync(new URL('./fixtures/weather.json',import.meta.url)));
+export function harness(withWeather=true){return `<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aperçu du hub Niak</title>
+<style>body{margin:0;--primary-text-color:#edf1f7;--secondary-text-color:#bdc5d1;--primary-background-color:#151c25;--card-background-color:#222932;--divider-color:#657386;--primary-color:#285f87;background:var(--primary-background-color);color:var(--primary-text-color);font-family:system-ui}aside{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 16px;font-size:12px;background:var(--card-background-color);border-bottom:1px solid var(--divider-color)}aside button{flex-shrink:0;min-height:36px;padding:6px 10px;border:1px solid var(--divider-color);border-radius:8px;background:transparent;color:inherit;font:inherit;cursor:pointer}niak-socle-1-6{height:calc(100dvh - 60px)}</style>
+<aside><span>Aperçu · données fictives · aucune connexion à votre Home Assistant</span><button id="theme">Changer de thème</button></aside><niak-socle-1-6></niak-socle-1-6>
+<script type="module">
+import '/shell.js';
+const fixture=await fetch('/comfort.json').then(r=>r.json()),weather=await fetch('/weather.json').then(r=>r.json());
+window.state=structuredClone(fixture.snapshot);window.healthMode='ready';window.calls=[];window.healthQueue=[];
+state.rooms.push({...structuredClone(state.rooms[0]),entry_id:'cuisine-demo',title:'Cuisine',config:{...structuredClone(state.rooms[0].config),name:'Cuisine'}});
+const entry=state.rooms[0],discovery=fixture.discovery;
+const health={level:'action',summary:'1 point à régler',tips_summary:'1 réglage à améliorer',rooms_summary:'1 pièce suivie',todo:[{level:'bad',text:'Extérieur à configurer',why:'Choisissez les mesures du dehors.',target:{kind:'exterior',label:'Extérieur'}}],tips:[{level:'tip',text:'Salon : ajouter les particules',why:'Une mesure est disponible.',target:{kind:'room',entry_id:entry.entry_id,label:'Salon'}}],sources:[{label:'Extérieur',level:'bad',text:'pas encore configuré'},{label:'Chauffage',level:'none',text:'non suivi'}],columns:['Température','Humidité','CO₂','Ouvrants','Chauffage'],rooms:[{entry_id:entry.entry_id,title:'Salon',cells:['répond','répond','répond','1 contact','—'].map(text=>({level:'ok',text}))}],versions:[{level:'ok',text:'Intégration de démonstration',why:'Carte incluse'}]};
+window.shell=document.querySelector('niak-socle-1-6');
+window.hass={connection:{},user:{is_admin:true},themes:{darkMode:true},async callWS(msg){calls.push(structuredClone(msg));
+ if(msg.type==='niak/overview'){const overview={version:1,socle:[1,6],sidebar:true,bricks:[{domain:'niak_comfort',name:'Niak Confort',slug:'confort',navigation:1,version:'aperçu',element:'niak-comfort-setup',module_url:'/comfort.js',status:{level:'action',summary:'Extérieur à configurer',details:['1 pièce suivie'],links:[]}},{domain:'niak_weather',name:'Niak Weather',slug:'meteo',navigation:1,tab:'Météo',version:'aperçu',element:'niak-weather-setup',module_url:'/weather.js',status:{level:'ok',summary:'Les sources sont configurées',details:['1 lieu suivi'],links:[]}}],others:[]};const mode=new URLSearchParams(location.search).get('bricks');if(!${withWeather}||mode==='comfort')overview.bricks=overview.bricks.filter(b=>b.slug==='confort');if(mode==='weather')overview.bricks=overview.bricks.filter(b=>b.slug==='meteo');if(mode==='none')overview.bricks=[];return overview;}
+ if(msg.type==='niak/set_sidebar')return {sidebar:msg.visible};
+ if(msg.type==='niak_comfort/configuration')return structuredClone(state);
+ if(msg.type==='niak_comfort/health'){if(healthMode==='error')throw {message:'Connexion interrompue.'};if(healthMode==='hold')return new Promise((resolve,reject)=>healthQueue.push({resolve:()=>resolve(structuredClone(health)),reject}));return structuredClone(health);}
+ if(msg.type==='niak_comfort/discover')return structuredClone(discovery);
+ if(msg.type==='niak_comfort/overview')return {areas:[]};
+ if(msg.type==='niak_comfort/validate_config')return {config:msg.config,warnings:[],revision:state.revision};
+ if(msg.type==='niak_comfort/save_config'){if(msg.revision!==state.revision)throw {message:'Configuration modifiée ailleurs.'};if(msg.home)state.home.sources=structuredClone(msg.config.sources);else{const room=state.rooms.find(r=>r.entry_id===msg.entry_id);room.config=structuredClone(msg.config);room.title=msg.config.name;}state.revision+='1';return structuredClone(state);}
+ if(msg.type==='niak_weather/panel/places')return {can_add:true,places:[{entry_id:'weather-demo',title:'Maison',loaded:true,failed:false,health:{title:'Maison',level:'ok',summary:'Tout est suivi',tips_summary:'',todo:[],tips:[],sources:[{label:'Prévisions',level:'ok',text:'Service météo Maison'}],sensors:[{label:'Température',name:'Dehors',level:'ok',text:'14,2 °C'}],entities:[{level:'ok',text:'Entités configurées',why:'',stage:null}],versions:[{level:'ok',text:'Niak Weather',why:'Carte incluse',stage:null}]}}]};
+ if(msg.type==='niak_weather/panel/open')return {...structuredClone(weather),saved:structuredClone(weather.draft)};
+ if(msg.type==='niak_weather/panel/change')return {...structuredClone(weather),draft:msg.draft};
+ if(msg.type==='niak_weather/panel/save')return {entry_id:'weather-demo'};
+ throw Error('Commande absente de cet aperçu : '+msg.type);
+}};
+function route(){shell.route={prefix:'/niak',path:location.pathname.replace(/^\\/niak/,'')};}window.addEventListener('location-changed',route);window.addEventListener('popstate',route);route();shell.hass=hass;
+window.toggleTheme=()=>{const light=hass.themes.darkMode;hass.themes={darkMode:!light};for(const [k,v]of Object.entries(light?{'primary-text-color':'#253047','secondary-text-color':'#5b687b','primary-background-color':'#f1f3f6','card-background-color':'#fff','divider-color':'#aeb9c5'}:{'primary-text-color':'#edf1f7','secondary-text-color':'#bdc5d1','primary-background-color':'#151c25','card-background-color':'#222932','divider-color':'#657386'}))document.body.style.setProperty('--'+k,v);shell.hass={...hass};};document.querySelector('#theme').onclick=toggleTheme;
+</script></html>`;}

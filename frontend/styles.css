@@ -36,19 +36,8 @@
 /* Charte des onglets de réglage (ECOSYSTEME.md § 8), same look as Niak Weather's « Météo » tab */
 .warn-inline{color:var(--nc-todo)}
 .choice{border:1px solid var(--nc-accent)}
-.intro{background:var(--nc-frame);border:1px solid var(--nc-border);border-radius:12px;padding:0 16px;margin:0 0 20px}
-.intro>summary{cursor:pointer;list-style:none;min-height:44px;display:flex;align-items:center;font-weight:600}
-.intro>summary::-webkit-details-marker{display:none}.intro>summary::before{content:'▸';display:inline-block;width:1.2em;color:var(--nc-muted)}.intro[open]>summary::before{content:'▾'}
-.intro ul{margin:0 0 14px;padding-left:1.2em;list-style:none}.intro li{max-width:none;margin:4px 0}
 /* Inside a frame, text takes the frame's whole width (charte). */
-.group p{max-width:none}
 /* Each part that folds is a frame of its own, like the cards of the home page. */
-.group{background:var(--nc-frame);border:1px solid var(--nc-border);border-radius:12px;padding:0 16px;margin:12px 0}
-.group>summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:18px;min-height:56px;list-style:none}
-.group>summary::-webkit-details-marker{display:none}.group>summary strong::before{content:'▸';display:inline-block;width:1.2em;color:var(--nc-muted)}.group[open]>summary strong::before{content:'▾'}
-.group[open]>summary{border-bottom:1px solid var(--nc-border)}.group[open]{padding-bottom:4px}
-.group>summary .hint{white-space:nowrap;font-weight:400}
-.group>.field:first-of-type{border-top:0}.field .group{margin-top:20px}
 /* A source chosen by integration: blue when chosen, greyed when missing. */
 .source{display:flex;gap:12px;align-items:flex-start;font-weight:400;background:var(--nc-surface);border:1px solid var(--nc-border);border-radius:8px;padding:12px 14px;margin:10px 0;cursor:pointer}
 .source.on{border-color:var(--nc-accent)}.source.off{opacity:.7;cursor:default}

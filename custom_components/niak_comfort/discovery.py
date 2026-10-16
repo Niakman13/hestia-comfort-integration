@@ -189,14 +189,15 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
             **({"voc_reference": voc_reference(hass, entry, device_class, attrs.get("unit_of_measurement"))} if key == "voc" else {})}
 
 
-def catalog(hass, area_id=None, selected=None, indoor_ids=()):
+def catalog(hass, area_id=None, selected=None, indoor_ids=(), *, keys=None, entries=None):
     selected = selected or {}
     result = {}
-    for key in (*INDOOR, *OUTDOOR, *OPENING_SOURCES):
+    entries = tuple(er.async_get(hass).entities.values()) if entries is None else entries
+    for key in keys if keys is not None else (*INDOOR, *OUTDOOR, *OPENING_SOURCES):
         ids = selected.get(key, [])
         ids = ids if isinstance(ids, list) else [ids] if ids else []
         items = []
-        for entry in er.async_get(hass).entities.values():
+        for entry in entries:
             c = candidate(hass, entry.entity_id, key, area_id, include_legacy=entry.entity_id in ids, indoor_ids=indoor_ids)
             if c:
                 items.append(c)

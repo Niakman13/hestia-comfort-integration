@@ -80,7 +80,7 @@ export function exteriorSummary(sources:Record<string,Spec>):string {
 export function warningId(key:string,id:string){return key+':'+id;}
 
 // The steps of a room, named by what they set (charte des onglets de réglage, ECOSYSTEME.md § 8).
-export const stages=['Température et humidité','Fenêtres et portes','Air et présence','Chauffage','Réglages / autres','Récapitulatif'];
+export const stages=['Température et humidité','Fenêtres et portes','Qualité de l’air','Chauffage','La pièce et ses réglages','Récapitulatif'];
 // What each step is for, shown on top of it in a frame that folds: one idea per line.
 export const intros:Record<string,string[]>={
  0:['La température de la pièce : la seule mesure obligatoire.',
@@ -90,7 +90,6 @@ export const intros:Record<string,string[]>={
   'Niak sait ce qui est ouvert ; l’exposition dit quand le soleil entre.',
   'Facultatif : sans contact, les conseils ne savent pas ce qui est ouvert.'],
  2:['Le CO₂, les particules et les COV suivent chacun une partie de la qualité de l’air.',
-  'La présence adapte les conseils ; le suivi et les alertes restent actifs dans une pièce vide.',
   'Tout est facultatif. Un purificateur ne retire pas le CO₂.'],
  3:['Le thermostat ou la vanne de la pièce, pour savoir si le chauffage tourne.',
   'Niak évite alors de conseiller d’ouvrir pendant qu’il chauffe. Il ne commande rien.',

@@ -29,8 +29,9 @@
   "options": {
     "step": {
       "init": {
-        "title": "Configure in Niak Comfort",
-        "description": "Rooms, their sensors and outdoor sources are managed in {workspace}, from the sidebar."
+        "title": "Niak Comfort",
+        "description": "Rooms, their sensors and outdoor sources are managed in the Confort tab of the Niak panel.\n\n[Open Niak Comfort settings]({link})",
+        "submit": "Close"
       }
     },
     "error": {

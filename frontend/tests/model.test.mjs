@@ -71,7 +71,7 @@ test('new room copies optional presence independently and discovers extra measur
  const room=newRoom(null,'Bureau',d);assert.deepEqual(room.presence,['binary_sensor.motion']);
  assert.equal(room.sources.pm25,'sensor.pm');assert.equal(room.sources.illuminance,'sensor.lux');
  room.presence.push('binary_sensor.other');assert.equal(d.suggestions.presence.length,1);
- assert.equal(stages[2],'Air et présence');
+ assert.equal(stages[2],'Qualité de l’air');
 });
 test('new rooms start with explained air references and only identified VOC presets',()=>{
  const voc={entity_id:'sensor.ikea',unit:null,voc_reference:{id:'sensirion_index',value:150,unit:''}};
@@ -83,5 +83,5 @@ test('new rooms start with explained air references and only identified VOC pres
  assert.equal(vocPreset({...voc,unit:'ppb'}),undefined);
  assert.equal(vocPreset({unit:null}),undefined);
  assert.equal(newRoom(null,'Autre',{suggestions:{voc:'sensor.other'},candidates:{voc:[{entity_id:'sensor.other',unit:'ppb'}]}}).evolution,undefined);
- assert.equal(stages[4],'Réglages / autres');
+ assert.equal(stages[4],'La pièce et ses réglages');
 });

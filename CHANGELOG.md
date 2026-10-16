@@ -1,3 +1,14 @@
+## 0.9.0-beta.4 — Le nouveau hub Niak
+
+- Interface claire ou sombre, menu par brique et mise en page adaptée au téléphone.
+- Vue d’ensemble des pièces avec Configurer. Les six rubriques restent dans la pièce choisie ; l’extérieur partagé est dans Réglages généraux.
+- Menu des pièces en deux rangées de boutons avec icônes, sans glissière horizontale.
+- Textes d’aide en info-bulles et valeurs par défaut explicites, avec possibilité de les rétablir ; recommandations et erreurs toujours visibles.
+- Ouverture de Confort stabilisée : la liste des pièces apparaît sans attendre le bilan technique. Liens directs, retours arrière et brouillons séparés par pièce.
+- Le menu ne propose que les briques installées ; l’entrée Niak du menu Home Assistant peut être masquée dans Réglages Niak.
+
+Bêta en observation. Les paramètres existants sont conservés. Après mise à jour HACS, redémarrez Home Assistant.
+
 ## 0.9.0-beta.3 — Seuils expliqués auprès des capteurs
 
 - Chaque capteur regroupe sa sélection, ses seuils modifiables et une explication repliable avec ses sources (HCSP, OMS, ADEME et fabricant).
@@ -24,6 +35,8 @@ Après mise à jour HACS, redémarrez Home Assistant, puis recherchez à nouveau
 - Présence facultative : une pièce vide reste suivie et les besoins mesurés restent visibles.
 
 Bêta en observation. Niak conseille et ne commande aucun équipement. Après mise à jour HACS, redémarrez Home Assistant.
+
+- La roue de l’intégration mène directement à l’onglet Confort.
 
 ## 0.6.0-beta.2 — Chargement fiable des cartes
 

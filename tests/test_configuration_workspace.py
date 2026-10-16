@@ -37,6 +37,31 @@ class WorkspaceTests(AdapterFixture):
     def config(self,**extra):
         return {'area_id':'salon','name':'Salon','sources':{'indoor_temperature':'sensor.local'},'windows':[], 'settings':{'minimum':20,'maximum':24},**extra}
 
+    async def test_health_suggestions_keep_full_catalog_results_without_scanning_other_rooms(self):
+        from custom_components.niak_comfort import health
+        from custom_components.niak_comfort.discovery import candidate
+        self.register('sensor.local_humidity','humidity',unit='%')
+        self.register('sensor.cuisine_humidity','humidity',area='cuisine',unit='%')
+        self.register('sensor.local_co2','carbon_dioxide',unit='ppm')
+        self.register('binary_sensor.local_window','window',value='off')
+        self.register('binary_sensor.fridge','door',value='off')
+        config=self.config()
+        self.hass.config_entries._entries[self.entry.entry_id]=self.entry
+        self.hass.config_entries.async_update_entry(self.entry,data=config)
+        self.service.entries=lambda:[self.entry]
+        expected=suggestions(catalog(self.hass,'salon',config['sources']),'salon')
+        expected={k:v for k,v in expected.items() if k in ('indoor_humidity','co2','windows','heating')}
+        with patch.object(health,'get_configuration',AsyncMock(return_value=self.service)), \
+             patch('custom_components.niak_comfort.discovery.candidate',wraps=candidate) as calls:
+            facts=await health.facts(self.hass,'test')
+        self.assertEqual(set(facts.rooms[0].available),set(expected))
+        self.assertNotIn('binary_sensor.fridge',expected.get('windows',[]))
+        # The configured room's health only requests four useful roles, on local entities.
+        health_calls=[c for c in calls.call_args_list if len(c.args)>3 and c.args[3]=='salon']
+        self.assertTrue(health_calls)
+        self.assertTrue(all(c.args[1]!='sensor.cuisine_humidity' for c in health_calls))
+        self.assertTrue(all(c.args[2] in ('indoor_humidity','co2','windows','heating') for c in health_calls))
+
     async def test_alias_in_another_room_is_explained_not_suggested(self):
         self.register('sensor.real_co2','carbon_dioxide',area='salon',unit='ppm',value='700')
         self.register('sensor.plant_co2','carbon_dioxide',area='cuisine',unit='ppm',platform='plant',attrs={'external_sensor':'sensor.real_co2'})
