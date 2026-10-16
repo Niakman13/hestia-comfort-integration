@@ -112,6 +112,51 @@ class SocleTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(self.hass.data[DATA_PANELS]["niak"].sidebar_title)
         self.assertIn("niak/set_sidebar", self.hass.data[WS_DOMAIN])
 
+    async def test_theme_and_sidebar_survive_restart_without_overwriting_each_other(self):
+        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
+        self.assertEqual((await socle.async_overview(self.hass))["theme"], "niak")
+        self.assertIn("niak/set_theme", self.hass.data[WS_DOMAIN])
+        await socle.async_set_theme(self.hass, "ha")
+        await socle.async_set_sidebar(self.hass, False)
+        self.hass.data.pop(socle.KEY)
+        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
+        overview = await socle.async_overview(self.hass)
+        self.assertEqual(overview["theme"], "ha")
+        self.assertFalse(overview["sidebar"])
+        await socle.async_set_theme(self.hass, "niak")
+        self.assertFalse((await socle.async_overview(self.hass))["sidebar"])
+        with self.assertRaises(ValueError):
+            await socle.async_set_theme(self.hass, "unknown")
+        self.assertEqual((await socle.async_overview(self.hass))["theme"], "niak")
+
+    async def test_old_settings_keep_the_existing_niak_appearance(self):
+        from homeassistant.helpers.storage import Store
+        await Store(self.hass, socle.STORE_VERSION, socle.KEY).async_save({"sidebar": False})
+        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
+        overview = await socle.async_overview(self.hass)
+        self.assertEqual(overview["theme"], "niak")
+        self.assertFalse(overview["sidebar"])
+
+    async def test_old_copy_loading_first_does_not_erase_stored_theme(self):
+        from homeassistant.helpers.storage import Store
+        await Store(self.hass, socle.STORE_VERSION, socle.KEY).async_save({"sidebar": False, "theme": "ha"})
+        # Socle 1.5/1.6 only imports the sidebar field before the newest copy starts.
+        self.hass.data[socle.KEY] = {"bricks": {}, "panel": None, "settings": {"sidebar": False}}
+        await socle.async_register_brick(self.hass, brick(), "/new/niak-socle.js")
+        self.assertEqual((await socle.async_overview(self.hass))["theme"], "ha")
+        self.assertFalse((await socle.async_overview(self.hass))["sidebar"])
+
+    async def test_older_weather_copy_cannot_replace_theme_handler_or_preference(self):
+        from unittest.mock import patch
+        await socle.async_register_brick(self.hass, brick(), "/new/niak-socle.js")
+        await socle.async_set_theme(self.hass, "ha")
+        handler = self.hass.data[WS_DOMAIN]["niak/set_theme"]
+        with patch.object(socle, "SOCLE_VERSION", (1, 4)):
+            await socle.async_register_brick(self.hass, brick(domain="niak_weather", slug="meteo", legacy_path=None), "/old/niak-socle.js")
+        self.assertEqual(self.module(), "/new/niak-socle.js")
+        self.assertIs(self.hass.data[WS_DOMAIN]["niak/set_theme"], handler)
+        self.assertEqual((await socle.async_overview(self.hass))["theme"], "ha")
+
 
 
 class ComfortStatusTests(unittest.IsolatedAsyncioTestCase):
