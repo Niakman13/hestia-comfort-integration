@@ -1,3 +1,11 @@
+## 0.9.0-beta.2 — Détection des indices COV IKEA
+
+- Les indices VOC Zigbee2MQTT sans catégorie Home Assistant, notamment la sonde IKEA VINDSTYRKA, sont reconnus à partir de leur identifiant technique ; le nom de l’entité peut être personnalisé.
+- Le rattachement à la pièce via l’appareil est conservé, ainsi que le seuil personnel dans l’indice sans unité, sans conversion en concentration.
+- Les capteurs Atmo France mal catégorisés, dont les pollens, sont exclus des COV de pièce.
+
+Après mise à jour HACS, redémarrez Home Assistant, puis recherchez à nouveau les capteurs dans la pièce.
+
 ## 0.9.0-beta.1 — Soleil, aération et présence
 
 - Volets manuels en bois ou autres, volets reliés à Home Assistant, ou aucun volet : conseils par ouvrant, position inconnue conservée et dérogation suivie lorsqu’elle est renseignée.
