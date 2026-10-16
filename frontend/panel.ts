@@ -118,7 +118,7 @@ export class ComfortSetup extends LitElement {
      ${r.cells.map(c=>html`<td class=${c.level}><span class="hl-dot"></span>${c.text}</td>`)}</tr>`)}</tbody></table></div>`,{className:'wide',collapsible:true})}
   </div>`;}
  private message(e:unknown){return typeof e==='object'&&e&&'message' in e?String(e.message):'La connexion est indisponible. Réessayez sans quitter votre brouillon.';}
- private path(path:string){const full='/'+path.replace(/^\//,'');this.routeHandled=full==='/'?'':full;history.pushState(null,'','/niak/confort'+(path?'/'+path:''));window.dispatchEvent(new CustomEvent('location-changed'));}
+ private path(path:string){if(!this.isConnected)return;const full='/'+path.replace(/^\//,'');this.routeHandled=full==='/'?'':full;history.pushState(null,'','/niak/confort'+(path?'/'+path:''));window.dispatchEvent(new CustomEvent('location-changed'));}
  private remember(){if(this.workspaceKey&&(this.draft||this.exteriorDraft))this.drafts.set(this.workspaceKey,{draft:this.draft,exteriorDraft:this.exteriorDraft,discovery:this.discovery,entryId:this.entryId,stage:this.stage,revision:this.revision,acknowledged:this.acknowledged,proposed:this.proposed,search:this.search,weatherEntry:this.weatherEntry});}
  private async followRoute(){
   const path=this.route?.path??'';if(this.routeHandled===path)return;this.routeHandled=path;const generation=++this.workspaceGeneration;this.remember();
@@ -126,6 +126,7 @@ export class ComfortSetup extends LitElement {
   this.workspaceKey=key;this.draft=undefined;this.exteriorDraft=undefined;this.discovery=undefined;this.entryId=undefined;this.preview=undefined;this.error='';this.saved='';this.confirmDiscard=false;this.confirmRemove=false;this.page='rooms';
   const cached=this.drafts.get(key);
   if(cached){Object.assign(this,cached);this.stage=roomSections.find(x=>x.path===section)?.stage??(section==='recapitulatif'?5:cached.stage);return;}
+  if(id==='apercu'&&this.snapshot?.rooms.some(r=>r.entry_id===section)){this.preview=section;this.previewEdited=true;return;}
   if(id==='reglages'){await this.editExterior(false);return;}
   const room=this.snapshot?.rooms.find(r=>r.entry_id===id);if(room){await this.editRoom(room,false);if(generation===this.workspaceGeneration)this.stage=roomSections.find(x=>x.path===section)?.stage??(section==='recapitulatif'?5:0);}else if(id){this.error='Cette pièce n’est plus disponible. Choisissez une pièce ci-dessous.';}
  }
@@ -151,8 +152,8 @@ export class ComfortSetup extends LitElement {
  private begin(){this.confirmRemove=false;this.busy=true;this.error='';this.saved='';this.preview=undefined;this.search={};this.confirmed=false;}
  private async start(area:{area_id:string;name:string}|null,name=''){
   if(!area&&!name.trim()){this.error='Donnez un nom à la pièce libre, par exemple « Étage » ou « Suite parentale ».';return;}
-  this.begin();
-  try{const d=await this.discover(area?.area_id);this.discovery=d;this.revision=d.revision;this.entryId=undefined;this.draft=newRoom(area,name.trim(),d);this.proposed=[...Object.values(this.draft.sources),...this.draft.windows];this.stage=0;this.acknowledged=[];this.freeName='';this.workspaceKey='nouvelle';this.path('nouvelle/temperature');}
+  const workspace=this.workspaceGeneration;this.begin();
+  try{const d=await this.discover(area?.area_id);if(workspace!==this.workspaceGeneration)return;this.discovery=d;this.revision=d.revision;this.entryId=undefined;this.draft=newRoom(area,name.trim(),d);this.proposed=[...Object.values(this.draft.sources),...this.draft.windows];this.stage=0;this.acknowledged=[];this.freeName='';this.workspaceKey='nouvelle';this.path('nouvelle/temperature');}
   catch(e){this.error=this.message(e);}finally{this.busy=false;}
  }
  private async editRoom(room:Room,route=true){
@@ -348,14 +349,15 @@ export class ComfortSetup extends LitElement {
  }
  private async save(){
   const config=this.exteriorDraft?{sources:this.exteriorDraft,weather:this.weatherEntry}:this.draft;if(!config)return;
-  this.busy=true;this.error='';
-  try{const validated=await this.hass!.callWS<{warnings:{key:string;entity_id:string}[]}>({type:'niak_comfort/validate_config',config,home:!!this.exteriorDraft});const missing=validated.warnings.map(w=>warningId(w.key,w.entity_id)).filter(id=>!this.acknowledged.includes(id));
+  const workspace=this.workspaceGeneration,entryId=this.entryId,isHome=!!this.exteriorDraft,revision=this.revision;this.busy=true;this.error='';
+  try{const validated=await this.hass!.callWS<{warnings:{key:string;entity_id:string}[]}>({type:'niak_comfort/validate_config',config,home:isHome});if(workspace!==this.workspaceGeneration)return;const missing=validated.warnings.map(w=>warningId(w.key,w.entity_id)).filter(id=>!this.acknowledged.includes(id));
    if(missing.length&&!this.confirmed){this.error='Cochez « J’ai vérifié, je confirme mes choix » juste au-dessus pour enregistrer.';return;}
    this.acknowledged=[...new Set([...this.acknowledged,...missing])];
-   const before=new Set(this.snapshot?.rooms.map(r=>r.entry_id));const wasRoom=!this.exteriorDraft;const edited=this.entryId;
-   this.snapshot=await this.hass!.callWS<Snapshot>({type:'niak_comfort/save_config',config,home:!!this.exteriorDraft,revision:this.revision,...(this.entryId?{entry_id:this.entryId}:{}),acknowledged:this.acknowledged});
+   const before=new Set(this.snapshot?.rooms.map(r=>r.entry_id));const wasRoom=!isHome;const edited=entryId;
+   this.snapshot=await this.hass!.callWS<Snapshot>({type:'niak_comfort/save_config',config,home:isHome,revision,...(entryId?{entry_id:entryId}:{}),acknowledged:this.acknowledged});
+   if(workspace!==this.workspaceGeneration)return;
    this.drafts.delete(this.workspaceKey);this.workspaceKey='';this.path('');this.draft=undefined;this.exteriorDraft=undefined;this.discovery=undefined;this.entryId=undefined;
-   if(wasRoom){this.preview=edited??this.snapshot.rooms.find(r=>!before.has(r.entry_id))?.entry_id;this.previewEdited=!!edited;}
+   if(wasRoom){this.preview=edited??this.snapshot.rooms.find(r=>!before.has(r.entry_id))?.entry_id;this.previewEdited=!!edited;if(this.preview)this.path('apercu/'+this.preview);}
    this.saved=wasRoom?'':'L’extérieur est enregistré. Toutes vos pièces l’utilisent.';}
   catch(e){this.error=this.message(e);}finally{this.busy=false;}
  }
@@ -397,7 +399,7 @@ export class ComfortSetup extends LitElement {
   return html`<h1 tabindex="-1">${this.previewEdited?room.title+' : modifications enregistrées':room.title+' est prêt'}</h1><p>Voici sa carte confort, telle qu’elle apparaîtra sur votre tableau de bord. Les conseils se mettent à jour en quelques secondes.</p><div class="preview">${this.card(room.entry_id)}</div>
    <h2>Ajouter la carte à un tableau de bord</h2><ol class="howto"><li>Ouvrez votre tableau de bord, puis le crayon <strong>Modifier</strong>.</li><li><strong>Ajouter une carte</strong>, puis cherchez <strong>Niak Confort</strong>. Pour toutes les pièces d’un coup : <strong>Niak Confort · logement</strong>.</li><li>Choisissez la pièce <strong>${room.title}</strong> et enregistrez.</li></ol>
    ${!s.home.configured?html`<p class="notice">Pour comparer avec le dehors (fraîcheur, pluie, vent, soleil), configurez maintenant l’extérieur du logement.</p>`:nothing}
-   <div class="actions">${!s.home.configured?html`<button class="primary" @click=${()=>this.editExterior()}>Configurer l’extérieur</button>`:nothing}<button class=${s.home.configured?'primary':''} @click=${()=>{this.preview=undefined;}}>Retour à Mon logement</button></div>`;}
+   <div class="actions">${!s.home.configured?html`<button class="primary" @click=${()=>this.editExterior()}>Configurer l’extérieur</button>`:nothing}<button class=${s.home.configured?'primary':''} @click=${()=>{this.preview=undefined;this.path('');}}>Retour à Mon logement</button></div>`;}
  private foundRooms(){const list=this.overview!;const n=this.picked.length;
   return html`<section class="start"><h2>Vos pièces trouvées</h2><p>Niak a cherché dans vos pièces Home Assistant. Décochez celles à ne pas suivre : vous pourrez tout retoucher ensuite, pièce par pièce.</p>
    <div class="found">${list.map(a=>{const ok=typeof a.suggestions.indoor_temperature==='string';return html`<div class="found-row"><label class="check"><input type="checkbox" ?disabled=${!ok} .checked=${this.picked.includes(a.area_id)} @change=${(e:Event)=>{const on=(e.target as HTMLInputElement).checked;this.picked=on?[...this.picked,a.area_id]:this.picked.filter(x=>x!==a.area_id);}}><span><strong>${a.name}</strong><span class="hint">${ok?this.detected(a.suggestions):a.temperatures>1?'Plusieurs températures : à choisir':'Aucune température trouvée'}</span></span></label>${ok?nothing:html`<button @click=${()=>this.start(a)}>Configurer</button>`}</div>`;})}</div>
