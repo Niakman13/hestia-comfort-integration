@@ -144,7 +144,7 @@
           "label": "Aucun appareil — capteurs séparés"
         }
       ],
-      "profile": "Autres capteurs / configuration manuelle",
+      "profile": "Ecowitt GW2000A",
       "history": true,
       "history_help": "Cumuls de pluie, tendance de la température et rafale du jour, quand la station ne les donne pas.",
       "groups": [
