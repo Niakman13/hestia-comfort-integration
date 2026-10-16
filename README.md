@@ -11,7 +11,7 @@
 
 Le confort de chaque pièce, expliqué : ouvrir, fermer, attendre ou ne rien faire, et pourquoi. Une seule intégration contient le moteur, la page de configuration **Niak Confort** et la carte.
 
-**Version 0.9.0-beta.4 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
+**Version 0.9.0-beta.5 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
 
 **Logement et étages** : regroupement des pièces par étage Home Assistant, moyennes et conseils d’aération, avec prise en charge du plain-pied. Voir [le fonctionnement et les vérifications](docs/ETAGES.md).
 
@@ -26,6 +26,8 @@ Voir [le périmètre et les limites des blocs 7 à 9](docs/BLOCS-7-8-9.md).
 ## Le hub Niak
 
 Le menu regroupe **Accueil Niak**, **Weather** et **Confort**, selon les intégrations installées. Confort affiche vos pièces avec **Configurer** ; les réglages d’une pièce restent dans cette pièce, avec six rubriques sans défilement horizontal. L’extérieur partagé se règle dans **Réglages généraux**. Les textes d’aide et l’origine des valeurs par défaut sont accessibles par des boutons nommés ; les recommandations restent visibles.
+
+Dans **Accueil Niak → Réglages**, choisissez de suivre les couleurs et la police du thème Home Assistant ou d’utiliser la palette Niak. Le choix est mémorisé ; Niak suit le mode clair ou sombre de Home Assistant. La section **Affichage** reste visible pour gérer l’entrée du menu Home Assistant.
 
 ## Installation
 

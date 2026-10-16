@@ -57,7 +57,7 @@ jobs:
         working-directory: card
         env:
           NIAK_TEST_FIREFOX: "1"
-      - run: node ../frontend/tests/navigation.browser.mjs
+      - run: npm --prefix ../frontend run test:browser
         working-directory: card
         env:
           NIAK_TEST_COMFORT_ONLY: "1"

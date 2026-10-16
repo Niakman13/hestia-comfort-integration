@@ -1,3 +1,10 @@
+## 0.9.0-beta.5 — Affichage du hub
+
+- L’accueil et le menu occupent toute la hauteur disponible dans Home Assistant, y compris lorsque seule une brique est à jour.
+- Le menu de configuration d’une pièce s’aligne sur toute la largeur du formulaire.
+- Dans Accueil Niak → Réglages, choix mémorisé entre les couleurs et la police du thème Home Assistant et la palette Niak. Niak conserve le suivi du mode clair ou sombre de Home Assistant.
+- La section Affichage reste toujours visible, sans repli.
+
 ## 0.9.0-beta.4 — Le nouveau hub Niak
 
 - Interface claire ou sombre, menu par brique et mise en page adaptée au téléphone.
