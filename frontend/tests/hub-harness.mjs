@@ -8,7 +8,7 @@ export function harness(withWeather=true){return `<!doctype html><html lang="fr"
 <script type="module">
 import '/shell.js';
 const fixture=await fetch('/comfort.json').then(r=>r.json()),weather=await fetch('/weather.json').then(r=>r.json());
-window.state=structuredClone(fixture.snapshot);window.healthMode='ready';window.calls=[];window.healthQueue=[];
+window.state=structuredClone(fixture.snapshot);window.healthMode='ready';window.calls=[];window.healthQueue=[];window.validationMode='ready';window.validationQueue=[];
 state.rooms.push({...structuredClone(state.rooms[0]),entry_id:'cuisine-demo',title:'Cuisine',config:{...structuredClone(state.rooms[0].config),name:'Cuisine'}});
 const entry=state.rooms[0],discovery=fixture.discovery;
 const health={level:'action',summary:'1 point à régler',tips_summary:'1 réglage à améliorer',rooms_summary:'1 pièce suivie',todo:[{level:'bad',text:'Extérieur à configurer',why:'Choisissez les mesures du dehors.',target:{kind:'exterior',label:'Extérieur'}}],tips:[{level:'tip',text:'Salon : ajouter les particules',why:'Une mesure est disponible.',target:{kind:'room',entry_id:entry.entry_id,label:'Salon'}}],sources:[{label:'Extérieur',level:'bad',text:'pas encore configuré'},{label:'Chauffage',level:'none',text:'non suivi'}],columns:['Température','Humidité','CO₂','Ouvrants','Chauffage'],rooms:[{entry_id:entry.entry_id,title:'Salon',cells:['répond','répond','répond','1 contact','—'].map(text=>({level:'ok',text}))}],versions:[{level:'ok',text:'Intégration de démonstration',why:'Carte incluse'}]};
@@ -20,7 +20,7 @@ window.hass={connection:{},user:{is_admin:true},themes:{darkMode:true},async cal
  if(msg.type==='niak_comfort/health'){if(healthMode==='error')throw {message:'Connexion interrompue.'};if(healthMode==='hold')return new Promise((resolve,reject)=>healthQueue.push({resolve:()=>resolve(structuredClone(health)),reject}));return structuredClone(health);}
  if(msg.type==='niak_comfort/discover')return structuredClone(discovery);
  if(msg.type==='niak_comfort/overview')return {areas:[]};
- if(msg.type==='niak_comfort/validate_config')return {config:msg.config,warnings:[],revision:state.revision};
+ if(msg.type==='niak_comfort/validate_config'){if(validationMode==='hold')return new Promise(resolve=>validationQueue.push(()=>resolve({config:msg.config,warnings:[],revision:state.revision})));return {config:msg.config,warnings:[],revision:state.revision};}
  if(msg.type==='niak_comfort/save_config'){if(msg.revision!==state.revision)throw {message:'Configuration modifiée ailleurs.'};if(msg.home)state.home.sources=structuredClone(msg.config.sources);else{const room=state.rooms.find(r=>r.entry_id===msg.entry_id);room.config=structuredClone(msg.config);room.title=msg.config.name;}state.revision+='1';return structuredClone(state);}
  if(msg.type==='niak_weather/panel/places')return {can_add:true,places:[{entry_id:'weather-demo',title:'Maison',loaded:true,failed:false,health:{title:'Maison',level:'ok',summary:'Tout est suivi',tips_summary:'',todo:[],tips:[],sources:[{label:'Prévisions',level:'ok',text:'Service météo Maison'}],sensors:[{label:'Température',name:'Dehors',level:'ok',text:'14,2 °C'}],entities:[{level:'ok',text:'Entités configurées',why:'',stage:null}],versions:[{level:'ok',text:'Niak Weather',why:'Carte incluse',stage:null}]}}]};
  if(msg.type==='niak_weather/panel/open')return {...structuredClone(weather),saved:structuredClone(weather.draft)};
