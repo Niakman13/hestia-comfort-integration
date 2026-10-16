@@ -12,7 +12,16 @@ export interface Reading {
   value: number|boolean|string|null; quality:'valid'|'unknown'|'stale'|'estimated';
   source:string|null; received_at:string|null; detail:string|null; unit:string|null;
 }
+export interface Features {
+ shutters?:{entity_id:string;mode:'none'|'manual'|'connected';position:number|null;state:string|null;advice:'close'|'open'|null;message:string;shade_fraction:number|null;shade_model:'geometry'|'simple'|'unknown';manual_override:boolean|null;automatic:boolean|null}[];
+ presence?:{state:'occupied'|'empty'|'unknown'|'not_configured';message:string};
+ air?:{co2_status?:'high'|'ok'|'unknown'|'not_configured';pm25_status:'high'|'ok'|'unknown'|'not_configured';voc_status:'high'|'ok'|'uninterpreted'|'unknown'|'not_configured';voc_unit:string|null;purifier:{on:boolean|null;speed:number|null};coverage:string;message:string};
+ ventilation?:{opened_minutes:number|null;duration_minutes:{min:number;max:number}|null;message:string;capacity:number|null};
+ humidity?:{dew_point:number|null;incoming_relative:number|null;glass_temperature:number|null;condensation_risk:boolean|null;message:string};
+ trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string};
+}
 export interface Assessment {
+  features?:Features;
   action:typeof ACTIONS[number]; level:Level; reason:string;
   needs:string[]; constraints:string[]; opportunities:string[]; partial:boolean; missing:string[];
   heating_action:string; indoor_absolute_humidity:number|null; outdoor_absolute_humidity:number|null;

@@ -11,9 +11,17 @@
 
 Le confort de chaque pièce, expliqué : ouvrir, fermer, attendre ou ne rien faire, et pourquoi. Une seule intégration contient le moteur, la page de configuration **Niak Confort** et la carte.
 
-**Version 0.6.0-beta.2 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
+**Version 0.9.0-beta.1 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
 
 **Logement et étages** : regroupement des pièces par étage Home Assistant, moyennes et conseils d’aération, avec prise en charge du plain-pied. Voir [le fonctionnement et les vérifications](docs/ETAGES.md).
+
+## Soleil, aération et air
+
+Les volets peuvent être manuels (bois, battants ou autres), reliés à Home Assistant, ou absents. Niak donne des conseils sans commander les équipements et sans inventer la position d’un volet manuel. Les dimensions facultatives affinent les estimations d’ombre et d’aération.
+
+La carte suit le temps d’ouverture connu, les tendances de température et le risque de buée estimé. Les durées d’aération restent indicatives. PM2.5, COV, présence et purificateur sont facultatifs : les polluants restent distingués, et une pièce vide conserve son suivi. Les COV nécessitent un seuil choisi dans l’unité du capteur.
+
+Voir [le périmètre et les limites des blocs 7 à 9](docs/BLOCS-7-8-9.md).
 
 ## Installation
 

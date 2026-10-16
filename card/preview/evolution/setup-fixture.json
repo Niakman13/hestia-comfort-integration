@@ -1,0 +1,591 @@
+{
+  "snapshot": {
+    "version": 1,
+    "revision": "46fc38282b59a3554259e6ffa63c0fefe541a3556833b2c927dbb09e7dbcabe4",
+    "home": {
+      "sources": {},
+      "configured": false,
+      "acknowledged": [],
+      "weather": null
+    },
+    "niak_weather": {
+      "installed": false,
+      "places": []
+    },
+    "integrations": {
+      "atmofrance": false
+    },
+    "rooms": [
+      {
+        "entry_id": "01M52A3F1GKMG0HBHNKBY1BPMM",
+        "title": "Salon",
+        "loaded": true,
+        "config": {
+          "name": "Salon",
+          "area_id": "salon",
+          "floor_id": null,
+          "sources": {
+            "indoor_temperature": "sensor.demo_temperature",
+            "indoor_humidity": "sensor.demo_humidity",
+            "co2": "sensor.demo_co2"
+          },
+          "windows": [
+            "binary_sensor.demo_window"
+          ],
+          "openings": {
+            "binary_sensor.demo_window": {
+              "exposure": "O",
+              "kind": "window",
+              "sheltered": false,
+              "shutter": "manual"
+            }
+          },
+          "settings": {
+            "minimum": 20,
+            "maximum": 24,
+            "humidity_high": 62,
+            "co2_potential": 1000,
+            "co2_action": 1200,
+            "co2_urgent": 1600,
+            "temperature_hysteresis": 0.5,
+            "co2_hysteresis": 100,
+            "humidity_hysteresis": 3,
+            "cooling_delta": 1.5,
+            "drying_delta": 1.5,
+            "max_age_seconds": 1800,
+            "gust_max": 45,
+            "frost": 1.0,
+            "sun_facade": 250,
+            "pm25_action": 25,
+            "illuminance_low": 100
+          },
+          "presence": [],
+          "evolution": {
+            "glazing_factor": 0.7,
+            "presence_delay_minutes": 5
+          },
+          "use_home": true
+        },
+        "floor": {
+          "floor_id": "rez_de_chaussee",
+          "name": "Rez-de-chaussée",
+          "level": 0
+        }
+      }
+    ],
+    "floors": [
+      {
+        "floor_id": "rez_de_chaussee",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      }
+    ],
+    "areas": [
+      {
+        "area_id": "salon",
+        "name": "Salon",
+        "floor_id": "rez_de_chaussee",
+        "outdoor": false
+      }
+    ]
+  },
+  "discovery": {
+    "version": 1,
+    "revision": "46fc38282b59a3554259e6ffa63c0fefe541a3556833b2c927dbb09e7dbcabe4",
+    "candidates": {
+      "indoor_temperature": [
+        {
+          "entity_id": "sensor.demo_temperature",
+          "name": "demo temperature",
+          "value": "27",
+          "unit": "°C",
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "sensor.demo_temperature",
+              "name": "demo temperature",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": "temperature",
+          "atmo_label": null
+        }
+      ],
+      "indoor_humidity": [
+        {
+          "entity_id": "sensor.demo_humidity",
+          "name": "demo humidity",
+          "value": "50",
+          "unit": "%",
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "sensor.demo_humidity",
+              "name": "demo humidity",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": "humidity",
+          "atmo_label": null
+        }
+      ],
+      "co2": [
+        {
+          "entity_id": "sensor.demo_co2",
+          "name": "demo co2",
+          "value": "850",
+          "unit": "ppm",
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "sensor.demo_co2",
+              "name": "demo co2",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": "carbon_dioxide",
+          "atmo_label": null
+        }
+      ],
+      "windows": [
+        {
+          "entity_id": "binary_sensor.demo_window",
+          "name": "demo window",
+          "value": "off",
+          "unit": null,
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "name": "demo window",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": "window",
+          "atmo_label": null
+        }
+      ],
+      "heating": [],
+      "illuminance": [
+        {
+          "entity_id": "sensor.demo_lux",
+          "name": "demo lux",
+          "value": "350",
+          "unit": "lx",
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "sensor.demo_lux",
+              "name": "demo lux",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": "illuminance",
+          "atmo_label": null
+        }
+      ],
+      "pm25": [
+        {
+          "entity_id": "sensor.demo_pm25",
+          "name": "demo pm25",
+          "value": "18",
+          "unit": "µg/m³",
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "sensor.demo_pm25",
+              "name": "demo pm25",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": "pm25",
+          "atmo_label": null
+        }
+      ],
+      "voc": [
+        {
+          "entity_id": "sensor.demo_voc",
+          "name": "demo voc",
+          "value": "160",
+          "unit": null,
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "sensor.demo_voc",
+              "name": "demo voc",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": "volatile_organic_compounds_index",
+          "atmo_label": null
+        }
+      ],
+      "purifier": [
+        {
+          "entity_id": "fan.demo_purifier",
+          "name": "demo purifier",
+          "value": "on",
+          "unit": null,
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "fan.demo_purifier",
+              "name": "demo purifier",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": null,
+          "atmo_label": null
+        }
+      ],
+      "presence": [
+        {
+          "entity_id": "binary_sensor.demo_presence",
+          "name": "demo presence",
+          "value": "on",
+          "unit": null,
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "binary_sensor.demo_presence",
+              "name": "demo presence",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": "occupancy",
+          "atmo_label": null
+        }
+      ],
+      "outdoor_temperature": [
+        {
+          "entity_id": "sensor.demo_temperature",
+          "name": "demo temperature",
+          "value": "27",
+          "unit": "°C",
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [
+            "used_indoor"
+          ],
+          "provenance": [
+            {
+              "entity_id": "sensor.demo_temperature",
+              "name": "demo temperature",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": "temperature",
+          "atmo_label": null
+        }
+      ],
+      "outdoor_humidity": [
+        {
+          "entity_id": "sensor.demo_humidity",
+          "name": "demo humidity",
+          "value": "50",
+          "unit": "%",
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [
+            "used_indoor"
+          ],
+          "provenance": [
+            {
+              "entity_id": "sensor.demo_humidity",
+              "name": "demo humidity",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": "humidity",
+          "atmo_label": null
+        }
+      ],
+      "rain": [],
+      "wind_gust": [],
+      "wind_bearing": [],
+      "solar": [],
+      "pollution": [],
+      "covers": [
+        {
+          "entity_id": "cover.demo_shutter",
+          "name": "demo shutter",
+          "value": "open",
+          "unit": null,
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "cover.demo_shutter",
+              "name": "demo shutter",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": "shutter",
+          "atmo_label": null
+        }
+      ],
+      "shutter_auto": [
+        {
+          "entity_id": "switch.demo_auto",
+          "name": "demo auto",
+          "value": "on",
+          "unit": null,
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "switch.demo_auto",
+              "name": "demo auto",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": null,
+          "atmo_label": null
+        },
+        {
+          "entity_id": "binary_sensor.demo_override",
+          "name": "demo override",
+          "value": "off",
+          "unit": null,
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "binary_sensor.demo_override",
+              "name": "demo override",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": null,
+          "atmo_label": null
+        },
+        {
+          "entity_id": "binary_sensor.demo_presence",
+          "name": "demo presence",
+          "value": "on",
+          "unit": null,
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "binary_sensor.demo_presence",
+              "name": "demo presence",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": "occupancy",
+          "atmo_label": null
+        },
+        {
+          "entity_id": "binary_sensor.demo_window",
+          "name": "demo window",
+          "value": "off",
+          "unit": null,
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "name": "demo window",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": "window",
+          "atmo_label": null
+        }
+      ],
+      "shutter_override": [
+        {
+          "entity_id": "switch.demo_auto",
+          "name": "demo auto",
+          "value": "on",
+          "unit": null,
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "switch.demo_auto",
+              "name": "demo auto",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": null,
+          "atmo_label": null
+        },
+        {
+          "entity_id": "binary_sensor.demo_override",
+          "name": "demo override",
+          "value": "off",
+          "unit": null,
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "binary_sensor.demo_override",
+              "name": "demo override",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": null,
+          "atmo_label": null
+        },
+        {
+          "entity_id": "binary_sensor.demo_presence",
+          "name": "demo presence",
+          "value": "on",
+          "unit": null,
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "binary_sensor.demo_presence",
+              "name": "demo presence",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": "occupancy",
+          "atmo_label": null
+        },
+        {
+          "entity_id": "binary_sensor.demo_window",
+          "name": "demo window",
+          "value": "off",
+          "unit": null,
+          "area_id": "salon",
+          "local": true,
+          "outside": false,
+          "reference": false,
+          "available": true,
+          "adapter": "direct",
+          "warnings": [],
+          "provenance": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "name": "demo window",
+              "area_id": "salon"
+            }
+          ],
+          "device_class": "window",
+          "atmo_label": null
+        }
+      ]
+    },
+    "suggestions": {
+      "indoor_temperature": "sensor.demo_temperature",
+      "indoor_humidity": "sensor.demo_humidity",
+      "co2": "sensor.demo_co2",
+      "windows": [
+        "binary_sensor.demo_window"
+      ],
+      "illuminance": "sensor.demo_lux",
+      "pm25": "sensor.demo_pm25",
+      "voc": "sensor.demo_voc",
+      "purifier": "fan.demo_purifier",
+      "presence": [
+        "binary_sensor.demo_presence"
+      ]
+    }
+  }
+}

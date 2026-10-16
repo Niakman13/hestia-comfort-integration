@@ -1,0 +1,3930 @@
+[
+  {
+    "id": "manual",
+    "title": "Chaleur · volets manuels bois",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "attendre",
+        "level": "action",
+        "reason": "cooling_unavailable",
+        "needs": [
+          "cool"
+        ],
+        "constraints": [],
+        "opportunities": [],
+        "partial": false,
+        "missing": [],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 12.874605770949916,
+        "outdoor_absolute_humidity": 16.01944784938113,
+        "temperature_delta": 4.0,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": false,
+            "exposure": "O",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.82,
+            "sun_wm2": 850,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": 35,
+          "azimuth": 270
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": null,
+        "open_first": [],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "mode": "manual",
+              "position": null,
+              "state": null,
+              "advice": "close",
+              "message": "Position non mesurée. Si le volet est ouvert, fermez-le pour limiter les apports solaires. Ombre estimée par modèle simple.",
+              "shade_fraction": 0.0,
+              "shade_model": "simple",
+              "manual_override": null,
+              "automatic": null
+            }
+          ],
+          "presence": {
+            "state": "occupied",
+            "message": "Présence détectée."
+          },
+          "air": {
+            "pm25_status": "not_configured",
+            "voc_status": "not_configured",
+            "voc_unit": null,
+            "purifier": {
+              "on": null,
+              "speed": null
+            },
+            "coverage": "Mesures disponibles : CO₂ ; non suivies ou indisponibles : PM2.5, COV",
+            "message": "Les mesures d’air restent distinctes.",
+            "co2_status": "ok"
+          },
+          "ventilation": {
+            "opened_minutes": null,
+            "duration_minutes": null,
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet.",
+            "capacity": null
+          },
+          "humidity": {
+            "dew_point": 15.7,
+            "incoming_relative": 63.0,
+            "glass_temperature": 28.2,
+            "condensation_risk": false,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée. L’air extérieur risque de réhumidifier la pièce."
+          },
+          "trends": {
+            "indoor": null,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 27.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 31.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 850.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "occupancy",
+          "unit": null
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 27.0,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 27.0
+          },
+          "level_of_attention": "action",
+          "partial": false
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "action",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [],
+      "crossing": null,
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": 31.0,
+      "partial": false
+    }
+  },
+  {
+    "id": "none",
+    "title": "Chaleur · aucun volet",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "attendre",
+        "level": "action",
+        "reason": "cooling_unavailable",
+        "needs": [
+          "cool"
+        ],
+        "constraints": [],
+        "opportunities": [],
+        "partial": false,
+        "missing": [],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 12.874605770949916,
+        "outdoor_absolute_humidity": 16.01944784938113,
+        "temperature_delta": 4.0,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": false,
+            "exposure": "O",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.82,
+            "sun_wm2": 850,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": 35,
+          "azimuth": 270
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": null,
+        "open_first": [],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [],
+          "presence": {
+            "state": "occupied",
+            "message": "Présence détectée."
+          },
+          "air": {
+            "pm25_status": "not_configured",
+            "voc_status": "not_configured",
+            "voc_unit": null,
+            "purifier": {
+              "on": null,
+              "speed": null
+            },
+            "coverage": "Mesures disponibles : CO₂ ; non suivies ou indisponibles : PM2.5, COV",
+            "message": "Les mesures d’air restent distinctes.",
+            "co2_status": "ok"
+          },
+          "ventilation": {
+            "opened_minutes": null,
+            "duration_minutes": null,
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet.",
+            "capacity": null
+          },
+          "humidity": {
+            "dew_point": 15.7,
+            "incoming_relative": 63.0,
+            "glass_temperature": 28.2,
+            "condensation_risk": false,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée. L’air extérieur risque de réhumidifier la pièce."
+          },
+          "trends": {
+            "indoor": null,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 27.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 31.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 850.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "occupancy",
+          "unit": null
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 27.0,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 27.0
+          },
+          "level_of_attention": "action",
+          "partial": false
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "action",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [],
+      "crossing": null,
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": 31.0,
+      "partial": false
+    }
+  },
+  {
+    "id": "override",
+    "title": "Volet connecté · dérogation",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "attendre",
+        "level": "action",
+        "reason": "cooling_unavailable",
+        "needs": [
+          "cool"
+        ],
+        "constraints": [],
+        "opportunities": [],
+        "partial": false,
+        "missing": [],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 12.874605770949916,
+        "outdoor_absolute_humidity": 16.01944784938113,
+        "temperature_delta": 4.0,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": false,
+            "exposure": "O",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.82,
+            "sun_wm2": 850,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": 35,
+          "azimuth": 270
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": null,
+        "open_first": [],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "mode": "connected",
+              "position": 60.0,
+              "state": "open",
+              "advice": null,
+              "message": "Position mesurée : 60 %. Dérogation active respectée. Ombre estimée par modèle simple.",
+              "shade_fraction": 0.0,
+              "shade_model": "simple",
+              "manual_override": true,
+              "automatic": true
+            }
+          ],
+          "presence": {
+            "state": "occupied",
+            "message": "Présence détectée."
+          },
+          "air": {
+            "pm25_status": "not_configured",
+            "voc_status": "not_configured",
+            "voc_unit": null,
+            "purifier": {
+              "on": null,
+              "speed": null
+            },
+            "coverage": "Mesures disponibles : CO₂ ; non suivies ou indisponibles : PM2.5, COV",
+            "message": "Les mesures d’air restent distinctes.",
+            "co2_status": "ok"
+          },
+          "ventilation": {
+            "opened_minutes": null,
+            "duration_minutes": null,
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet.",
+            "capacity": null
+          },
+          "humidity": {
+            "dew_point": 15.7,
+            "incoming_relative": 63.0,
+            "glass_temperature": 28.2,
+            "condensation_risk": false,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée. L’air extérieur risque de réhumidifier la pièce."
+          },
+          "trends": {
+            "indoor": null,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 27.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 31.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 850.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "occupancy",
+          "unit": null
+        },
+        "cover:binary_sensor.demo_window": {
+          "value": 60.0,
+          "quality": "valid",
+          "source": "sensor.demo_cover_binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "cover_state:binary_sensor.demo_window": {
+          "value": "open",
+          "quality": "valid",
+          "source": "sensor.demo_cover_state_binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "shutter_auto:binary_sensor.demo_auto": {
+          "value": true,
+          "quality": "valid",
+          "source": "sensor.demo_shutter_auto_binary_sensor.demo_auto",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "shutter_override:binary_sensor.demo_override": {
+          "value": true,
+          "quality": "valid",
+          "source": "sensor.demo_shutter_override_binary_sensor.demo_override",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 27.0,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 27.0
+          },
+          "level_of_attention": "action",
+          "partial": false
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "action",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [],
+      "crossing": null,
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": 31.0,
+      "partial": false
+    }
+  },
+  {
+    "id": "winter",
+    "title": "Froid · soleil utile",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "ok",
+        "level": "action",
+        "reason": "heat_needed",
+        "needs": [
+          "heat"
+        ],
+        "constraints": [],
+        "opportunities": [
+          "cool",
+          "dry"
+        ],
+        "partial": false,
+        "missing": [],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 7.908528517095877,
+        "outdoor_absolute_humidity": 4.406974006278881,
+        "temperature_delta": -9.5,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": false,
+            "exposure": "S",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.94,
+            "sun_wm2": 850,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": 20,
+          "azimuth": 180
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": null,
+        "open_first": [],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "mode": "manual",
+              "position": null,
+              "state": null,
+              "advice": "open",
+              "message": "Position non mesurée. Si le volet est fermé, ouvrez-le pour profiter du soleil. Ombre estimée par modèle simple.",
+              "shade_fraction": 0.0,
+              "shade_model": "simple",
+              "manual_override": null,
+              "automatic": null
+            }
+          ],
+          "presence": {
+            "state": "occupied",
+            "message": "Présence détectée."
+          },
+          "air": {
+            "pm25_status": "not_configured",
+            "voc_status": "not_configured",
+            "voc_unit": null,
+            "purifier": {
+              "on": null,
+              "speed": null
+            },
+            "coverage": "Mesures disponibles : CO₂ ; non suivies ou indisponibles : PM2.5, COV",
+            "message": "Les mesures d’air restent distinctes.",
+            "co2_status": "ok"
+          },
+          "ventilation": {
+            "opened_minutes": null,
+            "duration_minutes": null,
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet.",
+            "capacity": null
+          },
+          "humidity": {
+            "dew_point": 7.9,
+            "incoming_relative": 27.0,
+            "glass_temperature": 15.6,
+            "condensation_risk": false,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée."
+          },
+          "trends": {
+            "indoor": null,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 18.5,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 9.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 850.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "occupancy",
+          "unit": null
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 18.5,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 18.5
+          },
+          "level_of_attention": "action",
+          "partial": false
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "action",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [],
+      "crossing": null,
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": 9.0,
+      "partial": false
+    }
+  },
+  {
+    "id": "shade",
+    "title": "Débord de toit · ombre estimée",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "ok",
+        "level": "calm",
+        "reason": "within_comfort",
+        "needs": [],
+        "constraints": [],
+        "opportunities": [],
+        "partial": false,
+        "missing": [],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 10.277220932903429,
+        "outdoor_absolute_humidity": 14.373106139860635,
+        "temperature_delta": 6.0,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": false,
+            "exposure": "S",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.34,
+            "sun_wm2": 0,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": 70,
+          "azimuth": 180
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": null,
+        "open_first": [],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "mode": "manual",
+              "position": null,
+              "state": null,
+              "advice": null,
+              "message": "Position non mesurée. Ombre estimée par géométrie.",
+              "shade_fraction": 1,
+              "shade_model": "geometry",
+              "manual_override": null,
+              "automatic": null
+            }
+          ],
+          "presence": {
+            "state": "occupied",
+            "message": "Présence détectée."
+          },
+          "air": {
+            "pm25_status": "not_configured",
+            "voc_status": "not_configured",
+            "voc_unit": null,
+            "purifier": {
+              "on": null,
+              "speed": null
+            },
+            "coverage": "Mesures disponibles : CO₂ ; non suivies ou indisponibles : PM2.5, COV",
+            "message": "Les mesures d’air restent distinctes.",
+            "co2_status": "ok"
+          },
+          "ventilation": {
+            "opened_minutes": null,
+            "duration_minutes": null,
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet.",
+            "capacity": null
+          },
+          "humidity": {
+            "dew_point": 12.0,
+            "incoming_relative": 71.3,
+            "glass_temperature": 24.8,
+            "condensation_risk": false,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée. L’air extérieur risque de réhumidifier la pièce."
+          },
+          "trends": {
+            "indoor": null,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 23.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 29.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 850.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "occupancy",
+          "unit": null
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 23.0,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 23.0
+          },
+          "level_of_attention": "calm",
+          "partial": false
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "calm",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [],
+      "crossing": null,
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": 29.0,
+      "partial": false
+    }
+  },
+  {
+    "id": "night",
+    "title": "Nuit · préservez la chaleur",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "ok",
+        "level": "action",
+        "reason": "heat_needed",
+        "needs": [
+          "heat"
+        ],
+        "constraints": [],
+        "opportunities": [
+          "cool",
+          "dry"
+        ],
+        "partial": false,
+        "missing": [],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 7.908528517095877,
+        "outdoor_absolute_humidity": 3.8738646676327577,
+        "temperature_delta": -11.5,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": false,
+            "exposure": "O",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.0,
+            "sun_wm2": 105,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": -10,
+          "azimuth": 270
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": null,
+        "open_first": [],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "mode": "manual",
+              "position": null,
+              "state": null,
+              "advice": "close",
+              "message": "Position non mesurée. Si le volet est ouvert, fermez-le pour protéger la pièce du froid nocturne. Ombre estimée par modèle simple.",
+              "shade_fraction": 1.0,
+              "shade_model": "simple",
+              "manual_override": null,
+              "automatic": null
+            }
+          ],
+          "presence": {
+            "state": "occupied",
+            "message": "Présence détectée."
+          },
+          "air": {
+            "pm25_status": "not_configured",
+            "voc_status": "not_configured",
+            "voc_unit": null,
+            "purifier": {
+              "on": null,
+              "speed": null
+            },
+            "coverage": "Mesures disponibles : CO₂ ; non suivies ou indisponibles : PM2.5, COV",
+            "message": "Les mesures d’air restent distinctes.",
+            "co2_status": "ok"
+          },
+          "ventilation": {
+            "opened_minutes": null,
+            "duration_minutes": null,
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet.",
+            "capacity": null
+          },
+          "humidity": {
+            "dew_point": 7.9,
+            "incoming_relative": 23.5,
+            "glass_temperature": 15.0,
+            "condensation_risk": false,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée."
+          },
+          "trends": {
+            "indoor": null,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 18.5,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 7.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 850.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "occupancy",
+          "unit": null
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 18.5,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 18.5
+          },
+          "level_of_attention": "action",
+          "partial": false
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "action",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [],
+      "crossing": null,
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": 7.0,
+      "partial": false
+    }
+  },
+  {
+    "id": "co2",
+    "title": "CO₂ élevé · aération à commencer",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "ouvrir",
+        "level": "urgent",
+        "reason": "air_needed",
+        "needs": [
+          "air"
+        ],
+        "constraints": [],
+        "opportunities": [
+          "cool",
+          "dry",
+          "air"
+        ],
+        "partial": false,
+        "missing": [],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 10.879867710353107,
+        "outdoor_absolute_humidity": 8.145856632833713,
+        "temperature_delta": -5.0,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": false,
+            "exposure": "O",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.82,
+            "sun_wm2": 850,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": 35,
+          "azimuth": 270
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": null,
+        "open_first": [
+          "binary_sensor.demo_window"
+        ],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "mode": "manual",
+              "position": null,
+              "state": null,
+              "advice": null,
+              "message": "Position non mesurée. Ombre estimée par modèle simple.",
+              "shade_fraction": 0.0,
+              "shade_model": "simple",
+              "manual_override": null,
+              "automatic": null
+            }
+          ],
+          "presence": {
+            "state": "occupied",
+            "message": "Présence détectée."
+          },
+          "air": {
+            "pm25_status": "not_configured",
+            "voc_status": "not_configured",
+            "voc_unit": null,
+            "purifier": {
+              "on": null,
+              "speed": null
+            },
+            "coverage": "Mesures disponibles : CO₂ ; non suivies ou indisponibles : PM2.5, COV",
+            "message": "Les mesures d’air restent distinctes.",
+            "co2_status": "high"
+          },
+          "ventilation": {
+            "opened_minutes": null,
+            "duration_minutes": {
+              "min": 4,
+              "max": 10
+            },
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet. Capacité estimée en m² effectifs, avec hypothèse d’ouverture ; débit non mesuré.",
+            "capacity": 1.55
+          },
+          "humidity": {
+            "dew_point": 12.9,
+            "incoming_relative": 36.8,
+            "glass_temperature": 22.5,
+            "condensation_risk": false,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée."
+          },
+          "trends": {
+            "indoor": null,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 24.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 19.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 1700.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "occupancy",
+          "unit": null
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 24.0,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 24.0
+          },
+          "level_of_attention": "urgent",
+          "partial": false
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "urgent",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [],
+      "crossing": null,
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": 19.0,
+      "partial": false
+    }
+  },
+  {
+    "id": "airing",
+    "title": "Aération engagée · CO₂ encore élevé",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "ok",
+        "level": "urgent",
+        "reason": "air_needed",
+        "needs": [
+          "air"
+        ],
+        "constraints": [],
+        "opportunities": [
+          "cool",
+          "dry",
+          "air"
+        ],
+        "partial": false,
+        "missing": [],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 10.574834515903717,
+        "outdoor_absolute_humidity": 8.145856632833713,
+        "temperature_delta": -4.5,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": true,
+            "exposure": "O",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.82,
+            "sun_wm2": 850,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": 35,
+          "azimuth": 270
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": "one_side",
+        "open_first": [],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "mode": "manual",
+              "position": null,
+              "state": null,
+              "advice": null,
+              "message": "Position non mesurée. Ombre estimée par modèle simple.",
+              "shade_fraction": 0.0,
+              "shade_model": "simple",
+              "manual_override": null,
+              "automatic": null
+            }
+          ],
+          "presence": {
+            "state": "occupied",
+            "message": "Présence détectée."
+          },
+          "air": {
+            "pm25_status": "not_configured",
+            "voc_status": "not_configured",
+            "voc_unit": null,
+            "purifier": {
+              "on": null,
+              "speed": null
+            },
+            "coverage": "Mesures disponibles : CO₂ ; non suivies ou indisponibles : PM2.5, COV",
+            "message": "Les mesures d’air restent distinctes.",
+            "co2_status": "high"
+          },
+          "ventilation": {
+            "opened_minutes": 8,
+            "duration_minutes": {
+              "min": 4,
+              "max": 10
+            },
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet. Capacité estimée en m² effectifs, avec hypothèse d’ouverture ; débit non mesuré.",
+            "capacity": 1.55
+          },
+          "humidity": {
+            "dew_point": 12.5,
+            "incoming_relative": 37.9,
+            "glass_temperature": 22.1,
+            "condensation_risk": false,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée."
+          },
+          "trends": {
+            "indoor": -0.6,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 23.5,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 19.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 1650.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "occupancy",
+          "unit": null
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 23.5,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 23.5
+          },
+          "level_of_attention": "urgent",
+          "partial": false
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "urgent",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [
+        {
+          "title": "Salon",
+          "open": [
+            "Fenêtre ouest"
+          ]
+        }
+      ],
+      "crossing": "none",
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": 19.0,
+      "partial": false
+    }
+  },
+  {
+    "id": "empty",
+    "title": "Pièce vide · fenêtre ouverte",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "ok",
+        "level": "calm",
+        "reason": "within_comfort",
+        "needs": [],
+        "constraints": [],
+        "opportunities": [
+          "cool",
+          "dry"
+        ],
+        "partial": false,
+        "missing": [],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 9.703653257346708,
+        "outdoor_absolute_humidity": 6.0285086089441,
+        "temperature_delta": -8.0,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": true,
+            "exposure": "O",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.82,
+            "sun_wm2": 850,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": 35,
+          "azimuth": 270
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": "one_side",
+        "open_first": [],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "mode": "manual",
+              "position": null,
+              "state": null,
+              "advice": null,
+              "message": "Position non mesurée. Ombre estimée par modèle simple.",
+              "shade_fraction": 0.0,
+              "shade_model": "simple",
+              "manual_override": null,
+              "automatic": null
+            }
+          ],
+          "presence": {
+            "state": "empty",
+            "message": "Pièce confirmée vide : suivi du confort et de l’air conservé ; vérifiez les fenêtres ouvertes."
+          },
+          "air": {
+            "pm25_status": "not_configured",
+            "voc_status": "not_configured",
+            "voc_unit": null,
+            "purifier": {
+              "on": null,
+              "speed": null
+            },
+            "coverage": "Mesures disponibles : CO₂ ; non suivies ou indisponibles : PM2.5, COV",
+            "message": "Les mesures d’air restent distinctes.",
+            "co2_status": "ok"
+          },
+          "ventilation": {
+            "opened_minutes": 25,
+            "duration_minutes": null,
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet. Capacité estimée en m² effectifs, avec hypothèse d’ouverture ; débit non mesuré.",
+            "capacity": 1.55
+          },
+          "humidity": {
+            "dew_point": 11.1,
+            "incoming_relative": 30.2,
+            "glass_temperature": 19.6,
+            "condensation_risk": false,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée."
+          },
+          "trends": {
+            "indoor": null,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 22.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 14.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 850.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_presence_binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "occupancy",
+          "unit": null
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 22.0,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 22.0
+          },
+          "level_of_attention": "calm",
+          "partial": false
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "calm",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [
+        {
+          "title": "Salon",
+          "open": [
+            "Fenêtre ouest"
+          ]
+        }
+      ],
+      "crossing": "none",
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": 14.0,
+      "partial": false
+    }
+  },
+  {
+    "id": "motion",
+    "title": "Mouvement silencieux · présence inconnue",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "ok",
+        "level": "calm",
+        "reason": "within_comfort",
+        "needs": [],
+        "constraints": [],
+        "opportunities": [
+          "cool",
+          "dry"
+        ],
+        "partial": false,
+        "missing": [],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 10.277220932903429,
+        "outdoor_absolute_humidity": 8.639091242147579,
+        "temperature_delta": -3.0,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": false,
+            "exposure": "O",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.82,
+            "sun_wm2": 850,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": 35,
+          "azimuth": 270
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": null,
+        "open_first": [],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "mode": "manual",
+              "position": null,
+              "state": null,
+              "advice": null,
+              "message": "Position non mesurée. Ombre estimée par modèle simple.",
+              "shade_fraction": 0.0,
+              "shade_model": "simple",
+              "manual_override": null,
+              "automatic": null
+            }
+          ],
+          "presence": {
+            "state": "unknown",
+            "message": "Présence inconnue ; le silence d’un détecteur de mouvement ne prouve pas l’absence."
+          },
+          "air": {
+            "pm25_status": "not_configured",
+            "voc_status": "not_configured",
+            "voc_unit": null,
+            "purifier": {
+              "on": null,
+              "speed": null
+            },
+            "coverage": "Mesures disponibles : CO₂ ; non suivies ou indisponibles : PM2.5, COV",
+            "message": "Les mesures d’air restent distinctes.",
+            "co2_status": "ok"
+          },
+          "ventilation": {
+            "opened_minutes": null,
+            "duration_minutes": null,
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet.",
+            "capacity": null
+          },
+          "humidity": {
+            "dew_point": 12.0,
+            "incoming_relative": 41.6,
+            "glass_temperature": 22.1,
+            "condensation_risk": false,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée."
+          },
+          "trends": {
+            "indoor": null,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 23.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 20.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 850.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_presence_binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "motion",
+          "unit": null
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 23.0,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 23.0
+          },
+          "level_of_attention": "calm",
+          "partial": false
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "calm",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [],
+      "crossing": null,
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": 20.0,
+      "partial": false
+    }
+  },
+  {
+    "id": "particles",
+    "title": "Particules · extérieur défavorable",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "attendre",
+        "level": "action",
+        "reason": "opening_blocked",
+        "needs": [
+          "air",
+          "cool"
+        ],
+        "constraints": [
+          "pollution"
+        ],
+        "opportunities": [],
+        "partial": false,
+        "missing": [],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 11.512806573859336,
+        "outdoor_absolute_humidity": 9.15798944424662,
+        "temperature_delta": -4.0,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": false,
+            "exposure": "O",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.82,
+            "sun_wm2": 850,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": 35,
+          "azimuth": 270
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": null,
+        "open_first": [],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "mode": "manual",
+              "position": null,
+              "state": null,
+              "advice": "close",
+              "message": "Position non mesurée. Si le volet est ouvert, fermez-le pour limiter les apports solaires. Ombre estimée par modèle simple.",
+              "shade_fraction": 0.0,
+              "shade_model": "simple",
+              "manual_override": null,
+              "automatic": null
+            }
+          ],
+          "presence": {
+            "state": "occupied",
+            "message": "Présence détectée."
+          },
+          "air": {
+            "pm25_status": "high",
+            "voc_status": "not_configured",
+            "voc_unit": null,
+            "purifier": {
+              "on": true,
+              "speed": 65.0
+            },
+            "coverage": "Mesures disponibles : CO₂, PM2.5 ; non suivies ou indisponibles : COV",
+            "message": "PM2.5 élevées : besoin d’air maintenu sous réserve des conditions extérieures. Le purificateur ne renouvelle pas l’air et ne retire pas le CO₂ ; son action sur les COV n’est pas présumée.",
+            "co2_status": "ok"
+          },
+          "ventilation": {
+            "opened_minutes": null,
+            "duration_minutes": null,
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet.",
+            "capacity": null
+          },
+          "humidity": {
+            "dew_point": 13.9,
+            "incoming_relative": 39.2,
+            "glass_temperature": 23.8,
+            "condensation_risk": false,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée."
+          },
+          "trends": {
+            "indoor": null,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 25.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 21.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 850.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": true,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "occupancy",
+          "unit": null
+        },
+        "pm25": {
+          "value": 38.0,
+          "quality": "valid",
+          "source": "sensor.demo_pm25",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "µg/m³"
+        },
+        "purifier": {
+          "value": true,
+          "quality": "valid",
+          "source": "sensor.demo_purifier",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "purifier_speed": {
+          "value": 65.0,
+          "quality": "valid",
+          "source": "sensor.demo_purifier_speed",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 25.0,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 25.0
+          },
+          "level_of_attention": "action",
+          "partial": false
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "action",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [],
+      "crossing": null,
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": 21.0,
+      "partial": false
+    }
+  },
+  {
+    "id": "purifier",
+    "title": "Purificateur en marche · CO₂ élevé",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "ouvrir",
+        "level": "urgent",
+        "reason": "air_needed",
+        "needs": [
+          "air"
+        ],
+        "constraints": [],
+        "opportunities": [
+          "cool",
+          "dry",
+          "air"
+        ],
+        "partial": false,
+        "missing": [],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 10.277220932903429,
+        "outdoor_absolute_humidity": 8.145856632833713,
+        "temperature_delta": -4.0,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": false,
+            "exposure": "O",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.82,
+            "sun_wm2": 850,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": 35,
+          "azimuth": 270
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": null,
+        "open_first": [
+          "binary_sensor.demo_window"
+        ],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "mode": "manual",
+              "position": null,
+              "state": null,
+              "advice": null,
+              "message": "Position non mesurée. Ombre estimée par modèle simple.",
+              "shade_fraction": 0.0,
+              "shade_model": "simple",
+              "manual_override": null,
+              "automatic": null
+            }
+          ],
+          "presence": {
+            "state": "occupied",
+            "message": "Présence détectée."
+          },
+          "air": {
+            "pm25_status": "not_configured",
+            "voc_status": "not_configured",
+            "voc_unit": null,
+            "purifier": {
+              "on": true,
+              "speed": 70.0
+            },
+            "coverage": "Mesures disponibles : CO₂ ; non suivies ou indisponibles : PM2.5, COV",
+            "message": "Le purificateur ne renouvelle pas l’air et ne retire pas le CO₂ ; son action sur les COV n’est pas présumée.",
+            "co2_status": "high"
+          },
+          "ventilation": {
+            "opened_minutes": null,
+            "duration_minutes": {
+              "min": 4,
+              "max": 10
+            },
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet. Capacité estimée en m² effectifs, avec hypothèse d’ouverture ; débit non mesuré.",
+            "capacity": 1.55
+          },
+          "humidity": {
+            "dew_point": 12.0,
+            "incoming_relative": 39.1,
+            "glass_temperature": 21.8,
+            "condensation_risk": false,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée."
+          },
+          "trends": {
+            "indoor": null,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 23.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 19.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 1700.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "occupancy",
+          "unit": null
+        },
+        "purifier": {
+          "value": true,
+          "quality": "valid",
+          "source": "sensor.demo_purifier",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "purifier_speed": {
+          "value": 70.0,
+          "quality": "valid",
+          "source": "sensor.demo_purifier_speed",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 23.0,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 23.0
+          },
+          "level_of_attention": "urgent",
+          "partial": false
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "urgent",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [],
+      "crossing": null,
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": 19.0,
+      "partial": false
+    }
+  },
+  {
+    "id": "voc",
+    "title": "COV · indice sans seuil compatible",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "ok",
+        "level": "calm",
+        "reason": "within_comfort",
+        "needs": [],
+        "constraints": [],
+        "opportunities": [
+          "cool"
+        ],
+        "partial": false,
+        "missing": [],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 10.277220932903429,
+        "outdoor_absolute_humidity": 9.15798944424662,
+        "temperature_delta": -2.0,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": false,
+            "exposure": "O",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.82,
+            "sun_wm2": 850,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": 35,
+          "azimuth": 270
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": null,
+        "open_first": [],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "mode": "manual",
+              "position": null,
+              "state": null,
+              "advice": null,
+              "message": "Position non mesurée. Ombre estimée par modèle simple.",
+              "shade_fraction": 0.0,
+              "shade_model": "simple",
+              "manual_override": null,
+              "automatic": null
+            }
+          ],
+          "presence": {
+            "state": "occupied",
+            "message": "Présence détectée."
+          },
+          "air": {
+            "pm25_status": "not_configured",
+            "voc_status": "uninterpreted",
+            "voc_unit": "VOC index",
+            "purifier": {
+              "on": null,
+              "speed": null
+            },
+            "coverage": "Mesures disponibles : CO₂, COV ; non suivies ou indisponibles : PM2.5",
+            "message": "COV mesurés, interprétation indisponible sans seuil de même unité.",
+            "co2_status": "ok"
+          },
+          "ventilation": {
+            "opened_minutes": null,
+            "duration_minutes": null,
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet.",
+            "capacity": null
+          },
+          "humidity": {
+            "dew_point": 12.0,
+            "incoming_relative": 44.3,
+            "glass_temperature": 22.4,
+            "condensation_risk": false,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée."
+          },
+          "trends": {
+            "indoor": null,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 23.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 21.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 850.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "occupancy",
+          "unit": null
+        },
+        "voc": {
+          "value": 180.0,
+          "quality": "valid",
+          "source": "sensor.demo_voc",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "VOC index"
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 23.0,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 23.0
+          },
+          "level_of_attention": "calm",
+          "partial": false
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "calm",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [],
+      "crossing": null,
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": 21.0,
+      "partial": false
+    }
+  },
+  {
+    "id": "humidity",
+    "title": "Aération qui réhumidifie",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "fermer",
+        "level": "action",
+        "reason": "rehumidification_risk",
+        "needs": [],
+        "constraints": [],
+        "opportunities": [],
+        "partial": false,
+        "missing": [],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 10.674018583081379,
+        "outdoor_absolute_humidity": 13.736984166369929,
+        "temperature_delta": -1.0,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": true,
+            "exposure": "O",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.82,
+            "sun_wm2": 850,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": 35,
+          "azimuth": 270
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": "one_side",
+        "open_first": [],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "mode": "manual",
+              "position": null,
+              "state": null,
+              "advice": null,
+              "message": "Position non mesurée. Ombre estimée par modèle simple.",
+              "shade_fraction": 0.0,
+              "shade_model": "simple",
+              "manual_override": null,
+              "automatic": null
+            }
+          ],
+          "presence": {
+            "state": "occupied",
+            "message": "Présence détectée."
+          },
+          "air": {
+            "pm25_status": "not_configured",
+            "voc_status": "not_configured",
+            "voc_unit": null,
+            "purifier": {
+              "on": null,
+              "speed": null
+            },
+            "coverage": "Mesures disponibles : CO₂ ; non suivies ou indisponibles : PM2.5, COV",
+            "message": "Les mesures d’air restent distinctes.",
+            "co2_status": "ok"
+          },
+          "ventilation": {
+            "opened_minutes": 18,
+            "duration_minutes": null,
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet. Capacité estimée en m² effectifs, avec hypothèse d’ouverture ; débit non mesuré.",
+            "capacity": 1.55
+          },
+          "humidity": {
+            "dew_point": 12.5,
+            "incoming_relative": 70.5,
+            "glass_temperature": 21.7,
+            "condensation_risk": false,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée. L’air extérieur risque de réhumidifier la pièce."
+          },
+          "trends": {
+            "indoor": null,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 22.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 21.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 55.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 75.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 850.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "occupancy",
+          "unit": null
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 22.0,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 22.0
+          },
+          "level_of_attention": "action",
+          "partial": false
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "action",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [
+        {
+          "title": "Salon",
+          "open": [
+            "Fenêtre ouest"
+          ]
+        }
+      ],
+      "crossing": "none",
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": 21.0,
+      "partial": false
+    }
+  },
+  {
+    "id": "condensation",
+    "title": "Vitrage · risque de buée estimé",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "ouvrir",
+        "level": "action",
+        "reason": "drying_possible",
+        "needs": [
+          "dry"
+        ],
+        "constraints": [],
+        "opportunities": [
+          "cool",
+          "dry"
+        ],
+        "partial": false,
+        "missing": [],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 12.09472773900661,
+        "outdoor_absolute_humidity": 4.45173749429944,
+        "temperature_delta": -16.0,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": false,
+            "exposure": "O",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.82,
+            "sun_wm2": 850,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": 35,
+          "azimuth": 270
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": null,
+        "open_first": [
+          "binary_sensor.demo_window"
+        ],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "mode": "manual",
+              "position": null,
+              "state": null,
+              "advice": null,
+              "message": "Position non mesurée. Ombre estimée par modèle simple.",
+              "shade_fraction": 0.0,
+              "shade_model": "simple",
+              "manual_override": null,
+              "automatic": null
+            }
+          ],
+          "presence": {
+            "state": "occupied",
+            "message": "Présence détectée."
+          },
+          "air": {
+            "pm25_status": "not_configured",
+            "voc_status": "not_configured",
+            "voc_unit": null,
+            "purifier": {
+              "on": null,
+              "speed": null
+            },
+            "coverage": "Mesures disponibles : CO₂ ; non suivies ou indisponibles : PM2.5, COV",
+            "message": "Les mesures d’air restent distinctes.",
+            "co2_status": "ok"
+          },
+          "ventilation": {
+            "opened_minutes": null,
+            "duration_minutes": {
+              "min": 2,
+              "max": 5
+            },
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet. Capacité estimée en m² effectifs, avec hypothèse d’ouverture ; débit non mesuré.",
+            "capacity": 1.55
+          },
+          "humidity": {
+            "dew_point": 14.4,
+            "incoming_relative": 24.4,
+            "glass_temperature": 13.6,
+            "condensation_risk": true,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée."
+          },
+          "trends": {
+            "indoor": null,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 20.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": 4.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "indoor_humidity": {
+          "value": 70.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 70.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 850.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": false,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "occupancy",
+          "unit": null
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 20.0,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 20.0
+          },
+          "level_of_attention": "action",
+          "partial": false
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "action",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [],
+      "crossing": null,
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": 4.0,
+      "partial": false
+    }
+  },
+  {
+    "id": "missing",
+    "title": "Contact restauré · durée inconnue",
+    "view": {
+      "version": 1,
+      "entry_id": "demo-salon",
+      "area_id": "demo-salon",
+      "title": "Salon",
+      "computed_at": "2026-10-16T12:12:19.911978+00:00",
+      "assessment": {
+        "action": "unknown",
+        "level": "neutral",
+        "reason": "incomplete_data",
+        "needs": [],
+        "constraints": [],
+        "opportunities": [],
+        "partial": true,
+        "missing": [
+          "outdoor_temperature",
+          "presence:binary_sensor.demo_presence"
+        ],
+        "heating_action": "not_configured",
+        "indoor_absolute_humidity": 10.277220932903429,
+        "outdoor_absolute_humidity": null,
+        "temperature_delta": null,
+        "coordination": "not_connected",
+        "openings": [
+          {
+            "entity_id": "binary_sensor.demo_window",
+            "open": true,
+            "exposure": "O",
+            "kind": "window",
+            "sheltered": false,
+            "sun_share": 0.82,
+            "sun_wm2": 850,
+            "wind_side": null,
+            "flags": []
+          }
+        ],
+        "sun": {
+          "elevation": 35,
+          "azimuth": 270
+        },
+        "unverified": [],
+        "wind_bearing": null,
+        "crossing": "one_side",
+        "open_first": [],
+        "slot": null,
+        "rain_soon_minutes": null,
+        "features": {
+          "shutters": [
+            {
+              "entity_id": "binary_sensor.demo_window",
+              "mode": "manual",
+              "position": null,
+              "state": null,
+              "advice": null,
+              "message": "Position non mesurée. Ombre estimée par modèle simple.",
+              "shade_fraction": 0.0,
+              "shade_model": "simple",
+              "manual_override": null,
+              "automatic": null
+            }
+          ],
+          "presence": {
+            "state": "unknown",
+            "message": "Présence inconnue ; le silence d’un détecteur de mouvement ne prouve pas l’absence."
+          },
+          "air": {
+            "pm25_status": "not_configured",
+            "voc_status": "not_configured",
+            "voc_unit": null,
+            "purifier": {
+              "on": null,
+              "speed": null
+            },
+            "coverage": "Mesures disponibles : CO₂ ; non suivies ou indisponibles : PM2.5, COV",
+            "message": "Les mesures d’air restent distinctes.",
+            "co2_status": "ok"
+          },
+          "ventilation": {
+            "opened_minutes": null,
+            "duration_minutes": null,
+            "message": "Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet. Capacité estimée en m² effectifs, avec hypothèse d’ouverture ; débit non mesuré. Ouvert depuis une durée inconnue.",
+            "capacity": 1.55
+          },
+          "humidity": {
+            "dew_point": 12.0,
+            "incoming_relative": null,
+            "glass_temperature": null,
+            "condensation_risk": null,
+            "message": "Buée estimée à partir du point de rosée et d’un vitrage modélisé ; aucune condensation observée."
+          },
+          "trends": {
+            "indoor": null,
+            "outdoor": null,
+            "window_minutes": 30,
+            "message": "Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes."
+          }
+        }
+      },
+      "observations": {
+        "indoor_temperature": {
+          "value": 23.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "°C"
+        },
+        "outdoor_temperature": {
+          "value": null,
+          "quality": "unknown",
+          "source": "sensor.demo_outdoor_temperature",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "unavailable",
+          "unit": null
+        },
+        "indoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_indoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "outdoor_humidity": {
+          "value": 50.0,
+          "quality": "valid",
+          "source": "sensor.demo_outdoor_humidity",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "%"
+        },
+        "co2": {
+          "value": 850.0,
+          "quality": "valid",
+          "source": "sensor.demo_co2",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "ppm"
+        },
+        "rain": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_rain",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "pollution": {
+          "value": false,
+          "quality": "valid",
+          "source": "sensor.demo_pollution",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "wind_gust": {
+          "value": 5.0,
+          "quality": "valid",
+          "source": "sensor.demo_wind_gust",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "km/h"
+        },
+        "solar": {
+          "value": 700.0,
+          "quality": "valid",
+          "source": "sensor.demo_solar",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": "W/m²"
+        },
+        "window:binary_sensor.demo_window": {
+          "value": true,
+          "quality": "valid",
+          "source": "binary_sensor.demo_window",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": null,
+          "unit": null
+        },
+        "presence:binary_sensor.demo_presence": {
+          "value": null,
+          "quality": "unknown",
+          "source": "sensor.demo_presence_binary_sensor.demo_presence",
+          "received_at": "2026-10-16T12:12:19.911978+00:00",
+          "detail": "occupancy",
+          "unit": null
+        }
+      },
+      "names": {
+        "binary_sensor.demo_window": "Fenêtre ouest"
+      },
+      "floor": {
+        "floor_id": "rdc",
+        "name": "Rez-de-chaussée",
+        "level": 0
+      },
+      "comfort_minimum": 20
+    },
+    "home": {
+      "floors": [
+        {
+          "floor_id": "rdc",
+          "name": "Rez-de-chaussée",
+          "level": 0,
+          "room_ids": [
+            "demo-salon"
+          ],
+          "measured": 1,
+          "total": 1,
+          "mean": 23.0,
+          "hottest": {
+            "entry_id": "demo-salon",
+            "title": "Salon",
+            "temperature": 23.0
+          },
+          "level_of_attention": "neutral",
+          "partial": true
+        }
+      ],
+      "floor_contrast": null,
+      "ventilation": null,
+      "start_floor": null,
+      "level": "neutral",
+      "focus": "demo-salon",
+      "hottest": null,
+      "coolest": null,
+      "spread": null,
+      "open_rooms": [
+        {
+          "title": "Salon",
+          "open": [
+            "Fenêtre ouest"
+          ]
+        }
+      ],
+      "crossing": "none",
+      "start_with": null,
+      "sun_entering": [],
+      "outdoor_temperature": null,
+      "partial": true
+    }
+  }
+]

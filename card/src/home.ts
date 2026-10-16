@@ -1,8 +1,9 @@
 import {html,LitElement,unsafeCSS,nothing,type PropertyValues} from 'lit';
 import {property,state} from 'lit/decorators.js';
 import style from './ui/charter.css';
-import {isView,number,numeric,summary,levelLabels} from './view';
+import {isView,number,numeric,summary,levelLabels,evolutionLines} from './view';
 import {icon} from './ui/icons';
+import {MODULES} from './types';
 import type {Connection,HomeAssistant,Unsubscribe,View} from './types';
 
 interface FloorRef {floor_id:string|null;name:string;level:number|null}
@@ -65,7 +66,7 @@ export class NiakComfortHomeCard extends LitElement {
     if(h.floor_contrast){const c=h.floor_contrast;f.push(html`<span class="chip">${c.warmer} : ${number(c.difference)} °C de plus que ${c.cooler}${c.partial?' · mesures incomplètes':''}</span>`);}
     return f.length?html`<div class="home-facts">${f}</div>`:nothing;
   }
-  private room(r:View){return html`<button class="home-room" data-level=${r.assessment.level} @click=${()=>this.open(r)} title="Configurer ${r.title}"><span class="dot"></span><strong>${r.title}</strong><span class="home-room-advice">${['action','urgent','benefit'].includes(r.assessment.level)?summary(r)[0]:numeric(r.observations.indoor_temperature)===null?'Mesure indisponible':''}</span><span class="home-room-temp">${number(numeric(r.observations.indoor_temperature))}<small> °C</small></span></button>`;}
+  private room(r:View){const lines=evolutionLines(r,[...MODULES]);return html`<button class="home-room" data-level=${r.assessment.level} @click=${()=>this.open(r)} title="Configurer ${r.title}"><span class="dot"></span><strong>${r.title}</strong><span class="home-room-advice">${['action','urgent','benefit'].includes(r.assessment.level)?summary(r)[0]:numeric(r.observations.indoor_temperature)===null?'Mesure indisponible':''}</span><span class="home-room-temp">${number(numeric(r.observations.indoor_temperature))}<small> °C</small></span></button>${lines.length?html`<details class="explanation"><summary>Suivi et conseils · ${r.title}</summary>${lines.map(l=>html`<div class="reason-row"><strong>${l.title}</strong><p>${l.text}</p></div>`)}</details>`:nothing}`;}
   protected render(){
     if(!this.config)return nothing;
     const h=this.home;

@@ -9,7 +9,7 @@ const root=new URL('../',import.meta.url),temp=await mkdtemp(join(tmpdir(),'niak
 await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
   bundle:true,platform:'node',format:'esm',outExtension:{'.js':'.mjs'},logLevel:'silent'});
 const {cleanConfig}=await import(pathToFileURL(join(temp,'types.mjs')));
-const {isView,numeric,summary,readingStatus,coverageText,windFrom}=await import(pathToFileURL(join(temp,'view.mjs')));
+const {isView,numeric,summary,readingStatus,coverageText,windFrom,evolutionLines,co2Metric,solarMetric}=await import(pathToFileURL(join(temp,'view.mjs')));
 const {LiveView}=await import(pathToFileURL(join(temp,'live.mjs')));
 const fixtures=JSON.parse(await readFile(new URL('../preview/card-fixtures.json',import.meta.url),'utf8'));
 const fresh=()=>({...structuredClone(fixtures[0].view),computed_at:new Date().toISOString()});
@@ -118,4 +118,42 @@ test('wind names say where the wind comes from, in plain French',()=>{
 const floorFixtures=JSON.parse(await readFile(new URL('../preview/floors.json',import.meta.url),'utf8'));
 test('floor scenarios keep every room compatible with the card, including missing temperatures',()=>{
   for(const scene of floorFixtures)for(const room of scene.event.rooms)assert.equal(isView(room),true,scene.id+':'+room.title);
+});
+
+test('evolution preserves manual unknown positions, empty-room tracking and indicative estimates',()=>{
+ const v=fresh();v.assessment.features={shutters:[{entity_id:'binary_sensor.w',mode:'manual',position:null,message:'Si le volet est ouvert, fermez-le.'}],presence:{state:'empty',message:'Pièce vide ; suivi maintenu.'},ventilation:{opened_minutes:null,duration_minutes:{min:5,max:10},message:'Durée indicative.'},air:{message:'Les polluants non mesurés restent inconnus.',coverage:'CO₂ uniquement'},humidity:{condensation_risk:null,message:'Risque non calculable.'}};
+ const lines=evolutionLines(v,['shutters','air','windows','humidity']);
+ const text=lines.map(l=>l.text).join(' ');assert.match(text,/Position non mesurée/);assert.match(text,/Pièce vide/);assert.match(text,/5–10 min/);assert.match(text,/indicati/);assert.match(text,/non mesurés/);assert.doesNotMatch(text,/depuis 0/);
+ assert.deepEqual(evolutionLines(v,[]),[]);assert.deepEqual(evolutionLines({...v,assessment:{...v.assessment,features:undefined}},['air']),[]);
+});
+
+test('CO₂ verdict follows its own observation and verdict despite high particles',()=>{
+ const v=fresh();v.assessment.needs=['air'];v.assessment.level='action';v.assessment.features={air:{co2_status:'ok',pm25_status:'high'}};
+ v.observations.co2={value:500,quality:'valid'};
+ assert.equal(co2Metric(v).state,'ok');assert.equal(co2Metric(v).note,'Dans vos repères CO₂');
+ v.observations.co2={value:null,quality:'unknown'};v.assessment.features.air.co2_status='unknown';
+ assert.equal(co2Metric(v).state,'off');assert.doesNotMatch(co2Metric(v).note,/renouveler/);
+ v.observations.co2={value:1500,quality:'valid'};v.assessment.features.air.co2_status='high';
+ assert.equal(co2Metric(v).state,'need');assert.match(co2Metric(v).note,/renouveler/);
+});
+test('condensation has three explicit estimated outcomes and empty histories stay honest',()=>{
+ const v=fresh();for(const [risk,text] of [[true,'Risque de buée estimé'],[false,'Aucun risque de buée estimé'],[null,'Risque de buée inconnu']]){
+  v.assessment.features={humidity:{condensation_risk:risk,message:'Modèle estimé.'},trends:{indoor:null,outdoor:null,message:'Pentes estimées.'},ventilation:{opened_minutes:null,duration_minutes:null,message:'Durée indicative.'}};
+  const lines=evolutionLines(v,['humidity','temperature','windows']);assert.match(lines.find(l=>l.title==='Humidité et buée').text,new RegExp(text));
+  assert.equal(lines.find(l=>l.title==='Évolution des températures').text,'Historique insuffisant pour estimer une tendance.');
+  assert.equal(lines.some(l=>l.title==='Aération'),false);
+ }
+ v.assessment.sun=null;assert.equal(solarMetric(v).value,'—');assert.equal(solarMetric(v).note,'Position du soleil inconnue');
+});
+test('an open contact with no reliable timer keeps its unknown duration visible',()=>{
+ const v=fresh();v.observations['window:binary_sensor.open']={value:true,quality:'valid',source:'binary_sensor.open',received_at:new Date().toISOString(),detail:null,unit:null};
+ v.assessment.features={ventilation:{opened_minutes:null,duration_minutes:null,message:'Ouvert depuis une durée inconnue.'}};
+ assert.match(evolutionLines(v,['windows']).map(l=>l.text).join(' '),/durée inconnue/);
+});
+test('humidity and shutter reasons introduced by the engine have readable summaries',()=>{
+ const v=fresh();for(const reason of ['rehumidification_risk','shutter_protection']){v.assessment.reason=reason;assert.notEqual(summary(v)[0],'Conseil à vérifier');}
+});
+const evolutionFixtures=JSON.parse(await readFile(new URL('../preview/evolution/real-fixtures.json',import.meta.url),'utf8'));
+test('the sixteen evolution engine scenes keep a readable compatible card',()=>{
+ for(const scene of evolutionFixtures){assert.equal(isView(scene.view),true,scene.id);assert.notEqual(summary(scene.view)[0],'Conseil à vérifier',scene.id);}
 });

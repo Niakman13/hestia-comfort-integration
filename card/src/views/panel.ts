@@ -1,6 +1,6 @@
 import {html,nothing} from 'lit';
 import type {Config,View,Module} from '../types';
-import {windFrom,numeric,number,summary,needs,levelLabels,heatingLabels,sourceLabels,constraintLabels,exposureLabels,kindLabels,coverageText,readingStatus} from '../view';
+import {windFrom,numeric,number,summary,needs,levelLabels,heatingLabels,sourceLabels,constraintLabels,exposureLabels,kindLabels,coverageText,readingStatus,sourceLabel,evolutionLines,co2Metric,solarMetric} from '../view';
 import {icon} from '../ui/icons';
 export interface Controls {why:boolean;sources:boolean;toggleWhy:()=>void;toggleSources:()=>void;uid:string}
 export const moduleLabels:Record<Module,string>={windows:'Fenêtres',air:'Qualité de l’air',temperature:'Température',humidity:'Humidité',shutters:'Soleil et volets',coordination:'Lien chauffage'};
@@ -19,7 +19,7 @@ export function why(v:View,c:Controls) {
 }
 export function sources(v:View,c:Controls) {
   return html`<section class="sources" id=${'sources-'+c.uid} ?hidden=${!c.sources}><h3>Les données derrière le conseil</h3><dl>
-    ${Object.entries(v.observations).map(([k,r])=>html`<dt>${sourceLabels[k]??(k.startsWith('window:')?'Contact d’ouvrant':k)} · ${readingStatus(r)}</dt><dd>${r.source??'Source non configurée'}${r.received_at?` · reçu le ${new Date(r.received_at).toLocaleString('fr-FR')}`:''}${r.quality!=='valid'?' · exclu des mesures actuelles':''}</dd>`)}
+    ${Object.entries(v.observations).map(([k,r])=>html`<dt>${sourceLabel(v,k)} · ${readingStatus(r)}</dt><dd>${r.source??'Source non configurée'}${r.received_at?` · reçu le ${new Date(r.received_at).toLocaleString('fr-FR')}`:''}${r.quality!=='valid'?' · exclu des mesures actuelles':''}</dd>`)}
     ${Object.keys(sourceLabels).filter(k=>!v.observations[k]).map(k=>html`<dt>${sourceLabels[k]??k}</dt><dd>Non configuré</dd>`)}
   </dl><p class="truth">La publication d’un conseil ne rajeunit pas ses sources. Les heures indiquent la réception par Home Assistant, pas forcément l’instant physique de mesure.</p></section>`;
 }
@@ -44,13 +44,12 @@ export function metrics(v:View,config:Config) {
     out.push(metric('cloud','Dehors',number(te),'°C',te===null?(o.outdoor_temperature?readingStatus(o.outdoor_temperature):'Non configuré'):d===null?'—':`${d>0?'+':''}${number(d)} °C vs dedans`,te===null?'off':'ok','cold'));}
   if(mods.has('humidity')&&o.indoor_humidity){const h=numeric(o.indoor_humidity),wet=a.needs.includes('dry');
     out.push(metric('drop','Humidité',number(h),'%',wet?'Trop humide':a.indoor_absolute_humidity!==null?number(a.indoor_absolute_humidity)+' g/m³':o.indoor_humidity?readingStatus(o.indoor_humidity):'Non suivie',wet?'need':h===null?'off':'ok','cold'));}
-  if(mods.has('air')&&o.co2){const co2=numeric(o.co2),air=a.needs.includes('air');
-    out.push(metric('air','CO₂',number(co2),'ppm',air?'Air à renouveler':co2===null?(o.co2?readingStatus(o.co2):'Non suivi'):'Air correct',air?(a.level==='urgent'?'alert':'need'):co2===null?'off':'ok','calm'));}
+  if(mods.has('air')&&o.co2){const co2=numeric(o.co2),verdict=co2Metric(v);
+    out.push(metric('air','CO₂',number(co2),'ppm',verdict.note,verdict.state,'calm'));}
+  if(mods.has('air'))for(const [key,label,status] of [['pm25','PM2.5',a.features?.air?.pm25_status],['voc','COV',a.features?.air?.voc_status]] as const){if(!o[key])continue;const value=numeric(o[key]),high=status==='high';out.push(metric('air',label,number(value),o[key].unit??'',high?'Au-dessus de votre seuil':status==='uninterpreted'?'Seuil non renseigné':value===null?readingStatus(o[key]):status==='ok'?'Dans vos repères':'Interprétation indisponible',high?'need':value===null||status!=='ok'?'off':'ok','calm'));}
   if(mods.has('windows')){const w=contactState(v),flagged=(a.openings??[]).some(x=>x.flags.length);
     out.push(metric(w.opened?'open':'window','Ouvrants',w.total?`${w.opened}/${w.total}`:'—','',w.total?(w.opened?`${w.opened} ouvert${w.opened>1?'s':''}`:'Tout fermé'):'Non suivis',flagged?'alert':w.total?'ok':'off','accent'));}
-  if(mods.has('shutters')){const s=a.sun,list=a.openings??[],sunny=list.filter(x=>x.sun_wm2!==null&&x.sun_wm2>=50),top=Math.max(0,...sunny.map(x=>x.sun_wm2??0));
-    const night=!s||s.elevation<=0;
-    out.push(metric(night?'moon':'sun','Soleil',night?'Nuit':sunny.length?String(top):'—',night||!sunny.length?'':'W/m²',night?'Pas d’apport':!list.some(x=>x.exposure)?'Exposition à renseigner':sunny.length?`${sunny.length} ouvrant${sunny.length>1?'s':''} au soleil`:'Pas de soleil direct',list.some(x=>x.flags.includes('sun_entering'))?'need':night||!sunny.length?'off':'ok','heat'));}
+  if(mods.has('shutters')){const s=solarMetric(v);out.push(metric(s.ic,'Soleil',s.value,s.unit,s.note,s.state,'heat'));}
   if(mods.has('coordination')&&o.heating){out.push(metric('heat','Chauffage',o.heating?heatingLabels[a.heating_action]??'Inconnu':'—','',o.heating?'Observé, jamais commandé':'Non suivi',a.heating_action==='heating'?'need':o.heating?'ok':'off','heat'));}
   return out.length?html`<div class="metrics">${out}</div>`:html`<p class="empty-rubrics">Rubriques masquées. Le conseil reste disponible.</p>`;
 }
@@ -74,7 +73,7 @@ export function openingChips(v:View) {
   return html`<div class="opening-chips" aria-label="Ouvrants">${list.map(x=>html`<span class="opening-chip" ?data-open=${x.open===true} ?data-flag=${x.flags.length>0} title=${[kindLabels[x.kind],x.exposure?'exposé '+exposureLabels[x.exposure]:'',x.sheltered?'abrité':''].filter(Boolean).join(' · ')}>${icon(x.open?'open':'window')}${v.names?.[x.entity_id]??x.entity_id}${x.exposure?html`<em>${x.exposure}${x.wind_side&&sideShort[x.wind_side]?' · '+sideShort[x.wind_side]:''}</em>`:nothing}${x.flags.length?html`<b>${x.flags.map(f=>flagShort[f]??f).join(' · ')}</b>`:nothing}</span>`)}</div>`;
 }
 export function details(v:View,config:Config,c:Controls,full:boolean) {
-  return html`${why(v,c)}${metrics(v,config)}${nextHours(v)}${full&&(config.modules??[]).includes('windows')?openingChips(v):nothing}`;
+  return html`${why(v,c)}${metrics(v,config)}${nextHours(v)}${evolutionLines(v,config.modules??[]).length?html`<section class="explanation" aria-label="Suivi détaillé">${evolutionLines(v,config.modules??[]).map(l=>html`<div class="reason-row"><strong>${l.title}</strong><p>${l.text}</p></div>`)}</section>`:nothing}${full&&(config.modules??[]).includes('windows')?openingChips(v):nothing}`;
 }
 export function quality(v:View,c:Controls,configure?:()=>void) {
   return html`<div class="quality-foot">${icon('source')}<span>${coverageText(v)}</span><button @click=${c.toggleSources} aria-expanded=${c.sources} aria-controls=${'sources-'+c.uid}>Sources</button>${configure?html`<button class="configure" @click=${configure} aria-label="Configurer cette pièce" title="Configurer cette pièce">${icon('settings')}</button>`:nothing}</div>${sources(v,c)}`;
