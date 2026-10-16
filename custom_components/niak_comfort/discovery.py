@@ -1,4 +1,6 @@
 """Explain candidates using registry metadata and explicit sensor provenance."""
+import re
+
 from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
 
 from .const import OUTDOOR_AREAS, SOURCES
@@ -10,6 +12,25 @@ CLASSES = {"temperature": "temperature", "humidity": "humidity", "co2": "carbon_
            "wind": "wind_speed", "irradiance": "irradiance", "bearing": "wind_direction"}
 UNITS = {"temperature": ("°C", "°F", "K"), "humidity": ("%",), "co2": ("ppm",),
          "wind": ("km/h", "m/s", "mph", "kn", "ft/s"), "irradiance": ("W/m²",), "bearing": ("°",)}
+
+
+def voc_device_class(hass, entity_id):
+    """Identify VOC semantics from declared metadata or a known Z2M property.
+
+    Zigbee2MQTT exposes voc_index without a HA class or unit on VINDSTYRKA.
+    Its registry unique id identifies the property independently of user names.
+    Atmo France's pollen concentrations also carry a VOC class: exclude them.
+    """
+    state = hass.states.get(entity_id)
+    entry = er.async_get(hass).async_get(entity_id)
+    if not state or (entry and entry.platform == "atmofrance"):
+        return None
+    kind = (state.attributes.get("device_class") or
+            (entry.device_class or entry.original_device_class if entry else None))
+    if (kind is None and entry and entry.platform == "mqtt" and
+            re.fullmatch(r"0x[0-9a-fA-F]{16}_voc_index_zigbee2mqtt", entry.unique_id or "")):
+        return "volatile_organic_compounds_index"
+    return kind if kind in ("volatile_organic_compounds", "volatile_organic_compounds_parts", "volatile_organic_compounds_index") else None
 
 
 def outdoor_area(hass, area_id):
@@ -84,7 +105,8 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
         if domain != "sensor" or device_class != "pm25" or attrs.get("unit_of_measurement") not in ("µg/m³", "μg/m³", "mg/m³"):
             return None
     elif key == "voc":
-        if domain != "sensor" or device_class not in ("volatile_organic_compounds", "volatile_organic_compounds_parts", "volatile_organic_compounds_index"):
+        device_class = voc_device_class(hass, entity_id)
+        if domain != "sensor" or device_class is None:
             return None
         if attrs.get("unit_of_measurement") not in ("µg/m³", "μg/m³", "mg/m³", "ppb", "ppm", "index", "indice", "VOC index", None):
             return None
