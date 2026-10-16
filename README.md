@@ -11,7 +11,7 @@
 
 Le confort de chaque pièce, expliqué : ouvrir, fermer, attendre ou ne rien faire, et pourquoi. Une seule intégration contient le moteur, la page de configuration **Niak Confort** et la carte.
 
-**Version 0.9.0-beta.5 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
+**Version 0.9.0-beta.6 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
 
 **Logement et étages** : regroupement des pièces par étage Home Assistant, moyennes et conseils d’aération, avec prise en charge du plain-pied. Voir [le fonctionnement et les vérifications](docs/ETAGES.md).
 
@@ -77,3 +77,7 @@ Volets et luminosité, taille des ouvrants et aération traversante, durée d’
 - API WebSocket v1 en lecture : `niak_comfort/entries`, `niak_comfort/view`, `niak_comfort/subscribe`.
 
 Licence MIT — Niakman13.
+
+### Formulaires harmonisés
+
+Les réglages du hub partagent les mêmes composants : blocs par sujet, titres et espacements cohérents, aides en info-bulles et avertissements visibles. Weather regroupe les prévisions, alertes et saison, mesures de la station, air, pollens et entités. Les réglages généraux de Confort présentent leurs capteurs en lignes ouvertes dans chaque groupe. Les détails avancés restent repliables.
