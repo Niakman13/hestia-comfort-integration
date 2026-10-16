@@ -11,7 +11,7 @@ from homeassistant.helpers import area_registry as ar
 from . import weather_link
 from .floors import floor_catalog, room_floor
 from .const import DOMAIN, OUTDOOR_AREAS, SOURCES
-from .discovery import INDOOR, OUTDOOR, candidate, catalog, overview, suggestions
+from .discovery import INDOOR, OUTDOOR, candidate, catalog, overview, suggestions, voc_device_class
 from .engine.assessment import EXPOSURES, KINDS, Settings
 
 DATA_CONFIG = DOMAIN + "_configuration"
@@ -157,7 +157,7 @@ class Configuration:
             unit = threshold.get("unit") if isinstance(threshold, dict) else None
             state = self.hass.states.get(sources.get("voc", ""))
             source_unit = state.attributes.get("unit_of_measurement") if state else None
-            explicit_index = bool(state and state.attributes.get("device_class") == "volatile_organic_compounds_index")
+            explicit_index = voc_device_class(self.hass, sources.get("voc", "")) == "volatile_organic_compounds_index"
             expected_unit = "" if source_unit is None and explicit_index else source_unit
             if (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0
                 or not isinstance(unit, str) or not state or unit != expected_unit):

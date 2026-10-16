@@ -4,10 +4,11 @@ from unittest.mock import patch
 from types import SimpleNamespace
 from test_ha_adapter import AdapterFixture
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr
 from homeassistant.util import dt as dt_util
 from custom_components.niak_comfort.configuration import Configuration
 from custom_components.niak_comfort.coordinator import ComfortCoordinator
-from custom_components.niak_comfort.discovery import catalog, suggestions
+from custom_components.niak_comfort.discovery import catalog, suggestions, candidate
 
 
 class EvolutionAdapterTests(AdapterFixture):
@@ -39,6 +40,58 @@ class EvolutionAdapterTests(AdapterFixture):
         self.hass.config_entries._entries[self.entry.entry_id] = self.entry
         self.hass.config_entries.async_update_entry(self.entry, options=config or self.config())
         return ComfortCoordinator(self.hass, self.entry)
+
+    async def test_zigbee2mqtt_voc_index_without_class_is_local_selectable_and_interpreted(self):
+        registry = er.async_get(self.hass)
+        # Reproduce the live IKEA discovery metadata, using an arbitrary user name.
+        self.hass.config_entries._entries[self.entry.entry_id] = self.entry
+        device = dr.async_get(self.hass).async_get_or_create(
+            config_entry_id=self.entry.entry_id, identifiers={('mqtt', 'fixture-voc')},
+            manufacturer='IKEA', model='VINDSTYRKA air quality and humidity sensor')
+        dr.async_get(self.hass).async_update_device(device.id, area_id='salon')
+        item = registry.async_get_or_create('sensor', 'mqtt',
+            '0x0011223344556677_voc_index_zigbee2mqtt', suggested_object_id='renamed_sensor', device_id=device.id)
+        self.assertIsNone(item.area_id)  # The room is inherited from the device.
+        self.hass.states.async_set(item.entity_id, '144', {'state_class': 'measurement', 'friendly_name': 'Capteur renommé'})
+        found = catalog(self.hass, 'salon')
+        self.assertIn(item.entity_id, [c['entity_id'] for c in found['voc']])
+        # Two local VOC sensors must remain a choice. Once the other is elsewhere,
+        # this index becomes the room's sole automatic suggestion.
+        self.assertNotIn('voc', suggestions(found, 'salon'))
+        registry.async_update_entity('sensor.voc', area_id=None)
+        self.assertEqual(suggestions(catalog(self.hass, 'salon'), 'salon')['voc'], item.entity_id)
+        selected = candidate(self.hass, item.entity_id, 'voc', 'salon')
+        self.assertTrue(selected['local'])
+        self.assertEqual(selected['device_class'], 'volatile_organic_compounds_index')
+        self.assertIsNone(selected['unit'])
+        config = self.config(evolution={'voc_threshold': {'value': 150, 'unit': ''}})
+        config['sources']['voc'] = item.entity_id
+        cleaned, _ = self.service.validate(config)
+        coordinator = self.coordinator(cleaned)
+        view = await coordinator._async_update_data()
+        self.assertEqual(view['observations']['voc']['value'], 144)
+        self.assertIsNone(view['observations']['voc']['unit'])
+        self.assertEqual(view['assessment']['features']['air']['voc_status'], 'ok')
+        self.hass.states.async_set(item.entity_id, '180', {'state_class': 'measurement'})
+        view = await coordinator._async_update_data()
+        self.assertEqual(view['assessment']['features']['air']['voc_status'], 'high')
+        self.assertIn('air', view['assessment']['needs'])
+
+    async def test_a_voc_name_or_unrelated_mqtt_id_does_not_prove_an_index(self):
+        coordinator = self.coordinator()
+        for platform, uid in [('fixture', '0x0011223344556677_voc_index_zigbee2mqtt'), ('mqtt', 'unrelated_voc_index')]:
+            item = er.async_get(self.hass).async_get_or_create('sensor', platform, uid)
+            self.hass.states.async_set(item.entity_id, '144', {'friendly_name': 'IKEA VOC index'})
+            self.assertIsNone(candidate(self.hass, item.entity_id, 'voc'))
+            self.assertFalse(coordinator._reading(item.entity_id, 'voc', self.now).usable)
+
+    async def test_atmo_pollen_is_not_a_room_voc_even_with_a_voc_device_class(self):
+        item = er.async_get(self.hass).async_get_or_create('sensor', 'atmofrance',
+            'fixture-Concentration Ambroisie', suggested_object_id='pollen_misclassified')
+        self.hass.states.async_set(item.entity_id, '0.0', {
+            'device_class': 'volatile_organic_compounds', 'unit_of_measurement': 'μg/m³'})
+        self.assertIsNone(candidate(self.hass, item.entity_id, 'voc'))
+        self.assertFalse(self.coordinator()._reading(item.entity_id, 'voc', self.now).usable)
 
     async def test_discovery_and_presence_lists(self):
         found = catalog(self.hass, 'salon')

@@ -14,6 +14,7 @@ from .engine.assessment import Opening, Settings, Sun, assess
 from .engine.sources import normalize, Reading
 from .configuration import DATA_CONFIG
 from .exterior import exterior_reading
+from .discovery import voc_device_class
 from . import weather_link
 
 STATE_KINDS = ("window", "heating", "rain", "pollution", "presence", "purifier", "cover", "cover_state", "shutter_auto", "shutter_override", "purifier_speed")
@@ -172,8 +173,10 @@ class ComfortCoordinator(DataUpdateCoordinator):
         raw = state.state if state else None
         unit = state.attributes.get("unit_of_measurement") if state else None
         if state:
-            if kind == "voc" and unit is None and state.attributes.get("device_class") != "volatile_organic_compounds_index":
-                return Reading(None, "unknown", entity_id, state.last_reported.isoformat(), "incompatible_unit")
+            if kind == "voc":
+                voc_class = voc_device_class(self.hass, entity_id)
+                if voc_class is None or (unit is None and voc_class != "volatile_organic_compounds_index"):
+                    return Reading(None, "unknown", entity_id, state.last_reported.isoformat(), "incompatible_unit")
             if kind == "heating":
                 raw = state.attributes.get("hvac_action")
             elif kind in ("cover", "purifier_speed"):
