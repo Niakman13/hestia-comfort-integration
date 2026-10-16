@@ -1,3 +1,12 @@
+## 0.9.0-beta.3 — Seuils expliqués auprès des capteurs
+
+- Chaque capteur regroupe sa sélection, ses seuils modifiables et une explication repliable avec ses sources (HCSP, OMS, ADEME et fabricant).
+- Repères proposés : CO₂ 800 / 1 000 / 1 500 ppm, PM2.5 15 µg/m³, humidité haute 60 %, indice COV 150 pour une IKEA VINDSTYRKA identifiée. La portée de chaque référence est explicitée, notamment moyenne OMS sur 24 h versus mesure ponctuelle et indice COV relatif versus concentration.
+- Application unique de ces repères aux pièces existantes, puis conservation des personnalisations. Les seuils COV des modèles non reconnus ne sont pas remplacés par un indice arbitraire.
+- « Pièce et confort » devient « Réglages / autres » pour les paramètres transversaux.
+
+Après mise à jour HACS, redémarrez Home Assistant. Vérifiez les repères auprès des capteurs ; ils restent personnalisables.
+
 ## 0.9.0-beta.2 — Détection des indices COV IKEA
 
 - Les indices VOC Zigbee2MQTT sans catégorie Home Assistant, notamment la sonde IKEA VINDSTYRKA, sont reconnus à partir de leur identifiant technique ; le nom de l’entité peut être personnalisé.
