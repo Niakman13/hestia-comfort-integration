@@ -1,5 +1,6 @@
 <!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Niak Confort · Carte réelle, étages</title><style>body{margin:0;background:#151c25;color:#edf1f7;font:14px/1.5 system-ui}main{max-width:720px;margin:24px auto;padding:0 12px}h1{font-size:22px}label{display:block;margin:12px 0}select{display:block;width:100%;font:inherit;padding:10px;background:#222932;color:#edf1f7;border:1px solid #64748b;border-radius:8px}niak-comfort-home-card{display:block;margin-top:24px}p{color:#b2bdcd}</style><main><h1>Logement et étages · carte réelle</h1><p>Banc local · données fictives calculées par le moteur Python</p><label>Situation<select id="scenario"></select></label><label>Thème<select id="theme"><option value="dark">Sombre</option><option value="light">Clair</option></select></label><niak-comfort-home-card></niak-comfort-home-card></main><script type="module">
-import '../../custom_components/niak_comfort/frontend/niak-comfort-card.js';
+customElements.define('home-assistant', class extends HTMLElement {});
+await import('../../custom_components/niak_comfort/frontend/niak-comfort-card.js');
 const scenes=await(await fetch('./floors.json')).json();const choice=document.querySelector('#scenario'),theme=document.querySelector('#theme'),card=document.querySelector('niak-comfort-home-card');let send;
 choice.innerHTML=scenes.map((s,i)=>`<option value="${i}">${s.title}</option>`).join('');
 card.setConfig({type:'custom:niak-comfort-home-card',theme:'dark'});
