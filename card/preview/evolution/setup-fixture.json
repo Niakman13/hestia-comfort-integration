@@ -1,7 +1,7 @@
 {
   "snapshot": {
     "version": 1,
-    "revision": "46fc38282b59a3554259e6ffa63c0fefe541a3556833b2c927dbb09e7dbcabe4",
+    "revision": "aba6b007c91aa6fb1b132e9ad935f6185d93caa5f08d9970a002a375441c972b",
     "home": {
       "sources": {},
       "configured": false,
@@ -17,7 +17,7 @@
     },
     "rooms": [
       {
-        "entry_id": "01M52A3F1GKMG0HBHNKBY1BPMM",
+        "entry_id": "01M52G0WWADZFC3MTY9130534T",
         "title": "Salon",
         "loaded": true,
         "config": {
@@ -43,10 +43,10 @@
           "settings": {
             "minimum": 20,
             "maximum": 24,
-            "humidity_high": 62,
-            "co2_potential": 1000,
-            "co2_action": 1200,
-            "co2_urgent": 1600,
+            "humidity_high": 60,
+            "co2_potential": 800,
+            "co2_action": 1000,
+            "co2_urgent": 1500,
             "temperature_hysteresis": 0.5,
             "co2_hysteresis": 100,
             "humidity_hysteresis": 3,
@@ -56,7 +56,7 @@
             "gust_max": 45,
             "frost": 1.0,
             "sun_facade": 250,
-            "pm25_action": 25,
+            "pm25_action": 15,
             "illuminance_low": 100
           },
           "presence": [],
@@ -64,7 +64,8 @@
             "glazing_factor": 0.7,
             "presence_delay_minutes": 5
           },
-          "use_home": true
+          "use_home": true,
+          "air_reference_version": 1
         },
         "floor": {
           "floor_id": "rez_de_chaussee",
@@ -91,7 +92,7 @@
   },
   "discovery": {
     "version": 1,
-    "revision": "46fc38282b59a3554259e6ffa63c0fefe541a3556833b2c927dbb09e7dbcabe4",
+    "revision": "aba6b007c91aa6fb1b132e9ad935f6185d93caa5f08d9970a002a375441c972b",
     "candidates": {
       "indoor_temperature": [
         {
@@ -259,7 +260,12 @@
             }
           ],
           "device_class": "volatile_organic_compounds_index",
-          "atmo_label": null
+          "atmo_label": null,
+          "voc_reference": {
+            "id": "sensirion_index",
+            "value": 150,
+            "unit": ""
+          }
         }
       ],
       "purifier": [

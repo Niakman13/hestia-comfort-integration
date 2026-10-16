@@ -33,6 +33,16 @@ def voc_device_class(hass, entity_id):
     return kind if kind in ("volatile_organic_compounds", "volatile_organic_compounds_parts", "volatile_organic_compounds_index") else None
 
 
+def voc_reference(hass, entry, device_class, unit):
+    """Offer a manufacturer-based index preset only for identified hardware."""
+    device = dr.async_get(hass).async_get(entry.device_id) if entry.device_id else None
+    if (device_class == "volatile_organic_compounds_index" and unit in (None, "index", "indice", "VOC index")
+            and device and (device.manufacturer or "").casefold() == "ikea"
+            and (device.model or "").casefold() in ("e2112", "vindstyrka", "vindstyrka air quality and humidity sensor")):
+        return {"id": "sensirion_index", "value": 150, "unit": unit or ""}
+    return None
+
+
 def outdoor_area(hass, area_id):
     area = ar.async_get(hass).async_get_area(area_id) if area_id else None
     return bool(area and area.name.strip().casefold() in OUTDOOR_AREAS)
@@ -175,7 +185,8 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
             "unit": attrs.get("unit_of_measurement"), "area_id": own_area,
             "local": local, "outside": outside, "reference": bool(reference), "available": available,
             "adapter": adapter, "warnings": list(dict.fromkeys(warnings)), "provenance": chain,
-            "device_class": device_class, "atmo_label": attrs.get("Libellé") if adapter == "atmo_daily" else None}
+            "device_class": device_class, "atmo_label": attrs.get("Libellé") if adapter == "atmo_daily" else None,
+            **({"voc_reference": voc_reference(hass, entry, device_class, attrs.get("unit_of_measurement"))} if key == "voc" else {})}
 
 
 def catalog(hass, area_id=None, selected=None, indoor_ids=()):

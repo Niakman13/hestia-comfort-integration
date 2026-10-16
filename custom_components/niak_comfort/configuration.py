@@ -13,6 +13,7 @@ from .floors import floor_catalog, room_floor
 from .const import DOMAIN, OUTDOOR_AREAS, SOURCES
 from .discovery import INDOOR, OUTDOOR, candidate, catalog, overview, suggestions, voc_device_class
 from .engine.assessment import EXPOSURES, KINDS, Settings
+from .air_references import AIR_DEFAULTS, AIR_REFERENCE_VERSION
 
 DATA_CONFIG = DOMAIN + "_configuration"
 
@@ -169,7 +170,7 @@ class Configuration:
         settings = payload.get("settings", {})
         if not isinstance(settings, dict):
             raise ValueError("Préférences de confort invalides.")
-        settings = asdict(Settings(**settings))
+        settings = asdict(Settings(**{**AIR_DEFAULTS, **settings}))
         legacy_sheltered = payload.get("rain_exposed") is False
         openings = payload.get("openings", {})
         if not isinstance(openings, dict):
@@ -229,7 +230,8 @@ class Configuration:
                 cleaned_sources[key] = value
         cleaned = {"name": name.strip(), "area_id": area_id, "floor_id": floor_id, "sources": cleaned_sources,
                    "windows": list(dict.fromkeys(windows)), "openings": cleaned_openings, "settings": settings,
-                   "presence": list(dict.fromkeys(presence)), "evolution": cleaned_evolution, "use_home": not legacy}
+                   "presence": list(dict.fromkeys(presence)), "evolution": cleaned_evolution, "use_home": not legacy,
+                   "air_reference_version": AIR_REFERENCE_VERSION}
         return cleaned, warnings
 
     @staticmethod
