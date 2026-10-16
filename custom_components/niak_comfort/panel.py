@@ -21,7 +21,7 @@ async def async_setup_panel(hass):
     if not hass.data.get(DOMAIN + "_panel_asset"):
         await hass.http.async_register_static_paths([StaticPathConfig(
             ASSETS, str(Path(__file__).parent / "frontend"), False)])
-        # The card on every dashboard, always at the integration's version (an extra module and a dashboard resource).
+        # The versioned dashboard resource, with a guarded extra module only as fallback.
         await async_register_card(hass, CARD_URL, VERSION)
         websocket_api.async_register_command(hass, ws_health)
         hass.data[DOMAIN + "_panel_asset"] = True

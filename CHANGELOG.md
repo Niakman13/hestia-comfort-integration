@@ -1,3 +1,9 @@
+## 0.6.0-beta.2 — Chargement fiable des cartes
+
+- Les cartes du logement et des pièces attendent que Home Assistant soit prêt avant de s’enregistrer, y compris après un rechargement ou à la réouverture des onglets.
+- La ressource du tableau de bord est tenue à jour automatiquement ; les anciennes adresses locales encodées sont regroupées.
+- Le chargement de secours pour les tableaux de bord en YAML bénéficie de la même protection.
+
 ## 0.6.0-beta.1 — Logement et étages
 
 - La carte logement regroupe les pièces par étage Home Assistant, avec moyenne, nombre de mesures disponibles et pièce la plus chaude.

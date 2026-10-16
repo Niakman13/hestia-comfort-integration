@@ -51,6 +51,12 @@ jobs:
       - run: npm run validate
         working-directory: card
       - run: git diff --exit-code -- custom_components/niak_comfort/frontend/niak-comfort-card.js
+      - run: npx playwright install --with-deps chromium firefox
+        working-directory: card
+      - run: npm run test:loading
+        working-directory: card
+        env:
+          NIAK_TEST_FIREFOX: "1"
   hassfest:
     runs-on: ubuntu-latest
     steps:
