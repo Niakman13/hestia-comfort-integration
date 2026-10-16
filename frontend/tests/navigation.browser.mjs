@@ -1,0 +1,52 @@
+import assert from 'node:assert/strict';
+import {createServer} from 'node:http';
+import {readFileSync,mkdirSync,existsSync} from 'node:fs';
+import {once} from 'node:events';
+import {chromium,firefox} from '../../card/node_modules/playwright/index.mjs';
+import {harness,comfort} from './hub-harness.mjs';
+const comfortRoot=new URL('../../custom_components/niak_comfort/frontend/',import.meta.url),weatherRoot=new URL('../../../niak-weather-integration/custom_components/niak_weather/frontend/',import.meta.url);
+const withWeather=process.env.NIAK_TEST_COMFORT_ONLY!=='1'&&existsSync(weatherRoot);const html=harness(withWeather),id=comfort.snapshot.rooms[0].entry_id;
+const server=createServer((req,res)=>{const path=new URL(req.url,'http://localhost').pathname;
+ try{let file;if(path==='/shell.js')file=new URL('niak-socle.js',comfortRoot);else if(path==='/comfort.js')file=new URL('panel.js',comfortRoot);else if(path==='/weather.js')file=new URL('panel.js',weatherRoot);else if(/^\/manrope-\d+\.ttf$/.test(path))file=new URL(path.slice(1),comfortRoot);
+ if(file){res.setHeader('Content-Type',path.endsWith('.ttf')?'font/ttf':'text/javascript');res.end(readFileSync(file));}
+ else if(path.endsWith('/comfort.json')){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(comfort));}
+ else if(path.endsWith('/weather.json')){res.setHeader('Content-Type','application/json');res.end(readFileSync(new URL('./fixtures/weather.json',import.meta.url)));}
+ else{res.setHeader('Content-Type','text/html');res.end(html);}}catch(e){res.statusCode=500;res.end(String(e));}
+});
+server.listen(0,'127.0.0.1');await once(server,'listening');const origin='http://127.0.0.1:'+server.address().port;
+let checks=0;const out=process.env.NIAK_HUB_OUTPUT;if(out)mkdirSync(out,{recursive:true});
+async function nav(page,label,group){const shell=page.locator('niak-socle-1-6');if(await shell.locator('.mobile-bar').isVisible())await shell.getByRole('button',{name:'Ouvrir la navigation Niak',exact:true}).click();await shell.getByRole('navigation',{name:group,exact:true}).getByRole('link',{name:label,exact:true}).click();}
+async function noOverflow(panel){const size=await panel.evaluate(e=>({width:e.clientWidth,scroll:e.scrollWidth,main:e.shadowRoot.querySelector('main')?.scrollWidth}));assert.ok(size.scroll<=size.width+1,JSON.stringify(size));checks++;}
+try{for(const engine of [chromium,firefox]){const browser=await engine.launch();try{for(const width of [1440,390,320]){
+ const page=await browser.newPage({viewport:{width,height:950},hasTouch:width<600});page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(origin+'/niak');await page.evaluate(()=>healthMode='hold');await page.getByRole('button',{name:'Ouvrir Confort',exact:true}).click();const panel=page.locator('niak-comfort-setup');await panel.getByRole('heading',{name:'Pièces du logement',exact:true}).waitFor();
+ // The overview is immediate, even with a fourteen-second technical report.
+ if(engine===chromium&&width===1440)await page.waitForTimeout(14000);
+ await panel.getByRole('heading',{name:'Pièces du logement',exact:true}).waitFor();checks++;
+ const links=page.locator('niak-socle-1-6').locator('nav[aria-label=Confort] a');assert.equal(await links.count(),2);checks++;
+ await panel.locator('.room').filter({hasText:'Cuisine'}).getByRole('button',{name:'Configurer',exact:true}).click();await panel.getByRole('heading',{name:'Configurer Cuisine',exact:true}).waitFor();assert.ok(page.url().includes('cuisine-demo/temperature'));checks++;
+ for(const name of ['Température et humidité','Fenêtres et portes','Qualité de l’air','Présence','Chauffage','La pièce et ses réglages']){await panel.getByRole('button',{name,exact:true}).click();await noOverflow(panel);}
+ await panel.getByLabel('Nom',{exact:true}).fill('Cuisine brouillon');await nav(page,'Vue d’ensemble','Confort');await panel.getByRole('heading',{name:'Pièces du logement',exact:true}).waitFor();
+ await panel.locator('.room').filter({hasText:'Salon'}).getByRole('button',{name:'Configurer',exact:true}).click();await panel.getByRole('heading',{name:'Configurer Salon',exact:true}).waitFor();await panel.getByRole('button',{name:'La pièce et ses réglages',exact:true}).click();assert.equal(await panel.getByLabel('Nom',{exact:true}).inputValue(),'Salon');checks++;
+ await nav(page,'Vue d’ensemble','Confort');await panel.locator('.room').filter({hasText:'Cuisine'}).getByRole('button',{name:'Configurer',exact:true}).click();await panel.getByRole('button',{name:'La pièce et ses réglages',exact:true}).click();
+ // A retained draft must not be overwritten by Configurer reopening its server copy.
+ assert.equal(await panel.getByLabel('Nom',{exact:true}).inputValue(),'Cuisine brouillon');checks++;
+ await panel.getByRole('button',{name:'Qualité de l’air',exact:true}).click();for(const name of ['CO₂','Particules fines PM2.5','Composés organiques volatils (COV)'])await panel.getByRole('heading',{name,exact:true}).waitFor();assert.equal(await panel.getByRole('heading',{name:'Présence',exact:true}).count(),0);checks++;
+ await panel.getByText('15 µg/m³',{exact:true}).waitFor();await panel.getByText('Indice 150',{exact:true}).waitFor();checks+=2;
+ const help=panel.getByRole('button',{name:'Aide : Comprendre cette étape',exact:true});await help.click();await panel.getByRole('tooltip').waitFor();await page.keyboard.press('Escape');await panel.getByRole('tooltip').waitFor({state:'hidden'});checks++;
+ const initial=await page.evaluate(()=>JSON.stringify(state));if(out&&engine===chromium)await page.screenshot({path:out+'/production-air-dark-'+width+'.png',fullPage:true});await panel.getByRole('button',{name:'Récapitulatif',exact:true}).click();await panel.getByRole('button',{name:'Enregistrer',exact:true}).waitFor();assert.equal(await page.evaluate(()=>JSON.stringify(state)),initial);checks++;
+ await nav(page,'Réglages généraux','Confort');await panel.getByRole('heading',{name:'Réglages généraux',exact:true}).waitFor();await noOverflow(panel);
+ if(withWeather){await nav(page,'Vue d’ensemble','Weather');const weather=page.locator('niak-weather-setup');await weather.getByRole('heading',{name:'Mes lieux météo',exact:true}).waitFor();await weather.getByRole('button',{name:'Configurer',exact:true}).waitFor();checks++;
+ for(const name of ['Sources météo','Station météo · capteurs locaux','Qualité de l’air','Pollens','Entités']){await nav(page,name,'Weather');await weather.getByRole('heading',{name:name==='Station météo · capteurs locaux'?'Station météo / Capteurs locaux':name,exact:true}).waitFor();await noOverflow(weather);}
+ await page.evaluate(()=>toggleTheme());await noOverflow(weather);}else await page.evaluate(()=>toggleTheme());await nav(page,'Vue d’ensemble','Confort');await panel.getByRole('heading',{name:'Pièces du logement',exact:true}).waitFor();
+ if(out&&engine===chromium)await page.screenshot({path:out+'/production-overview-'+width+'.png',fullPage:true});
+ if(engine===chromium&&width===1440){await panel.locator('.room').filter({hasText:'Cuisine'}).getByRole('button',{name:'Configurer',exact:true}).click();await panel.getByRole('button',{name:'La pièce et ses réglages',exact:true}).click();await panel.getByRole('button',{name:'Récapitulatif',exact:true}).click();await panel.getByRole('button',{name:'Enregistrer',exact:true}).click();await panel.getByRole('heading',{name:'Cuisine brouillon : modifications enregistrées',exact:true}).waitFor();assert.equal(await page.evaluate(()=>state.rooms[0].title),'Salon');assert.equal(await page.evaluate(()=>state.rooms.find(r=>r.entry_id==='cuisine-demo').title),'Cuisine brouillon');const saved=await page.evaluate(()=>calls.filter(c=>c.type==='niak_comfort/save_config').at(-1));assert.equal(saved.entry_id,'cuisine-demo');checks+=3;}
+ await page.evaluate(()=>{healthMode='ready';for(const q of healthQueue.splice(0))q.resolve();});assert.deepEqual(errors,[]);checks++;page.on('dialog',d=>d.accept());await page.close();
+ // Direct URLs, reload, and back always keep the explicit room.
+ const direct=await browser.newPage({viewport:{width,height:950}});direct.setDefaultTimeout(10000);await direct.goto(origin+'/niak/confort/'+id+'/air');await direct.getByRole('heading',{name:'Configurer Salon',exact:true}).waitFor();await direct.getByRole('heading',{name:'Qualité de l’air',exact:true}).waitFor();checks++;direct.on('dialog',d=>d.accept());await direct.reload();await direct.getByRole('heading',{name:'Qualité de l’air',exact:true}).waitFor();checks++;await nav(direct,'Vue d’ensemble','Confort');await direct.goBack();await direct.getByRole('heading',{name:'Configurer Salon',exact:true}).waitFor();await direct.getByRole('heading',{name:'Qualité de l’air',exact:true}).waitFor();checks++;await direct.close();
+
+ }
+ for(const mode of (withWeather?['comfort','weather','none']:['comfort','none'])){const page=await browser.newPage();await page.goto(origin+'/niak?bricks='+mode);const shell=page.locator('niak-socle-1-6');await shell.getByRole('heading',{name:'Votre logement, connecté',exact:true}).waitFor();assert.equal(await shell.locator('nav[aria-label=Confort]').count(),mode==='comfort'?1:0);assert.equal(await shell.locator('nav[aria-label=Weather]').count(),mode==='weather'?1:0);checks+=2;await page.goto(origin+'/niak/meteo?bricks=comfort');await shell.getByText('La brique correspondante n’est pas installée ou cette adresse est inconnue.').waitFor();checks++;await page.close();}
+ const failure=await browser.newPage();await failure.goto(origin+'/niak');await failure.evaluate(()=>healthMode='error');await failure.getByRole('button',{name:'Ouvrir Confort',exact:true}).click();await failure.getByRole('heading',{name:'Pièces du logement',exact:true}).waitFor();await failure.getByRole('alert').filter({hasText:'Le bilan technique'}).waitFor();await failure.evaluate(()=>healthMode='ready');await failure.getByRole('button',{name:'Réessayer',exact:true}).click();await failure.getByRole('heading',{name:'À régler',exact:true}).waitFor();checks++;await failure.close();
+ }finally{await browser.close();}}}finally{server.close();}
+console.log(JSON.stringify({checks,engines:['Chromium','Firefox'],widths:[1440,390,320]}));

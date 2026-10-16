@@ -11,7 +11,7 @@
 
 Le confort de chaque pièce, expliqué : ouvrir, fermer, attendre ou ne rien faire, et pourquoi. Une seule intégration contient le moteur, la page de configuration **Niak Confort** et la carte.
 
-**Version 0.9.0-beta.3 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
+**Version 0.9.0-beta.4 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
 
 **Logement et étages** : regroupement des pièces par étage Home Assistant, moyennes et conseils d’aération, avec prise en charge du plain-pied. Voir [le fonctionnement et les vérifications](docs/ETAGES.md).
 
@@ -22,6 +22,10 @@ Les volets peuvent être manuels (bois, battants ou autres), reliés à Home Ass
 La carte suit le temps d’ouverture connu, les tendances de température et le risque de buée estimé. Les durées d’aération restent indicatives. PM2.5, COV, présence et purificateur sont facultatifs : les polluants restent distingués, et une pièce vide conserve son suivi. Les COV nécessitent un seuil choisi dans l’unité du capteur.
 
 Voir [le périmètre et les limites des blocs 7 à 9](docs/BLOCS-7-8-9.md).
+
+## Le hub Niak
+
+Le menu regroupe **Accueil Niak**, **Weather** et **Confort**, selon les intégrations installées. Confort affiche vos pièces avec **Configurer** ; les réglages d’une pièce restent dans cette pièce, avec six rubriques sans défilement horizontal. L’extérieur partagé se règle dans **Réglages généraux**. Les textes d’aide et l’origine des valeurs par défaut sont accessibles par des boutons nommés ; les recommandations restent visibles.
 
 ## Installation
 

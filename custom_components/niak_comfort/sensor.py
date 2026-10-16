@@ -33,7 +33,8 @@ class ComfortSensor(CoordinatorEntity, SensorEntity):
         self.entity_description = description
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
         self._attr_device_info = {"identifiers": {(DOMAIN, entry.entry_id)}, "name": entry.title,
-                                  "manufacturer": "Niak", "model": "Comfort · observation"}
+                                  "manufacturer": "Niak", "model": "Comfort · observation",
+                                  "configuration_url": "homeassistant://niak/confort"}
 
     @property
     def native_value(self):

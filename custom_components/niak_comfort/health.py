@@ -9,7 +9,9 @@ from homeassistant.util import dt as dt_util
 
 from . import weather_link
 from .configuration import get_configuration
-from .discovery import catalog, overview, suggestions
+from homeassistant.helpers import entity_registry as er
+
+from .discovery import INDOOR, catalog, effective_area, overview, suggestions
 
 GONE = ("unavailable", "unknown")
 COLUMNS = (("indoor_temperature", "Température"), ("indoor_humidity", "Humidité"), ("co2", "CO₂"), ("windows", "Ouvrants"), ("heating", "Chauffage"))
@@ -171,6 +173,11 @@ async def facts(hass, version):
     service, now = await get_configuration(hass), dt_util.utcnow()
     rooms, used = [], set()
     indoor_ids = {{**e.data, **e.options}.get("sources", {}).get(k) for e in service.entries() for k in ("indoor_temperature", "indoor_humidity")} - {None}
+    # Only local, unselected suggestions are used here. Index the registry once,
+    # rather than scanning every entity for every role for every configured room.
+    local_entries = {}
+    for entity in er.async_get(hass).entities.values():
+        local_entries.setdefault(effective_area(hass, entity), []).append(entity)
     for entry in service.entries():
         config = {**entry.data, **entry.options}
         sources, windows = config.get("sources", {}), config.get("windows", [])
@@ -186,7 +193,11 @@ async def facts(hass, version):
         if area_id := config.get("area_id"):
             used.add(area_id)
             selected = {**sources, "windows": windows}
-            for key, value in suggestions(catalog(hass, area_id, selected, indoor_ids), area_id).items():
+            candidates = {key: [] for key in INDOOR}
+            candidates.update(catalog(hass, area_id, selected, indoor_ids,
+                                      keys=("indoor_humidity", "co2", "heating", "windows"),
+                                      entries=local_entries.get(area_id, ())))
+            for key, value in suggestions(candidates, area_id).items():
                 entity_id = value[0] if isinstance(value, list) and value else value
                 if isinstance(entity_id, str) and not selected.get(key):
                     state = hass.states.get(entity_id)

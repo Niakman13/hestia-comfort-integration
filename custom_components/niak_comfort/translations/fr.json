@@ -29,8 +29,9 @@
   "options": {
     "step": {
       "init": {
-        "title": "Configurer dans Niak Confort",
-        "description": "Les pièces, leurs capteurs et l’extérieur se règlent dans {workspace}, depuis la barre latérale."
+        "title": "Niak Confort",
+        "description": "Les pièces, leurs capteurs et l’extérieur se règlent dans l’onglet Confort du panneau Niak.\n\n[Ouvrir les paramètres de Niak Confort]({link})",
+        "submit": "Fermer"
       }
     },
     "error": {

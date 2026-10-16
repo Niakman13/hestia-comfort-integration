@@ -2,8 +2,10 @@ import {LitElement,html,unsafeCSS,nothing,type PropertyValues} from 'lit';
 import {customElement,property,state} from 'lit/decorators.js';
 import {live} from 'lit/directives/live.js';
 import styles from './styles.css';
+import {frame,hubStyles,modernStyles,hubIcon,helpTip,defaultValue} from './socle/ui';
 import {labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,stages,intros,outdoorGroups,changedAdvanced,advancedDefaults,airSource,airChoices,exteriorChoices,airReferenceDefaults,vocPreset,thresholdSources,type Choice,type Area,type Candidate,type Discovery,type Health,type HealthLine,type Target,type Snapshot,type Hass,type Room,type RoomConfig,type Spec} from './model';
-const FOLDED='niak-confort-folded-intros';
+const roomSections=[{stage:0,path:'temperature',label:'Température',title:'Température et humidité',icon:'temperature'},{stage:1,path:'ouvertures',label:'Ouvertures',title:'Fenêtres et portes',icon:'openings'},{stage:2,path:'air',label:'Air intérieur',title:'Qualité de l’air',icon:'air'},{stage:6,path:'presence',label:'Présence',title:'Présence',icon:'presence'},{stage:3,path:'chauffage',label:'Chauffage',title:'Chauffage',icon:'heating'},{stage:4,path:'piece',label:'La pièce',title:'La pièce et ses réglages',icon:'room'}];
+const roomOrder=[0,1,2,6,3,4,5];
 const help:Record<string,string>={indoor_temperature:'La mesure de l’air de cette pièce. Seule information obligatoire. La température d’un appareil ou du sol d’une plante peut être différente.',indoor_humidity:'Permet de repérer un air trop humide et de savoir si aérer l’assèche vraiment.',illuminance:'La lumière mesurée en lux aide à interpréter le soleil. Elle ne mesure pas la position d’un volet.',pm25:'Mesure les particules fines. Le seuil d’action est votre réglage de confort.',voc:'Les repères ci-dessous dépendent du capteur et de son unité ; un indice n’est pas une concentration.',purifier:'Observe son fonctionnement sans le commander. Un purificateur ne retire pas le CO₂.',presence:'Plusieurs capteurs peuvent suivre la pièce. L’absence adapte les conseils sans couper le suivi ni les alertes.',co2:'Permet de savoir quand renouveler l’air. Ce capteur ne mesure pas tous les polluants.',windows:'Les contacts des fenêtres et portes qui donnent sur l’extérieur. Pas les portes de meubles ou d’appareils.',heating:'Permet de savoir si le chauffage tourne vraiment, pour ne pas conseiller d’ouvrir à ce moment-là. Niak ne commande rien.',outdoor_temperature:'Permet de savoir si ouvrir rafraîchit ou réchauffe, et s’il gèle.',outdoor_humidity:'Avec les températures, permet de comparer l’eau contenue dans l’air dedans et dehors.',rain:'Une intensité en mm/h dit s’il pleut maintenant. Un cumul de la journée ne le dit pas.',wind_gust:'Au-delà de vos réglages (45 km/h par défaut), Niak conseille de ne rien laisser ouvert.',wind_bearing:'D’où vient le vent, en degrés. Avec l’exposition des ouvrants, Niak sait lesquels sont au vent, fait traverser l’air et repère la pluie poussée sous un avant-toit.',solar:'Un capteur d’ensoleillement en W/m² permet de calculer le soleil reçu par chaque façade.',pollution:'L’indice ATMO du jour (intégration Atmo France) sert de précaution régionale. Ce n’est pas une mesure à vos fenêtres.'};
 let pickerLoad:Promise<string|null>|undefined;
 // Home Assistant loads its entity picker lazily; a card editor makes it available to this page.
@@ -21,7 +23,7 @@ function loadPicker():Promise<string|null>{
 }
 @customElement('niak-comfort-setup')
 export class ComfortSetup extends LitElement {
- static styles=unsafeCSS(styles);
+ static styles=[unsafeCSS(styles),hubStyles,modernStyles];
  @property({attribute:false}) hass?:Hass;
  @property({attribute:false}) route?:{path:string};
  @property({type:Boolean}) narrow=false;
@@ -38,14 +40,15 @@ export class ComfortSetup extends LitElement {
  @state() private acknowledged:string[]=[];
  @state() private confirmed=false;
  @state() private health?:Health;
+ @state() private healthLoading=true;
+ @state() private healthError='';
+ private healthGeneration=0;
  // The tab opens on the home's technical state; « Modifier » leads to the rooms.
- @state() private page:'health'|'rooms'='health';
+ @state() private page:'health'|'rooms'='rooms';
  @state() private overview?:{area_id:string;name:string;suggestions:Record<string,string|string[]>;temperatures:number}[];
  @state() private picked:string[]=[];
  @state() private weatherEntry:string|null=null;
  @state() private proposed:string[]=[];
- // The step explanations folded by the user, kept in this browser.
- @state() private folded:string[]=(()=>{try{const v=JSON.parse(localStorage.getItem(FOLDED)??'[]');return Array.isArray(v)?v.map(String):[];}catch{return [];}})();
  @state() private confirmDiscard=false;
  @state() private confirmRemove=false;
  @state() private freeName='';
@@ -54,17 +57,20 @@ export class ComfortSetup extends LitElement {
  @state() private pickerTag:string|null=null;
  private generation=0;
  private connection?:unknown;
- private routeHandled='';
+ private routeHandled:string|undefined;
+ private workspaceGeneration=0;
+ private workspaceKey='';
+ private drafts=new Map<string,{draft?:RoomConfig;exteriorDraft?:Record<string,Spec>;discovery?:Discovery;entryId?:string;stage:number;revision:string;acknowledged:string[];proposed:string[];search:Record<string,string>;weatherEntry:string|null}>();
  private revision='';
  private previewCard?:{id:string;el:HTMLElement&{hass?:unknown;setConfig?:(c:object)=>void}};
- private beforeUnload=(e:BeforeUnloadEvent)=>{if(this.draft||this.exteriorDraft){e.preventDefault();e.returnValue='';}};
- connectedCallback(){super.connectedCallback();window.addEventListener('beforeunload',this.beforeUnload);void loadPicker().then(tag=>this.pickerTag=tag);}
- disconnectedCallback(){super.disconnectedCallback();this.generation++;window.removeEventListener('beforeunload',this.beforeUnload);}
+ private beforeUnload=(e:BeforeUnloadEvent)=>{if(this.draft||this.exteriorDraft||this.drafts.size){e.preventDefault();e.returnValue='';}};
+ connectedCallback(){super.connectedCallback();if(this.hass&&!this.snapshot){this.connection=this.hass.connection;void this.load();}else if(this.healthLoading&&this.snapshot)void this.loadHealth();window.addEventListener('beforeunload',this.beforeUnload);void loadPicker().then(tag=>this.pickerTag=tag);}
+ disconnectedCallback(){super.disconnectedCallback();this.workspaceGeneration++;if(this.busy)this.routeHandled=undefined;this.generation++;this.healthGeneration++;window.removeEventListener('beforeunload',this.beforeUnload);}
  protected updated(changed:PropertyValues){
   this.setAttribute('data-theme',this.hass?.themes?.darkMode===false?'light':'dark');
-  if(changed.has('hass')&&this.hass?.connection!==this.connection){this.connection=this.hass?.connection;void this.load();}
+  if(changed.has('hass')&&this.hass&&(this.hass.connection!==this.connection||!this.snapshot&&!this.busy&&!this.error)){this.connection=this.hass?.connection;void this.load();}
   if(changed.has('hass')&&this.previewCard)this.previewCard.el.hass=this.hass;
-  if(changed.has('route')&&this.snapshot&&!this.draft&&!this.exteriorDraft)void this.followRoute();
+  if(changed.has('route')&&this.snapshot)void this.followRoute();
   // Fresh state after every change of the home (a room saved, the exterior changed…).
   if(changed.has('snapshot')&&this.snapshot)void this.loadHealth();
   // An error appears next to what the person was doing, never only at the top of a long page.
@@ -77,8 +83,16 @@ export class ComfortSetup extends LitElement {
   finally{if(generation===this.generation)this.busy=false;}
  }
  private async loadHealth(){
-  try{this.health=await this.hass!.callWS<Health>({type:'niak_comfort/health'});}
-  catch{this.health=undefined;}  // the rooms page stays available
+  const generation=++this.healthGeneration;this.healthLoading=true;this.healthError='';
+  try{const value=await this.hass!.callWS<Health>({type:'niak_comfort/health'});if(generation===this.healthGeneration)this.health=value;}
+  catch(e){if(generation===this.healthGeneration)this.healthError=this.message(e);}
+  finally{if(generation===this.healthGeneration)this.healthLoading=false;}
+ }
+ private healthScreen(){
+  if(this.health)return html`${this.healthError?html`<p class="notice error" role="alert">Le bilan n’a pas pu être actualisé. <button @click=${()=>void this.loadHealth()}>Réessayer</button></p>`:nothing}${this.healthPage()}`;
+  return html`<h1>Mon logement</h1>${this.healthError?html`<p class="notice error" role="alert">Le bilan du logement n’a pas pu être chargé. ${this.healthError}</p>
+   <div class="actions"><button @click=${()=>void this.loadHealth()}>Réessayer</button><button @click=${()=>this.page='rooms'}>Ouvrir les réglages</button></div>`
+   :html`<p class="loading" role="status">Chargement du bilan de votre logement…</p>`}`;
  }
  private async goTo(t:Target){
   if(t.kind==='exterior')return this.editExterior();
@@ -89,22 +103,32 @@ export class ComfortSetup extends LitElement {
   return html`<li class=${l.level}><span class="hl-dot"></span><div><strong>${l.text}</strong>${l.why?html`<span class="hl-why">${l.why}</span>`:nothing}</div>
    ${l.target?html`<button class="link hl-go" ?disabled=${this.busy} @click=${()=>void this.goTo(l.target!)}>${l.target.label}</button>`:nothing}</li>`;
  }
- private healthPage(){const h=this.health!;
+ private healthPage(details=false){const h=this.health!;
   return html`<div class="hl-head"><div><h1>Mon logement</h1>
     <p class="hl-state ${h.level==='ok'?'ok':'bad'}"><span class="hl-dot"></span>${h.summary}<span class="muted"> · ${h.rooms_summary}${h.tips_summary?` · ${h.tips_summary}`:''}</span></p></div>
-   <button class="primary" @click=${()=>{this.page='rooms';this.saved='';}}>Modifier</button></div>
+   </div>
   <p class="hl-legend"><span class="ok"><span class="hl-dot"></span>fonctionne</span><span class="bad"><span class="hl-dot"></span>à régler</span><span class="tip"><span class="hl-dot"></span>à améliorer</span><span class="none"><span class="hl-dot"></span>non utilisé</span></p>
   <div class="hl-grid">
-   ${h.todo.length?html`<section class="hl-card wide todo"><h2>À régler</h2><ul class="hl-lines">${h.todo.map(l=>this.hline(l))}</ul></section>`:nothing}
-   ${h.tips.length?html`<section class="hl-card wide"><h2>À améliorer <small>facultatif</small></h2><ul class="hl-lines">${h.tips.map(l=>this.hline(l))}</ul></section>`:nothing}
-   <section class="hl-card"><h2>Sources</h2><ul class="hl-lines">${h.sources.map(s=>html`<li class=${s.level}><span class="hl-dot"></span><div><strong>${s.label}</strong><span class="hl-why">${s.text}</span></div></li>`)}</ul></section>
-   <section class="hl-card"><h2>Versions et liens</h2><ul class="hl-lines">${h.versions.map(l=>this.hline(l))}</ul></section>
-   <section class="hl-card wide"><h2>Capteurs par pièce</h2><div class="hl-table"><table><thead><tr><th scope="col">Pièce</th>${h.columns.map(c=>html`<th scope="col">${c}</th>`)}</tr></thead>
+   ${!details&&h.todo.length?html`${frame('À régler',html`<ul class="hl-lines">${h.todo.map(l=>this.hline(l))}</ul>`,{className:'wide todo'})}`:nothing}
+   ${!details&&h.tips.length?html`${frame('À améliorer',html`<ul class="hl-lines">${h.tips.map(l=>this.hline(l))}</ul>`,{className:'wide'})}`:nothing}
+   ${frame('Sources',html`<ul class="hl-lines">${h.sources.map(s=>html`<li class=${s.level}><span class="hl-dot"></span><div><strong>${s.label}</strong><span class="hl-why">${s.text}</span></div></li>`)}</ul>`,{className:'nk-plain'})}
+   ${frame('Versions et liens',html`<ul class="hl-lines">${h.versions.map(l=>this.hline(l))}</ul>`,{collapsible:true,open:false})}
+   ${frame('Capteurs par pièce',html`<div class="hl-table" tabindex="0" role="region" aria-label="Capteurs par pièce, tableau défilant"><table><thead><tr><th scope="col">Pièce</th>${h.columns.map(c=>html`<th scope="col">${c}</th>`)}</tr></thead>
     <tbody>${h.rooms.map(r=>html`<tr><th scope="row"><button class="link" @click=${()=>void this.goTo({kind:'room',entry_id:r.entry_id,label:r.title})}>${r.title}</button></th>
-     ${r.cells.map(c=>html`<td class=${c.level}><span class="hl-dot"></span>${c.text}</td>`)}</tr>`)}</tbody></table></div></section>
+     ${r.cells.map(c=>html`<td class=${c.level}><span class="hl-dot"></span>${c.text}</td>`)}</tr>`)}</tbody></table></div>`,{className:'wide',collapsible:true})}
   </div>`;}
  private message(e:unknown){return typeof e==='object'&&e&&'message' in e?String(e.message):'La connexion est indisponible. Réessayez sans quitter votre brouillon.';}
- private async followRoute(){const path=this.route?.path??'';if(this.routeHandled===path)return;this.routeHandled=path;const id=path.split('/').filter(Boolean)[0];const room=this.snapshot?.rooms.find(r=>r.entry_id===id);if(room)await this.editRoom(room);}
+ private path(path:string){const full='/'+path.replace(/^\//,'');this.routeHandled=full==='/'?'':full;history.pushState(null,'','/niak/confort'+(path?'/'+path:''));window.dispatchEvent(new CustomEvent('location-changed'));}
+ private remember(){if(this.workspaceKey&&(this.draft||this.exteriorDraft))this.drafts.set(this.workspaceKey,{draft:this.draft,exteriorDraft:this.exteriorDraft,discovery:this.discovery,entryId:this.entryId,stage:this.stage,revision:this.revision,acknowledged:this.acknowledged,proposed:this.proposed,search:this.search,weatherEntry:this.weatherEntry});}
+ private async followRoute(){
+  const path=this.route?.path??'';if(this.routeHandled===path)return;this.routeHandled=path;const generation=++this.workspaceGeneration;this.remember();
+  const [id,section]=path.split('/').filter(Boolean);const key=id??'';
+  this.workspaceKey=key;this.draft=undefined;this.exteriorDraft=undefined;this.discovery=undefined;this.entryId=undefined;this.preview=undefined;this.error='';this.saved='';this.confirmDiscard=false;this.confirmRemove=false;this.page='rooms';
+  const cached=this.drafts.get(key);
+  if(cached){Object.assign(this,cached);this.stage=roomSections.find(x=>x.path===section)?.stage??(section==='recapitulatif'?5:cached.stage);return;}
+  if(id==='reglages'){await this.editExterior(false);return;}
+  const room=this.snapshot?.rooms.find(r=>r.entry_id===id);if(room){await this.editRoom(room,false);if(generation===this.workspaceGeneration)this.stage=roomSections.find(x=>x.path===section)?.stage??(section==='recapitulatif'?5:0);}else if(id){this.error='Cette pièce n’est plus disponible. Choisissez une pièce ci-dessous.';}
+ }
  private async loadOverview(){
   try{const o=await this.hass!.callWS<{areas:NonNullable<ComfortSetup['overview']>}>({type:'niak_comfort/overview'});const living=livingArea(o.areas.map(a=>({...a,outdoor:false})),new Set());this.overview=living?[...o.areas.filter(a=>a.area_id===living.area_id),...o.areas.filter(a=>a.area_id!==living.area_id)]:o.areas;this.picked=o.areas.filter(a=>typeof a.suggestions.indoor_temperature==='string').map(a=>a.area_id);}
   catch{this.overview=[];}
@@ -128,19 +152,21 @@ export class ComfortSetup extends LitElement {
  private async start(area:{area_id:string;name:string}|null,name=''){
   if(!area&&!name.trim()){this.error='Donnez un nom à la pièce libre, par exemple « Étage » ou « Suite parentale ».';return;}
   this.begin();
-  try{const d=await this.discover(area?.area_id);this.discovery=d;this.revision=d.revision;this.entryId=undefined;this.draft=newRoom(area,name.trim(),d);this.proposed=[...Object.values(this.draft.sources),...this.draft.windows];this.stage=0;this.acknowledged=[];this.freeName='';}
+  try{const d=await this.discover(area?.area_id);this.discovery=d;this.revision=d.revision;this.entryId=undefined;this.draft=newRoom(area,name.trim(),d);this.proposed=[...Object.values(this.draft.sources),...this.draft.windows];this.stage=0;this.acknowledged=[];this.freeName='';this.workspaceKey='nouvelle';this.path('nouvelle/temperature');}
   catch(e){this.error=this.message(e);}finally{this.busy=false;}
  }
- private async editRoom(room:Room){
-  this.begin();
-  try{const d=await this.discover(room.config.area_id,room.entry_id);this.discovery=d;this.revision=d.revision;this.entryId=room.entry_id;
+ private async editRoom(room:Room,route=true){
+  const cached=this.drafts.get(room.entry_id);if(route&&cached){Object.assign(this,cached);this.workspaceKey=room.entry_id;this.path(room.entry_id+'/'+(roomSections.find(x=>x.stage===this.stage)?.path??'recapitulatif'));return;}
+  const generation=this.workspaceGeneration;this.begin();
+  try{const d=await this.discover(room.config.area_id,room.entry_id);if(generation!==this.workspaceGeneration)return;this.discovery=d;this.revision=d.revision;this.entryId=room.entry_id;
    const config=structuredClone(room.config);config.area_id??=null;config.openings??={};for(const id of config.windows)config.openings[id]??={...defaultOpening(),sheltered:config.rain_exposed===false};
-   this.draft=config;this.proposed=[];this.stage=0;this.acknowledged=[...(config.acknowledged??[])];}
+   this.draft=config;this.proposed=[];this.stage=0;this.acknowledged=[...(config.acknowledged??[])];this.workspaceKey=room.entry_id;if(route)this.path(room.entry_id+'/temperature');}
   catch(e){this.error=this.message(e);}finally{this.busy=false;}
  }
- private async editExterior(){
-  this.begin();
-  try{const d=await this.discover();this.discovery=d;this.revision=d.revision;this.exteriorDraft=structuredClone(this.snapshot!.home.sources);this.weatherEntry=this.snapshot!.home.weather??null;this.acknowledged=[...(this.snapshot!.home.acknowledged??[])];this.proposed=[];}
+ private async editExterior(route=true){
+  const cached=this.drafts.get('reglages');if(route&&cached){Object.assign(this,cached);this.workspaceKey='reglages';this.path('reglages');return;}
+  const generation=this.workspaceGeneration;this.begin();
+  try{const d=await this.discover();if(generation!==this.workspaceGeneration)return;this.discovery=d;this.revision=d.revision;this.exteriorDraft=structuredClone(this.snapshot!.home.sources);this.weatherEntry=this.snapshot!.home.weather??null;this.acknowledged=[...(this.snapshot!.home.acknowledged??[])];this.proposed=[];this.workspaceKey='reglages';if(route)this.path('reglages');}
   catch(e){this.error=this.message(e);}finally{this.busy=false;}
  }
  // Takes Niak Weather's station and signals as the exterior: one setting place for the whole home.
@@ -153,28 +179,24 @@ export class ComfortSetup extends LitElement {
  private ownSensors(){this.weatherEntry=null;this.saved='';}
  // The exterior: its source by integration first, then the place of Niak Weather.
  private exteriorSource(){const s=this.snapshot!,nw=s.niak_weather,from=this.weatherEntry?'weather':'own';
-  return html`<section class="field"><div class="field-top"><h3 id="l-from">D’où viennent les mesures du dehors ?</h3></div>
+  return frame('D’où viennent les mesures du dehors ?',html`<span id="l-from" class="sr-only">Source des mesures du dehors</span>
    ${this.choiceList('from','l-from',exteriorChoices(s),from,v=>v==='weather'?void this.useWeather(nw!.places[0].entry_id):this.ownSensors())}
    ${from==='weather'?this.zone('Lieu Niak Weather',(nw?.places??[]).map(p=>({value:p.entry_id,label:p.title})),this.weatherEntry!,id=>void this.useWeather(id),
-    'Niak Confort lit aussi ses alertes (orage, vigilance, pluie qui arrive) et ses prévisions pour les créneaux d’ouverture.'):nothing}</section>`;}
+    'Niak Confort lit aussi ses alertes (orage, vigilance, pluie qui arrive) et ses prévisions pour les créneaux d’ouverture.'):nothing}`);}
  // The outdoor air quality: the integration first, then its zone or place, then the person's caution.
  private airBlock(){const all=this.discovery?.candidates.pollution??[],spec=this.exteriorDraft!.pollution,current=airSource(spec);
   const pickSource=(v:string)=>{if(v===current)return;if(v==='none'){this.clear('pollution');return;}
    const first=all.find(c=>c.adapter===(v==='atmo'?'atmo_daily':'niak_index'));if(first)this.choose('pollution',first);};
   const zones=spec&&current!=='other'?all.filter(c=>c.adapter===spec.adapter):[],c=all.find(x=>x.entity_id===spec?.entity_id);
-  return html`<section class="field"><div class="field-top"><h3 id="l-air">${labels.pollution}</h3><span>Facultatif</span></div><p class="hint">Une précaution régionale du jour, pas une mesure à vos fenêtres.</p>
+  return frame(labels.pollution,html`<span id="l-air" class="sr-only">${labels.pollution}</span><p class="hint">Une précaution régionale du jour, pas une mesure à vos fenêtres.</p>
    ${this.choiceList('air','l-air',airChoices(this.snapshot!,all,current),current,pickSource)}
    ${spec&&current!=='other'?this.zone(current==='atmo'?'Zone Atmo France':'Lieu Niak Weather',zones.map(z=>({value:z.entity_id,label:z.name+' · '+measurement(z)})),spec.entity_id,id=>this.pick('pollution',id)):nothing}
    ${current==='other'?html`<p class="hint">${c?.name??spec!.entity_id}</p>`:nothing}${c?this.warnings(c):nothing}
-   ${spec?.adapter==='atmo_daily'?html`<label>Prudence à partir du niveau<select @change=${(e:Event)=>{this.exteriorDraft={...this.exteriorDraft!,pollution:{...spec,block_from:Number((e.target as HTMLSelectElement).value)}};}}>${['Moyen','Dégradé','Mauvais','Très mauvais','Extrêmement mauvais'].map((label,i)=>html`<option value=${i+2} ?selected=${(spec.block_from??4)===i+2}>${label}</option>`)}</select></label><p class="hint">C’est votre préférence de prudence, pas une consigne sanitaire.</p>`:nothing}</section>`;}
+   ${spec?.adapter==='atmo_daily'?html`<label>Prudence à partir du niveau<select @change=${(e:Event)=>{this.exteriorDraft={...this.exteriorDraft!,pollution:{...spec,block_from:Number((e.target as HTMLSelectElement).value)}};}}>${['Moyen','Dégradé','Mauvais','Très mauvais','Extrêmement mauvais'].map((label,i)=>html`<option value=${i+2} ?selected=${(spec.block_from??4)===i+2}>${label}</option>`)}</select></label><p class="hint">C’est votre préférence de prudence, pas une consigne sanitaire.</p>`:nothing}`);}
  // ---- Pieces shared by every step (charte des onglets de réglage) ----
  // What the step is for, in a frame that folds and stays folded.
- private intro(id:string){const open=!this.folded.includes(id);
-  const toggle=(e:Event)=>{const now=(e.target as HTMLDetailsElement).open;if(now===open)return;
-   this.folded=now?this.folded.filter(s=>s!==id):[...this.folded,id];
-   try{localStorage.setItem(FOLDED,JSON.stringify(this.folded));}catch{/* private window: folded for this visit only */}};
-  return html`<details class="intro" ?open=${open} @toggle=${toggle}><summary>À quoi sert cet onglet ?</summary><ul>${intros[id].map(l=>html`<li>${l}</li>`)}</ul></details>`;}
- // A source chosen by integration: greyed with a link to install it when it is missing.
+ private intro(key:string){if(key==='6')return html`<div class="nk-step-help">${helpTip('Présence',help.presence,'À quoi sert cette étape ?')}</div>`;return html`<div class="nk-step-help">${helpTip('Comprendre cette étape',html`<ul>${intros[key].map(line=>html`<li>${line}</li>`)}</ul>`,'À quoi sert cette étape ?')}</div>`;}
+
  private choiceList(name:string,label:string,choices:Choice[],value:string,pick:(v:string)=>void){
   return html`<div class="sources" role="radiogroup" aria-labelledby=${label}>${choices.map(c=>html`<label class="source ${c.value===value?'on':''} ${c.available?'':'off'}">
    <input type="radio" name=${name} .checked=${c.value===value} ?disabled=${!c.available||this.busy} @change=${()=>pick(c.value)}>
@@ -187,8 +209,10 @@ export class ComfortSetup extends LitElement {
    ${options.map(o=>html`<option value=${o.value} ?selected=${o.value===value}>${o.label}</option>`)}</select></label>${hint?html`<p class="hint">${hint}</p>`:nothing}`;}
  // A part that folds, in a frame of its own: title, « x sur y », and what is left to check.
  private group(title:string,keys:string[]){
-  const on=keys.filter(k=>this.selected(k).length).length,check=this.pending().some(p=>keys.some(k=>p.id.startsWith(k+':')));
-  return html`<details class="group" open><summary><strong>${title}</strong><span class="hint">${on} sur ${keys.length}${check?html` · <span class="warn-inline">à vérifier</span>`:nothing}</span></summary>${keys.map(k=>this.field(k))}</details>`;}
+  const on=keys.filter(k=>this.selected(k).length).length;
+  return frame(title,html`${keys.map(k=>this.field(k))}`,{count:`${on} sur ${keys.length}`});
+ }
+
  private async changeArea(area_id:string){
   if(!this.draft)return;this.busy=true;this.error='';
   try{const d=await this.discover(area_id||null,this.entryId);this.discovery=d;this.revision=d.revision;this.draft={...this.draft,area_id:area_id||null,floor_id:null};}
@@ -209,7 +233,7 @@ export class ComfortSetup extends LitElement {
   return this.confirmRemove?html`<section class="notice remove" role="alertdialog" aria-label="Supprimer la pièce"><h2>Supprimer « ${d.name} » ?</h2><p>Niak arrête de suivre cette pièce et sa carte n’affichera plus rien. Vos appareils et capteurs Home Assistant ne sont pas touchés.</p><p class="hint">${d.area_id?'La pièce Home Assistant vous sera de nouveau proposée dans Mon logement.':'Vous pourrez la recréer comme pièce libre.'}</p><div class="actions"><button @click=${()=>this.confirmRemove=false}>Garder la pièce</button><button class="danger" ?disabled=${this.busy} @click=${()=>this.removeRoom()}>Supprimer la pièce</button></div></section>`
    :html`<div class="remove"><button class="link danger-link" @click=${()=>this.confirmRemove=true}>Supprimer cette pièce</button></div>`;}
  private cancel(){if(this.draft||this.exteriorDraft){this.confirmDiscard=true;return;}this.discard();}
- private discard(){this.confirmDiscard=false;this.draft=undefined;this.exteriorDraft=undefined;this.discovery=undefined;this.entryId=undefined;this.error='';this.acknowledged=[];this.proposed=[];}
+ private discard(){this.drafts.delete(this.workspaceKey);this.workspaceKey='';this.path('');this.confirmDiscard=false;this.draft=undefined;this.exteriorDraft=undefined;this.discovery=undefined;this.entryId=undefined;this.error='';this.acknowledged=[];this.proposed=[];}
  private selected(key:string):string[]{if(this.exteriorDraft)return this.exteriorDraft[key]?[this.exteriorDraft[key].entity_id]:[];if(!this.draft)return [];return key==='presence'?(this.draft.presence??[]):key==='windows'?this.draft.windows:this.draft.sources[key]?[this.draft.sources[key]]:[];}
  private choose(key:string,c:Candidate){
   const previous=this.selected(key);
@@ -272,26 +296,24 @@ export class ComfortSetup extends LitElement {
   return html`<label>${label}${this.pickerTag?this.selector(kind,[...new Set([...(value?[value]:[]),...all.map(c=>c.entity_id)])],value,label,change):html`<select @change=${(e:Event)=>change((e.target as HTMLSelectElement).value)}><option value="" ?selected=${!value}>Non renseigné</option>${value&&!all.some(c=>c.entity_id===value)?html`<option selected value=${value}>${value} · introuvable</option>`:nothing}${all.map(c=>html`<option value=${c.entity_id} ?selected=${value===c.entity_id}>${c.name} · ${measurement(c)}</option>`)}</select>`}</label>${all.find(c=>c.entity_id===value)?this.warnings(all.find(c=>c.entity_id===value)!):nothing}`;
  }
  private evolutionNumber(key:'glazing_factor'|'presence_delay_minutes',label:string,initial:number,min:number,max:number,step:number){const d=this.draft!;return html`<label>${label}<input type="number" min=${min} max=${max} step=${step} .value=${String(d.evolution?.[key]??initial)} @input=${(e:Event)=>this.draft={...d,evolution:{...d.evolution,[key]:Number((e.target as HTMLInputElement).value)}}}></label>`;}
- private airPresence(){return html`${['co2','pm25','voc','purifier','presence'].map(key=>this.field(key))}`;}
- private sensorSettings(key:string){const d=this.draft!;if(!d||!this.selected(key).length)return nothing;
- const voc=this.discovery?.candidates.voc?.find(c=>c.entity_id===d.sources.voc),unit=voc?(voc.unit??''):(d.evolution?.voc_threshold?.unit??''),preset=vocPreset(voc);
+ private airPresence(){return html`${['co2','pm25','voc','purifier'].map(key=>this.field(key))}`;}
+ private sensorSettings(key:string){const d=this.draft!;if(!d)return nothing;const selected=!!this.selected(key).length;if(!selected&&!['pm25','voc'].includes(key))return nothing;
+ const voc=this.discovery?.candidates.voc?.find(c=>c.entity_id===d.sources.voc),unit=voc?(voc.unit??''):(d.evolution?.voc_threshold?.unit??''),preset=vocPreset(voc),availableVoc=this.discovery?.candidates.voc?.find(c=>vocPreset(c)),availablePreset=vocPreset(availableVoc);
  if(key==='co2')return html`<div class="sensor-settings"><h4>Repères d’interprétation</h4>
-  <p class="hint">Proposition Niak : 800 ppm pour signaler une possibilité d’aération, 1 000 ppm pour conseiller d’aérer, 1 500 ppm pour attirer l’attention.</p>
+
   ${this.number('co2_potential','CO₂ : aérer ferait du bien (ppm)',1000)}${this.number('co2_action','CO₂ : aérer (ppm)',1200)}${this.number('co2_urgent','CO₂ : attention (ppm)',1600)}
-  <button @click=${()=>this.draft={...d,settings:{...d.settings,co2_potential:airReferenceDefaults.co2_potential,co2_action:airReferenceDefaults.co2_action,co2_urgent:airReferenceDefaults.co2_urgent}}}>Utiliser 800 / 1 000 / 1 500 ppm</button>
-  <details class="group"><summary>Pourquoi ces valeurs ?</summary><p class="hint">Pourquoi : le HCSP retient 800 ppm comme objectif de renouvellement d’air et 1 500 ppm comme valeur d’action rapide dans les établissements recevant du public. Niak s’en inspire pour le logement et ajoute un palier intermédiaire à 1 000 ppm. Ces valeurs décrivent le confinement, pas la toxicité ni l’ensemble des polluants. Les anciens repères Niak étaient 1 000 / 1 200 / 1 600 ppm. <a href=${thresholdSources.co2} target="_blank" rel="noopener noreferrer">Source : HCSP, avis du 21 janvier 2022</a>.</p></details></div>`;
+  ${defaultValue('800 / 1 000 / 1 500 ppm',()=>this.draft={...d,settings:{...d.settings,co2_potential:airReferenceDefaults.co2_potential,co2_action:airReferenceDefaults.co2_action,co2_urgent:airReferenceDefaults.co2_urgent}},html`<p class="hint">Pourquoi : le HCSP retient 800 ppm comme objectif de renouvellement d’air et 1 500 ppm comme valeur d’action rapide dans les établissements recevant du public. Niak s’en inspire pour le logement et ajoute un palier intermédiaire à 1 000 ppm. Ces valeurs décrivent le confinement, pas la toxicité ni l’ensemble des polluants. Les anciens repères Niak étaient 1 000 / 1 200 / 1 600 ppm. <a href=${thresholdSources.co2} target="_blank" rel="noopener noreferrer">Source : HCSP, avis du 21 janvier 2022</a>.</p>`,{applied:['co2_potential','co2_action','co2_urgent'].every(k=>d.settings[k]===airReferenceDefaults[k as keyof typeof airReferenceDefaults])})}</div>`;
  if(key==='pm25')return html`<div class="sensor-settings"><h4>Repère d’interprétation</h4>
-  ${this.number('pm25_action','PM2.5 : seuil de signalement (µg/m³)',25)}
-  <button @click=${()=>this.draft={...d,settings:{...d.settings,pm25_action:airReferenceDefaults.pm25_action}}}>Utiliser 15 µg/m³ proposés</button>
-  <details class="group"><summary>Pourquoi ces valeurs ?</summary><p class="hint">Pourquoi 15 : l’OMS recommande 15 µg/m³ en moyenne sur 24 heures (et 5 sur un an). Niak utilise ici 15 comme repère de vigilance sur la mesure reçue ; il ne calcule pas une exposition sur 24 heures. Un pic n’est donc pas un dépassement de la moyenne OMS, et une mesure basse ne garantit pas l’absence de risque. Le seuil Niak précédent était 25. <a href=${thresholdSources.pm25} target="_blank" rel="noopener noreferrer">Source : OMS, lignes directrices 2021</a>.</p></details></div>`;
+  ${selected?this.number('pm25_action','PM2.5 : seuil de signalement (µg/m³)',25):nothing}
+  ${defaultValue('15 µg/m³',()=>this.draft={...d,settings:{...d.settings,pm25_action:airReferenceDefaults.pm25_action}},html`<p class="hint">Pourquoi 15 : l’OMS recommande 15 µg/m³ en moyenne sur 24 heures (et 5 sur un an). Niak utilise ici 15 comme repère de vigilance sur la mesure reçue ; il ne calcule pas une exposition sur 24 heures. Un pic n’est donc pas un dépassement de la moyenne OMS, et une mesure basse ne garantit pas l’absence de risque. Le seuil Niak précédent était 25. <a href=${thresholdSources.pm25} target="_blank" rel="noopener noreferrer">Source : OMS, lignes directrices 2021</a>.</p>`,{applied:d.settings.pm25_action===15,disabled:!selected,note:!selected?'Choisissez le capteur pour activer le suivi.':undefined})}</div>`;
  if(key==='voc')return html`<div class="sensor-settings"><h4>Repère d’interprétation</h4>
   ${d.sources.voc?html`<p class="hint">Capteur choisi : ${voc?.name??d.sources.voc}. Unité : ${unit||'indice sans unité'}. Le seuil reste attaché à cette unité ; changer de capteur ou d’unité impose de le vérifier.</p>
   <label>Seuil COV (${unit||'indice'})<input type="number" min="0" step="any" .value=${d.evolution?.voc_threshold?.unit===unit?String(d.evolution.voc_threshold.value):''} @input=${(e:Event)=>{const value=(e.target as HTMLInputElement).value,evolution={...d.evolution};if(value)evolution.voc_threshold={value:Number(value),unit};else delete evolution.voc_threshold;this.draft={...d,evolution};}}></label>
-  ${preset?html`<button @click=${()=>this.draft={...d,evolution:{...d.evolution,voc_threshold:{...preset}}}}>Utiliser l’indice 150 proposé</button><details class="group"><summary>Pourquoi cet indice ?</summary><p class="hint">Pourquoi 150 : pour la VINDSTYRKA IKEA identifiée, Niak reprend l’exemple d’action de Sensirion. L’indice 100 correspond au niveau habituel appris par le capteur ; un indice plus haut signale davantage de COV par rapport à cet historique. Ce n’est ni une concentration, ni une limite sanitaire. L’adaptation du capteur peut ramener une pollution persistante vers 100. <a href=${thresholdSources.voc} target="_blank" rel="noopener noreferrer">Source : Sensirion, fonctionnement du VOC Index</a>.</p></details>`:html`<p class="hint">Pas de valeur automatique pour ce capteur : son unité seule ne suffit pas à justifier un seuil commun. Utilisez un repère documenté par son fabricant dans cette unité ; Niak ne convertit pas les indices en ppb ou en µg/m³. À défaut de seuil, la mesure reste visible sans verdict COV.</p><p class="hint">L’UBA rappelle que le total des COV ne permet pas à lui seul d’évaluer le risque sanitaire. Un seuil d’une substance ou un repère TVOC ne s’applique pas automatiquement à tous les capteurs grand public. <a href=${thresholdSources.tvoc} target="_blank" rel="noopener noreferrer">Source : agence allemande de l’environnement, AIR</a>.</p>`}
-  <p class="hint">Vous pouvez laisser le seuil vide pour suivre la mesure sans l’interpréter.</p>`:html`<p class="hint">Choisissez d’abord votre capteur COV dans « Air et présence ». Son repère sera proposé ici si le modèle est reconnu.</p>`}</div>`;
- if(key==='indoor_humidity')return html`<div class="sensor-settings"><h4>Repère d’humidité</h4>${this.number('humidity_high','Humidité haute (%)',62)}<button @click=${()=>this.draft={...d,settings:{...d.settings,humidity_high:airReferenceDefaults.humidity_high}}}>Utiliser 60 % proposés</button><details class="group"><summary>Pourquoi ces valeurs ?</summary><p class="hint">L’ADEME conseille 40 à 60 % d’humidité. Niak propose donc 60 % pour signaler un air humide ; le choix d’aérer dépend aussi de l’humidité extérieure. L’ancien repère Niak était 62 %. <a href=${thresholdSources.humidity} target="_blank" rel="noopener noreferrer">Source : ADEME, Respirer un air sain chez soi</a>.</p></details></div>`;
- if(key==='presence')return html`<div class="sensor-settings">${this.evolutionNumber('presence_delay_minutes','Délai avant de considérer la pièce vide (minutes)',5,0,120,1)}<p class="hint">5 minutes est un choix pratique Niak pour éviter les changements trop rapides. Le délai commence après une absence réellement signalée ; le silence d’un détecteur de mouvement ne suffit pas. Une pièce vide conserve son suivi et ses alertes.</p></div>`;
- if(key==='indoor_temperature')return html`<div class="sensor-settings"><h4>Votre plage de confort</h4>${this.number('minimum','Température minimum (°C)',20,0.5)}${this.number('maximum','Température maximum (°C)',24,0.5)}<details class="group"><summary>Pourquoi cette plage ?</summary><p class="hint">20–24 °C est la plage initiale Niak : un choix de confort personnel, à adapter à cette pièce. Ce n’est pas une limite sanitaire.</p></details></div>`;
+  ${preset?html`${defaultValue('Indice 150',()=>this.draft={...d,evolution:{...d.evolution,voc_threshold:{...preset}}},html`<p class="hint">Pourquoi 150 : pour la VINDSTYRKA IKEA identifiée, Niak reprend l’exemple d’action de Sensirion. L’indice 100 correspond au niveau habituel appris par le capteur ; un indice plus haut signale davantage de COV par rapport à cet historique. Ce n’est ni une concentration, ni une limite sanitaire. L’adaptation du capteur peut ramener une pollution persistante vers 100. <a href=${thresholdSources.voc} target="_blank" rel="noopener noreferrer">Source : Sensirion, fonctionnement du VOC Index</a>.</p>`,{applied:d.evolution?.voc_threshold?.value===preset.value&&d.evolution?.voc_threshold?.unit===preset.unit})}`:html`<p class="hint">Aucune valeur par défaut pour ce capteur : son unité seule ne suffit pas à justifier un seuil commun. Utilisez un repère documenté par son fabricant dans cette unité ; Niak ne convertit pas les indices en ppb ou en µg/m³. À défaut de seuil, la mesure reste visible sans verdict COV.</p><p class="hint">L’UBA rappelle que le total des COV ne permet pas à lui seul d’évaluer le risque sanitaire. Un seuil d’une substance ou un repère TVOC ne s’applique pas automatiquement à tous les capteurs grand public. <a href=${thresholdSources.tvoc} target="_blank" rel="noopener noreferrer">Source : agence allemande de l’environnement, AIR</a>.</p>`}
+  <p class="hint">Vous pouvez laisser le seuil vide pour suivre la mesure sans l’interpréter.</p>`:html`<p class="hint">Choisissez votre capteur COV pour activer le suivi.</p>${availablePreset?defaultValue('Indice '+availablePreset.value,()=>{},html`<p class="hint">Pourquoi 150 : pour la VINDSTYRKA IKEA identifiée, Niak reprend l’exemple d’action de Sensirion. L’indice 100 correspond au niveau habituel appris par le capteur ; un indice plus haut signale davantage de COV par rapport à cet historique. Ce n’est ni une concentration, ni une limite sanitaire. L’adaptation du capteur peut ramener une pollution persistante vers 100. <a href=${thresholdSources.voc} target="_blank" rel="noopener noreferrer">Source : Sensirion, fonctionnement du VOC Index</a>.</p>`,{applied:false,disabled:true,note:'Pour le capteur reconnu : '+availableVoc!.name}):html`<p class="hint">Valeur par défaut : selon le modèle et l’unité du capteur.</p>`}`}</div>`;
+ if(key==='indoor_humidity')return html`<div class="sensor-settings"><h4>Repère d’humidité</h4>${this.number('humidity_high','Humidité haute (%)',62)}${defaultValue('60 %',()=>this.draft={...d,settings:{...d.settings,humidity_high:airReferenceDefaults.humidity_high}},html`<p class="hint">L’ADEME conseille 40 à 60 % d’humidité. Niak propose donc 60 % pour signaler un air humide ; le choix d’aérer dépend aussi de l’humidité extérieure. L’ancien repère Niak était 62 %. <a href=${thresholdSources.humidity} target="_blank" rel="noopener noreferrer">Source : ADEME, Respirer un air sain chez soi</a>.</p>`,{applied:d.settings.humidity_high===60})}</div>`;
+ if(key==='presence')return html`<div class="sensor-settings">${this.evolutionNumber('presence_delay_minutes','Délai avant de considérer la pièce vide (minutes)',5,0,120,1)}${helpTip('Comprendre le délai de présence',html`<p>5 minutes est un choix pratique Niak pour éviter les changements trop rapides. Le délai commence après une absence réellement signalée ; le silence d’un détecteur de mouvement ne suffit pas. Une pièce vide conserve son suivi et ses alertes.</p>`,'Comprendre ce réglage')}</div>`;
+ if(key==='indoor_temperature')return html`<div class="sensor-settings"><h4>Votre plage de confort</h4>${this.number('minimum','Température minimum (°C)',20,0.5)}${this.number('maximum','Température maximum (°C)',24,0.5)}${defaultValue('20–24 °C',()=>this.draft={...d,settings:{...d.settings,minimum:20,maximum:24}},html`<p class="hint">20–24 °C est la plage initiale Niak : un choix de confort personnel, à adapter à cette pièce. Ce n’est pas une limite sanitaire.</p>`,{applied:d.settings.minimum===20&&d.settings.maximum===24})}</div>`;
  return nothing;
  }
  private openingDetails(id:string){const m=this.draft!.openings[id]??defaultOpening();return html`<div class="opening">
@@ -308,21 +330,21 @@ export class ComfortSetup extends LitElement {
   const proposals=(this.exteriorDraft?all.filter(c=>c.outside):all.filter(c=>c.local)).filter(c=>!selected.includes(c.entity_id));
   const canAdd=multiple.has(key)||!selected.length;
   const where=this.exteriorDraft?'dans vos pièces extérieures':room?.area_id?'dans la pièce '+this.areaName(room.area_id):'';
-  return html`<section class="field" aria-label=${labels[key]}><div class="field-top"><h3>${labels[key]}</h3><span>${key==='indoor_temperature'?'Obligatoire':'Facultatif'}</span></div><p class="hint">${help[key]}</p>
-   ${key==='windows'&&selected.length?html`<p class="hint">L’exposition est le côté vers lequel regarde l’ouvrant. Elle permet de savoir quand le soleil y entre.</p>`:nothing}
+  return frame(labels[key],html`
+   ${key==='windows'&&selected.length?html`${helpTip('Comprendre l’exposition',html`<p>L’exposition est le côté vers lequel regarde l’ouvrant. Elle permet de savoir quand le soleil y entre.</p>`,'Comprendre ce réglage')}`:nothing}
    ${selected.map(id=>this.chosen(key,id,all,selected))}
    ${canAdd&&proposals.length?html`<p class="hint strong">${proposals.length===1?'Trouvé '+where:'Trouvés '+where+' : choisissez '+(multiple.has(key)?'ceux qui conviennent':'celui qui convient')}</p><div class="candidates">${proposals.slice(0,5).map(c=>this.candidateRow(c,key))}</div>`:nothing}
    ${canAdd&&!proposals.length&&!selected.length?html`<p class="notice">${where?'Rien trouvé '+where+'.':'Pièce libre : choisissez le capteur ci-dessous.'}${where?' Vous pouvez en choisir un ailleurs ci-dessous.':''}</p>`:nothing}
    ${canAdd?this.picker(key,all,selected):nothing}
    ${this.draft?this.sensorSettings(key):nothing}
    ${key!=='indoor_temperature'&&!selected.length?html`<button class="link" @click=${()=>{this.clear(key);this.saved=labels[key]+' : laissé vide pour l’instant.';}}>Continuer sans</button>`:nothing}
-  </section>`;
+  `,{count:key==='indoor_temperature'?'Obligatoire':selected.length?'Choisi':'Facultatif',help:help[key],className:'nk-field-section nk-plain'});
  }
- private go(stage:number){this.stage=stage;this.error='';this.saved='';this.updateComplete.then(()=>this.renderRoot.querySelector<HTMLElement>('h1')?.focus());}
+ private go(stage:number){this.stage=stage;if(this.workspaceKey)this.path(this.workspaceKey+'/'+(roomSections.find(x=>x.stage===stage)?.path??'recapitulatif'));this.error='';this.saved='';this.updateComplete.then(()=>{this.renderRoot.querySelector<HTMLElement>('h1')?.focus();});}
  private next(){
   if(this.stage===0&&!this.draft?.sources.indoor_temperature){this.error='Choisissez la température de la pièce pour continuer. C’est la seule mesure obligatoire.';return;}
   if(this.stage===4){const s=this.draft!.settings;if(!this.draft!.name.trim()){this.error='Donnez un nom à la pièce.';return;}if(!Number.isFinite(s.minimum)||!Number.isFinite(s.maximum)||s.minimum>=s.maximum){this.error='La température minimum doit être inférieure au maximum.';return;}}
-  this.go(this.stage+1);
+  this.go(roomOrder[roomOrder.indexOf(this.stage)+1]??5);
  }
  private async save(){
   const config=this.exteriorDraft?{sources:this.exteriorDraft,weather:this.weatherEntry}:this.draft;if(!config)return;
@@ -332,7 +354,7 @@ export class ComfortSetup extends LitElement {
    this.acknowledged=[...new Set([...this.acknowledged,...missing])];
    const before=new Set(this.snapshot?.rooms.map(r=>r.entry_id));const wasRoom=!this.exteriorDraft;const edited=this.entryId;
    this.snapshot=await this.hass!.callWS<Snapshot>({type:'niak_comfort/save_config',config,home:!!this.exteriorDraft,revision:this.revision,...(this.entryId?{entry_id:this.entryId}:{}),acknowledged:this.acknowledged});
-   this.draft=undefined;this.exteriorDraft=undefined;this.discovery=undefined;this.entryId=undefined;
+   this.drafts.delete(this.workspaceKey);this.workspaceKey='';this.path('');this.draft=undefined;this.exteriorDraft=undefined;this.discovery=undefined;this.entryId=undefined;
    if(wasRoom){this.preview=edited??this.snapshot.rooms.find(r=>!before.has(r.entry_id))?.entry_id;this.previewEdited=!!edited;}
    this.saved=wasRoom?'':'L’extérieur est enregistré. Toutes vos pièces l’utilisent.';}
   catch(e){this.error=this.message(e);}finally{this.busy=false;}
@@ -340,32 +362,31 @@ export class ComfortSetup extends LitElement {
  private number(key:string,label:string,initial:number,step=1){const d=this.draft!;return html`<label>${label}<input type="number" step=${step} .value=${String(d.settings[key]??initial)} @input=${(e:Event)=>this.draft={...d,settings:{...d.settings,[key]:Number((e.target as HTMLInputElement).value)}}}></label>`;}
  private floorName(){const d=this.draft!;const id=d.area_id?this.snapshot?.areas.find(a=>a.area_id===d.area_id)?.floor_id:d.floor_id;return this.snapshot?.floors?.find(f=>f.floor_id===id)?.name??'Non renseigné';}
  private preferences(){const d=this.draft!,used=new Set(this.snapshot!.rooms.filter(r=>r.entry_id!==this.entryId).map(r=>r.config.area_id));
-  return html`<section class="field"><h2>La pièce</h2><label>Nom<input type="text" maxlength="100" .value=${d.name} @input=${(e:Event)=>this.draft={...d,name:(e.target as HTMLInputElement).value}}></label>
+  return html`${frame('La pièce',html`<label>Nom<input type="text" maxlength="100" .value=${d.name} @input=${(e:Event)=>this.draft={...d,name:(e.target as HTMLInputElement).value}}></label>
    <label>Pièce Home Assistant<select @change=${(e:Event)=>this.changeArea((e.target as HTMLSelectElement).value)}><option value="" ?selected=${!d.area_id}>Aucune (pièce libre)</option>${this.snapshot!.areas.filter(a=>!a.outdoor&&(!used.has(a.area_id)||a.area_id===d.area_id)).map(a=>html`<option value=${a.area_id} ?selected=${a.area_id===d.area_id}>${a.name}</option>`)}</select></label>
    ${d.area_id?html`<p>Étage : <strong>${this.floorName()}</strong></p><p class="hint">Repris de Home Assistant. Pour le modifier, changez l’étage de cette pièce dans Home Assistant.</p>`:html`<label>Étage (facultatif)<select @change=${(e:Event)=>this.draft={...d,floor_id:(e.target as HTMLSelectElement).value||null}}><option value="" ?selected=${!this.snapshot?.floors?.some(f=>f.floor_id===d.floor_id)}>Non renseigné</option>${(this.snapshot?.floors??[]).map(f=>html`<option value=${f.floor_id} ?selected=${d.floor_id===f.floor_id}>${f.name}</option>`)}</select></label>`}
    <p class="hint">Le suivi fonctionne aussi de plain-pied, sans étage à configurer.</p>
-   <p class="hint">Rattacher la pièce permet à Niak de proposer ses capteurs. Vous pouvez toujours en choisir ailleurs.</p></section>
+   <p class="hint">Rattacher la pièce permet à Niak de proposer ses capteurs. Vous pouvez toujours en choisir ailleurs.</p>`,{className:'nk-plain'})}
    <section class="field"><h2>Autres réglages</h2><details class="group"><summary><strong>Réglages avancés</strong><span class="hint">${changedAdvanced(d.settings)?`${changedAdvanced(d.settings)} sur ${Object.keys(advancedDefaults).length} modifiés`:'par défaut'}</span></summary>
     <p class="hint">Choix de fonctionnement Niak, modifiables selon votre logement ; ces valeurs ne sont pas des normes sanitaires.</p>${this.number('gust_max','Rafales : ne rien laisser ouvert au-delà de (km/h)',45)}${this.number('frost','Gel : pas d’ouverture prolongée en dessous de (°C)',1,0.5)}${this.number('sun_facade','Soleil fort sur une façade (W/m²)',250,10)}${this.evolutionNumber('glazing_factor','Facteur estimé du vitrage (0 à 1)',0.7,0,1,0.05)}${this.number('illuminance_low','Luminosité basse (lux)',100)}${this.number('max_age_seconds','Ancienneté maximum des mesures (secondes)',1800)}<p class="hint">45 km/h de rafales et 1 °C : précautions Niak pour les ouvrants, à adapter à leur exposition. 250 W/m² : repère Niak de soleil fort sur la façade, estimé. 100 lux : repère de faible luminosité, sans déduction de position de volet. Facteur vitrage 0,7 : hypothèse de calcul de buée entre température extérieure (0) et intérieure (1), sans mesure du vitrage. 1 800 secondes : après 30 minutes sans nouvelle mesure, une donnée numérique devient trop ancienne ; cette expiration ne s’applique pas aux états de contacts.</p></details></section>`;}
  private summary(){const d=this.draft!,home=this.snapshot!.home;const name=(key:string,id?:string)=>id?this.discovery?.candidates[key]?.find(v=>v.entity_id===id)?.name??id:'';
   const metas=d.windows.map(id=>d.openings[id]??defaultOpening());const counts=new Map<string,number>();for(const m of metas)if(m.exposure)counts.set(m.exposure,(counts.get(m.exposure)??0)+1);
   const expo=[...counts].map(([e,n])=>n+' '+exposures.find(x=>x[0]===e)![1].toLowerCase()).join(', ');const unknown=metas.filter(m=>!m.exposure).length,sheltered=metas.filter(m=>m.sheltered).length;
   const measures=[name('indoor_temperature',d.sources.indoor_temperature),name('indoor_humidity',d.sources.indoor_humidity)].filter(Boolean).join(' · ');
-  return html`<dl class="summary compact"><dt>${stages[0]}</dt><dd>${measures||'—'}</dd>
+  return html`${frame('Récapitulatif',html`<dl class="summary compact"><dt>${stages[0]}</dt><dd>${measures||'—'}</dd>
    <dt>${stages[1]}</dt><dd>${d.windows.length?html`${d.windows.length} ${d.windows.length>1?'ouvrants':'ouvrant'}${sheltered?' · '+sheltered+' abrité'+(sheltered>1?'s':''):''}${expo?' · '+expo:''}${unknown?' · '+unknown+' sans exposition':''}<details><summary>Voir la liste</summary>${d.windows.map(id=>html`<div>${name('windows',id)}</div>`)}</details>`:'Aucun'}</dd>
    <dt>${stages[2]}</dt><dd>${['co2','pm25','voc','purifier'].map(k=>name(k,d.sources[k])).filter(Boolean).join(' · ')||'Air non mesuré'}${d.presence?.length?' · '+d.presence.length+' capteur(s) de présence':''}</dd><dt>${stages[3]}</dt><dd>${name('heating',d.sources.heating)||'Non suivi'}</dd>
    <dt>${stages[4]}</dt><dd>${d.name} · ${d.area_id?'rattachée à « '+this.areaName(d.area_id)+' »':'pièce libre'} · étage : ${this.floorName()} · ${d.settings.minimum}–${d.settings.maximum} °C</dd>
-   <dt>Extérieur</dt><dd>${home.configured?exteriorSummary(home.sources):'À configurer depuis Mon logement'}</dd></dl>
+   <dt>Extérieur</dt><dd>${home.configured?exteriorSummary(home.sources):'À configurer depuis Mon logement'}</dd></dl>`)}
    ${this.confirmBlock()}`;}
  private errorBlock(){return this.error?html`<p class="notice error" role="alert">${this.error}</p>`:nothing;}
- private wizard(){const d=this.draft!;return html`<div class="actions"><button class="link" @click=${()=>this.cancel()}>← Mon logement</button></div><h1 tabindex="-1">${this.entryId?'Modifier':'Configurer'} ${d.name||'la pièce'}</h1><p class="step-count">${d.area_id?'Pièce Home Assistant : '+this.areaName(d.area_id):'Pièce libre'} · étape ${this.stage+1} sur ${stages.length}</p>
-  <nav class="steps" aria-label="Étapes">${stages.map((label,i)=>html`<button aria-current=${i===this.stage?'step':'false'} @click=${()=>this.go(i)}>${label}</button>`)}</nav>
-  ${this.intro(String(this.stage))}
-  ${this.stage===0?[...indoor,'illuminance'].map(key=>this.field(key)):this.stage===1?this.field('windows'):this.stage===2?this.airPresence():this.stage===3?this.field('heating'):this.stage===4?this.preferences():this.summary()}
-  ${this.stage<4?html`<button class="link" @click=${()=>this.refreshCandidates()}>Rechercher à nouveau les capteurs</button>`:nothing}
-  ${this.errorBlock()}
-  <div class="bottom"><button @click=${()=>this.stage?this.go(this.stage-1):this.cancel()}>Retour</button><div>${this.stage>0&&this.stage<5?html`<button @click=${()=>this.go(this.stage+1)}>Passer</button>`:nothing}<button class="primary" ?disabled=${this.busy} @click=${()=>this.stage===5?this.save():this.next()}>${this.stage===5?'Enregistrer':'Continuer'}</button></div></div>${this.removeBlock()}`;}
- private exterior(){return html`<div class="actions"><button class="link" @click=${()=>this.cancel()}>← Mon logement</button></div><h1 tabindex="-1">L’extérieur du logement</h1>${this.intro('exterior')}${this.exteriorSource()}
+ private wizard(){const d=this.draft!,section=roomSections.find(x=>x.stage===this.stage);return html`<div class="workspace-head"><button class="link" @click=${()=>this.cancel()}>← Vue d’ensemble Confort</button><h1 tabindex="-1">Configurer ${d.name||'la pièce'}</h1><p class="step-count">${d.area_id?'Pièce Home Assistant : '+this.areaName(d.area_id):'Pièce libre'} · Les réglages de cette pièce</p></div>
+  <nav class="room-menu" aria-label="Réglages de la pièce">${[roomSections.slice(0,3),roomSections.slice(3)].map(row=>html`<div class="room-menu-row">${row.map(x=>html`<button aria-label=${x.title} title=${x.title} aria-current=${x.stage===this.stage?'page':nothing} @click=${()=>this.go(x.stage)}>${hubIcon(x.icon)}<span>${x.label}</span></button>`)}</div>`)}</nav>
+  <div class="room-content-head"><h2>${section?.title??'Récapitulatif'}</h2></div>${this.intro(String(this.stage))}
+  ${this.stage===0?[...indoor,'illuminance'].map(key=>this.field(key)):this.stage===1?this.field('windows'):this.stage===2?this.airPresence():this.stage===6?this.field('presence'):this.stage===3?this.field('heating'):this.stage===4?this.preferences():this.summary()}
+  ${this.stage!==4&&this.stage!==5?html`<button class="link" ?disabled=${this.busy} @click=${()=>this.refreshCandidates()}>Rechercher à nouveau les capteurs</button>`:nothing}${this.errorBlock()}
+  <div class="bottom"><button ?disabled=${this.busy} @click=${()=>this.stage?this.go(roomOrder[roomOrder.indexOf(this.stage)-1]??0):this.cancel()}>Retour</button><div>${this.stage!==5?html`<button ?disabled=${this.busy} @click=${()=>this.go(5)}>Récapitulatif</button>`:nothing}<button class="primary" ?disabled=${this.busy} @click=${()=>this.stage===5?this.save():this.next()}>${this.stage===5?'Enregistrer':'Continuer'}</button></div></div>${this.removeBlock()}`;}
+ private exterior(){return html`<div class="actions"><button class="link" @click=${()=>this.cancel()}>← Mon logement</button></div><h1 tabindex="-1">Réglages généraux</h1><p class="muted">L’extérieur du logement, partagé par toutes vos pièces.</p>${this.intro('exterior')}${this.exteriorSource()}
   ${outdoorGroups.map(([title,keys])=>this.group(title,keys))}${this.airBlock()}${this.confirmBlock()}${this.errorBlock()}<div class="bottom"><button @click=${()=>this.cancel()}>Annuler</button><button class="primary" ?disabled=${this.busy} @click=${()=>this.save()}>Enregistrer l’extérieur</button></div>`;}
  private card(id:string){
   if(!customElements.get('niak-comfort-card'))return html`<p class="notice">L’aperçu de la carte apparaîtra après un rechargement de la page.</p>`;
@@ -382,18 +403,18 @@ export class ComfortSetup extends LitElement {
    <div class="found">${list.map(a=>{const ok=typeof a.suggestions.indoor_temperature==='string';return html`<div class="found-row"><label class="check"><input type="checkbox" ?disabled=${!ok} .checked=${this.picked.includes(a.area_id)} @change=${(e:Event)=>{const on=(e.target as HTMLInputElement).checked;this.picked=on?[...this.picked,a.area_id]:this.picked.filter(x=>x!==a.area_id);}}><span><strong>${a.name}</strong><span class="hint">${ok?this.detected(a.suggestions):a.temperatures>1?'Plusieurs températures : à choisir':'Aucune température trouvée'}</span></span></label>${ok?nothing:html`<button @click=${()=>this.start(a)}>Configurer</button>`}</div>`;})}</div>
    ${this.errorBlock()}<button class="primary" ?disabled=${this.busy||!n} @click=${()=>this.createAll()}>${n?`Créer ${n>1?'les '+n+' pièces':'la pièce'}`:'Cochez une pièce'}</button></section>`;}
  private home(){const s=this.snapshot!;const used=new Set(s.rooms.map(r=>r.config.area_id).filter((a):a is string=>!!a));const living=livingArea(s.areas,used);const areas=s.areas.filter(a=>!a.outdoor&&!used.has(a.area_id)&&(s.rooms.length||a!==living));
-  return html`${s.rooms.length&&this.health?html`<button class="link" @click=${()=>{this.page='health';this.saved='';}}>← État du logement</button>`:nothing}
-  <h1>${s.rooms.length?'Modifier le logement':'Mon logement'}</h1><p class="muted">Vos pièces et les mesures qui aident Niak à expliquer leur confort. Aucun équipement n’est commandé.</p>
-  ${!s.rooms.length&&this.overview?.some(a=>typeof a.suggestions.indoor_temperature==='string')?this.foundRooms():!s.rooms.length?html`<section class="start"><h2>Commençons par le Salon</h2>${living?html`<p>Niak a trouvé la pièce « ${living.name} » dans Home Assistant. Il vous proposera ses capteurs ; vous gardez, retirez ou complétez.</p><button class="primary" @click=${()=>this.start(living)}>Configurer le Salon</button>`:html`<p>Aucune pièce « Salon » dans Home Assistant : Niak crée une pièce libre et vous choisissez ses capteurs.</p><button class="primary" @click=${()=>this.start(null,'Salon')}>Créer le Salon</button>`}</section>`:html`<h2>Vos pièces</h2>${s.rooms.map(room=>html`<section class="room"><div><h3>${room.title}</h3><p class="hint">${coverage(room.config)}${room.config.area_id?'':' · pièce libre'}</p>${!room.loaded?html`<p class="warning hint">Le calcul de cette pièce n’est pas chargé. Vérifiez ses capteurs et les journaux de l’intégration.</p>`:nothing}</div><button @click=${()=>this.editRoom(room)}>Modifier</button></section>`)}`}
-  <section class="field"><h3>${s.rooms.length?'Ajouter une pièce':this.overview?'Une pièce sans pièce Home Assistant ?':'Ou commencer par une autre pièce'}</h3>${areas.length&&!(this.overview&&!s.rooms.length)?html`<p class="hint">Vos pièces Home Assistant : Niak proposera leurs capteurs.</p><div class="area-buttons">${areas.map(a=>html`<button @click=${()=>this.start(a)}>${a.name}</button>`)}</div>`:nothing}
-   <form class="free" @submit=${(e:Event)=>{e.preventDefault();void this.start(null,this.freeName);}}><label>Pièce libre, sans pièce Home Assistant<input type="text" maxlength="100" placeholder="Par exemple : Étage" .value=${this.freeName} @input=${(e:Event)=>this.freeName=(e.target as HTMLInputElement).value}></label><button type="submit">Créer</button></form></section>
-  ${s.rooms.length?html`<section class="field"><h2>Les cartes</h2><p>Dans un tableau de bord : <strong>Ajouter une carte</strong>, puis <strong>Niak Confort</strong> pour une pièce, ou <strong>Niak Confort · logement</strong> pour la synthèse de toutes les pièces.</p></section>`:nothing}<section class="field"><h2>L’extérieur du logement</h2><p>Température, humidité, pluie, vent, soleil et qualité de l’air dehors : vous les choisissez une fois, toutes vos pièces les utilisent.</p><p class="hint">${s.home.configured?exteriorSummary(s.home.sources):'Pas encore configuré'}${s.home.weather?' · relié à Niak Weather':s.niak_weather?.installed?' · Niak Weather peut le remplir pour vous':''}</p><button @click=${()=>this.editExterior()}>${s.home.configured?'Modifier l’extérieur':'Configurer l’extérieur'}</button></section>`;}
+  return html`
+  <h1>Pièces du logement</h1><p class="muted">Vos pièces et les mesures qui aident Niak à expliquer leur confort. Aucun équipement n’est commandé.</p>
+  ${!s.rooms.length&&this.overview?.some(a=>typeof a.suggestions.indoor_temperature==='string')?this.foundRooms():!s.rooms.length?html`<section class="start"><h2>Commençons par le Salon</h2>${living?html`<p>Niak a trouvé la pièce « ${living.name} » dans Home Assistant. Il vous proposera ses capteurs ; vous gardez, retirez ou complétez.</p><button class="primary" @click=${()=>this.start(living)}>Configurer le Salon</button>`:html`<p>Aucune pièce « Salon » dans Home Assistant : Niak crée une pièce libre et vous choisissez ses capteurs.</p><button class="primary" @click=${()=>this.start(null,'Salon')}>Créer le Salon</button>`}</section>`:html`<div class="room-list">${s.rooms.map(room=>html`<section class="room"><div><h3>${room.title}</h3><p class="hint">${coverage(room.config)}${room.config.area_id?'':' · pièce libre'}</p>${!room.loaded?html`<p class="warning hint">Le calcul de cette pièce n’est pas chargé. Vérifiez ses capteurs et les journaux de l’intégration.</p>`:nothing}</div><button ?disabled=${this.busy} @click=${()=>this.editRoom(room)}>Configurer</button></section>`)}</div>`}
+  ${frame(s.rooms.length?'Ajouter une pièce':this.overview?'Une pièce sans pièce Home Assistant ?':'Ou commencer par une autre pièce',html`${areas.length&&!(this.overview&&!s.rooms.length)?html`<p class="hint">Vos pièces Home Assistant : Niak proposera leurs capteurs.</p><div class="area-buttons">${areas.map(a=>html`<button @click=${()=>this.start(a)}>${a.name}</button>`)}</div>`:nothing}
+   <form class="free" @submit=${(e:Event)=>{e.preventDefault();void this.start(null,this.freeName);}}><label>Pièce libre, sans pièce Home Assistant<input type="text" maxlength="100" placeholder="Par exemple : Étage" .value=${this.freeName} @input=${(e:Event)=>this.freeName=(e.target as HTMLInputElement).value}></label><button type="submit">Créer</button></form>`)}
+  ${s.rooms.length?html`${frame('Les cartes',html`<p>Dans un tableau de bord : <strong>Ajouter une carte</strong>, puis <strong>Niak Confort</strong> pour une pièce, ou <strong>Niak Confort · logement</strong> pour la synthèse de toutes les pièces.</p>`)}`:nothing}${this.health?html`${this.health.todo.length?frame('À régler',html`<ul class="hl-lines">${this.health.todo.map(l=>this.hline(l))}</ul>`,{className:'todo'}):nothing}${this.health.tips.length?frame('À améliorer',html`<ul class="hl-lines">${this.health.tips.map(l=>this.hline(l))}</ul>`):nothing}<details class="health-details"><summary>Sources, conseils et état du logement</summary>${this.healthPage(true)}</details>`:this.healthError?html`<p class="notice" role="alert">Le bilan technique n’a pas pu être chargé. <button @click=${()=>void this.loadHealth()}>Réessayer</button></p>`:html`<p class="muted" role="status">Actualisation du bilan…</p>`}`;}
  protected render(){if(this.hass?.user?.is_admin===false)return html`<main><h1>Niak Confort</h1><p>La configuration du logement est réservée aux administrateurs Home Assistant.</p></main>`;
   const editing=!!(this.draft||this.exteriorDraft);
   // Inside the shared « Niak » panel, its header and tabs replace this one.
   const header=this.hasAttribute('embedded')?nothing:html`<header><button aria-label="Ouvrir le menu Home Assistant" @click=${()=>this.menu()}><span class="menu-icon"></span></button><strong>Niak Confort</strong></header>`;
   return html`${header}<main>${this.confirmDiscard?html`<section class="notice" role="alertdialog" aria-label="Abandonner le brouillon"><h2>Quitter sans enregistrer ?</h2><p>Vos choix de cette page seront perdus.</p><div class="actions"><button @click=${()=>this.confirmDiscard=false}>Continuer la configuration</button><button @click=${()=>this.discard()}>Quitter sans enregistrer</button></div></section>`:nothing}
    ${!editing?html`${this.errorBlock()}${this.error&&!this.snapshot?html`<button @click=${()=>this.load()}>Réessayer</button>`:nothing}`:nothing}${this.saved?html`<p class="notice success" role="status">${this.saved}</p>`:nothing}${this.busy&&!this.snapshot?html`<p class="loading" role="status">Chargement de votre logement…</p>`:nothing}
-   ${this.snapshot?(this.exteriorDraft?this.exterior():this.draft?this.wizard():this.preview?this.previewScreen():this.page==='health'&&this.health&&this.snapshot.rooms.length?this.healthPage():this.home()):nothing}${this.busy&&this.snapshot?html`<p class="busy" role="status">Un instant…</p>`:nothing}</main>`;
+   ${this.snapshot?(this.exteriorDraft?this.exterior():this.draft?this.wizard():this.preview?this.previewScreen():this.page==='health'&&this.snapshot.rooms.length?this.healthScreen():this.home()):nothing}${this.busy&&this.snapshot?html`<p class="busy" role="status">Un instant…</p>`:nothing}</main>`;
  }
 }

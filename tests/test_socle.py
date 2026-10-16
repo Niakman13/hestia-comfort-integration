@@ -93,6 +93,26 @@ class SocleTests(unittest.IsolatedAsyncioTestCase):
         await socle.async_register_brick(self.hass, brick(odd), "/a/niak-socle.js")
         self.assertEqual((await socle.async_overview(self.hass))["bricks"][0]["status"]["level"], "unknown")
 
+    async def test_the_sidebar_entry_can_be_hidden_and_the_panel_stays_open(self):
+        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
+        self.assertTrue((await socle.async_overview(self.hass))["sidebar"])
+        await socle.async_set_sidebar(self.hass, False)
+        panel = self.hass.data[DATA_PANELS]["niak"]
+        self.assertIsNone(panel.sidebar_title)  # gone from the sidebar, still served at /niak
+        self.assertEqual(self.module(), "/a/niak-socle.js")
+        self.assertFalse((await socle.async_overview(self.hass))["sidebar"])
+        await socle.async_set_sidebar(self.hass, True)
+        self.assertEqual(self.hass.data[DATA_PANELS]["niak"].sidebar_title, "Niak")
+
+    async def test_the_choice_survives_a_restart_and_applies_to_the_next_brick(self):
+        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
+        await socle.async_set_sidebar(self.hass, False)
+        self.hass.data.pop(socle.KEY)  # as after a restart: the file is all that remains
+        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
+        self.assertIsNone(self.hass.data[DATA_PANELS]["niak"].sidebar_title)
+        self.assertIn("niak/set_sidebar", self.hass.data[WS_DOMAIN])
+
+
 
 class ComfortStatusTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
