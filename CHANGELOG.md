@@ -1,3 +1,11 @@
+## 0.9.0-beta.10 — Défilement corrigé, verre dépoli, pièces qui défilent
+
+- Les conseils défilent vraiment : une mesure qui bouge (le CO₂ toutes les quelques secondes) ne relance plus le compte à rebours, qui restait bloqué sur le premier conseil.
+- La carte logement fait défiler les pièces qui demandent quelque chose, la plus urgente d’abord, avec le nom de la pièce.
+- L’échelle de température est posée sur un verre dépoli, comme la frise de Niak Weather ; le réglage « Effet de verre » le rend opaque.
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 0.9.0-beta.9 — Les conseils défilent, la carte se règle
 
 - Quand il y a plusieurs conseils, ils défilent dans le bandeau, un toutes les 4,5 s, comme dans Niak Weather : le plus important d’abord, une barre par conseil, pause au survol, un appui pour passer au suivant. La carte garde la hauteur du conseil le plus long : plus de saut quand le texte change.
