@@ -120,7 +120,9 @@ class AirTreatmentTests(unittest.TestCase):
 
     def test_the_ventilation_state_is_published(self):
         result = assess(self.room(ventilation=Reading(True, "valid", "fan.vmc")))
-        self.assertEqual(result.features["air"]["ventilation"], {"on": True})
+        self.assertEqual(result.features["air"]["ventilation"], {"on": True, "boost": False})
+        boost = assess(self.room(ventilation=Reading(False, "valid", "fan.vmc"), ventilation_boost=Reading(True, "valid", "fan.vmc_turbo")))
+        self.assertEqual(boost.features["air"]["ventilation"], {"on": True, "boost": True})
         self.assertIsNone(assess(self.room()).features["air"]["ventilation"])
 
 

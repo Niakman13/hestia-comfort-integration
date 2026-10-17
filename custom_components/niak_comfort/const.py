@@ -1,6 +1,6 @@
 """Stable keys for the first observation-only alpha."""
 DOMAIN = "niak_comfort"
-VERSION = "0.9.1-beta.1"
+VERSION = "0.9.2-beta.1"
 VIEW_VERSION = 1
 # A contact that opens for less than this is a bounce, not an opening to advise about.
 OPEN_DEBOUNCE_SECONDS = 60
@@ -9,7 +9,7 @@ SEASON_REFRESH_SECONDS = 3600
 SOURCES = {
     "indoor_temperature": "temperature", "outdoor_temperature": "temperature",
     "indoor_humidity": "humidity", "outdoor_humidity": "humidity", "co2": "co2",
-    "illuminance": "illuminance", "pm25": "pm25", "voc": "voc", "purifier": "purifier", "ventilation": "ventilation",
+    "illuminance": "illuminance", "pm25": "pm25", "voc": "voc", "purifier": "purifier", "ventilation": "ventilation", "ventilation_boost": "ventilation",
     "rain": "rain", "pollution": "pollution", "heating": "heating",
     "wind_gust": "wind", "wind_bearing": "bearing", "solar": "irradiance",
 }

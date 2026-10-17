@@ -82,7 +82,8 @@ export function slides(v:View):Slide[] {
   if(air?.purifier?.on===true){const pm=numeric(o.pm25),speed=air.purifier.speed;
     out.push({level:'calm',pill:'En cours',title:air.pm25_treated?'Le purificateur filtre':'Le purificateur tourne',
       line:pm!==null?html`Particules ${b(number(pm)+' µg/m³')}${speed!=null?` · il tourne à ${number(speed)} %`:''}`:speed!=null?html`Il tourne à ${b(number(speed)+' %')}`:'Il filtre l’air de la pièce',disk:'fan',cap:v.names?.[o.purifier?.source??'']??undefined});}
-  if(air?.ventilation?.on===true)out.push({level:'calm',pill:'En cours',title:'La ventilation renouvelle l’air',line:a.needs.includes('dry')?html`Elle aide à ${b('assécher')}`:'Renouvellement continu',disk:'vmc'});
+  if(air?.ventilation?.on===true){const fast=air.ventilation.boost===true;
+    out.push({level:'calm',pill:'En cours',title:'La ventilation renouvelle l’air',line:a.needs.includes('dry')?html`Elle aide à ${b('assécher')}${fast?' · grande vitesse':''}`:fast?html`En ${b('grande vitesse')}`:'Renouvellement continu',disk:'vmc',cap:fast?'Grande vitesse':undefined});}
   const silent=a.missing.some(k=>k in OUTSIDE&&!!o[k]);
   if(silent&&a.reason!=='verify_exterior')out.push({level:'neutral',pill:'À savoir',title:a.missing.includes('pollution')&&a.missing.filter(k=>k in OUTSIDE).length===1?'Air extérieur inconnu':'Mesure extérieure manquante',line:outsideGaps(v),disk:'ask',cap:'Le conseil reste valable'});
   if(a.slot&&a.slot.kind==='open'&&!['cooling_unavailable','precool_later'].includes(a.reason))out.push({level:'benefit',pill:'Plus tard',title:`Ouvrez vers ${hour(a.slot.time)}`,line:html`Dehors descendra à ${b(number(a.slot.temperature)+' °C')}`,disk:'moon'});
@@ -149,8 +150,9 @@ export function tiles(v:View,config:Config):Tile[] {
   if(mods.has('air')&&o.purifier){const on=o.purifier.quality==='valid'?o.purifier.value===true:null,speed=numeric(o.purifier_speed);
     // Running, it is a remedy at work: framed in green, like the measure it treats.
     list.push({ic:'fan',label:'Purificateur',value:on===null?'—':on?'En marche':'Arrêté',note:on?(speed!==null?`filtre à ${number(speed)} %`:'filtre l’air'):on===false?'à l’arrêt':'indisponible',level:on?'calm':'neutral',out:on===true});}
-  if(mods.has('air')&&o.ventilation){const on=o.ventilation.quality==='valid'?o.ventilation.value===true:null;
-    list.push({ic:'vmc',label:'Ventilation',value:on===null?'—':on?'En marche':'Arrêtée',note:on?'renouvelle l’air':on===false?'à l’arrêt':'indisponible',level:on?'calm':'neutral',out:on===true});}
+  const vent=air?.ventilation;
+  if(mods.has('air')&&vent){const on=vent.on,fast=vent.boost===true;
+    list.push({ic:'vmc',label:'Ventilation',value:on===null?'—':fast?'Rapide':on?'En marche':'Arrêtée',note:on?(fast?'grande vitesse':'renouvelle l’air'):on===false?'à l’arrêt':'indisponible',level:on?'calm':'neutral',out:on===true});}
   if(mods.has('coordination')&&o.heating){const label=heatingLabels[a.heating_action]??'Inconnu',running=a.heating_action==='heating';
     list.push({ic:'heat',label:'Chauffage',value:running?'Chauffe':label,note:running?'chauffe la pièce':'observé, jamais commandé',level:'neutral',out:false});}
   return list;

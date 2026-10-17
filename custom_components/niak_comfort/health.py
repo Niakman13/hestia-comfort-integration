@@ -16,12 +16,12 @@ from .discovery import INDOOR, catalog, effective_area, overview, suggestions
 GONE = ("unavailable", "unknown")
 COLUMNS = (("indoor_temperature", "Température"), ("indoor_humidity", "Humidité"), ("co2", "CO₂"), ("windows", "Ouvrants"), ("heating", "Chauffage"))
 # « Cuisine : le CO₂ ne répond pas »
-SUBJECTS = {"indoor_temperature": "la température", "indoor_humidity": "l’humidité", "co2": "le CO₂", "windows": "un ouvrant", "heating": "le chauffage", "illuminance": "la luminosité", "pm25": "les PM2.5", "voc": "les COV", "purifier": "le purificateur", "ventilation": "la ventilation", "presence": "la présence", "covers": "le volet", "shutter_auto": "l’automatisation du volet", "shutter_override": "la dérogation du volet",
+SUBJECTS = {"indoor_temperature": "la température", "indoor_humidity": "l’humidité", "co2": "le CO₂", "windows": "un ouvrant", "heating": "le chauffage", "illuminance": "la luminosité", "pm25": "les PM2.5", "voc": "les COV", "purifier": "le purificateur", "ventilation": "la ventilation", "ventilation_boost": "la grande vitesse de la ventilation", "presence": "la présence", "covers": "le volet", "shutter_auto": "l’automatisation du volet", "shutter_override": "la dérogation du volet",
             "outdoor_temperature": "la température", "outdoor_humidity": "l’humidité", "rain": "la pluie", "wind_gust": "les rafales",
             "wind_bearing": "la direction du vent", "solar": "l’ensoleillement", "pollution": "la pollution"}
 LOSS = {"indoor_temperature": "Le confort de la pièce n’est plus évalué.", "indoor_humidity": "L’humidité de la pièce est inconnue.",
         "co2": "Le conseil d’aération est en pause.", "windows": "Niak ne sait plus s’il est ouvert.", "heating": "Niak ne sait plus si le chauffage tourne."}
-LOSS.update({"illuminance": "La lumière intérieure est inconnue.", "pm25": "Les particules intérieures ne sont plus mesurées.", "voc": "Les COV ne sont plus mesurés.", "purifier": "Le fonctionnement du purificateur est inconnu.", "ventilation": "Le fonctionnement de la ventilation est inconnu.", "presence": "La présence reste inconnue.", "covers": "La position du volet est inconnue.", "shutter_auto": "L’automatisation est inconnue.", "shutter_override": "La dérogation est inconnue."})
+LOSS.update({"illuminance": "La lumière intérieure est inconnue.", "pm25": "Les particules intérieures ne sont plus mesurées.", "voc": "Les COV ne sont plus mesurés.", "purifier": "Le fonctionnement du purificateur est inconnu.", "ventilation": "Le fonctionnement de la ventilation est inconnu.", "ventilation_boost": "La grande vitesse de la ventilation est inconnue.", "presence": "La présence reste inconnue.", "covers": "La position du volet est inconnue.", "shutter_auto": "L’automatisation est inconnue.", "shutter_override": "La dérogation est inconnue."})
 GAINS = {"indoor_humidity": "repérer un air trop humide et savoir si aérer l’assèche",
          "co2": "savoir quand renouveler l’air", "heating": "ne pas conseiller d’ouvrir pendant que le chauffage tourne"}
 
@@ -182,7 +182,7 @@ async def facts(hass, version):
         config = {**entry.data, **entry.options}
         sources, windows = config.get("sources", {}), config.get("windows", [])
         room = Room(entry.entry_id, entry.title, entry.state.value == "loaded")
-        room.sensors = [_sensor(hass, key, sources[key], now) for key in ("indoor_temperature", "indoor_humidity", "co2", "heating", "illuminance", "pm25", "voc", "purifier", "ventilation") if sources.get(key)]
+        room.sensors = [_sensor(hass, key, sources[key], now) for key in ("indoor_temperature", "indoor_humidity", "co2", "heating", "illuminance", "pm25", "voc", "purifier", "ventilation", "ventilation_boost") if sources.get(key)]
         room.sensors += [_sensor(hass, "windows", w, now) for w in windows]
         room.sensors += [_sensor(hass, "presence", e, now) for e in config.get("presence", [])]
         for meta in config.get("openings", {}).values():
