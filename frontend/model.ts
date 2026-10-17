@@ -13,7 +13,7 @@ export interface Candidate {
 export interface Spec {entity_id:string;adapter:string;block_from?:number}
 export interface OpeningMeta {exposure:string|null;kind:string;sheltered:boolean;shutter?:'none'|'manual'|'connected';cover_entity?:string;auto_entity?:string;override_entity?:string;width?:number;height?:number;overhang_depth?:number;overhang_gap?:number}
 export interface EvolutionConfig {voc_threshold?:{value:number;unit:string};glazing_factor?:number;presence_delay_minutes?:number}
-export interface RoomConfig {presence?:string[];evolution?:EvolutionConfig;floor_id?:string|null;area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean}
+export interface RoomConfig {presence?:string[];evolution?:EvolutionConfig;floor_id?:string|null;area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean;heated?:boolean}
 export interface Room {entry_id:string;title:string;loaded:boolean;config:RoomConfig}
 export interface Area {floor_id?:string|null;area_id:string;name:string;outdoor:boolean}
 export interface Snapshot {version:1;revision:string;floors?:{floor_id:string;name:string;level:number|null}[];areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null};niak_weather?:{installed:boolean;places:{entry_id:string;title:string}[]};integrations?:{atmofrance?:boolean}}
@@ -51,7 +51,7 @@ export function newRoom(area:{area_id:string;name:string}|null,name:string,d:Dis
  const sources:Record<string,string>={};for(const key of [...indoor,'illuminance','co2','pm25','voc','purifier','heating']){const value=d.suggestions[key];if(typeof value==='string')sources[key]=value;}
  const windows=Array.isArray(d.suggestions.windows)?[...d.suggestions.windows]:[];
  const voc= d.candidates?.voc?.find(c=>c.entity_id===sources.voc),preset=vocPreset(voc);
- return {area_id:area?.area_id??null,name:area?.name??name,sources,presence:Array.isArray(d.suggestions.presence)?[...d.suggestions.presence]:[],windows,openings:Object.fromEntries(windows.map(id=>[id,defaultOpening()])),settings:{minimum:20,maximum:24,...airReferenceDefaults},...(preset?{evolution:{voc_threshold:preset}}:{}),acknowledged:[]};
+ return {area_id:area?.area_id??null,name:area?.name??name,sources,presence:Array.isArray(d.suggestions.presence)?[...d.suggestions.presence]:[],windows,openings:Object.fromEntries(windows.map(id=>[id,defaultOpening()])),settings:{minimum:20,maximum:24,summer_maximum:26,...airReferenceDefaults},...(preset?{evolution:{voc_threshold:preset}}:{}),acknowledged:[]};
 }
 // New rooms use these explained operating choices. Existing settings are never
 // replaced when opening the editor; backend defaults preserve older rooms.

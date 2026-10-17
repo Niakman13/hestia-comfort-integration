@@ -9,7 +9,7 @@ from homeassistant.core import callback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, SOURCES, VIEW_VERSION
+from .const import DOMAIN, OPEN_DEBOUNCE_SECONDS, SEASON_REFRESH_SECONDS, SOURCES, VIEW_VERSION
 from .engine.assessment import Opening, Settings, Sun, assess
 from .engine.sources import normalize, Reading
 from .configuration import DATA_CONFIG
@@ -34,6 +34,9 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.absent_since = {}
         self.history_reports = {}
         self.histories = {"temperature_history": deque(maxlen=360), "outdoor_history": deque(maxlen=360)}
+        # (computed at, seven-day outdoor mean or None): the seasonal comfort range follows it.
+        self.season = (None, None)
+        self._season_failed = False
 
     async def async_start(self):
         self.config_entry.async_on_unload(self.async_stopped)
@@ -98,6 +101,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
             start = starts.get(eid)
             return max(0, (now - start).total_seconds() / 60) if start else None
         return {**self.config.get("evolution", {}),
+                "heated": self.config.get("heated", True), "outdoor_mean_7d": self.season[1],
                 "opening_minutes": {e: minutes(e, self.opened_since, "on") for e in self.config.get("windows", [])},
                 "presence_off_minutes": {e: minutes(e, self.absent_since, "off") for e in self.config.get("presence", [])},
                 **{k: list(v) for k, v in self.histories.items()}}
@@ -147,6 +151,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
             if state and state.attributes.get("percentage") is not None:
                 readings["purifier_speed"] = self._reading(selected["purifier"], "purifier_speed", now)
         outlook = weather_link.outlook(self.hass, self._weather_place())
+        await self._refresh_season(now)
         self.previous = assess(readings, self.settings, self.previous, openings, self._sun(), outlook, now, context=self._context(now, readings))
         return {"version": VIEW_VERSION, "entry_id": self.entry_id,
                 "area_id": self.config.get("area_id"), "title": self.config.get("name"),
@@ -154,6 +159,42 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 "computed_at": now.isoformat(), "assessment": self.previous.to_dict(),
                 "observations": {k: asdict(v) for k, v in readings.items()},
                 "names": {e: (state.name if (state := self.hass.states.get(e)) else e) for e in windows}}
+
+    def _outdoor_entity(self):
+        if self.home_configuration:
+            sources = self.home_configuration.effective_sources(self.config)
+        else:
+            sources = {k: {"entity_id": v} for k, v in self.config.get("sources", {}).items()}
+        spec = sources.get("outdoor_temperature")
+        return spec["entity_id"] if spec else None
+
+    async def _refresh_season(self, now):
+        stamp = self.season[0]
+        if stamp and (now - stamp).total_seconds() < SEASON_REFRESH_SECONDS:
+            return
+        self.season = (now, await self._outdoor_mean(now))
+
+    async def _outdoor_mean(self, now):
+        """Seven-day mean of the outdoor temperature from hourly statistics; None when not known."""
+        entity_id = self._outdoor_entity()
+        if not entity_id:
+            return None
+        try:
+            from homeassistant.components.recorder import get_instance
+            from homeassistant.components.recorder.statistics import statistics_during_period
+            stats = await get_instance(self.hass).async_add_executor_job(
+                statistics_during_period, self.hass, now - timedelta(days=7), now, {entity_id}, "hour", None, {"mean"})
+        except Exception:  # the comfort range then simply stays as saved
+            if not self._season_failed:
+                self._season_failed = True
+                self.logger.warning("Seasonal comfort range unavailable: outdoor statistics could not be read", exc_info=True)
+            return None
+        means = [row["mean"] for row in stats.get(entity_id, []) if isinstance(row.get("mean"), (int, float))]
+        # Three days of hourly means at least: a recent sensor must not set the season alone.
+        if len(means) < 72:
+            return None
+        value = sum(means) / len(means)
+        return value if -40 <= value <= 60 else None
 
     def _weather_place(self):
         home = self.home_configuration.home if self.home_configuration else {}
@@ -184,6 +225,12 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 unit = "%"
         # HA last_reported tracks reception even when the measured value is unchanged.
         # It is not the sensor's physical sampling time.
-        return normalize(kind, raw, unit,
-                         source=entity_id, reported_at=state.last_reported if state else None,
-                         now=now, max_age=None if kind in STATE_KINDS else self.settings.max_age_seconds)
+        reading = normalize(kind, raw, unit,
+                            source=entity_id, reported_at=state.last_reported if state else None,
+                            now=now, max_age=None if kind in STATE_KINDS else self.settings.max_age_seconds)
+        if kind == "window" and reading.value is True:
+            since = self.opened_since.get(entity_id)
+            # A contact that bounces (open for a few seconds) is not an opening: advice waits for a real one.
+            if since and (now - since).total_seconds() < OPEN_DEBOUNCE_SECONDS:
+                return replace(reading, value=False, detail="debounce")
+        return reading

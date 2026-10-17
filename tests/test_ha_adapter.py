@@ -51,6 +51,35 @@ class AdapterFixture(unittest.IsolatedAsyncioTestCase):
 
 
 class AdapterTests(AdapterFixture):
+    async def test_a_bouncing_contact_is_not_an_opening_until_it_lasts(self):
+        coordinator = ComfortCoordinator(self.hass, self.entry)
+        self.hass.states.async_set("binary_sensor.window", "on")
+        coordinator.opened_since["binary_sensor.window"] = dt_util.utcnow()
+        data = await coordinator._async_update_data()
+        self.assertFalse(data["observations"]["window:binary_sensor.window"]["value"])
+        coordinator.opened_since["binary_sensor.window"] = dt_util.utcnow() - timedelta(seconds=120)
+        data = await coordinator._async_update_data()
+        self.assertTrue(data["observations"]["window:binary_sensor.window"]["value"])
+
+    async def _season(self, rows):
+        class FakeRecorder:
+            async def async_add_executor_job(self, function, *args):
+                return {"sensor.outside": rows}
+        coordinator = ComfortCoordinator(self.hass, self.entry)
+        with patch("homeassistant.components.recorder.get_instance", return_value=FakeRecorder()):
+            data = await coordinator._async_update_data()
+        return data["assessment"]["features"]["season"]
+
+    async def test_the_comfort_range_follows_the_recorded_outdoor_mean(self):
+        season = await self._season([{"mean": 21.0}] * 100)
+        self.assertTrue(season["known"])
+        self.assertEqual(season["maximum"], 26)
+
+    async def test_too_few_statistics_keep_the_saved_range(self):
+        season = await self._season([{"mean": 21.0}] * 10)
+        self.assertFalse(season["known"])
+        self.assertEqual(season["maximum"], 24)
+
     async def test_real_state_mapping_and_sensor_output(self):
         coordinator = ComfortCoordinator(self.hass, self.entry)
         coordinator.data = await coordinator._async_update_data()

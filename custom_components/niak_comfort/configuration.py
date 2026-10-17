@@ -171,6 +171,9 @@ class Configuration:
         if not isinstance(settings, dict):
             raise ValueError("Préférences de confort invalides.")
         settings = asdict(Settings(**{**AIR_DEFAULTS, **settings}))
+        heated = payload.get("heated", True)
+        if not isinstance(heated, bool):
+            raise ValueError("« Pièce chauffée » doit être oui ou non.")
         legacy_sheltered = payload.get("rain_exposed") is False
         openings = payload.get("openings", {})
         if not isinstance(openings, dict):
@@ -231,7 +234,7 @@ class Configuration:
         cleaned = {"name": name.strip(), "area_id": area_id, "floor_id": floor_id, "sources": cleaned_sources,
                    "windows": list(dict.fromkeys(windows)), "openings": cleaned_openings, "settings": settings,
                    "presence": list(dict.fromkeys(presence)), "evolution": cleaned_evolution, "use_home": not legacy,
-                   "air_reference_version": AIR_REFERENCE_VERSION}
+                   "air_reference_version": AIR_REFERENCE_VERSION, "heated": heated}
         return cleaned, warnings
 
     @staticmethod
