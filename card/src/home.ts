@@ -1,10 +1,12 @@
 import {html,LitElement,unsafeCSS,nothing,type PropertyValues} from 'lit';
 import {property,state} from 'lit/decorators.js';
 import style from './ui/charter.css';
-import {isView,number,numeric,summary,levelLabels,evolutionLines} from './view';
-import {icon} from './ui/icons';
-import {MODULES} from './types';
-import type {Connection,HomeAssistant,Unsubscribe,View} from './types';
+import charte from './ui/niak-charte.css';
+import roomStyle from './ui/room.css';
+import {html as h2} from 'lit';
+import {isView,number,numeric} from './view';
+import {advice,scale,fold,hero,tileSummary,type CardState} from './views/room';
+import type {Connection,HomeAssistant,Unsubscribe,View,Level} from './types';
 
 interface FloorRef {floor_id:string|null;name:string;level:number|null}
 interface Floor extends FloorRef {room_ids:string[];mean:number|null;measured:number;total:number;hottest:{title:string;temperature:number}|null}
@@ -21,12 +23,14 @@ interface HomeConfig {type:'custom:niak-comfort-home-card';title?:string;theme?:
 
 /** The home card: a synthesis of every room. It never replaces the room cards' advice. */
 export class NiakComfortHomeCard extends LitElement {
-  static styles=unsafeCSS(style);
+  static styles=[unsafeCSS(style),unsafeCSS(charte),unsafeCSS(roomStyle)];
   @property({attribute:false}) hass?:HomeAssistant;
   @state() private config?:HomeConfig;
   @state() private rooms:View[]=[];
   @state() private home?:Home;
   @state() private problem?:string;
+  @state() private folds:Record<string,boolean>={};
+  private uid=`nch-${Math.random().toString(36).slice(2,8)}`;
   private connection?:Connection;
   private unsubscribe?:Unsubscribe;
   private retry?:ReturnType<typeof setTimeout>;
@@ -40,6 +44,7 @@ export class NiakComfortHomeCard extends LitElement {
     if(changed.has('hass'))this.connect();
     const theme=this.config?.theme==='auto'||!this.config?.theme?(this.hass?.themes?.darkMode===false?'light':'dark'):this.config.theme;
     this.setAttribute('theme',theme);
+    if(this.config?.theme==='light'||this.config?.theme==='dark')this.setAttribute('forced',this.config.theme);else this.removeAttribute('forced');
   }
   private stop(){this.generation++;if(this.retry)clearTimeout(this.retry);this.retry=undefined;const remove=this.unsubscribe;this.unsubscribe=undefined;this.connection=undefined;if(remove)void Promise.resolve().then(()=>remove()).catch(()=>{});}
   private connect(){
@@ -55,35 +60,54 @@ export class NiakComfortHomeCard extends LitElement {
   }
   private later(){if(this.retry)return;this.retry=setTimeout(()=>{this.retry=undefined;this.connection=undefined;this.connect();},4000);}
   private open(view:View){history.pushState(null,'','/niak/confort/'+encodeURIComponent(view.entry_id));window.dispatchEvent(new CustomEvent('location-changed',{detail:{replace:false}}));}
-  private facts(h:Home){
-    const f=[];
-    if(h.hottest&&h.coolest)f.push(html`<span class="chip">${icon('temp')}Plus chaude : ${h.hottest.title} ${number(h.hottest.temperature)} °C</span><span class="chip">${icon('cold')}Plus fraîche : ${h.coolest.title} ${number(h.coolest.temperature)} °C</span>`);
-    if(h.start_with)f.push(html`<span class="chip strong">${icon('open')}Commencez par : ${h.start_with}${h.start_floor?` · ${h.start_floor.name}`:''}</span>`);
-    if(h.open_rooms.length)f.push(html`<span class="chip">${icon('open')}Ouvert : ${h.open_rooms.map(r=>`${r.title} (${r.open.length})`).join(', ')}</span>`);
-    if(h.crossing==='strong')f.push(html`<span class="chip">${icon('air')}Façades opposées ouvertes · passage de l’air à vérifier</span>`);
-    else if(h.crossing==='partial')f.push(html`<span class="chip">${icon('air')}Deux façades ouvertes</span>`);
-    for(const s of h.sun_entering)f.push(html`<span class="chip warn">${icon('sun')}Soleil qui entre : ${s.title}</span>`);
-    if(h.floor_contrast){const c=h.floor_contrast;f.push(html`<span class="chip">${c.warmer} : ${number(c.difference)} °C de plus que ${c.cooler}${c.partial?' · mesures incomplètes':''}</span>`);}
-    return f.length?html`<div class="home-facts">${f}</div>`:nothing;
+  private state():CardState{
+    const o=this.folds,get=(k:string)=>o[k]??false;
+    return {why:get('why'),tilesOpen:get('tilesOpen'),detailsOpen:get('detailsOpen'),uid:this.uid,toggle:k=>{const cur=this.folds;this.folds={...cur,[k]:!(cur[k]??false)};}};
   }
-  private room(r:View){const lines=evolutionLines(r,[...MODULES]);return html`<button class="home-room" data-level=${r.assessment.level} @click=${()=>this.open(r)} title="Configurer ${r.title}"><span class="dot"></span><strong>${r.title}</strong><span class="home-room-advice">${['action','urgent','benefit'].includes(r.assessment.level)?summary(r)[0]:numeric(r.observations.indoor_temperature)===null?'Mesure indisponible':''}</span><span class="home-room-temp">${number(numeric(r.observations.indoor_temperature))}<small> °C</small></span></button>${lines.length?html`<details class="explanation"><summary>Suivi et conseils · ${r.title}</summary>${lines.map(l=>html`<div class="reason-row"><strong>${l.title}</strong><p>${l.text}</p></div>`)}</details>`:nothing}`;}
+  /** Short names for the scale: « Chambre AL » → AL, « Salle de bain » → SB, « Salon » → S; never twice the same. */
+  private shorts(rooms:View[]):Map<string,string>{
+    const out=new Map<string,string>(),used=new Set<string>();
+    for(const r of rooms){const words=r.title.trim().split(/\s+/).filter(w=>!/^(de|du|des|la|le|les|d’|d')$/i.test(w));
+      let s=words.length>1&&words[words.length-1].length<=3?words[words.length-1].toUpperCase():words.length>1?words.map(w=>w[0]).join('').toUpperCase():r.title.slice(0,1).toUpperCase();
+      if(used.has(s))s=r.title.slice(0,2);used.add(s);out.set(r.entry_id,s);}
+    return out;
+  }
+  private roomTile(r:View){
+    const t=numeric(r.observations.indoor_temperature),a=r.assessment,lvl=a.level as Level,unheated=a.features?.season?.heated===false;
+    const note=t===null?'mesure indisponible':a.needs.includes('cool')?'trop chaud':a.needs.includes('heat')?'trop frais':unheated?'non chauffée':['action','urgent'].includes(lvl)?advice(r).title.toLowerCase():'dans votre plage';
+    const out=['action','urgent'].includes(lvl);
+    return h2`<button class=${'nc-tile'+(out?' out':'')} data-level=${unheated&&!out?'neutral':lvl} @click=${()=>this.open(r)} title=${'Configurer '+r.title}><div class="nc-tile-h"><span class="nw-label">${r.title}</span></div><b>${number(t)}<small>°C</small></b><em>${note}</em></button>`;
+  }
+  private details(h:Home){
+    const row=(t:string,x:string)=>h2`<li><b>${t}</b><span> · ${x}</span></li>`,out=[];
+    if(h.start_with)out.push(row('Commencez par',h.start_with+(h.start_floor?` (${h.start_floor.name})`:'')));
+    if(h.floor_contrast){const c=h.floor_contrast;out.push(row(c.warmer,`${number(c.difference)} °C de plus que ${c.cooler}${c.partial?' · mesures incomplètes':''}`));}
+    if(h.hottest&&h.coolest)out.push(row('Écart entre pièces',`${number(h.spread)} °C (${h.hottest.title} la plus chaude, ${h.coolest.title} la plus fraîche)`));
+    if(h.ventilation){const v=h.ventilation;out.push(row(v.kind==='cross'?'Air traversant':'Effet cheminée',`${v.openings.map(o=>`${o.title} — ${o.name}`).join(' + ')}${v.engaged?' · déjà ouverts':''}`));}
+    if(h.open_rooms.length)out.push(row('Ouvert',h.open_rooms.map(r=>`${r.title} (${r.open.length})`).join(', ')));
+    for(const s of h.sun_entering)out.push(row('Soleil qui entre',s.title));
+    if(h.partial)out.push(row('Bilan','sur les mesures disponibles'));
+    return out;
+  }
   protected render(){
     if(!this.config)return nothing;
     const h=this.home;
     if(!h){const text=this.problem==='not_configured'?['Aucune pièce','Ouvrez Niak Confort dans la barre latérale pour configurer vos pièces.']:this.problem?['Connexion indisponible','La carte réessaie automatiquement.']:['Chargement du logement','En attente des pièces.'];
       return html`<ha-card class="nc-card problem" data-level="neutral" role="status"><h2>${text[0]}</h2><p>${text[1]}</p></ha-card>`;}
-    const focus=this.rooms.find(r=>r.entry_id===h.focus),calm=!focus||focus.assessment.level==='calm';
-    const [title,text]=focus&&!calm?summary(focus):[h.partial?'Bilan du logement incomplet':'Tout va bien dans le logement',h.partial?'Bilan sur les mesures disponibles.':'Toutes les pièces sont dans vos repères.'];
-    const temps=this.rooms.map(r=>numeric(r.observations.indoor_temperature)).filter((t):t is number=>t!==null);
-    return html`<ha-card class="nc-card home-card" data-level=${h.level}>
-      <div class="hero home-hero"><div class="hero-head"><h2>${this.config.title||'Confort · Mon logement'}</h2><span class="source-chip">${icon('home')}${this.rooms.length} pièce${this.rooms.length>1?'s':''}</span></div>
-        <div class="hero-text"><span class="status">${icon(calm?'check':'alert')}${levelLabels[h.level as keyof typeof levelLabels]??''}</span><h3>${focus&&!calm?html`${focus.title} · ${title}`:title}</h3><p>${text}</p></div></div>
-      <div class="exchange" aria-label="Dedans et dehors"><div><div class="measure-name">Dedans</div><div class="measure-value range">${temps.length?number(Math.min(...temps)):'—'}${temps.length>1?html`<small>–</small>${number(Math.max(...temps))}`:nothing}<small>°C</small></div></div>
-        <div class="exchange-line">${h.spread!==null?`${number(h.spread)} °C d’écart entre pièces`:'Écart entre pièces inconnu'}</div>
-        <div class="outside"><div class="measure-name">Dehors</div><div class="measure-value">${number(h.outdoor_temperature)}<small>°C</small></div></div></div>
-      ${h.floors?.length?html`${h.floors.map(f=>html`<section class="home-floor"><div class="home-floor-heading"><h3>${h.floors!.length===1?'Mon logement':f.name}</h3><strong>${number(f.mean)} °C <small>· moyenne</small></strong></div><p class="home-floor-coverage">${f.measured} pièce${f.measured>1?'s':''} mesurée${f.measured>1?'s':''} sur ${f.total}${f.hottest?` · Plus chaude : ${f.hottest.title} (${number(f.hottest.temperature)} °C)`:''}</p><div class="home-rooms">${this.rooms.filter(r=>f.room_ids.includes(r.entry_id)).map(r=>this.room(r))}</div></section>`)}`:html`<div class="home-rooms">${this.rooms.map(r=>this.room(r))}</div>`}
-      ${h.ventilation?html`<div class="home-ventilation"><strong>${h.ventilation.engaged?'Ouvertures engagées':h.ventilation.kind==='cross'?'Aération traversante possible':'Effet cheminée possible'}</strong><p>${h.ventilation.openings.map(o=>`${o.title} — ${o.name}`).join(' + ')}.</p><p>${h.ventilation.engaged?'Ces ouvrants sont ouverts.':'Associez ces ouvertures si le passage intérieur est libre.'} ${h.ventilation.kind==='combined'?'Le vent peut aider le tirage entre les niveaux.':''}</p><details><summary>Pourquoi ce conseil ?</summary><p>L’air extérieur est plus frais et les conditions suivies de ces pièces permettent le rafraîchissement. ${h.ventilation.kind==='cross'?'Les ouvrants donnent sur des façades opposées.':'Les ouvertures se situent sur deux niveaux différents ; un tirage thermique est possible, même sans vent.'} Le passage intérieur doit rester libre. Le débit et la circulation réelle de l’air ne sont pas mesurés.</p></details></div>`:nothing}
-      ${this.facts(h)}
+    const focus=this.rooms.find(r=>r.entry_id===h.focus),calm=!focus||['calm','neutral'].includes(focus.assessment.level);
+    const ad=focus&&!calm?advice(focus):{title:h.partial?'Bilan partiel':'Rien à faire',line:h2`Toutes les pièces sont <b>${h.partial?'suivies avec les mesures disponibles':'dans votre plage'}</b>`,disk:h.open_rooms.length?'open':'check',cap:h.open_rooms.length?undefined:'Tout est fermé'};
+    if(focus&&!calm)ad.line=h.start_with&&focus.assessment.needs.includes('cool')?h2`Commencez par <b>${h.start_with}</b>`:h2`<b>${focus.title}</b> · ${ad.line}`;
+    const shorts=this.shorts(this.rooms),season=(focus??this.rooms[0])?.assessment.features?.season;
+    const rooms=this.rooms.flatMap(r=>{const t=numeric(r.observations.indoor_temperature);return t===null?[]:[{name:r.title,short:shorts.get(r.entry_id)!,value:t,level:(r.assessment.features?.season?.heated===false&&!['action','urgent'].includes(r.assessment.level)?'neutral':r.assessment.level) as Level}];});
+    const st=this.state(),floors=h.floors?.length?h.floors:[{floor_id:null,name:'Mon logement',level:null,room_ids:this.rooms.map(r=>r.entry_id),mean:null,measured:0,total:0,hottest:null}];
+    const all=this.rooms.map(r=>this.roomTile(r)),outside=this.rooms.filter(r=>['action','urgent'].includes(r.assessment.level));
+    const body=h2`<div class="nc-tiles">${floors.map(f=>h2`${floors.length>1?h2`<div class="nc-floor"><span class="nw-label">${f.name}</span><b>${number(f.mean)} °C</b></div>`:nothing}${this.rooms.filter(r=>f.room_ids.includes(r.entry_id)).map(r=>this.roomTile(r))}`)}</div>`;
+    return html`<ha-card class="nc-c" data-level=${h.level}>
+      ${hero({name:this.config.title||'Mon logement',level:h.level as Level,advice:ad,scaleLabel:'Les pièces',scale:scale({band:season?[season.minimum,season.maximum]:null,out:h.outdoor_temperature,rooms}),st,why:h2`<p><b>Pièce suivie de près</b> · ${focus?focus.title:'aucune'}</p><p><b>Bilan</b> · ${h.partial?'mesures incomplètes dans au moins une pièce':'toutes les pièces répondent'}</p>`})}
+      <div class="nc-body">
+        ${fold({label:'Pièces',summary:tileSummary(all.length,outside.length,'pièce'),open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:this.uid+'-rooms',body,keep:outside.map(r=>this.roomTile(r))})}
+        ${fold({label:'Détails',summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:this.uid+'-details',body:h2`<ul class="nc-list">${this.details(h)}</ul>`})}
+      </div>
     </ha-card>`;
   }
 }

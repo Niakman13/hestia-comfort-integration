@@ -327,6 +327,14 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     extended = features(readings, settings, context, openings, sun, details,
                         needs, action, reason, now, ai, ae, air_detail)
     extended["season"] = {**season, "heated": heated}
+    # The last 24 hours of the room, widened by the current reading (statistics stop at the last full hour).
+    day = context.get("indoor_day_range")
+    if (isinstance(day, Mapping) and all(isinstance(day.get(k), (int, float)) and not isinstance(day.get(k), bool) and math.isfinite(day[k]) for k in ("min", "max"))
+            and day["min"] <= day["max"]):
+        low, high = (min(day["min"], ti), max(day["max"], ti)) if ti is not None else (day["min"], day["max"])
+        extended["day_range"] = {"min": round(low, 1), "max": round(high, 1)}
+    else:
+        extended["day_range"] = None
     # A solar protection opportunity does not change the contact action. Existing
     # room needs and safety reasons retain their original priority.
     if (not constraints and reason == "within_comfort" and level == "calm"

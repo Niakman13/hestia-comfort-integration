@@ -1,7 +1,6 @@
 import {LitElement,html,css,type PropertyValues} from 'lit';
 import {property,state} from 'lit/decorators.js';
-import {cleanConfig,MODULES,type Config,type Module,type HomeAssistant,type Entry} from './types';
-import {moduleLabels} from './views/panel';
+import {cleanConfig,MODULES,moduleLabels,type Config,type Module,type HomeAssistant,type Entry} from './types';
 import {icon} from './ui/icons';
 
 export class ComfortEditor extends LitElement {

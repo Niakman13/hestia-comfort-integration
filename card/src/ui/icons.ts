@@ -22,6 +22,12 @@ const paths:Record<string,string>={
   cloud:'<path d="M6 18a5 5 0 0 1-1-10 7 7 0 0 1 13-2 6 6 0 0 1 0 12H6Z"/>',
   home:'<path d="m3 11 9-8 9 8M5 9v12h14V9M10 21v-7h4v7"/>',
   link:'<path d="m10 14 4-4m-5-3 2-2a5 5 0 0 1 7 7l-2 2M8 10l-2 2a5 5 0 0 0 7 7l2-2"/>',
-  alert:'<path d="m12 3 10 18H2L12 3Zm0 6v5m0 3v.1"/>'
+  alert:'<path d="m12 3 10 18H2L12 3Zm0 6v5m0 3v.1"/>',
+  ask:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  shut:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M17 12H8m3-3-3 3 3 3"/>',
+  pm:'<circle cx="7" cy="8" r="1.4"/><circle cx="14" cy="6" r="1.1"/><circle cx="18" cy="11" r="1.4"/><circle cx="10" cy="14" r="1.1"/><circle cx="16" cy="17" r="1.3"/><circle cx="7" cy="19" r="1"/>',
+  flask:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/>',
+  fan:'<circle cx="12" cy="12" r="2"/><path d="M12 10c-1-4 0-7 3-7 2 0 2 3-1 7m-2 4c1 4 0 7-3 7-2 0-2-3 1-7m2-2c4-1 7 0 7 3 0 2-3 2-7-1m-4 0c-4 1-7 0-7-3 0-2 3-2 7 1"/>'
 };
 export const icon = (name:string, cls='') => html`<svg class=${'icon '+cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${unsafeSVG(paths[name]??paths.info)}</svg>`;

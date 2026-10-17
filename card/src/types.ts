@@ -4,6 +4,7 @@ export const MODULES = ['windows','air','temperature','humidity','shutters','coo
 export type Level = typeof LEVELS[number];
 export type Module = typeof MODULES[number];
 export type Format = 'mini'|'tile'|'intermediate'|'full';
+export const moduleLabels:Record<Module,string>={windows:'Fenêtres',air:'Qualité de l’air',temperature:'Température',humidity:'Humidité',shutters:'Soleil et volets',coordination:'Lien chauffage'};
 export interface Config {
   type: 'custom:niak-comfort-card'; entry_id?: string; title?: string; format?: Format;
   modules?: Module[]; animations?: boolean; glass_effect?: boolean; theme?: 'auto'|'light'|'dark';
@@ -19,6 +20,8 @@ export interface Features {
  ventilation?:{opened_minutes:number|null;duration_minutes:{min:number;max:number}|null;message:string;capacity:number|null};
  humidity?:{dew_point:number|null;incoming_relative:number|null;glass_temperature:number|null;condensation_risk:boolean|null;message:string};
  trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string};
+ season?:{known:boolean;weight:number|null;outdoor_mean:number|null;minimum:number;maximum:number;heated:boolean};
+ day_range?:{min:number;max:number}|null;
 }
 export interface Assessment {
   features?:Features;

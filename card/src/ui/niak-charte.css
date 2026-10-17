@@ -1,0 +1,71 @@
+/* CHARTE COMMUNE NIAK — jetons et pièces partagés par toutes les cartes Niak.
+   Valeurs reprises de la carte Niak Weather (card/src/ui/charter.ts), qui fait référence.
+   Modifier ICI, puis recopier avec charte/copier.sh dans chaque carte : jamais directement dans une brique. */
+:host {
+  /* Couleurs du thème Home Assistant, avec replis. */
+  --nw-fg: var(--primary-text-color, #212121);
+  --nw-fg2: var(--secondary-text-color, #727272);
+  --nw-bg: var(--ha-card-background, var(--card-background-color, #fff));
+  --nw-accent: var(--primary-color, #03a9f4);
+  /* Contours et arrondis : un seul arrondi pour toutes les boîtes, un pour les pastilles. */
+  --nw-line: color-mix(in srgb, var(--nw-fg) 13%, transparent);
+  --nw-line-soft: color-mix(in srgb, var(--nw-fg) 8%, transparent);
+  --nw-radius-card: var(--ha-card-border-radius, 12px);
+  --nw-radius: 14px;
+  --nw-radius-pill: 999px;
+  --nw-glass-strong: color-mix(in srgb, var(--nw-bg) 84%, transparent);
+  --nw-blur: blur(6px) saturate(1.2);
+  --nw-pad-panel: 18px 20px;
+  /* Six tailles de texte, rien d'autre : étiquette 10 · secondaire 12 · texte 13 · titre 17 · valeur 30 · température 42. */
+  --nw-fs-label: 10px; --nw-fs-small: 12px; --nw-fs-text: 13px; --nw-fs-title: 17px; --nw-fs-value: 30px; --nw-fs-temp: 42px;
+  --nw-label-spacing: .6px;
+  /* Couleurs de sens, palette « Aube » (OKLCH, même clarté et même saturation). Un thème peut les remplacer. */
+  --nw-rain: var(--niak-rain-color, oklch(.8 .07 190));
+  --nw-wind: var(--niak-wind-color, oklch(.79 .075 280));
+  --nw-heat: var(--niak-heat-color, oklch(.83 .085 42));
+  --nw-cold: var(--niak-cold-color, oklch(.85 .05 220));
+  --nw-calm: var(--niak-calm-color, oklch(.83 .075 150));
+  --nw-pressure: var(--niak-pressure-color, oklch(.78 .07 315));
+  --nw-level1: var(--niak-level1-color, oklch(.88 .1 96));
+  --nw-level2: var(--niak-level2-color, oklch(.81 .105 64));
+  --nw-level3: var(--niak-level3-color, oklch(.74 .115 18));
+  /* Part de couleur dans un texte coloré : 34 % reste lisible (contraste 4,5:1). */
+  --nw-ink: 34%;
+  --nw-ease: cubic-bezier(.2, .8, .2, 1);
+  --nw-expand: .45s;
+}
+button { font:inherit; color:inherit; }
+button:focus-visible { outline:2px solid var(--nw-accent); outline-offset:2px; }
+.sr { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+/* Étiquette en petites capitales, une seule taille partout. */
+.nw-label { font-size:var(--nw-fs-label); line-height:13px; font-weight:700; letter-spacing:var(--nw-label-spacing); text-transform:uppercase; color:var(--nw-fg2); white-space:nowrap; }
+/* Texte coloré toujours lisible : la couleur de sens mélangée au texte. */
+.nw-ink { font-size:var(--nw-fs-small); font-weight:600; color:color-mix(in oklab, var(--c) var(--nw-ink), var(--nw-fg)); }
+/* Pastille de source : une seule règle. */
+.nw-badge { display:inline-flex; align-items:center; font-size:var(--nw-fs-small); line-height:18px; font-weight:500; white-space:nowrap; padding:3px 10px;
+  border-radius:var(--nw-radius-pill); border:1px solid var(--nw-line); background:color-mix(in srgb, var(--nw-bg) 70%, transparent); color:var(--nw-fg);
+  max-width:100%; overflow:hidden; text-overflow:ellipsis; box-sizing:border-box; }
+/* Pastille d'info teintée. */
+.nw-chip { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:var(--nw-radius-pill); font-size:var(--nw-fs-small); line-height:18px; font-weight:600;
+  white-space:nowrap; border:1px solid transparent; background:color-mix(in oklab, var(--c) 24%, transparent); color:color-mix(in oklab, var(--c) var(--nw-ink), var(--nw-fg)); }
+.nw-chips { display:flex; flex-wrap:wrap; gap:8px; }
+/* Cadre : toutes les boîtes. */
+.nw-panel { background:var(--nw-bg); border:1px solid var(--nw-line); border-radius:var(--nw-radius); padding:var(--nw-pad-panel); min-width:0; box-sizing:border-box; }
+.nw-panel-icon { display:grid; place-items:center; width:32px; height:32px; border-radius:10px; flex:none;
+  background:color-mix(in oklab, var(--c) 28%, transparent); color:color-mix(in oklab, var(--c) 60%, var(--nw-fg)); }
+/* Légende : toujours centrée sous son graphique. */
+.nw-legend { display:flex; justify-content:center; flex-wrap:wrap; gap:6px 16px; font-size:var(--nw-fs-small); color:var(--nw-fg2); }
+.nw-legend span { display:inline-flex; align-items:center; gap:6px; }
+/* Une valeur posée sur un graphique. */
+.nw-pill { position:absolute; transform:translate(-50%, -130%); font-size:var(--nw-fs-small); font-weight:700; padding:2px 8px; border-radius:var(--nw-radius-pill);
+  background:var(--nw-bg); border:1px solid var(--nw-line); box-shadow:0 2px 6px #0001; white-space:nowrap; }
+/* Bouton « i ». */
+.nw-info { display:inline-grid; place-items:center; width:22px; height:22px; padding:0; flex:none; border-radius:50%; border:1px solid var(--nw-line);
+  background:var(--nw-bg); color:var(--nw-fg2); cursor:pointer; }
+.nw-info:hover { color:var(--nw-fg); border-color:color-mix(in srgb, var(--nw-fg) 30%, transparent); }
+/* Section repliable : étiquette, résumé, chevron rond (vers le bas replié, vers le haut ouvert). */
+.nw-fold-head { display:flex; align-items:center; gap:10px; width:100%; border:0; background:none; padding:0; cursor:pointer; text-align:left; }
+.nw-fold-head .nw-sum { flex:1; min-width:0; font-size:var(--nw-fs-small); color:var(--nw-fg2); }
+.nw-chevron { display:grid; place-items:center; width:30px; height:30px; flex:none; border-radius:50%; border:1px solid var(--nw-line); transition:transform var(--nw-expand) var(--nw-ease); }
+.nw-fold-head[aria-expanded="true"] .nw-chevron { transform:rotate(180deg); }
+@media (prefers-reduced-motion:reduce) { .nw-chevron { transition:none; } }

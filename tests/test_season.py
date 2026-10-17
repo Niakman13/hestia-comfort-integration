@@ -66,5 +66,15 @@ class UnheatedRoomTests(unittest.TestCase):
         self.assertIn("cool", result.needs)
 
 
+class DayRangeTests(unittest.TestCase):
+    def test_the_range_includes_the_current_reading(self):
+        result = assess(readings(25.4), context={"indoor_day_range": {"min": 21.0, "max": 24.8}})
+        self.assertEqual(result.features["day_range"], {"min": 21.0, "max": 25.4})
+
+    def test_an_unknown_or_invalid_range_is_not_drawn(self):
+        self.assertIsNone(assess(readings(22.0)).features["day_range"])
+        self.assertIsNone(assess(readings(22.0), context={"indoor_day_range": {"min": 25, "max": 20}}).features["day_range"])
+
+
 if __name__ == "__main__":
     unittest.main()
