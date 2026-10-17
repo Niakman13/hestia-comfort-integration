@@ -1,3 +1,12 @@
+## 0.9.4-beta.1 — Des conseils chiffrés et plus clairs
+
+- Le conseil montre ce qu’il compare : « 60 % d’humidité, l’air du dehors la ferait descendre à 48 % », « 22 °C dedans, 15 °C dehors ».
+- La durée d’aération s’affiche sous le pictogramme, avec l’ouvrant à ouvrir : « 4 à 11 min · Fenêtre Ouest ».
+- Le bandeau ne montre que des conseils : une source qui ne répond pas reste signalée dans « Détails ».
+- « Détails » est allégé : plus de doublon sur les sources, plus de volet « rien à faire ».
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 0.9.3-beta.1 — VMC simplifiée, détails d’un appui
 
 - Un appui sur une tuile de mesure, sur la bulle de température, sur le repère « dehors » ou sur une pièce de la carte logement ouvre la fenêtre de détails de Home Assistant (historique, attributs).

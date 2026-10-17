@@ -15,11 +15,22 @@ export interface Advice {title:string;line:TemplateResult|string;disk:string;cap
 export function advice(v:View):Advice {
   const a=v.assessment,o=v.observations,ti=numeric(o.indoor_temperature);
   const opened=Object.entries(o).some(([k,r])=>k.startsWith('window:')&&r.quality==='valid'&&r.value===true);
-  const gap=a.temperature_delta===null?null:Math.abs(a.temperature_delta);
   const first=(a.open_first??[]).map(id=>v.names?.[id]??id)[0];
   const slot=a.slot;
   const duration=a.features?.ventilation?.duration_minutes;
-  const minutes=duration?`${duration.min} à ${duration.max} minutes`:'quelques minutes';
+  // The banner compares instead of asserting: the reader sees the two values the advice is based on.
+  const te=numeric(o.outdoor_temperature),hi=numeric(o.indoor_humidity),incoming=a.features?.humidity?.incoming_relative??null;
+  const temps=html`${deg(ti)} dedans, ${b(deg(te)+' dehors')}`;
+  // Humidity in plain words: where the outdoor air would bring the room once warmed inside.
+  const water=(()=>{
+    if(incoming==null||hi===null)return html`L’air du dehors est ${b('plus sec')}`;
+    const target=Math.round(incoming),now=Math.round(hi);
+    return target<now?html`${now} % d’humidité, l’air du dehors la ferait ${b('descendre à '+target+' %')}`
+      :target>now?html`${now} % d’humidité, l’air du dehors la ferait ${b('monter à '+target+' %')}`
+      :html`${now} % d’humidité, l’air du dehors ${b('ne la changerait pas')}`;
+  })();
+  // How long, under the disk: the duration first, then where to open.
+  const span=duration?`${duration.min} à ${duration.max} min`:undefined,where=(x?:string)=>[span,x].filter(Boolean).join(' · ')||undefined;
   const constraint=a.constraints.find(c=>c!=='heating_running'&&c!=='frost')??a.constraints[0];
   switch(a.reason){
     case 'within_comfort': return {title:'Rien à faire',line:html`${deg(ti)}, ${b('dans votre plage')}`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
@@ -31,23 +42,23 @@ export function advice(v:View):Advice {
       return {title:a.action==='fermer'?'Refermez':'Gardez fermé',line:html`${b(why)}${a.needs.length?' : le besoin attendra':''}`,disk:a.action==='fermer'?'shut':'window'};
     }
     case 'short_air_change': return {title:a.action==='ok'?'Aération en cours':'Aérez 5 minutes',line:html`Air à renouveler, ${b(a.constraints.includes('frost')?'il gèle dehors':'le chauffage tourne')}`,disk:'open',cap:a.action==='ok'?undefined:'Puis refermez'};
-    case 'air_needed': return {title:a.action==='ok'?'Aération en cours':`Aérez ${minutes}`,line:airWhy(v),disk:'open',cap:a.action==='ok'?undefined:first};
-    case 'cooling_possible': return {title:a.action==='ok'?'Aération en cours':'Ouvrez pour rafraîchir',line:html`Il fait ${b(`${number(gap)} °C de moins`)} dehors`,disk:'open',cap:a.action==='ok'?undefined:first};
+    case 'air_needed': return {title:a.action==='ok'?'Aération en cours':'Renouvelez l’air',line:airWhy(v),disk:'open',cap:a.action==='ok'?span:where(first)};
+    case 'cooling_possible': return {title:a.action==='ok'?'Aération en cours':'Ouvrez pour rafraîchir',line:temps,disk:'open',cap:a.action==='ok'?span:where(first)};
     case 'precool_possible': return {title:a.action==='ok'?'Laissez ouvert cette nuit':'Ouvrez pour la nuit',line:html`Demain sera chaud : ${b('stockez le frais')}`,disk:'moon',cap:first};
     case 'precool_later':
     case 'cooling_unavailable':
-      return slot&&slot.kind==='open'?{title:`Ouvrez vers ${hour(slot.time)}`,line:html`Dehors descendra à ${b(number(slot.temperature)+' °C')}`,disk:'moon',cap:slot.wind_bearing!=null?windFrom(slot.wind_bearing):undefined}
-        :{title:'Gardez fermé',line:html`Dehors ${b('n’est pas plus frais')} pour l’instant`,disk:'clock'};
-    case 'drying_possible': return {title:a.action==='ok'?'Aération en cours':'Aérez pour assécher',line:html`L’air du dehors ${b('est plus sec')}`,disk:'open',cap:a.action==='ok'?undefined:first};
-    case 'drying_unavailable': return {title:'Humidité à surveiller',line:html`Dehors ${b('n’est pas plus sec')}`,disk:'clock'};
-    case 'exchange_harmful': return {title:'Refermez',line:html`Dehors ${b(a.temperature_delta!==null&&a.temperature_delta>0?'réchauffe la pièce':'refroidit la pièce')}`,disk:'shut'};
-    case 'rehumidification_risk': return {title:'Refermez',line:html`L’air du dehors ${b('est plus humide')}`,disk:'shut'};
+      return slot&&slot.kind==='open'?{title:`Ouvrez vers ${hour(slot.time)}`,line:html`Il fera ${b(number(slot.temperature)+' °C')} dehors`,disk:'moon',cap:slot.wind_bearing!=null?windFrom(slot.wind_bearing):undefined}
+        :{title:'Gardez fermé',line:html`Il ne fait ${b('pas plus frais dehors')} pour l’instant`,disk:'clock'};
+    case 'drying_possible': return {title:a.action==='ok'?'Aération en cours':'Aérez pour assécher',line:water,disk:'open',cap:a.action==='ok'?span:where(first)};
+    case 'drying_unavailable': return {title:'Humidité à surveiller',line:incoming!=null?water:html`L’air du dehors ${b('n’est pas plus sec')}`,disk:'clock',cap:'Aérer n’aiderait pas'};
+    case 'exchange_harmful': return {title:'Refermez',line:html`L’air du dehors ${b(a.temperature_delta!==null&&a.temperature_delta>0?'réchauffe la pièce':'refroidit la pièce')}`,disk:'shut'};
+    case 'rehumidification_risk': return {title:'Refermez',line:incoming!=null?water:html`L’air du dehors ${b('est plus humide')}`,disk:'shut'};
     case 'heat_needed': return {title:a.action==='fermer'?'Refermez':'Gardez fermé',line:html`Pièce fraîche : ${b(deg(ti))}`,disk:a.action==='fermer'?'shut':'window'};
     case 'sun_entering': return {title:'Fermez côté soleil',line:html`Le soleil ${b('chauffe la pièce')}`,disk:'shut'};
     case 'shutter_protection': return {title:'Adaptez les volets',line:html`Le soleil ${b('tape sur une façade')}`,disk:'window'};
     case 'optional_air_change': return {title:'Aérez si possible',line:html`CO₂ ${b(number(numeric(o.co2))+' ppm')}`,disk:'open'};
     case 'verify_exterior': {
-      const gesture=a.needs.includes('air')?`Aérez ${minutes}`:a.needs.includes('cool')?'Ouvrez pour rafraîchir':a.needs.includes('dry')?'Aérez pour assécher':'Vérifiez dehors';
+      const gesture=a.needs.includes('air')?'Renouvelez l’air':a.needs.includes('cool')?'Ouvrez pour rafraîchir':a.needs.includes('dry')?'Aérez pour assécher':'Vérifiez dehors';
       return {title:gesture,line:html`${outsideGaps(v)} : ${b('regardez dehors avant')}`,disk:'ask',cap:'Si le temps le permet'};
     }
     case 'incomplete_data': {
@@ -84,9 +95,8 @@ export function slides(v:View):Slide[] {
       line:pm!==null?html`Particules ${b(number(pm)+' µg/m³')}${speed!=null?` · il tourne à ${number(speed)} %`:''}`:speed!=null?html`Il tourne à ${b(number(speed)+' %')}`:'Il filtre l’air de la pièce',disk:'fan',cap:v.names?.[o.purifier?.source??'']??undefined});}
   if(air?.ventilation?.on===true){const fast=air.ventilation.boost===true;
     out.push({level:'calm',pill:'En cours',title:'La ventilation renouvelle l’air',line:a.needs.includes('dry')?html`Elle aide à ${b('assécher')}${fast?' · grande vitesse':''}`:fast?html`En ${b('grande vitesse')}`:'Renouvellement continu',disk:'vmc',cap:fast?'Grande vitesse':undefined});}
-  const silent=a.missing.some(k=>k in OUTSIDE&&!!o[k]);
-  if(silent&&a.reason!=='verify_exterior')out.push({level:'neutral',pill:'À savoir',title:a.missing.includes('pollution')&&a.missing.filter(k=>k in OUTSIDE).length===1?'Air extérieur inconnu':'Mesure extérieure manquante',line:outsideGaps(v),disk:'ask',cap:'Le conseil reste valable'});
-  if(a.slot&&a.slot.kind==='open'&&!['cooling_unavailable','precool_later'].includes(a.reason))out.push({level:'benefit',pill:'Plus tard',title:`Ouvrez vers ${hour(a.slot.time)}`,line:html`Dehors descendra à ${b(number(a.slot.temperature)+' °C')}`,disk:'moon'});
+  // What Niak cannot check is information, not advice: it stays in « Détails ».
+  if(a.slot&&a.slot.kind==='open'&&!['cooling_unavailable','precool_later'].includes(a.reason))out.push({level:'benefit',pill:'Plus tard',title:`Ouvrez vers ${hour(a.slot.time)}`,line:html`Il fera ${b(number(a.slot.temperature)+' °C')} dehors`,disk:'moon'});
   return out;
 }
 
@@ -180,16 +190,16 @@ export function details(v:View,config:Config):TemplateResult[] {
   if(a.slot)out.push(row(a.slot.kind==='open'?'Ouverture possible':'Fermeture conseillée',`${hour(a.slot.time)} · ${number(a.slot.temperature)} °C${a.slot.wind_bearing!=null?' · '+windFrom(a.slot.wind_bearing):''}`));
   const silent=a.missing.filter(k=>!!v.observations[k]);
   if(silent.length)out.push(row('Ne répond pas',silent.map(k=>sourceLabel(v,k)).join(', ')));
-  if(a.unverified?.length&&a.action!=='fermer')out.push(row('Non suivi',a.unverified.map(k=>k==='rain'?'pluie':'air extérieur').join(' et ')+' : vérifiez avant d’ouvrir'));
+  if(a.unverified?.length&&a.action!=='fermer')out.push(row('Sans capteur',a.unverified.map(k=>k==='rain'?'pluie':'qualité de l’air dehors').join(', ')));
   const vent=f?.ventilation;
-  if(mods.has('windows')&&vent){if(vent.opened_minutes!=null)out.push(row('Ouvert depuis',`${number(vent.opened_minutes)} min`));if(vent.duration_minutes)out.push(row('Durée indicative',`${vent.duration_minutes.min} à ${vent.duration_minutes.max} min`));}
-  if(mods.has('shutters'))for(const s of f?.shutters??[]){if(s.mode==='none')continue;
+  if(mods.has('windows')&&vent){if(vent.opened_minutes!=null)out.push(row('Ouvert depuis',`${number(vent.opened_minutes)} min`));}
+  if(mods.has('shutters'))for(const s of f?.shutters??[]){if(s.mode==='none'||(!s.advice&&!s.manual_override&&s.position==null))continue;
     out.push(row(v.names?.[s.entity_id]??'Volet',[s.manual_override?'dérogation manuelle':s.advice==='close'?'à fermer':s.advice==='open'?'à ouvrir':'rien à faire',s.position!=null?`ouvert à ${number(s.position)} %`:''].filter(Boolean).join(' · ')));}
   if(mods.has('air')&&f?.presence&&f.presence.state!=='not_configured')out.push(row('Présence',{occupied:'quelqu’un est là',empty:'pièce vide',unknown:'inconnue'}[f.presence.state]??''));
   if(mods.has('humidity')&&f?.humidity&&f.humidity.condensation_risk!==null)out.push(row('Buée',f.humidity.condensation_risk?'risque estimé':'aucun risque estimé'));
   const tr=f?.trends;
   if(mods.has('temperature')&&tr&&(tr.indoor!=null||tr.outdoor!=null))out.push(row('Tendance',[tr.indoor!=null?`dedans ${tr.indoor>0?'+':''}${number(tr.indoor)} °C/h`:'',tr.outdoor!=null?`dehors ${tr.outdoor>0?'+':''}${number(tr.outdoor)} °C/h`:''].filter(Boolean).join(', ')));
-  out.push(row('Sources',coverageText(v)));
+  if(!silent.length)out.push(row('Sources',coverageText(v)));
   return out;
 }
 
