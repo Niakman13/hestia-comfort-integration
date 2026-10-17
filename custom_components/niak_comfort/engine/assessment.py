@@ -257,7 +257,9 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     rain_coming = soon is not None and any(d["open"] and rained_on(d["entity_id"]) for d in details)
     soft = [c for c in constraints if c in ("frost", "heating_running")]
     # A configured protection that does not answer blocks the advice; one never configured does not.
-    checked = (rain is False or ("rain" not in readings and rain is None)) and (pollution is False or ("pollution" not in readings and pollution is None))
+    # Rain still guards an opening when its sensor stops answering. A daily outdoor-air index that is
+    # down (Atmo France outage) behaves like one never configured: the advice stands, the gap is reported.
+    checked = (rain is False or ("rain" not in readings and rain is None)) and pollution is not True
     thermal_known = ti is not None and te is not None
     optional_wet_exchange = ai is not None and ae is not None and ae > ai + 1
     useful = air or ((hot or precool) and cool and not optional_wet_exchange) or (wet and dry and not cold)
@@ -267,7 +269,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
                                         and not (k == "pollution" and r.quality == "estimated" and r.value is not None)}
                                        | {k for k in ("indoor_temperature", "outdoor_temperature") if value(k) is None})
                            if not (k == "rain" and all_sheltered)))
-    partial = bool(missing)
+    partial = bool(set(missing) - {"pollution"})
     urgent = (co2 is not None and co2 >= settings.co2_urgent) or exposed_open or (windy and opened)
     # Pre-cooling is an opportunity for tomorrow, not a problem now.
     level = "urgent" if urgent else "action" if set(needs) - {"precool"} else "benefit" if needs else "neutral" if partial else "calm"

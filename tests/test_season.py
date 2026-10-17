@@ -76,5 +76,26 @@ class DayRangeTests(unittest.TestCase):
         self.assertIsNone(assess(readings(22.0), context={"indoor_day_range": {"min": 25, "max": 20}}).features["day_range"])
 
 
+class OutdoorGapTests(unittest.TestCase):
+    """An outdoor-air index that stops answering must not hold the advice back; a silent rain sensor still does."""
+    def wet_room(self, **extra):
+        values = {"indoor_temperature": 23.0, "outdoor_temperature": 18.0, "indoor_humidity": 70.0,
+                  "outdoor_humidity": 60.0, "window:fen": False}
+        r = {k: Reading(v, "valid", "fictitious") for k, v in values.items()}
+        r.update(extra)
+        return r
+
+    def test_a_down_air_index_does_not_block_the_advice(self):
+        result = assess(self.wet_room(pollution=Reading(None, "unknown", "sensor.atmo", None, "unavailable"),
+                                      rain=Reading(False, "valid", "sensor.rain")))
+        self.assertEqual((result.action, result.reason), ("ouvrir", "drying_possible"))
+        self.assertIn("pollution", result.missing)
+        self.assertFalse(result.partial)
+
+    def test_a_silent_rain_sensor_still_asks_to_check_outside(self):
+        result = assess(self.wet_room(rain=Reading(None, "unknown", "sensor.rain", None, "unavailable")))
+        self.assertEqual(result.reason, "verify_exterior")
+
+
 if __name__ == "__main__":
     unittest.main()

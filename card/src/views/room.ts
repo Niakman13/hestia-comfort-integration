@@ -1,6 +1,6 @@
 import {html,nothing,type TemplateResult} from 'lit';
 import type {Config,View,Level} from '../types';
-import {numeric,number,heatingLabels,coverageText,windFrom,needs as needLabels,constraintLabels} from '../view';
+import {numeric,number,heatingLabels,coverageText,windFrom,sourceLabel,needs as needLabels,constraintLabels} from '../view';
 import {icon} from '../ui/icons';
 
 /** The level, said in two or three words: the colour is never the only signal. */
@@ -46,9 +46,8 @@ export function advice(v:View):Advice {
     case 'shutter_protection': return {title:'Adaptez les volets',line:html`Le soleil ${b('tape sur une façade')}`,disk:'window'};
     case 'optional_air_change': return {title:'Aérez si possible',line:html`CO₂ ${b(number(numeric(o.co2))+' ppm')}`,disk:'open'};
     case 'verify_exterior': {
-      const missing=[...new Set((a.unverified?.length?a.unverified:a.missing).map(k=>k==='rain'?'Pluie':k==='pollution'?'Air extérieur':'Extérieur'))];
       const gesture=a.needs.includes('air')?`Aérez ${minutes}`:a.needs.includes('cool')?'Ouvrez pour rafraîchir':a.needs.includes('dry')?'Aérez pour assécher':'Vérifiez dehors';
-      return {title:gesture,line:html`${missing.join(' et ')} non suivi${missing.length>1?'s':''} : ${b('regardez dehors avant')}`,disk:'ask',cap:'Si le temps le permet'};
+      return {title:gesture,line:html`${outsideGaps(v)} : ${b('regardez dehors avant')}`,disk:'ask',cap:'Si le temps le permet'};
     }
     case 'incomplete_data': {
       const failed=a.missing.filter(k=>!!o[k]);
@@ -56,6 +55,16 @@ export function advice(v:View):Advice {
     }
   }
   return {title:pills[a.level],line:'',disk:a.action==='ouvrir'?'open':a.action==='fermer'?'shut':'window'};
+}
+/** Outdoor sources the advice could not check: never configured (« non suivi ») or configured but silent (« indisponible »). */
+const OUTSIDE:Record<string,[string,boolean]>={rain:['pluie',true],pollution:['air extérieur',false],outdoor_temperature:['température dehors',true],outdoor_humidity:['humidité dehors',true],wind_gust:['rafales',true]};
+export function outsideGaps(v:View):string {
+  const a=v.assessment,pick=(keys:string[])=>keys.filter(k=>k in OUTSIDE).map(k=>OUTSIDE[k]);
+  const absent=pick(a.unverified??[]),silent=pick(a.missing.filter(k=>!!v.observations[k]));
+  // French agreement: feminine only when every name is feminine; « rafales » is already plural.
+  const part=(names:[string,boolean][],word:(fem:boolean,plural:boolean)=>string)=>names.length?`${names.map(n=>n[0]).join(' et ')} ${word(names.every(n=>n[1]),names.length>1||names.some(n=>n[0].endsWith('s')))}`:'';
+  const text=[part(silent,(f,pl)=>'indisponible'+(pl?'s':'')),part(absent,(f,pl)=>'non suivi'+(f?'e':'')+(pl?'s':''))].filter(Boolean).join(', ');
+  return text?text[0].toUpperCase()+text.slice(1):'Extérieur à vérifier';
 }
 function airWhy(v:View):TemplateResult {
   const o=v.observations,air=v.assessment.features?.air,parts:string[]=[];
@@ -138,6 +147,8 @@ export function details(v:View,config:Config):TemplateResult[] {
   if(season)out.push(row('Votre plage aujourd’hui',`${number(season.minimum)} à ${number(season.maximum)} °C${!season.heated?' · pièce non chauffée':''}${season.known?(season.weight===0?' · hiver':season.weight===1?' · été':' · entre-saisons'):' · saison non calculée'}`));
   if(a.action==='ouvrir'&&a.open_first?.length)out.push(row('Ouvrez d’abord',a.open_first.map(id=>v.names?.[id]??id).join(' et ')));
   if(a.slot)out.push(row(a.slot.kind==='open'?'Ouverture possible':'Fermeture conseillée',`${hour(a.slot.time)} · ${number(a.slot.temperature)} °C${a.slot.wind_bearing!=null?' · '+windFrom(a.slot.wind_bearing):''}`));
+  const silent=a.missing.filter(k=>!!v.observations[k]);
+  if(silent.length)out.push(row('Ne répond pas',silent.map(k=>sourceLabel(v,k)).join(', ')));
   if(a.unverified?.length&&a.action!=='fermer')out.push(row('Non suivi',a.unverified.map(k=>k==='rain'?'pluie':'air extérieur').join(' et ')+' : vérifiez avant d’ouvrir'));
   const vent=f?.ventilation;
   if(mods.has('windows')&&vent){if(vent.opened_minutes!=null)out.push(row('Ouvert depuis',`${number(vent.opened_minutes)} min`));if(vent.duration_minutes)out.push(row('Durée indicative',`${vent.duration_minutes.min} à ${vent.duration_minutes.max} min`));}
