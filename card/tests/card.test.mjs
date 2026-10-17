@@ -11,7 +11,7 @@ await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts','src/views/
 const {cleanConfig}=await import(pathToFileURL(join(temp,'types.mjs')));
 const {isView,numeric,summary,readingStatus,coverageText,windFrom,evolutionLines,co2Metric,solarMetric}=await import(pathToFileURL(join(temp,'view.mjs')));
 const {LiveView}=await import(pathToFileURL(join(temp,'live.mjs')));
-const {outsideGaps}=await import(pathToFileURL(join(temp,'views/room.mjs')));
+const {outsideGaps,advice,slides}=await import(pathToFileURL(join(temp,'views/room.mjs')));
 const fixtures=JSON.parse(await readFile(new URL('../preview/card-fixtures.json',import.meta.url),'utf8'));
 const fresh=()=>({...structuredClone(fixtures[0].view),computed_at:new Date().toISOString()});
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
@@ -173,4 +173,22 @@ test('card display settings are booleans, kept as given',()=>{
   const c=cleanConfig({type:'custom:niak-comfort-card',measures_open:false,details_open:true,rotate:false,show_scale:false});
   assert.equal(c.measures_open,false);assert.equal(c.details_open,true);assert.equal(c.rotate,false);assert.equal(c.show_scale,false);
   assert.throws(()=>cleanConfig({type:'custom:niak-comfort-card',rotate:'non'}));
+});
+
+// A lit template read as plain text, as the banner shows it.
+const flat=t=>t==null?'':typeof t==='string'||typeof t==='number'?String(t):Array.isArray(t)?t.map(flat).join(''):t.strings?t.strings.map((s,i)=>s+flat(t.values[i])).join(''):'';
+const plain=t=>flat(t).replace(/<[^>]+>/g,'');
+test('the drying advice speaks of what this room really gains, how long, and when it is better',()=>{
+  const v=fresh(),drying={minutes:35,now:76,after:70,gain:6,tau:35,openings:7,later:null};
+  v.observations.indoor_humidity={value:76,quality:'valid',source:'sensor.h',received_at:null,detail:null,unit:'%'};
+  v.observations.outdoor_humidity={value:81,quality:'valid',source:'sensor.o',received_at:null,detail:null,unit:'%'};
+  v.assessment={...v.assessment,reason:'drying_possible',action:'ouvrir',features:{...v.assessment.features,drying,ventilation:{opened_minutes:null,duration_minutes:{min:25,max:35},message:'',capacity:null}}};
+  let a=advice(v);assert.equal(a.title,'Aérez 25 à 35 min');assert.match(plain(a.line),/environ 70 % après l’aération/);assert.doesNotMatch(plain(a.line),/il ferait/);
+  v.assessment.features.drying={...drying,later:{minutes:35,now:76,after:62,gain:14,time:'2026-10-17T20:00:00+00:00'}};
+  assert.equal(slides(v).filter(s=>s.title.startsWith('Encore mieux vers')).length,1);
+  v.assessment={...v.assessment,reason:'drying_later',action:'attendre'};
+  a=advice(v);assert.match(a.title,/^Aérez vers /);assert.match(plain(a.line),/environ 62 % après 35 min/);
+  v.assessment={...v.assessment,reason:'drying_slow',features:{...v.assessment.features,drying:{...drying,after:74,gain:2},air:{...(v.assessment.features?.air??{}),ventilation:{on:false,boost:false}}}};
+  a=advice(v);assert.equal(a.title,'Lancez la VMC');assert.match(plain(a.line),/76 → 74 %/);
+  v.assessment.features.air.ventilation=null;assert.equal(advice(v).title,'Aérer assèche peu ici');
 });

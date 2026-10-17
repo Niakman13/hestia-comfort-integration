@@ -1,11 +1,13 @@
 """Stable keys for the first observation-only alpha."""
 DOMAIN = "niak_comfort"
-VERSION = "0.9.6-beta.1"
+VERSION = "0.9.7-beta.1"
 VIEW_VERSION = 1
 # A contact open for less than this is a bounce: shown at once, but advice waits for a real opening.
 OPEN_DEBOUNCE_SECONDS = 30
 # Seven-day outdoor mean (hourly statistics), refreshed at most this often.
 SEASON_REFRESH_SECONDS = 3600
+# Past openings are read again from the recorder this often (and soon after each closing).
+LEARNING_REFRESH_SECONDS = 6 * 3600
 SOURCES = {
     "indoor_temperature": "temperature", "outdoor_temperature": "temperature",
     "indoor_humidity": "humidity", "outdoor_humidity": "humidity", "co2": "co2",

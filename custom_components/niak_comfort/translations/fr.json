@@ -77,6 +77,8 @@
           "cooling_unavailable": "Fraîcheur indisponible",
           "heat_needed": "Besoin de chaleur",
           "drying_unavailable": "Assèchement indisponible",
+          "drying_later": "Assécher plus tard",
+          "drying_slow": "Aérer assèche peu ici",
           "incomplete_data": "Information incomplète",
           "optional_air_change": "Renouvellement d’air facultatif",
           "gust_open_windows": "Rafales : fermer",

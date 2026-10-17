@@ -1,3 +1,14 @@
+## 0.9.7-beta.1 — Chaque pièce apprend de ses aérations
+
+- **Les conseils d’aération apprennent de votre maison.** Niak relit les ouvertures des 10 derniers jours et retient, pour chaque pièce, ce qu’une aération y a vraiment donné : vitesse de séchage, humidité qui reste, humidité qui revient après la fermeture. Les nouvelles aérations s’ajoutent ensuite (jusqu’à 90 jours).
+- La promesse est réaliste : « 76 % d’humidité, environ 70 % après l’aération » au lieu d’un remplacement complet de l’air qui n’arrive jamais.
+- La durée est celle de la pièce : 20 min dans une buanderie qui sèche vite, une heure dans une chambre où l’air se renouvelle mal.
+- Si aérer ne gagnerait presque rien, Niak ne le demande plus : « Aérer ici : 76 → 74 % seulement », et propose la VMC quand la pièce en a une.
+- Le meilleur moment : « Aérez vers 22 h » quand l’air du soir sera nettement plus sec, ou « Encore mieux vers 22 h » en second message.
+- Dans « Détails », la ligne « Séchage » dit sur combien d’aérations la pièce a appris.
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 0.9.6-beta.1 — Mode du chauffage et échelle plus lisible
 
 - La tuile Chauffage indique le mode du thermostat : hors gel, éco, confort, boost…

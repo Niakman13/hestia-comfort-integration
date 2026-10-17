@@ -76,6 +76,8 @@
           "cooling_unavailable": "Cooling unavailable",
           "heat_needed": "Heat needed",
           "drying_unavailable": "Drying unavailable",
+          "drying_later": "Drying later",
+          "drying_slow": "Little drying here",
           "incomplete_data": "Incomplete information",
           "optional_air_change": "Optional air renewal",
           "gust_open_windows": "Gusts: close",
