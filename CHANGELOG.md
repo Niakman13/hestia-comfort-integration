@@ -1,5 +1,6 @@
-## 0.9.3-beta.1 — Réglage de la VMC simplifié
+## 0.9.3-beta.1 — VMC simplifiée, détails d’un appui
 
+- Un appui sur une tuile de mesure, sur la bulle de température, sur le repère « dehors » ou sur une pièce de la carte logement ouvre la fenêtre de détails de Home Assistant (historique, attributs).
 - Une entité cachée par Home Assistant n’est plus proposée (par exemple l’interrupteur d’origine d’une VMC changée en ventilateur) : fini les « VMC » en double.
 - Une VMC à deux vitesses : « Ventilation (VMC) » propose la position normale, « Vitesse rapide de la VMC (Turbo) » la position rapide ; ce second réglage apparaît une fois la VMC choisie.
 - Une VMC n’est plus proposée comme purificateur.

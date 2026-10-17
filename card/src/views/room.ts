@@ -91,7 +91,7 @@ export function slides(v:View):Slide[] {
 }
 
 export interface ScaleInput {band?:[number,number]|null;day?:{min:number;max:number}|null;now?:number|null;out?:number|null;
-  rooms?:{name:string;short:string;value:number;level:Level}[];unit?:string}
+  rooms?:{name:string;short:string;value:number;level:Level;entity?:string}[];unit?:string;nowEntity?:string;outEntity?:string}
 /** The charter's scale (as Niak Weather's « Ressenti »): a thin track, your range, a ring with its value; labels never overlap. */
 export function scale(s:ScaleInput):TemplateResult {
   const values=[s.band?.[0],s.band?.[1],s.day?.min,s.day?.max,s.now,s.out,...(s.rooms??[]).map(r=>r.value)].filter((x):x is number=>typeof x==='number'&&Number.isFinite(x));
@@ -122,15 +122,24 @@ export function scale(s:ScaleInput):TemplateResult {
     <div class="nc-track"></div>
     ${s.band?html`<div class="nc-band" style=${`left:${pct(s.band[0])};width:${(pos(s.band[1])-pos(s.band[0])).toFixed(2)}%`}></div>`:nothing}
     ${s.day?html`<div class="nc-day" style=${`left:${pct(s.day.min)};width:${(pos(s.day.max)-pos(s.day.min)).toFixed(2)}%`}></div>`:nothing}
-    ${s.out!=null?html`<span class="nc-mk out" style=${'left:'+pct(s.out)}></span>`:nothing}
-    ${(s.rooms??[]).map(r=>html`<span class="nc-mk room" data-level=${r.level} style=${'left:'+pct(r.value)} title=${r.name+' '+fmt(r.value)+' '+unit}></span>`)}
-    ${s.now!=null?html`<span class="nc-ring" style=${'left:'+pct(s.now)}></span><span class="nw-pill nc-now" style=${'left:'+pct(s.now)}>${fmt(s.now)} ${unit}</span>`:nothing}
+    ${s.out!=null?(s.outEntity?html`<button type="button" class="nc-mk out nc-hit" style=${'left:'+pct(s.out)} title="Détails : dehors" aria-label="Détails de la température dehors" @click=${(e:Event)=>moreInfo(e,s.outEntity!)}></button>`:html`<span class="nc-mk out" style=${'left:'+pct(s.out)}></span>`):nothing}
+    ${(s.rooms??[]).map(r=>r.entity?html`<button type="button" class="nc-mk room nc-hit" data-level=${r.level} style=${'left:'+pct(r.value)} title=${r.name+' '+fmt(r.value)+' '+unit} aria-label=${'Détails : '+r.name} @click=${(e:Event)=>moreInfo(e,r.entity!)}></button>`:html`<span class="nc-mk room" data-level=${r.level} style=${'left:'+pct(r.value)} title=${r.name+' '+fmt(r.value)+' '+unit}></span>`)}
+    ${s.now!=null?html`<span class="nc-ring" style=${'left:'+pct(s.now)}></span>${s.nowEntity?html`<button type="button" class="nw-pill nc-now nc-hit" style=${'left:'+pct(s.now)} title="Détails de la température" @click=${(e:Event)=>moreInfo(e,s.nowEntity!)}>${fmt(s.now)} ${unit}</button>`:html`<span class="nw-pill nc-now" style=${'left:'+pct(s.now)}>${fmt(s.now)} ${unit}</span>`}`:nothing}
     ${placed}
   </div>
   <div class="nw-legend nc-legend">${s.band?html`<span><i class="k-band"></i>votre plage</span>`:nothing}${s.day?html`<span><i class="k-day"></i>min–max 24 h</span>`:nothing}${s.rooms?html`<span><i class="k-room"></i>pièces</span>`:nothing}${s.out!=null?html`<span><i class="k-out"></i>dehors</span>`:nothing}</div>`;
 }
 
-export interface Tile {ic:string;label:string;value:string;unit?:string;note:string;level:Level;out:boolean}
+export interface Tile {ic:string;label:string;value:string;unit?:string;note:string;level:Level;out:boolean;entity?:string}
+/** Opens Home Assistant's own details window (history, attributes) for an entity, as any dashboard card does. */
+export const moreInfo=(e:Event,entityId:string)=>{e.stopPropagation();(e.currentTarget as HTMLElement).dispatchEvent(new CustomEvent('hass-more-info',{detail:{entityId},bubbles:true,composed:true}));};
+/** The entity behind each tile: the one a tap opens. */
+function tileEntity(v:View,label:string):string|undefined {
+  const o=v.observations,src=(k:string)=>o[k]?.source??undefined;
+  if(label==='Fenêtres'){const contacts=Object.entries(o).filter(([k])=>k.startsWith('window:'));const open=contacts.find(([,r])=>r.value===true);return (open??contacts[0])?.[1].source??undefined;}
+  return ({'Humidité':src('indoor_humidity'),'CO₂':src('co2'),'Particules':src('pm25'),'COV':src('voc'),'Soleil':src('solar'),'Purificateur':src('purifier'),
+    'Ventilation':o.ventilation_boost?.value===true?src('ventilation_boost'):src('ventilation')??src('ventilation_boost'),'Chauffage':src('heating')} as Record<string,string|undefined>)[label];
+}
 /** One compact frame per measure; it takes the level's outline when the measure leaves your range. */
 export function tiles(v:View,config:Config):Tile[] {
   const o=v.observations,a=v.assessment,mods=new Set(config.modules??[]),list:Tile[]=[],air=a.features?.air;
@@ -155,9 +164,11 @@ export function tiles(v:View,config:Config):Tile[] {
     list.push({ic:'vmc',label:'Ventilation',value:on===null?'—':fast?'Rapide':on?'En marche':'Arrêtée',note:on?(fast?'grande vitesse':'renouvelle l’air'):on===false?'à l’arrêt':'indisponible',level:on?'calm':'neutral',out:on===true});}
   if(mods.has('coordination')&&o.heating){const label=heatingLabels[a.heating_action]??'Inconnu',running=a.heating_action==='heating';
     list.push({ic:'heat',label:'Chauffage',value:running?'Chauffe':label,note:running?'chauffe la pièce':'observé, jamais commandé',level:'neutral',out:false});}
+  for(const t of list)t.entity=tileEntity(v,t.label);
   return list;
 }
-export const tile=(t:Tile)=>html`<div class=${'nc-tile'+(t.out?' out':'')} data-level=${t.level}><div class="nc-tile-h"><span class="nc-ic">${icon(t.ic)}</span><span class="nw-label">${t.label}</span></div><b>${t.value}${t.unit?html`<small>${t.unit}</small>`:nothing}</b><em>${t.note}</em></div>`;
+export const tile=(t:Tile)=>t.entity?html`<button type="button" class=${'nc-tile'+(t.out?' out':'')} data-level=${t.level} title=${'Détails : '+t.label} @click=${(e:Event)=>moreInfo(e,t.entity!)}>${tileBody(t)}</button>`:html`<div class=${'nc-tile'+(t.out?' out':'')} data-level=${t.level}>${tileBody(t)}</div>`;
+const tileBody=(t:Tile)=>html`<div class="nc-tile-h"><span class="nc-ic">${icon(t.ic)}</span><span class="nw-label">${t.label}</span></div><b>${t.value}${t.unit?html`<small>${t.unit}</small>`:nothing}</b><em>${t.note}</em>`;
 
 const row=(t:string,x:string)=>html`<li><b>${t}</b><span> · ${x}</span></li>`;
 /** One short line per fact: the long explanations of 0.9 become « title · fact ». */
@@ -210,7 +221,7 @@ export function roomCard(v:View,config:Config,st:CardState,mini=false):TemplateR
   const list=tiles(v,config),outside=list.filter(t=>t.out);
   const band:[number,number]|null=f?.season?[f.season.minimum,f.season.maximum]:null;
   const body=config.show_measures!==false&&list.length>0||config.show_details!==false;
-  const sc=(config.modules??[]).includes('temperature')&&config.show_scale!==false?scale({band,day:f?.day_range??null,now:ti,out:te}):html``;
+  const sc=(config.modules??[]).includes('temperature')&&config.show_scale!==false?scale({band,day:f?.day_range??null,now:ti,out:te,nowEntity:v.observations.indoor_temperature?.source??undefined,outEntity:v.observations.outdoor_temperature?.source??undefined}):html``;
   return html`<ha-card class="nc-c" data-level=${a.level}>
     ${hero({name:config.title||v.title,level:a.level,slides:slides(v),scaleLabel:'Température',scale:sc,st,why:whyLines(v),compact:mini||config.show_scale===false||!(config.modules??[]).includes('temperature'),still:config.animations===false||config.rotate===false})}
     ${mini||!body?nothing:html`<div class="nc-body">
