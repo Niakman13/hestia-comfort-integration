@@ -1,5 +1,7 @@
-## 0.9.5-beta.1 — Une valeur stable n’est plus « indisponible »
+## 0.9.5-beta.1 — Fenêtres affichées tout de suite, valeurs stables valables
 
+- Une fenêtre qu’on ouvre apparaît sur la carte en une à deux secondes. Seul le conseil attend 30 secondes (au lieu d’une minute) pour ignorer les rebonds du contact, puis se met à jour aussitôt.
+- Quand l’air du dehors affiche plus d’humidité que dedans mais asséchera quand même la pièce, la carte l’explique : « Dehors 79 %, mais l’air froid contient peu d’eau : réchauffé chez vous, il ferait 46 % ».
 - Beaucoup de capteurs n’envoient une valeur que lorsqu’elle change : une humidité stable pendant la nuit n’est plus considérée comme trop ancienne. Une valeur reste valable tant que son appareil donne signe de vie (par exemple, la température du même capteur).
 - Le délai d’expiration passe de 30 minutes à 3 heures ; les pièces réglées sur l’ancien délai sont mises à jour automatiquement.
 - Sur la carte, « pas de nouvelle mesure » (capteur silencieux) se distingue désormais d’« indisponible » (capteur perdu).

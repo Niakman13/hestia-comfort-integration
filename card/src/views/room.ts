@@ -24,7 +24,10 @@ export function advice(v:View):Advice {
   // Humidity in plain words: where the outdoor air would bring the room once warmed inside.
   const water=(()=>{
     if(incoming==null||hi===null)return html`L’air du dehors est ${b('plus sec')}`;
-    const target=Math.round(incoming),now=Math.round(hi);
+    const target=Math.round(incoming),now=Math.round(hi),outside=numeric(o.outdoor_humidity);
+    // The trap: a cold outdoor air at 79 % holds little water. Say it, or the advice looks wrong.
+    if(target<now&&outside!==null&&Math.round(outside)>=now)
+      return html`Dehors ${Math.round(outside)} %, mais l’air froid contient peu d’eau : réchauffé chez vous, il ferait ${b(target+' %')}`;
     return target<now?html`${now} % d’humidité, l’air du dehors la ferait ${b('descendre à '+target+' %')}`
       :target>now?html`${now} % d’humidité, l’air du dehors la ferait ${b('monter à '+target+' %')}`
       :html`${now} % d’humidité, l’air du dehors ${b('ne la changerait pas')}`;
