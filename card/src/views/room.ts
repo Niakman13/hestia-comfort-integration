@@ -193,7 +193,7 @@ export function hero(o:{name:string;level:Level;slides:Slide[];scaleLabel:string
     <div class="nc-top"><h2>${o.name}</h2><button class="nw-info" aria-label="Pourquoi ce conseil ?" aria-expanded=${o.st.why} aria-controls=${o.st.uid+'-why'} @click=${()=>o.st.toggle('why')}>${icon('info')}</button><span class="nw-chip nc-level">${many?`${o.slides.length} conseils`:pills[o.level]}</span></div>
     <niak-advice-ticker .slides=${o.slides} .still=${!!o.still}></niak-advice-ticker>
     <div class="nc-why" id=${o.st.uid+'-why'} ?hidden=${!o.st.why}>${o.why}</div>
-    ${o.compact?nothing:html`<div class="nc-sec"><div class="nw-label">${o.scaleLabel}</div>${o.scale}</div>`}
+    ${o.compact?nothing:html`<div class="nc-sec nw-glass"><div class="nw-label">${o.scaleLabel}</div>${o.scale}</div>`}
   </div>`;
 }
 /** A folding section with the charter's round chevron; out-of-range tiles stay visible when folded. */
@@ -228,11 +228,19 @@ export class NiakAdviceTicker extends LitElement {
   private timer?:ReturnType<typeof setTimeout>;
   createRenderRoot(){return this;}
   connectedCallback(){super.connectedCallback();this.schedule();}
-  disconnectedCallback(){super.disconnectedCallback();clearTimeout(this.timer);}
+  disconnectedCallback(){super.disconnectedCallback();clearTimeout(this.timer);this.timer=undefined;}
   protected willUpdate(changed:Map<string,unknown>){if(changed.has('slides')&&this.index>=this.slides.length)this.index=0;}
-  protected updated(){this.schedule();}
+  // The view is refreshed whenever a sensor moves (every few seconds for CO₂): a new list of slides
+  // must not restart the countdown, or the first advice would never leave. Only a new slide, a pause
+  // or a missing countdown starts one.
+  protected updated(changed:Map<string,unknown>){
+    if(changed.has('index')||changed.has('paused')||changed.has('still')||!this.timer)this.schedule();
+  }
   private get calm(){return this.still||matchMedia('(prefers-reduced-motion: reduce)').matches;}
-  private schedule(){clearTimeout(this.timer);if(this.slides.length>1&&!this.paused&&!this.calm)this.timer=setTimeout(()=>{this.index=(this.index+1)%this.slides.length;},4500);}
+  private schedule(){
+    clearTimeout(this.timer);this.timer=undefined;
+    if(this.slides.length>1&&!this.paused&&!this.calm)this.timer=setTimeout(()=>{this.timer=undefined;this.index=(this.index+1)%this.slides.length;},4500);
+  }
   private go(i:number){this.index=(i+this.slides.length)%this.slides.length;}
   private hold(on:boolean){this.paused=on;}
   protected render(){

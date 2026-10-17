@@ -15,6 +15,9 @@
   --nw-radius-pill: 999px;
   --nw-glass-strong: color-mix(in srgb, var(--nw-bg) 84%, transparent);
   --nw-blur: blur(6px) saturate(1.2);
+  /* Verre dépoli posé sur le fond coloré (frise de Weather, échelle de Confort) : plus clair, plus flou. */
+  --nw-glass-clear: color-mix(in srgb, var(--nw-bg) 45%, transparent);
+  --nw-frost: blur(14px) saturate(1.6);
   --nw-pad-panel: 18px 20px;
   /* Six tailles de texte, rien d'autre : étiquette 10 · secondaire 12 · texte 13 · titre 17 · valeur 30 · température 42. */
   --nw-fs-label: 10px; --nw-fs-small: 12px; --nw-fs-text: 13px; --nw-fs-title: 17px; --nw-fs-value: 30px; --nw-fs-temp: 42px;
@@ -69,3 +72,6 @@ button:focus-visible { outline:2px solid var(--nw-accent); outline-offset:2px; }
 .nw-chevron { display:grid; place-items:center; width:30px; height:30px; flex:none; border-radius:50%; border:1px solid var(--nw-line); transition:transform var(--nw-expand) var(--nw-ease); }
 .nw-fold-head[aria-expanded="true"] .nw-chevron { transform:rotate(180deg); }
 @media (prefers-reduced-motion:reduce) { .nw-chevron { transition:none; } }
+/* Panneau de verre dépoli ; le réglage « Effet de verre » décoché (:host([flat])) le rend opaque et sans flou. */
+.nw-glass { background:var(--nw-glass-clear); backdrop-filter:var(--nw-frost); -webkit-backdrop-filter:var(--nw-frost); border:1px solid var(--nw-line); border-radius:var(--nw-radius); }
+:host([flat]) { --nw-blur:none; --nw-frost:none; --nw-glass-clear:var(--nw-bg); --nw-glass-strong:var(--nw-bg); }
