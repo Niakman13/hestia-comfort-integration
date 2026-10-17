@@ -5,7 +5,7 @@ import charte from './ui/niak-charte.css';
 import roomStyle from './ui/room.css';
 import {html as h2} from 'lit';
 import {isView,number,numeric} from './view';
-import {advice,scale,fold,hero,tileSummary,pills,type CardState} from './views/room';
+import {advice,scale,fold,hero,tileSummary,pills,type CardState,type Advice,type Slide} from './views/room';
 import type {Connection,HomeAssistant,Unsubscribe,View,Level} from './types';
 
 interface FloorRef {floor_id:string|null;name:string;level:number|null}
@@ -89,21 +89,31 @@ export class NiakComfortHomeCard extends LitElement {
     if(h.partial)out.push(row('Bilan','sur les mesures disponibles'));
     return out;
   }
+  /** One slide per room that asks for something, the most urgent first, then what the home can do as a whole. */
+  private slides(h:Home,calmAdvice:Advice):Slide[]{
+    const rank:Record<string,number>={urgent:0,action:1,benefit:2};
+    const asking=this.rooms.filter(r=>r.assessment.level in rank).sort((a,b)=>rank[a.assessment.level]-rank[b.assessment.level]);
+    const out:Slide[]=asking.map(r=>{const ad=advice(r),cool=r.assessment.needs.includes('cool')&&h.start_with===r.title;
+      return {...ad,level:r.assessment.level as Level,pill:r.title,line:cool&&h.start_floor?h2`${ad.line} · <b>${h.start_floor.name}</b> d’abord`:ad.line};});
+    if(h.ventilation&&!h.ventilation.engaged)out.push({level:'benefit',pill:'Logement',title:h.ventilation.kind==='cross'?'Faites traverser l’air':'Ouvrez en bas et en haut',
+      line:h2`${h.ventilation.openings.map(o=>o.name).join(' + ')}`,disk:'open'});
+    return out.length?out:[{...calmAdvice,level:h.level as Level,pill:pills[h.level as Level]}];
+  }
   protected render(){
     if(!this.config)return nothing;
     const h=this.home;
     if(!h){const text=this.problem==='not_configured'?['Aucune pièce','Ouvrez Niak Confort dans la barre latérale pour configurer vos pièces.']:this.problem?['Connexion indisponible','La carte réessaie automatiquement.']:['Chargement du logement','En attente des pièces.'];
       return html`<ha-card class="nc-card problem" data-level="neutral" role="status"><h2>${text[0]}</h2><p>${text[1]}</p></ha-card>`;}
-    const focus=this.rooms.find(r=>r.entry_id===h.focus),calm=!focus||['calm','neutral'].includes(focus.assessment.level);
-    const ad=focus&&!calm?advice(focus):{title:h.partial?'Bilan partiel':'Rien à faire',line:h2`Toutes les pièces sont <b>${h.partial?'suivies avec les mesures disponibles':'dans votre plage'}</b>`,disk:h.open_rooms.length?'open':'check',cap:h.open_rooms.length?undefined:'Tout est fermé'};
-    if(focus&&!calm)ad.line=h.start_with&&focus.assessment.needs.includes('cool')?h2`Commencez par <b>${h.start_with}</b>`:h2`<b>${focus.title}</b> · ${ad.line}`;
+    const focus=this.rooms.find(r=>r.entry_id===h.focus);
+    const calmAdvice={title:h.partial?'Bilan partiel':'Rien à faire',line:h2`Toutes les pièces sont <b>${h.partial?'suivies avec les mesures disponibles':'dans votre plage'}</b>`,disk:h.open_rooms.length?'open':'check',cap:h.open_rooms.length?undefined:'Tout est fermé'};
+    const homeSlides=this.slides(h,calmAdvice);
     const shorts=this.shorts(this.rooms),season=(focus??this.rooms[0])?.assessment.features?.season;
     const rooms=this.rooms.flatMap(r=>{const t=numeric(r.observations.indoor_temperature);return t===null?[]:[{name:r.title,short:shorts.get(r.entry_id)!,value:t,level:(r.assessment.features?.season?.heated===false&&!['action','urgent'].includes(r.assessment.level)?'neutral':r.assessment.level) as Level}];});
     const st=this.state(),floors=h.floors?.length?h.floors:[{floor_id:null,name:'Mon logement',level:null,room_ids:this.rooms.map(r=>r.entry_id),mean:null,measured:0,total:0,hottest:null}];
     const all=this.rooms.map(r=>this.roomTile(r)),outside=this.rooms.filter(r=>['action','urgent'].includes(r.assessment.level));
     const body=h2`<div class="nc-tiles">${floors.map(f=>h2`${floors.length>1?h2`<div class="nc-floor"><span class="nw-label">${f.name}</span><b>${number(f.mean)} °C</b></div>`:nothing}${this.rooms.filter(r=>f.room_ids.includes(r.entry_id)).map(r=>this.roomTile(r))}`)}</div>`;
     return html`<ha-card class="nc-c" data-level=${h.level}>
-      ${hero({name:this.config.title||'Mon logement',level:h.level as Level,slides:[{...ad,level:h.level as Level,pill:pills[h.level as Level]}],scaleLabel:'Les pièces',scale:scale({band:season?[season.minimum,season.maximum]:null,out:h.outdoor_temperature,rooms}),st,why:h2`<p><b>Pièce suivie de près</b> · ${focus?focus.title:'aucune'}</p><p><b>Bilan</b> · ${h.partial?'mesures incomplètes dans au moins une pièce':'toutes les pièces répondent'}</p>`})}
+      ${hero({name:this.config.title||'Mon logement',level:h.level as Level,slides:homeSlides,scaleLabel:'Les pièces',scale:scale({band:season?[season.minimum,season.maximum]:null,out:h.outdoor_temperature,rooms}),st,why:h2`<p><b>Pièce suivie de près</b> · ${focus?focus.title:'aucune'}</p><p><b>Bilan</b> · ${h.partial?'mesures incomplètes dans au moins une pièce':'toutes les pièces répondent'}</p>`})}
       <div class="nc-body">
         ${fold({label:'Pièces',summary:tileSummary(all.length,outside.length,'pièce'),open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:this.uid+'-rooms',body,keep:outside.map(r=>this.roomTile(r))})}
         ${fold({label:'Détails',summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:this.uid+'-details',body:h2`<ul class="nc-list">${this.details(h)}</ul>`})}
