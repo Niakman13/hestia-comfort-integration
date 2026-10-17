@@ -1,6 +1,6 @@
 {
   "name": "niak-comfort-configuration",
-  "version": "0.9.0-beta.10",
+  "version": "0.9.1-beta.1",
   "private": true,
   "type": "module",
   "scripts": {
