@@ -59,9 +59,20 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
             self.hass.states.async_set(entity_id, 'on', {'friendly_name': name})
         found = catalog(self.hass, 'salon')
         names = [c['entity_id'] for c in found['ventilation']]
-        self.assertEqual(set(names), {'fan.vmc', 'fan.vmc_turbo', 'switch.vmc_relais'})
-        self.assertEqual(names[-1], 'fan.vmc_turbo')
-        self.assertEqual(found['ventilation_boost'][0]['entity_id'], 'fan.vmc_turbo')
+        self.assertEqual(set(names), {'fan.vmc', 'switch.vmc_relais'})
+        self.assertEqual([c['entity_id'] for c in found['ventilation_boost']], ['fan.vmc_turbo'])
+        self.assertNotIn('fan.vmc', [c['entity_id'] for c in found['purifier']])
+        self.assertIn('fan.purificateur', [c['entity_id'] for c in found['purifier']])
+
+    async def test_an_entity_hidden_by_home_assistant_is_not_offered(self):
+        entry = self.register('fan.vmc', None, 'salon', value='on', unit=None)
+        hidden = self.register('switch.vmc_cachee', None, 'salon', value='on', unit=None)
+        er.async_get(self.hass).async_update_entity(hidden.entity_id, hidden_by=er.RegistryEntryHider.INTEGRATION)
+        names = [c['entity_id'] for c in catalog(self.hass, 'salon')['ventilation']]
+        self.assertIn(entry.entity_id, names)
+        self.assertNotIn('switch.vmc_cachee', names)
+        kept = catalog(self.hass, 'salon', {'ventilation': 'switch.vmc_cachee'})['ventilation']
+        self.assertIn('switch.vmc_cachee', [c['entity_id'] for c in kept])
 
     async def test_device_area_and_entity_override(self):
         self.hass.config_entries._entries[self.entry.entry_id] = self.entry

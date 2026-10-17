@@ -92,6 +92,9 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
     state = hass.states.get(entity_id)
     if not entry or entry.disabled_by or entry.entity_category is not None or not state:
         return None
+    # Hidden by Home Assistant (the switch behind a « switch as fan »): never offered again, unless already chosen.
+    if entry.hidden_by and not include_legacy:
+        return None
     attrs = state.attributes
     domain = state.domain
     device_class = attrs.get("device_class") or entry.device_class or entry.original_device_class
@@ -110,7 +113,8 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
         if domain not in ("switch", "binary_sensor") or device_class in ("problem", "battery", "connectivity"):
             return None
     elif key == "purifier":
-        if domain != "fan":
+        # A fan named as a ventilation unit belongs to « Ventilation », not to the purifier.
+        if domain != "fan" or any(word in f"{state.name} {entity_id}".casefold() for word in VENTILATION_WORDS):
             return None
     elif key in ("ventilation", "ventilation_boost"):
         # A ventilation unit (VMC): any fan but a purifier, or a relay or sensor whose name says ventilation.
@@ -222,6 +226,10 @@ def catalog(hass, area_id=None, selected=None, indoor_ids=(), *, keys=None, entr
         # A two-speed ventilation: the high-speed position goes to « grande vitesse », the other one first for the normal speed.
         speed = (lambda c: not any(w in c["name"].casefold() for w in BOOST_WORDS)) if key == "ventilation_boost" else \
             (lambda c: any(w in c["name"].casefold() for w in BOOST_WORDS)) if key == "ventilation" else (lambda c: False)
+        # Each speed of a two-speed unit is offered in its own setting only, when the room has both.
+        fast = lambda c: any(w in c["name"].casefold() for w in BOOST_WORDS)
+        if key in ("ventilation", "ventilation_boost") and any(c["local"] and fast(c) for c in items) and any(c["local"] and not fast(c) for c in items):
+            items = [c for c in items if fast(c) == (key == "ventilation_boost") or not c["local"]]
         result[key] = sorted(items, key=lambda c: (first(c), not c["local"], speed(c), bool(c["warnings"]), c["name"].casefold()))
     return result
 

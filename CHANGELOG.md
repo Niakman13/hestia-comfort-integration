@@ -1,3 +1,11 @@
+## 0.9.3-beta.1 — Réglage de la VMC simplifié
+
+- Une entité cachée par Home Assistant n’est plus proposée (par exemple l’interrupteur d’origine d’une VMC changée en ventilateur) : fini les « VMC » en double.
+- Une VMC à deux vitesses : « Ventilation (VMC) » propose la position normale, « Vitesse rapide de la VMC (Turbo) » la position rapide ; ce second réglage apparaît une fois la VMC choisie.
+- Une VMC n’est plus proposée comme purificateur.
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 0.9.2-beta.1 — Une VMC mieux reconnue, avec sa grande vitesse
 
 - Le choix « Ventilation (VMC) » ne propose plus que des ventilations : les ventilateurs (sauf les purificateurs) et les interrupteurs dont le nom l’évoque (VMC, ventilation, extraction, aération, hotte). Chauffe-eau, fil pilote et prises n’apparaissent plus, et les deux positions d’une VMC sont visibles.
