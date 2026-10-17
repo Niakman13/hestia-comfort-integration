@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Refonte des cartes Confort</title>
+<style>
+:root{
+  --fg:#253047;--fg2:#5b687b;--bg:#fff;--page:#f1f3f6;--line:color-mix(in srgb,var(--fg) 10%,transparent);
+  --calm:#326647;--benefit:#31657a;--action:#855522;--urgent:#943e38;--neutral:#576376;
+  --calm-s:#dcebe0;--benefit-s:#dbe8ee;--action-s:#f4e4d2;--urgent-s:#f3dcd9;--neutral-s:#e6e9ee;
+  --cold:#31657a;--heat:#b0703f;--track:#e7eaef;--band:#cfe5d6;--band2:#a9d2b6;
+}
+:root[data-theme="dark"]{
+  --fg:#edf1f7;--fg2:#b2bdcd;--bg:#222932;--page:#151c25;--line:color-mix(in srgb,var(--fg) 12%,transparent);
+  --calm:#b1d7b9;--benefit:#bad7e3;--action:#efc293;--urgent:#efb1ab;--neutral:#bdc5d1;
+  --calm-s:#2b3d33;--benefit-s:#2a3a44;--action-s:#463829;--urgent-s:#462f2e;--neutral-s:#2f3742;
+  --cold:#bad7e3;--heat:#e9c3a5;--track:#323b47;--band:#2f4a39;--band2:#3f6650;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --fg:#edf1f7;--fg2:#b2bdcd;--bg:#222932;--page:#151c25;--line:color-mix(in srgb,var(--fg) 12%,transparent);
+  --calm:#b1d7b9;--benefit:#bad7e3;--action:#efc293;--urgent:#efb1ab;--neutral:#bdc5d1;
+  --calm-s:#2b3d33;--benefit-s:#2a3a44;--action-s:#463829;--urgent-s:#462f2e;--neutral-s:#2f3742;
+  --cold:#bad7e3;--heat:#e9c3a5;--track:#323b47;--band:#2f4a39;--band2:#3f6650;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--fg);font:14px/1.5 Roboto,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:1180px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:24px;margin:0 0 4px;letter-spacing:-.4px}
+h2{font-size:18px;margin:40px 0 4px}
+.lead{color:var(--fg2);margin:0 0 8px;max-width:760px}
+.rules{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0;padding:0;list-style:none}
+.rules li{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:12px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.toggle{display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px}
+.toggle button{border:0;background:none;color:var(--fg2);font:inherit;font-size:12px;padding:5px 10px;border-radius:7px;cursor:pointer}
+.toggle button[aria-pressed="true"]{background:var(--page);color:var(--fg);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));gap:16px;margin-top:14px;align-items:start}
+.note{font-size:12px;color:var(--fg2);margin:6px 2px 0}
+.card{background:var(--bg);border-radius:16px;border:1px solid var(--line);padding:16px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--lvl)}
+.lvl-calm{--lvl:var(--calm);--lvl-s:var(--calm-s)}.lvl-benefit{--lvl:var(--benefit);--lvl-s:var(--benefit-s)}
+.lvl-action{--lvl:var(--action);--lvl-s:var(--action-s)}.lvl-urgent{--lvl:var(--urgent);--lvl-s:var(--urgent-s)}
+.lvl-neutral{--lvl:var(--neutral);--lvl-s:var(--neutral-s)}
+.head{display:flex;align-items:center;gap:10px}
+.ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--lvl-s);color:var(--lvl);flex:none}
+.ico svg{width:20px;height:20px}
+.name{font-weight:700;font-size:15px;flex:1}
+.pill{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--lvl-s);color:var(--lvl);white-space:nowrap}
+.hero{display:flex;align-items:flex-end;gap:12px;margin:14px 0 2px}
+.big{font-size:44px;font-weight:700;letter-spacing:-1.5px;line-height:1;font-variant-numeric:tabular-nums}
+.big small{font-size:18px;font-weight:500;color:var(--fg2);letter-spacing:0;margin-left:2px}
+.trend{font-size:12px;color:var(--fg2);padding-bottom:4px}
+.say{font-size:16px;font-weight:600;margin:10px 0 0;display:flex;align-items:center;gap:8px}
+.say .dot{width:8px;height:8px;border-radius:50%;background:var(--lvl);flex:none}
+.range{position:relative;margin:26px 2px 6px;height:58px}
+.range .track{position:absolute;left:0;right:0;top:22px;height:12px;border-radius:6px;background:var(--track)}
+.range .band{position:absolute;top:22px;height:12px;background:var(--band)}
+.range .band.opt{background:var(--band2)}
+.range .day{position:absolute;top:26px;height:4px;border-radius:2px;background:color-mix(in srgb,var(--fg) 45%,transparent)}
+.range .mk{position:absolute;top:16px;width:6px;height:24px;margin-left:-3px;border-radius:3px;background:var(--fg);box-shadow:0 0 0 2px var(--bg)}
+.range .mk.out{background:var(--bg);border:2px solid var(--cold);width:10px;height:10px;top:23px;margin-left:-5px;border-radius:50%;box-shadow:none}
+.range .mk.fc{background:transparent;border:2px dashed var(--fg2);box-shadow:none}
+.range .mk.room{width:12px;height:12px;top:22px;margin-left:-6px;border-radius:50%;background:var(--c,var(--fg));box-shadow:0 0 0 2px var(--bg)}
+.range .lab{position:absolute;font-size:12px;color:var(--fg2);transform:translateX(-50%);white-space:nowrap}
+.range .lab.up{top:0}.range .lab.down{top:40px}
+.range .lab b{color:var(--fg);font-weight:600}
+.range .ends{position:absolute;top:40px;font-size:12px;color:var(--fg2)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--fg2);margin-top:2px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:12px}
+.tile{border-radius:12px;background:var(--page);padding:8px 10px;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2px 6px;min-width:0}
+.tile div{grid-column:1/-1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile svg{width:18px;height:18px;color:var(--fg2);flex:none}
+.tile b{font-size:16px;font-variant-numeric:tabular-nums}
+.tile s{text-decoration:none;font-size:12px;color:var(--fg2)}
+.tile .st{width:7px;height:7px;border-radius:50%;justify-self:end;background:var(--c);grid-row:1;grid-column:2}
+.more{margin-top:12px;border-top:1px solid var(--line);padding-top:8px}
+.more summary{cursor:pointer;font-size:12px;color:var(--fg2);list-style:none}
+.more summary::before{content:"＋ "}
+.more[open] summary::before{content:"－ "}
+.more p{margin:6px 0 0;font-size:12px;color:var(--fg2)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chip{display:flex;align-items:center;gap:6px;border-radius:999px;background:var(--page);padding:4px 10px;font-size:12px}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.chip b{font-variant-numeric:tabular-nums}
+.floors{display:grid;gap:6px;margin-top:12px}
+.floor{display:grid;grid-template-columns:70px 1fr 48px;align-items:center;gap:8px;font-size:12px;color:var(--fg2)}
+.floor .bar{height:8px;border-radius:4px;background:var(--track);position:relative}
+.floor .bar span{position:absolute;top:0;bottom:0;border-radius:4px;background:color-mix(in srgb,var(--fg) 35%,transparent)}
+.floor b{color:var(--fg);text-align:right}
+.mini{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.mini .ico{width:30px;height:30px}
+.mini .mv{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.mini .mb{flex:1;height:8px;border-radius:4px;background:var(--track);position:relative}
+.mini .mb .band{position:absolute;top:0;bottom:0;background:var(--band);border-radius:4px}
+.mini .mb .mk{position:absolute;top:-4px;width:4px;height:16px;margin-left:-2px;border-radius:2px;background:var(--fg)}
+.story{font-size:20px;font-weight:700;line-height:1.3;margin:12px 0 4px;letter-spacing:-.3px}
+.chart{width:100%;height:auto;display:block;margin-top:8px}
+.chart text{fill:var(--fg2);font-size:11px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.kpi{background:var(--page);border-radius:12px;padding:10px}
+.kpi b{display:block;font-size:22px;letter-spacing:-.5px}
+.kpi span{font-size:12px;color:var(--fg2)}
+.bars{display:grid;gap:5px;margin-top:10px}
+.bars div{display:grid;grid-template-columns:90px 1fr 44px;gap:8px;align-items:center;font-size:12px}
+.bars i{height:10px;border-radius:5px;background:var(--heat);display:block}
+.bars em{font-style:normal;color:var(--fg2);text-align:right;font-variant-numeric:tabular-nums}
+.detail-only{display:none}
+body.detail .detail-only{display:block}
+body.detail .simple-only{display:none}
+.tip{border-radius:12px;background:var(--lvl-s);padding:10px 12px;margin-top:12px;font-size:13px}
+.tip b{color:var(--lvl)}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+@media (max-width:720px){.compare{grid-template-columns:1fr}.big{font-size:38px}}
+.before .blah{font-size:12px;color:var(--fg2)}
+
+/* ── v2 : carte pièce repartie de la carte actuelle ── */
+.v2{background:var(--bg);border-radius:16px;border:1px solid var(--line);overflow:hidden}
+.v2-hero{position:relative;isolation:isolate;overflow:hidden;padding:16px 18px 6px;background:linear-gradient(115deg,var(--bg) 30%,color-mix(in srgb,var(--lvl) 12%,var(--bg)) 100%)}
+.v2-hero:after{content:'';position:absolute;width:220px;height:220px;right:-30px;top:-60px;border-radius:50%;background:color-mix(in srgb,var(--lvl) 16%,transparent);filter:blur(34px);z-index:-1}
+.v2-top{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg2)}
+.v2-top .room{margin-left:auto;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:12px}
+.v2-main{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;margin-top:10px}
+.v2-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--lvl-s);color:var(--lvl)}
+.v2 h3{font-size:24px;line-height:1.2;letter-spacing:-.5px;margin:8px 0 4px;text-wrap:balance}
+.v2-line{font-size:14px;color:var(--fg2);margin:0}
+.v2-line b{color:var(--fg)}
+.disk{width:84px;height:84px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--lvl) 14%,var(--bg));color:var(--lvl);box-shadow:0 0 0 6px color-mix(in srgb,var(--lvl) 8%,transparent)}
+.disk svg{width:40px;height:40px}
+.disk-cap{font-size:12px;color:var(--fg2);text-align:center;margin-top:6px;max-width:90px}
+.v2-acts{display:flex;gap:6px;flex-wrap:wrap;padding:2px 0 12px}
+.v2-acts span{border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12px;color:var(--fg2);background:color-mix(in srgb,var(--bg) 70%,transparent)}
+.v2-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;padding:12px 14px 14px;border-top:1px solid var(--line)}
+.mt{border-radius:11px;background:var(--page);padding:7px 9px;border:1.5px solid transparent;min-width:0}
+.mt-h{display:flex;align-items:center;justify-content:space-between;color:var(--fg2)}
+.mt-h svg{width:15px;height:15px}
+.mt-h i{width:6px;height:6px;border-radius:50%;background:var(--c)}
+.mt b{display:block;font-size:15px;margin-top:3px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mt b small{font-size:11px;font-weight:500;color:var(--fg2);margin-left:1px}
+.mt span{display:block;font-size:12px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mt.out{border-color:var(--c);background:color-mix(in srgb,var(--c) 7%,var(--bg))}
+.mt.out span{color:var(--c);font-weight:600}
+.v2-more{border-top:1px solid var(--line);padding:10px 16px}
+.v2-more summary{cursor:pointer;font-size:12px;color:var(--fg2);list-style:none}
+.v2-more summary::before{content:"＋ "}.v2-more[open] summary::before{content:"－ "}
+.v2-more ul{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:4px;font-size:12px;color:var(--fg2)}
+.v2-more li b{color:var(--fg);font-weight:600}
+
+.lg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--fg2);margin:-2px 0 10px}
+.lg span{display:inline-flex;align-items:center;gap:5px}
+.lg .k{display:inline-block;flex:none}
+.lg .k.band{width:14px;height:8px;border-radius:3px;background:var(--band)}
+.lg .k.day{width:14px;height:3px;border-radius:2px;background:color-mix(in srgb,var(--fg) 45%,transparent)}
+.lg .k.now{width:4px;height:12px;border-radius:2px;background:var(--fg)}
+.lg .k.out{width:9px;height:9px;border-radius:50%;border:2px solid var(--cold)}
+.lg .k.fc{width:4px;height:12px;border:1.5px dashed var(--fg2);border-radius:2px}
+.lg .k.room{width:9px;height:9px;border-radius:50%;background:var(--calm)}
+.rt{border-radius:11px;background:var(--page);padding:7px 9px;border:1.5px solid transparent;min-width:0;--c:var(--calm)}
+.rt-h{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.rt-h span{font-size:12px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt-h i{width:6px;height:6px;border-radius:50%;background:var(--c);flex:none}
+.rt b{display:block;font-size:15px;margin-top:3px;font-variant-numeric:tabular-nums}
+.rt b small{font-size:11px;font-weight:500;color:var(--fg2)}
+.rt em{display:block;font-style:normal;font-size:12px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt.out{border-color:var(--c);background:color-mix(in srgb,var(--c) 7%,var(--bg))}
+.rt.out em{color:var(--c);font-weight:600}
+.fl{grid-column:1/-1;display:flex;justify-content:space-between;font-size:12px;color:var(--fg2);margin:4px 2px 0;font-weight:600}
+.fl b{color:var(--fg);font-variant-numeric:tabular-nums}
+
+.v2-top{justify-content:space-between}
+.v2-room{font-size:16px;color:var(--fg)}
+.v2-main{margin-top:8px}
+.v2 h3{margin:0 0 4px}
+.v2-foot{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-bottom:12px}
+.v2-foot .lg{margin:0}
+.why{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--fg2);white-space:nowrap;background:color-mix(in srgb,var(--bg) 70%,transparent)}
+
+.v2-tiles .tg{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;width:100%;border:0;background:none;padding:0 2px 2px;font:inherit;font-size:12px;color:var(--fg2);cursor:pointer;text-align:left}
+.v2-tiles .tg b{color:var(--lvl)}
+.v2-tiles .chev{transition:transform .2s}
+.v2-tiles.collapsed .chev{transform:rotate(-90deg)}
+.v2-tiles.collapsed .mt:not(.out),.v2-tiles.collapsed .rt:not(.out),.v2-tiles.collapsed .fl{display:none}
+@media (prefers-reduced-motion:reduce){.v2-tiles .chev{transition:none}}
+
+/* ── Charte Niak Weather appliquée (jetons repris de niak-weather card/src/ui/charter.ts) ── */
+.nwc{--nw-fg:var(--fg);--nw-fg2:var(--fg2);--nw-bg:var(--bg);
+ --nw-line:color-mix(in srgb,var(--nw-fg) 13%,transparent);--nw-line-soft:color-mix(in srgb,var(--nw-fg) 8%,transparent);
+ --nw-radius:14px;--nw-radius-card:12px;--nw-fs-label:10px;--nw-fs-small:12px;--nw-fs-text:13px;--nw-fs-title:17px;--nw-fs-value:30px;--nw-fs-temp:42px;
+ --nw-heat:oklch(.83 .085 42);--nw-cold:oklch(.85 .05 220);--nw-calm:oklch(.83 .075 150);--nw-level1:oklch(.88 .1 96);--nw-level2:oklch(.81 .105 64);--nw-level3:oklch(.74 .115 18);--nw-ink:34%;
+ font-family:Roboto,system-ui,sans-serif}
+.nwc .lvl-calm{--c:var(--nw-calm)}.nwc .lvl-benefit{--c:var(--nw-cold)}.nwc .lvl-action{--c:var(--nw-level2)}.nwc .lvl-urgent{--c:var(--nw-level3)}.nwc .lvl-neutral{--c:color-mix(in srgb,var(--nw-fg2) 60%,var(--nw-bg))}
+.nwc .ink{color:color-mix(in oklab,var(--c) var(--nw-ink),var(--nw-fg))}
+.nw-label{font-size:var(--nw-fs-label);line-height:13px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--nw-fg2);white-space:nowrap}
+.c3{background:var(--nw-bg);border:1px solid var(--nw-line);border-radius:var(--nw-radius-card);overflow:hidden}
+.c3-hero{position:relative;isolation:isolate;overflow:hidden;padding:18px 20px 16px;background:linear-gradient(115deg,var(--nw-bg) 32%,color-mix(in oklab,var(--c) 30%,var(--nw-bg)) 100%)}
+.c3-hero:after{content:'';position:absolute;width:230px;height:230px;right:-40px;top:-70px;border-radius:50%;background:color-mix(in oklab,var(--c) 32%,transparent);filter:blur(36px);z-index:-1}
+.c3-top{display:flex;align-items:center;gap:8px}
+.c3-top h2{margin:0;font-size:var(--nw-fs-title);font-weight:700;letter-spacing:-.2px}
+.i{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--nw-line);font:italic 600 12px Georgia,serif;color:var(--nw-fg2);background:color-mix(in srgb,var(--nw-bg) 70%,transparent)}
+.chip3{margin-left:auto;display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:var(--nw-fs-small);line-height:18px;font-weight:600;white-space:nowrap;background:color-mix(in oklab,var(--c) 24%,transparent);color:color-mix(in oklab,var(--c) var(--nw-ink),var(--nw-fg))}
+.c3-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;margin-top:14px}
+.advice{font-size:var(--nw-fs-value);font-weight:700;letter-spacing:-1px;line-height:1.1;margin:4px 0 6px;text-wrap:balance}
+.reason{margin:0;font-size:var(--nw-fs-text);font-weight:500;line-height:1.5}
+.reason b{font-weight:700}
+.disk3{width:88px;height:88px;border-radius:50%;display:grid;place-items:center;background:color-mix(in oklab,var(--c) 26%,var(--nw-bg));color:color-mix(in oklab,var(--c) 60%,var(--nw-fg));box-shadow:0 0 0 7px color-mix(in oklab,var(--c) 14%,transparent)}
+.disk3 svg{width:42px;height:42px}
+.cap3{font-size:var(--nw-fs-small);color:var(--nw-fg2);text-align:center;margin-top:8px;max-width:96px}
+.sec{margin-top:18px}
+/* échelle, sur le modèle du Ressenti de Weather */
+.sc{position:relative;height:62px;margin:8px 6px 0}
+.sc .tr{position:absolute;left:0;right:0;top:30px;height:8px;border-radius:4px;background:color-mix(in srgb,var(--nw-fg) 9%,transparent)}
+.sc .bd{position:absolute;top:30px;height:8px;background:color-mix(in oklab,var(--nw-calm) 75%,transparent);border-radius:4px}
+.sc .dy{position:absolute;top:32px;height:4px;border-radius:2px;background:color-mix(in srgb,var(--nw-fg) 40%,transparent)}
+.sc .ring{position:absolute;top:24px;width:20px;height:20px;margin-left:-10px;border-radius:50%;background:var(--nw-bg);border:4px solid color-mix(in oklab,var(--c) 70%,var(--nw-fg));box-sizing:border-box;box-shadow:0 1px 4px color-mix(in srgb,var(--nw-fg) 20%,transparent)}
+.sc .bub{position:absolute;top:0;transform:translateX(-50%);padding:1px 8px;border-radius:999px;border:1px solid var(--nw-line);background:var(--nw-bg);font-size:var(--nw-fs-text);font-weight:700;white-space:nowrap}
+.sc .ot{position:absolute;top:29px;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:var(--nw-bg);border:2px solid color-mix(in oklab,var(--nw-cold) 75%,var(--nw-fg))}
+.sc .fc{position:absolute;top:27px;width:14px;height:14px;margin-left:-7px;border-radius:50%;border:2px dashed var(--nw-fg2)}
+.sc .rm{position:absolute;top:28px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:color-mix(in oklab,var(--c) 75%,var(--nw-fg));box-shadow:0 0 0 2px var(--nw-bg)}
+.sc .lb{position:absolute;top:44px;transform:translateX(-50%);font-size:var(--nw-fs-small);color:var(--nw-fg2);white-space:nowrap}
+.sc .lb.up{top:6px}.sc .lb b{color:var(--nw-fg)}
+.lg3{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 16px;font-size:var(--nw-fs-small);color:var(--nw-fg2);margin-top:6px}
+.lg3 span{display:inline-flex;align-items:center;gap:6px}
+.lg3 i{display:inline-block}
+.lg3 .k-bd{width:10px;height:10px;border-radius:3px;background:color-mix(in oklab,var(--nw-calm) 75%,transparent)}
+.lg3 .k-dy{width:14px;height:4px;border-radius:2px;background:color-mix(in srgb,var(--nw-fg) 40%,transparent)}
+.lg3 .k-ot{width:9px;height:9px;border-radius:50%;border:2px solid color-mix(in oklab,var(--nw-cold) 75%,var(--nw-fg))}
+.lg3 .k-fc{width:10px;height:10px;border-radius:50%;border:2px dashed var(--nw-fg2)}
+.lg3 .k-rm{width:10px;height:10px;border-radius:50%;background:color-mix(in oklab,var(--nw-calm) 75%,var(--nw-fg))}
+/* mesures */
+.c3-body{padding:14px 20px 16px;border-top:1px solid var(--nw-line-soft)}
+.sh{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.sh .sum{font-size:var(--nw-fs-small);color:var(--nw-fg2);flex:1}
+.sh .sum b{font-weight:600;color:color-mix(in oklab,var(--c) var(--nw-ink),var(--nw-fg))}
+.chev3{width:30px;height:30px;border-radius:50%;border:1px solid var(--nw-line);display:grid;place-items:center;flex:none;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.chev3 svg{width:16px;height:16px}
+.fold:not(.closed)>.sh .chev3{transform:rotate(180deg)}
+.tl3{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px;margin-top:12px}
+.t3{border:1px solid var(--nw-line);border-radius:var(--nw-radius);padding:10px 12px;min-width:0}
+.t3-h{display:flex;align-items:center;gap:6px}
+.t3-h .pi{display:grid;place-items:center;width:22px;height:22px;border-radius:7px;flex:none;background:color-mix(in oklab,var(--c) 28%,transparent);color:color-mix(in oklab,var(--c) 60%,var(--nw-fg))}
+.t3-h .pi svg{width:14px;height:14px}
+.t3 b{display:block;font-size:var(--nw-fs-title);font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.t3 b small{font-size:var(--nw-fs-small);font-weight:400;color:var(--nw-fg2);margin-left:2px}
+.t3 em{display:block;font-style:normal;font-size:var(--nw-fs-small);color:var(--nw-fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t3.out{border-color:color-mix(in oklab,var(--c) 75%,var(--nw-fg));background:color-mix(in oklab,var(--c) 10%,var(--nw-bg))}
+.t3.out em{font-weight:600;color:color-mix(in oklab,var(--c) var(--nw-ink),var(--nw-fg))}
+.fold.closed .t3:not(.out),.fold.closed .fl3,.fold.closed .dl{display:none}
+.fl3{grid-column:1/-1;display:flex;justify-content:space-between;margin-top:6px}
+.fl3 b{font-size:var(--nw-fs-small)}
+.dl{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:6px;font-size:var(--nw-fs-text)}
+.dl li span{color:var(--nw-fg2)}
+@media (prefers-reduced-motion:reduce){.chev3{transition:none}}
+@media (max-width:420px){.advice{font-size:26px}.disk3{width:72px;height:72px}.disk3 svg{width:34px;height:34px}}
+</style>
+</head>
+<body>
+<main>
+<div class="top">
+  <div>
+    <h1>Refonte des cartes Confort</h1>
+    <p class="lead">Maquettes de travail, données de la maison de Frank. Une seule règle : <b>on regarde d’abord, on lit ensuite</b>.</p>
+    <ul class="rules">
+      <li>1 visuel principal</li><li>1 phrase de 6 mots maximum</li><li>Le détail se déplie</li><li>Vert = tout va bien · bleu = à saisir · orange = un geste · rouge = urgent</li>
+    </ul>
+  </div>
+  <div class="toggle" role="group" aria-label="Thème">
+    <button data-theme-set="light" aria-pressed="false">Clair</button>
+    <button data-theme-set="dark" aria-pressed="false">Sombre</button>
+    <button data-theme-set="auto" aria-pressed="true">Auto</button>
+  </div>
+</div>
+
+
+<h2>0. Carte pièce · charte Niak Weather</h2>
+<p class="lead">Mêmes jetons que la carte Weather complète : tailles de texte, étiquettes en petites capitales, palette Aube, contours, bouton « i », sections repliables au chevron rond, échelle à anneau comme le Ressenti. On garde le dégradé et le rond à icône.</p>
+<div class="grid" id="v2"></div>
+
+
+<h2>0 bis. Carte logement · même charte</h2>
+<p class="lead">Même bandeau que la carte pièce : la pièce qui demande quelque chose donne le conseil. La barre place chaque pièce dans votre plage ; les tuiles sont groupées par étage et s’encadrent hors plage.</p>
+<div class="grid" id="v2home"></div>
+
+<h2>1. La barre de plage, élément commun à toutes les cartes</h2>
+<p class="lead">Inspirée de la room climate card. Elle dit tout d’un coup d’œil : votre plage (zone verte), où en est la pièce (trait plein), sa variation des dernières 24 h (fine barre grise), dehors (rond bleu) et la prévision (trait pointillé).</p>
+<div class="grid">
+  <div class="card lvl-calm" style="grid-column:1/-1;max-width:640px">
+    <div id="demo-range"></div>
+    <div class="legend"><span><i style="background:var(--band)"></i>Votre plage aujourd’hui</span><span><i style="background:color-mix(in srgb,var(--fg) 45%,transparent)"></i>Min–max 24 h</span><span><i style="background:var(--fg)"></i>Maintenant</span><span><i style="border:2px solid var(--cold);border-radius:50%"></i>Dehors</span><span><i style="border:2px dashed var(--fg2)"></i>Prévu à 20 h</span></div>
+  </div>
+</div>
+
+<h2>2. Carte pièce : trois situations</h2>
+<p class="lead">Même pièce, même structure. Seuls la couleur, la phrase et les repères changent. Les explications longues passent sous « Pourquoi ? ».</p>
+<div class="grid" id="rooms"></div>
+
+<h2>3. Carte logement</h2>
+<p class="lead">Une barre, un point par pièce. La phrase ne parle que de la pièce qui demande quelque chose.</p>
+<div class="grid" id="home"></div>
+
+<h2>4. Format mini (une ligne)</h2>
+<p class="lead">Pour les tableaux de bord chargés ou le téléphone. Un appui ouvre la carte complète.</p>
+<div class="grid" id="minis"></div>
+
+<h2>5. Même barre pour l’air</h2>
+<p class="lead">Le composant sert aussi au CO₂ et à l’humidité : on apprend à le lire une fois.</p>
+<div class="grid" id="air"></div>
+
+<h2>6. Avant / après</h2>
+<p class="lead">La carte actuelle à gauche (textes de la 0.9), la proposition à droite pour la même situation.</p>
+<div class="compare" id="compare"></div>
+
+<h2>7. Exploration : « Ma maison » (future brique Niak Maison)</h2>
+<div class="top">
+  <p class="lead">Pas pour la refonte immédiate : une piste pour la brique statistique. Deux niveaux de lecture.</p>
+  <div class="toggle" role="group" aria-label="Niveau de lecture">
+    <button data-level="simple" aria-pressed="true">Simple</button>
+    <button data-level="detail" aria-pressed="false">Détaillé</button>
+  </div>
+</div>
+<div class="grid" id="maison"></div>
+<p class="note">Chiffres réels : statistiques horaires de Home Assistant, juin à août 2026 (docs/ANALYSE-HISTORIQUE.md). Températures des pièces : relevé du 17 octobre.</p>
+</main>
+
+<script>
+const fr=(v,d=1)=>v.toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const I={
+ therm:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0Z"/></svg>',
+ home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11 12 4l9 7v9H3z"/></svg>',
+ drop:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11Z"/></svg>',
+ air:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"/></svg>',
+ win:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M12 3v18M4 12h16"/></svg>',
+ moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 14A8 8 0 1 1 10 4a6 6 0 0 0 10 10Z"/></svg>',
+};
+function range({lo,hi,band,opt,day,now,out,fc,rooms,unit='°C',labels=true}){
+ const pos=v=>(Math.min(hi,Math.max(lo,v))-lo)/(hi-lo)*100;
+ const p=v=>pos(v).toFixed(2)+'%';
+ const w=(a,b)=>((Math.min(hi,b)-Math.max(lo,a))/(hi-lo)*100).toFixed(2)+'%';
+ let h=`<div class="range"><div class="track"></div>`;
+ if(band)h+=`<div class="band" style="left:${p(band[0])};width:${w(band[0],band[1])}"></div>`;
+ if(opt)h+=`<div class="band opt" style="left:${p(opt[0])};width:${w(opt[0],opt[1])}"></div>`;
+ if(day)h+=`<div class="day" style="left:${p(day[0])};width:${w(day[0],day[1])}"></div>`;
+ const labs=[];
+ if(band&&labels&&!rooms)labs.push({x:(pos(band[0])+pos(band[1]))/2,t:`${fr(band[0],band[0]%1?1:0)}–${fr(band[1],band[1]%1?1:0)} ${unit}`,pref:'up'});
+ if(out!=null){h+=`<span class="mk out" style="left:${p(out)}" title="Dehors"></span>`;labs.push({x:pos(out),t:`dehors ${fr(out)}`,pref:'down'});}
+ if(fc!=null){h+=`<span class="mk fc" style="left:${p(fc.v)}" title="Prévu"></span>`;labs.push({x:pos(fc.v),t:`${fc.t} ${fr(fc.v)}`,pref:'down'});}
+ if(rooms){
+  // Rooms a few tenths apart share one label (« S·C »): every room stays named.
+  const sorted=[...rooms].sort((a,b)=>a.v-b.v),groups=[];
+  for(const r of sorted){h+=`<span class="mk room" style="left:${p(r.v)};--c:var(--${r.l})" title="${r.n} ${fr(r.v)}"></span>`;
+   const g=groups[groups.length-1];if(g&&pos(r.v)-pos(g[g.length-1].v)<4.5)g.push(r);else groups.push([r]);}
+  groups.forEach((g,i)=>{const x=g.reduce((t,r)=>t+pos(r.v),0)/g.length,t=g.map(r=>r.s).join('·');labs.push({x,t:`<b>${t}</b>`,len:t.length+1,pref:i%2?'down':'up'});});
+ }
+ if(now!=null)h+=`<span class="mk" style="left:${p(now)}" title="Maintenant"></span>`;
+ // Greedy placement on two rows: a label never covers another one.
+ const rows={up:[],down:[]};
+ for(const l of labs){
+  const half=((l.len||l.t.length)*6.6/300*100)/2+1.5;
+  const free=r=>rows[r].every(([a,b])=>l.x+half<a||l.x-half>b);
+  const row=free(l.pref)?l.pref:free(l.pref==='up'?'down':'up')?(l.pref==='up'?'down':'up'):null;
+  if(!row)continue;
+  rows[row].push([l.x-half,l.x+half]);
+  const anchor=l.x<12?'transform:none;left:0':l.x>88?'transform:none;right:0':`left:${l.x.toFixed(2)}%`;
+  h+=`<span class="lab ${row}" style="${anchor}">${l.t}</span>`;
+ }
+ return h+'</div>';
+}
+
+Object.assign(I,{
+ cloud:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 9.5 4.3 4.3 0 0 0 7 18Z"/></svg>',
+ pm:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="8" r="1.8"/><circle cx="13" cy="6" r="1.4"/><circle cx="18" cy="10" r="1.8"/><circle cx="9" cy="14" r="1.4"/><circle cx="16" cy="17" r="1.6"/><circle cx="6" cy="19" r="1.2"/></svg>',
+ flask:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></svg>',
+ sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+ heat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4v16M12 4v16M17 4v16M4 20h16"/></svg>',
+ check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>',
+ open:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="10" height="18" rx="1.5"/><path d="M13 3l7 3v15l-7-0"/><path d="M8 12h9m-3-3 3 3-3 3" stroke-linecap="round"/></svg>',
+ ask:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/></svg>',
+});
+
+
+
+
+
+const CH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+function legend(r){const k=[];if(r.band)k.push(['bd','votre plage']);if(r.day)k.push(['dy','min–max 24 h']);if(r.rooms)k.push(['rm','pièces']);if(r.out!=null)k.push(['ot','dehors']);if(r.fc)k.push(['fc','prévu']);return `<div class="lg3">${k.map(([c,t])=>`<span><i class="k-${c}"></i>${t}</span>`).join('')}</div>`;}
+// Échelle de la charte : piste fine, plage, anneau pour la valeur actuelle avec sa bulle.
+function scale({lo,hi,band,day,now,out,fc,rooms,unit='°C'}){
+ const pos=v=>(Math.min(hi,Math.max(lo,v))-lo)/(hi-lo)*100,p=v=>pos(v).toFixed(2)+'%',w=(a,b)=>(pos(b)-pos(a)).toFixed(2)+'%';
+ const n=v=>fr(v,v%1?1:0);
+ let h=`<div class="sc"><div class="tr"></div>`;
+ if(band)h+=`<div class="bd" style="left:${p(band[0])};width:${w(band[0],band[1])}"></div>`;
+ if(day)h+=`<div class="dy" style="left:${p(day[0])};width:${w(day[0],day[1])}"></div>`;
+ const labs=[];
+ if(band)labs.push({x:pos(band[0]),t:n(band[0])},{x:pos(band[1]),t:n(band[1])});
+ if(out!=null){h+=`<span class="ot" style="left:${p(out)}"></span>`;labs.push({x:pos(out),t:`dehors ${fr(out)}`,strong:true});}
+ if(fc){h+=`<span class="fc" style="left:${p(fc.v)}"></span>`;labs.push({x:pos(fc.v),t:`${fc.t} ${fr(fc.v)}`,strong:true});}
+ if(rooms){const sorted=[...rooms].sort((a,b)=>a.v-b.v),groups=[];
+  for(const r of sorted){h+=`<span class="rm" style="left:${p(r.v)};--c:var(--nw-${r.l==='action'?'level2':r.l==='benefit'?'cold':r.l==='neutral'?'fg2':'calm'})" title="${r.n} ${fr(r.v)}"></span>`;
+   const g=groups[groups.length-1];if(g&&pos(r.v)-pos(g[g.length-1].v)<4.5)g.push(r);else groups.push([r]);}
+  groups.forEach((g,i)=>labs.push({x:g.reduce((t,r)=>t+pos(r.v),0)/g.length,t:`<b>${g.map(r=>r.s).join('·')}</b>`,len:g.map(r=>r.s).join('·').length,row:i%2?'down':'up',strong:true}));}
+ if(now!=null){h+=`<span class="ring" style="left:${p(now)}"></span><span class="bub" style="left:${p(now)}">${fr(now)} ${unit}</span>`;}
+ // Étiquettes du bas, placées sans chevauchement ; les repères de plage cèdent la place aux autres.
+ const taken=[];if(now!=null)taken.push([pos(now)-9,pos(now)+9,'up']);
+ for(const l of labs.sort((a,b)=>(b.strong?1:0)-(a.strong?1:0))){const half=((l.len||String(l.t).replace(/<[^>]+>/g,'').length)*6.6/320*100)/2+1.5,row=l.row||'down';
+  const free=r=>taken.every(([a,b,rr])=>rr!==r||l.x+half<a||l.x-half>b);const rr=free(row)?row:(l.row&&free(row==='up'?'down':'up'))?(row==='up'?'down':'up'):null;if(!rr)continue;
+  taken.push([l.x-half,l.x+half,rr]);const anchor=l.x<8?'transform:none;left:0':l.x>92?'transform:none;right:0;left:auto':`left:${l.x.toFixed(2)}%`;h+=`<span class="lb${rr==='up'?' up':''}" style="${anchor}">${l.t}</span>`;}
+ return h+'</div>';
+}
+const mt=(i,lab,v,u,st='calm',out=false)=>`<div class="t3${out?' out':''} lvl-${st}"><div class="t3-h"><span class="pi">${I[i]}</span><span class="nw-label">${lab.split('|')[0]}</span></div><b>${v}${u?`<small>${u}</small>`:''}</b><em>${lab.split('|')[1]||'dans votre plage'}</em></div>`;
+const rt=(n,v,lab,st='calm',out=false)=>`<div class="t3${out?' out':''} lvl-${st}"><div class="t3-h"><span class="nw-label">${n}</span></div><b>${fr(v)}<small>°C</small></b><em>${lab}</em></div>`;
+function fold(items,unit,open,title='Mesures'){const n=items.filter(t=>t.includes('class="t3')).length,k=items.filter(t=>t.includes(' out ')).length;
+ return `<div class="fold${open?'':' closed'}"><button class="sh" type="button" onclick="this.parentElement.classList.toggle('closed')"><span class="nw-label">${title}</span><span class="sum">${n} ${unit}${k?` · <b>${k} hors de votre plage</b>`:' · toutes dans votre plage'}</span><span class="chev3">${CH}</span></button><div class="tl3">${items.join('')}</div></div>`;}
+function shell({lvl,pill,name,title,line,disk,cap,r,body,more,label='Température'}){
+ return `<div class="nwc"><div class="c3 lvl-${lvl}"><div class="c3-hero">
+  <div class="c3-top"><h2>${name}</h2><span class="i" title="Pourquoi ?">i</span><span class="chip3">${pill}</span></div>
+  <div class="c3-grid"><div><div class="nw-label">Conseil</div><p class="advice">${title}</p><p class="reason">${line}</p></div>
+   <div><div class="disk3">${I[disk]}</div>${cap?`<div class="cap3">${cap}</div>`:''}</div></div>
+  <div class="sec"><div class="nw-label">${label}</div>${scale(r)}${legend(r)}</div></div>
+  <div class="c3-body">${body}
+   <div class="fold closed" style="margin-top:14px"><button class="sh" type="button" onclick="this.parentElement.classList.toggle('closed')"><span class="nw-label">Détails</span><span class="sum"></span><span class="chev3">${CH}</span></button><ul class="dl">${more.map(m=>`<li>${m}</li>`).join('')}</ul></div>
+  </div></div></div>`;
+}
+function v2({lvl,pill,room='Salon',title,line,disk,cap,r,tiles,more,open=false}){return shell({lvl,pill,name:room,title,line,disk,cap,r,more,body:fold(tiles,'mesures',open)});}
+function v2home({lvl,pill,title,line,disk,cap,r,floors,more,open=false}){return shell({lvl,pill,name:'Mon logement',title,line,disk,cap,r,more,label:'Les pièces',body:fold(floors.flatMap(f=>[`<div class="fl3"><span class="nw-label">${f.name}</span><b>${fr(f.mean)} °C</b></div>`,...f.rooms]),'pièces',open,'Pièces')});}
+document.getElementById('v2').innerHTML=[
+ v2({lvl:'action',pill:'Geste conseillé',title:'Aérez 10 minutes',line:'Pluie non suivie : <b>regardez dehors avant</b>',disk:'ask',cap:'S’il ne pleut pas',
+  r:{lo:16,hi:30,band:[20,24.8],day:[21.9,23.6],now:23.3,out:21.5},
+  tiles:[mt('drop','Humidité|trop humide','63','%','action',true),mt('flask','COV|élevés','186','','action',true),mt('air','CO₂','716','ppm'),mt('pm','Particules','2','µg/m³'),mt('win','Fenêtres|toutes fermées','0/3','','neutral'),mt('sun','Soleil|peu de soleil','Faible','','neutral'),mt('heat','Chauffage|ne chauffe pas','Arrêté','','neutral')],
+  open:true,more:['<b>Pourquoi aérer</b> <span>· humidité 63 % (repère 60 %) et COV 186 (repère 150)</span>','<b>Fenêtre Ouest</b> <span>· face au vent</span>','<b>Portes-fenêtres SD et SG</b> <span>· à l’ombre</span>','<b>Présence</b> <span>· quelqu’un est là</span>','<b>Sources</b> <span>· Alpstuga (CO₂, PM2.5), IKEA (COV), station GW2000A</span>']}),
+ v2({lvl:'action',pill:'Geste conseillé',title:'Ouvrez 10 minutes',line:'Il fait <b>8&nbsp;°C de moins</b> dehors',disk:'open',cap:'Côté ouest',
+  r:{lo:14,hi:28,band:[20,24],day:[23.9,25.2],now:25,out:17},
+  tiles:[mt('drop','Humidité','48','%'),mt('air','CO₂','860','ppm'),mt('win','Fenêtres|toutes fermées','0/3','','neutral'),mt('heat','Chauffage|ne chauffe pas','Arrêté','','neutral')],
+  more:['<b>Plage d’hiver</b> <span>· jusqu’à 24 °C</span>','<b>Ensuite</b> <span>· refermez au bout de 10 à 15 min</span>','<b>Air extérieur</b> <span>· non suivi</span>']}),
+ v2({lvl:'calm',pill:'Tout va bien',title:'Gardez fermé',line:'<b>31&nbsp;°C dehors</b> : la maison tient',disk:'check',
+  r:{lo:16,hi:34,band:[20,26],day:[24.6,25.6],now:25,out:31.5,fc:{v:25.8,t:'20 h'}},
+  tiles:[mt('drop','Humidité','52','%'),mt('air','CO₂','640','ppm'),mt('win','Fenêtres|toutes fermées','0/3','','neutral'),mt('sun','Soleil|plein soleil','Fort','','neutral')],
+  more:['<b>Plage d’été</b> <span>· jusqu’à 26 °C</span>','<b>Ce soir 20 h</b> <span>· 25,8 °C prévus dedans</span>','<b>Volets</b> <span>· fermez côté ouest après 14 h</span>']}),
+ v2({lvl:'benefit',pill:'À saisir ce soir',title:'Ouvrez vers 22 h',line:'La nuit peut retirer <b>2&nbsp;°C</b>',disk:'moon',cap:'24 °C dehors à 22 h',
+  r:{lo:16,hi:34,band:[20,26],day:[25.2,27.1],now:26.8,out:29.9,fc:{v:24.5,t:'7 h'}},
+  tiles:[mt('drop','Humidité','55','%'),mt('air','CO₂','720','ppm'),mt('win','Fenêtres|toutes fermées','0/3','','neutral')],
+  more:['<b>Créneau</b> <span>· 22 h à 7 h, vent d’ouest</span>','<b>Effet attendu</b> <span>· environ −2 °C au réveil, d’après vos nuits d’été</span>']}),
+].join('');
+document.getElementById('v2home').innerHTML=[
+ v2home({lvl:'calm',pill:'Tout va bien',title:'Rien à faire',line:'Toutes les pièces sont <b>dans votre plage</b>',disk:'check',cap:'Tout est fermé',
+  r:{lo:16,hi:26,band:[20,24.8],out:17.2,rooms:[{n:'Chambre P',s:'P',v:20.4,l:'calm'},{n:'Buanderie',s:'B',v:21.6,l:'neutral'},{n:'Chambre A',s:'A',v:21.8,l:'calm'},{n:'Salon',s:'S',v:22.3,l:'calm'},{n:'Cuisine',s:'C',v:22.4,l:'calm'},{n:'Chambre AL',s:'AL',v:22.6,l:'calm'},{n:'Chambre M',s:'M',v:23.3,l:'calm'}]},
+  floors:[{name:'Rez-de-chaussée',mean:21.6,rooms:[rt('Salon',22.3,'dans la plage'),rt('Cuisine',22.4,'dans la plage'),rt('Chambre P',20.4,'un peu frais','benefit'),rt('Buanderie',21.6,'non chauffée','neutral')]},
+         {name:'Étage',mean:22.6,rooms:[rt('Chambre A',21.8,'dans la plage'),rt('Chambre AL',22.6,'dans la plage'),rt('Chambre M',23.3,'dans la plage')]}],
+  open:true,more:['<b>Étage</b> <span>· 1,0 °C plus chaud que le bas</span>','<b>Écart entre pièces</b> <span>· 2,9 °C (Chambre M la plus chaude, Chambre P la plus fraîche)</span>']}),
+ v2home({lvl:'action',pill:'Geste conseillé',title:'Rafraîchissez l’étage',line:'Commencez par la <b>Chambre AL</b>',disk:'open',cap:'18 °C dehors',
+  r:{lo:16,hi:30,band:[20,24.8],out:18,rooms:[{n:'Chambre P',s:'P',v:24.1,l:'calm'},{n:'Buanderie',s:'B',v:26.8,l:'neutral'},{n:'Salon',s:'S',v:24.6,l:'calm'},{n:'Cuisine',s:'C',v:24.9,l:'action'},{n:'Chambre A',s:'A',v:25.9,l:'action'},{n:'Chambre M',s:'M',v:26.4,l:'action'},{n:'Chambre AL',s:'AL',v:27.2,l:'action'}]},
+  floors:[{name:'Rez-de-chaussée',mean:24.5,rooms:[rt('Salon',24.6,'dans la plage'),rt('Cuisine',24.9,'un peu chaud','action',true),rt('Chambre P',24.1,'dans la plage'),rt('Buanderie',26.8,'non chauffée','neutral')]},
+         {name:'Étage',mean:26.5,rooms:[rt('Chambre AL',27.2,'trop chaud','action',true),rt('Chambre M',26.4,'trop chaud','action',true),rt('Chambre A',25.9,'trop chaud','action',true)]}],
+  more:['<b>Pourquoi l’étage</b> <span>· la chaleur y stagne : 2,0 °C de plus qu’en bas</span>','<b>Pour que l’air traverse</b> <span>· ouvrez aussi une fenêtre en bas, côté opposé</span>']}),
+].join('');
+
+document.getElementById('demo-range').innerHTML=range({lo:14,hi:30,band:[20,25],day:[22.8,25.4],now:25,out:17,fc:{v:25.8,t:'20 h'}});
+
+const tiles=(t)=>`<div class="tiles">${t.map(x=>`<div class="tile" style="--c:var(--${x.l})">${I[x.i]}<span class="st"></span><div><b>${x.v}</b><br><s>${x.u}</s></div></div>`).join('')}</div>`;
+function room({lvl,pill,name,v,trend,say,r,t,why,icon='therm'}){
+ return `<div class="card lvl-${lvl}">
+  <div class="head"><span class="ico">${I[icon]}</span><span class="name">${name}</span><span class="pill">${pill}</span></div>
+  <div class="hero"><span class="big">${fr(v)}<small>°C</small></span><span class="trend">${trend}</span></div>
+  <div class="say"><span class="dot"></span>${say}</div>
+  ${range(r)}
+  ${tiles(t)}
+  <details class="more"><summary>Pourquoi ?</summary><p>${why}</p></details>
+ </div>`;
+}
+const T=(h,c,w)=>[{i:'drop',v:h+' %',u:'humidité',l:'calm'},{i:'air',v:c,u:'CO₂ ppm',l:c>=1000?'action':'calm'},{i:'win',v:w,u:'fenêtres',l:'neutral'}];
+document.getElementById('rooms').innerHTML=[
+ room({lvl:'calm',pill:'Tout va bien',name:'Salon · été',v:25,trend:'↗ 0,2 °C/h',say:'Dans votre plage',
+  r:{lo:16,hi:32,band:[20,26],day:[24.6,25.6],now:25,out:31.5,fc:{v:25.8,t:'20 h'}},t:T(52,640,'0/3'),
+  why:'Plage d’été : jusqu’à 26 °C (moyenne dehors 22 °C sur 7 jours). Dehors est plus chaud : garder fermé est le bon choix.'}),
+ room({lvl:'action',pill:'Un geste',name:'Salon · hiver',v:25,trend:'→ stable',say:'Ouvrez : 17 °C dehors',
+  r:{lo:14,hi:28,band:[20,24],day:[23.9,25.2],now:25,out:17},t:T(48,860,'0/3'),
+  why:'Plage d’hiver : jusqu’à 24 °C. Dehors est 8 °C plus frais : 10 à 15 minutes suffisent, puis refermez.'}),
+ room({lvl:'benefit',pill:'À saisir ce soir',name:'Salon · soirée d’été',v:26.8,trend:'↗ 0,1 °C/h',say:'Ouvrez vers 22 h',icon:'moon',
+  r:{lo:16,hi:34,band:[20,26],day:[25.2,27.1],now:26.8,out:29.9,fc:{v:24.5,t:'7 h'}},t:T(55,720,'0/3'),
+  why:'Il fera 24 °C dehors vers 22 h. En ouvrant la nuit, le Salon peut perdre environ 2 °C d’ici le matin (moyenne de vos nuits d’été).'}),
+].join('');
+
+const rooms=[{n:'Chambre P',s:'P',v:20.4,l:'calm'},{n:'Buanderie',s:'B',v:21.6,l:'neutral'},{n:'Chambre A',s:'A',v:21.8,l:'calm'},{n:'Salon',s:'S',v:22.3,l:'calm'},{n:'Cuisine',s:'C',v:22.4,l:'calm'},{n:'Chambre AL',s:'AL',v:22.6,l:'calm'},{n:'Chambre M',s:'M',v:23.3,l:'calm'}];
+const chips=rs=>`<div class="chips">${rs.map(r=>`<span class="chip" style="--c:var(--${r.l})"><i></i>${r.n} <b>${fr(r.v)}</b></span>`).join('')}</div>`;
+const floors=`<div class="floors">
+ <div class="floor">RDC<div class="bar"><span style="left:30%;width:24%"></span></div><b>21,7°</b></div>
+ <div class="floor">Étage<div class="bar"><span style="left:47%;width:19%"></span></div><b>22,6°</b></div></div>`;
+document.getElementById('home').innerHTML=`
+ <div class="card lvl-calm">
+  <div class="head"><span class="ico">${I.home}</span><span class="name">Mon logement</span><span class="pill">Tout va bien</span></div>
+  <div class="hero"><span class="big">22,1<small>°C</small></span><span class="trend">moyenne · 7 pièces</span></div>
+  <div class="say"><span class="dot"></span>Toutes les pièces dans la plage</div>
+  ${range({lo:18,hi:26,band:[20,24],rooms})}
+  ${chips(rooms)}
+  <details class="more"><summary>Par étage</summary>${floors}<p>L’étage est 0,9 °C plus chaud. Écart entre pièces : 2,9 °C.</p></details>
+ </div>
+ <div class="card lvl-action">
+  <div class="head"><span class="ico">${I.home}</span><span class="name">Mon logement</span><span class="pill">Un geste</span></div>
+  <div class="hero"><span class="big">25,4<small>°C</small></span><span class="trend">moyenne · 6 pièces</span></div>
+  <div class="say"><span class="dot"></span>Chambre AL : ouvrez, 18 °C dehors</div>
+  ${range({lo:20,hi:30,band:[20,24.5],rooms:[{n:'Chambre P',s:'P',v:24.1,l:'calm'},{n:'Salon',s:'S',v:24.6,l:'action'},{n:'Cuisine',s:'C',v:24.9,l:'action'},{n:'Chambre A',s:'A',v:25.9,l:'action'},{n:'Chambre M',s:'M',v:26.4,l:'action'},{n:'Chambre AL',s:'AL',v:27.2,l:'action'}]})}
+  ${chips([{n:'Chambre AL',v:27.2,l:'action'},{n:'Chambre M',v:26.4,l:'action'},{n:'Chambre A',v:25.9,l:'action'},{n:'Cuisine',v:24.9,l:'action'},{n:'Salon',v:24.6,l:'action'},{n:'Chambre P',v:24.1,l:'calm'}])}
+  <details class="more"><summary>Par où commencer ?</summary><p>Ouvrez d’abord à l’étage, là où la chaleur s’accumule, puis une fenêtre en bas côté opposé : l’air traverse.</p></details>
+ </div>`;
+
+const mini=(lvl,icon,name,v,band,lo,hi,say)=>{const p=x=>((x-lo)/(hi-lo)*100)+'%';return `<div class="card mini lvl-${lvl}"><span class="ico">${I[icon]}</span><div style="min-width:86px"><div style="font-size:12px;color:var(--fg2)">${name}</div><div class="mv">${fr(v)}°</div></div><div class="mb"><span class="band" style="left:${p(band[0])};width:calc(${p(band[1])} - ${p(band[0])})"></span><span class="mk" style="left:${p(v)}"></span></div><span class="pill">${say}</span></div>`;};
+document.getElementById('minis').innerHTML=mini('calm','therm','Salon',22.3,[20,24],16,28,'OK')+mini('action','therm','Chambre AL',27.2,[20,24.5],16,30,'Ouvrir')+mini('benefit','moon','Salon',26.8,[20,26],16,32,'22 h');
+
+document.getElementById('air').innerHTML=`
+ <div class="card lvl-action"><div class="head"><span class="ico">${I.air}</span><span class="name">CO₂ · Salon</span><span class="pill">Un geste</span></div>
+  <div class="hero"><span class="big">1 080<small>ppm</small></span></div><div class="say"><span class="dot"></span>Aérez 10 minutes</div>
+  ${range({lo:400,hi:1800,band:[400,1000],opt:[400,800],day:[520,1120],now:1080,unit:'ppm',labels:false})}
+  <div class="legend"><span><i style="background:var(--band2)"></i>Très bon &lt; 800</span><span><i style="background:var(--band)"></i>Correct &lt; 1 000</span><span><i style="background:var(--track)"></i>À renouveler</span></div></div>
+ <div class="card lvl-urgent"><div class="head"><span class="ico">${I.drop}</span><span class="name">Humidité · Chambre P</span><span class="pill">Toute l’année</span></div>
+  <div class="hero"><span class="big">68<small>%</small></span></div><div class="say"><span class="dot"></span>Trop humide, souvent</div>
+  ${range({lo:20,hi:90,band:[40,60],day:[63,71],now:68,out:58,unit:'%'})}
+  <details class="more"><summary>Pourquoi ?</summary><p>Au-dessus de 60 % la plupart du temps depuis un an (79 % des heures l’hiver). Dehors est souvent plus sec : aérer court aide, la VMC aussi.</p></details></div>`;
+
+document.getElementById('compare').innerHTML=`
+ <div class="card lvl-action before"><div class="head"><span class="name">Confort · Salon (0.9)</span><span class="pill">Geste conseillé</span></div>
+  <p style="font-size:18px;font-weight:700;margin:12px 0 4px">Profitez de la fraîcheur</p>
+  <p class="blah">L’air extérieur est suffisamment plus frais pour aider cette pièce à retrouver votre plage de confort.</p>
+  <p class="blah">ⓘ Qualité de l’air dehors non suivie : vérifiez avant d’ouvrir.</p>
+  <p class="blah">Température 25 °C · Dans vos repères — Dehors 17 °C · −8 °C vs dedans — Humidité 48 % · 12 g/m³ — CO₂ 860 ppm · Dans vos repères CO₂ — Ouvrants 0/3 · Tout fermé — Soleil 850 W/m² · 1 ouvrant au soleil — Vent d’ouest</p>
+  <p class="blah"><b>Présence</b> Présence non suivie. <b>Qualité de l’air</b> Les mesures d’air restent distinctes. Mesures disponibles : CO₂ ; non suivies ou indisponibles : PM2.5, COV. <b>Humidité et buée</b> Aucun risque de buée estimé avec les mesures actuelles. Buée estimée à partir du point de rosée et d’un vitrage modélisé…</p>
+  <p class="note">Environ 110 mots avant les détails, aucun visuel.</p></div>
+ ${room({lvl:'action',pill:'Un geste',name:'Salon',v:25,trend:'→ stable',say:'Ouvrez : 17 °C dehors',r:{lo:14,hi:28,band:[20,24],day:[23.9,25.2],now:25,out:17},t:T(48,860,'0/3'),why:'Dehors est 8 °C plus frais : 10 à 15 minutes suffisent, puis refermez. Qualité de l’air dehors non suivie.'})}`;
+
+const tin=[26.7,26.5,26.3,26.1,25.9,25.7,25.3,25.2,25.5,25.8,26,26.1,26.3,26.4,26.6,26.6,26.7,26.8,26.9,27,27.1,27.1,27,26.8];
+const tout=[23.4,22.3,21.3,20.6,20,19.5,19.1,22.4,25.9,28.7,30.9,32.4,33.3,33.9,34.1,34.4,34.4,33.8,33.2,32,29.9,27.8,26.3,24.7];
+function day(){const W=340,H=150,l=26,r=8,t=10,b=22,lo=18,hi=36;const x=i=>l+i*(W-l-r)/23,y=v=>t+(hi-v)/(hi-lo)*(H-t-b);
+ const path=a=>a.map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)).join(' ');
+ let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Journée type de juillet : dehors de 19 à 34 °C, Salon de 25 à 27 °C">`;
+ s+=`<rect x="${l}" y="${y(26)}" width="${W-l-r}" height="${y(20)-y(26)}" fill="var(--band)" opacity=".6"/>`;
+ [20,26,34].forEach(v=>s+=`<text x="2" y="${y(v)+3}">${v}°</text>`);
+ [0,6,12,18].forEach(h=>s+=`<text x="${x(h)-6}" y="${H-6}">${h} h</text>`);
+ s+=`<path d="${path(tout)}" fill="none" stroke="var(--heat)" stroke-width="2.5"/><path d="${path(tin)}" fill="none" stroke="var(--fg)" stroke-width="2.5"/>`;
+ s+=`<text x="${x(13)}" y="${y(34.4)-5}" style="fill:var(--heat)">dehors</text><text x="${x(2)}" y="${y(26.4)-6}" style="fill:var(--fg)">Salon</text></svg>`;return s;}
+const hot=[['Chambre AL',1795],['Buanderie',1735],['Chambre A',1714],['Chambre M',1669],['Salle de bain',1551],['Chambre P',1392],['Cuisine',1376],['Salon',1275]];
+document.getElementById('maison').innerHTML=`
+ <div class="card lvl-calm"><div class="head"><span class="ico">${I.home}</span><span class="name">Votre maison en été</span></div>
+  <p class="story">34 °C dehors, 27 °C dedans : elle garde bien le frais.</p>
+  ${day()}
+  <div class="kpis"><div class="kpi"><b>84 %</b><span>de la chaleur absorbée</span></div><div class="kpi"><b>20 h</b><span>heure la plus chaude</span></div><div class="kpi"><b>91/92</b><span>nuits assez fraîches</span></div></div>
+  <div class="detail-only"><p class="note">Amplitude d’une journée : 15,5 °C dehors, 2,4 °C dans le Salon. Le pic intérieur suit celui du dehors de 5 h. Constante de temps estimée : 97 h.</p></div>
+ </div>
+ <div class="card lvl-benefit"><div class="head"><span class="ico">${I.moon}</span><span class="name">Votre meilleur levier</span></div>
+  <p class="story">Ouvrir la nuit en été.</p>
+  <div class="tip"><b>−2 °C</b> au réveil en moyenne quand la nuit descend à 16–20 °C.</div>
+  <div class="detail-only"><p class="note">Juin à août : 38 % des heures chaudes avaient un air extérieur au moins 1,5 °C plus frais (4 à 5 °C en moyenne). 179 à 258 de ces heures par mois tombaient la nuit.</p></div>
+ </div>
+ <div class="card lvl-action"><div class="head"><span class="ico">${I.therm}</span><span class="name">Les pièces qui chauffent le plus</span></div>
+  <p class="story simple-only">L’étage et la buanderie souffrent le plus.</p>
+  <div class="bars">${hot.map(([n,h])=>`<div><span>${n}</span><i style="width:${(h/1795*100).toFixed(0)}%"></i><em>${Math.round(h/24)} j</em></div>`).join('')}</div>
+  <p class="note">Équivalent en jours au-dessus de 26 °C, été 2026.</p>
+ </div>
+ <div class="card lvl-urgent"><div class="head"><span class="ico">${I.drop}</span><span class="name">À surveiller toute l’année</span></div>
+  <p class="story">Chambre P : froide et humide.</p>
+  <div class="kpis"><div class="kpi"><b>17,9°</b><span>moyenne l’hiver</span></div><div class="kpi"><b>79 %</b><span>des heures &gt; 60 % HR</span></div><div class="kpi"><b>VMC</b><span>à vérifier</span></div></div>
+  <div class="detail-only"><p class="note">Sous 19 °C pendant 85 % de l’hiver. Dehors était plus sec pendant 4 661 heures où la pièce dépassait 60 % : aérer court aurait asséché.</p></div>
+ </div>`;
+
+const root=document.documentElement;
+document.querySelectorAll('[data-theme-set]').forEach(b=>b.onclick=()=>{const t=b.dataset.themeSet;if(t==='auto')root.removeAttribute('data-theme');else root.dataset.theme=t;document.querySelectorAll('[data-theme-set]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+document.querySelectorAll('[data-level]').forEach(b=>b.onclick=()=>{document.body.classList.toggle('detail',b.dataset.level==='detail');document.querySelectorAll('[data-level]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+</script>
+</body>
+</html>

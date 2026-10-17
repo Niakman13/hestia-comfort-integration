@@ -1,12 +1,13 @@
-## 0.9.0-beta.7 — Une plage de confort qui suit les saisons
+## 0.9.0-beta.7 — Des cartes plus visuelles, une plage de confort qui suit les saisons
 
-- La température maximale de confort suit la saison : 24 °C l’hiver, 26 °C l’été par défaut, avec un passage progressif quand la température extérieure moyenne des 7 derniers jours monte de 12 à 20 °C. Fini le « trop chaud » permanent en été.
-- Nouveau réglage « Température maximum en été » dans « Votre plage de confort ». Les pièces existantes reçoivent 26 °C pour l’été, modifiable ; leur maximum d’hiver ne change pas.
-- Nouvelle option « Pièce non chauffée » (buanderie, cellier…) : Niak ne conseille jamais de la réchauffer.
-- Un contact qui s’ouvre moins d’une minute n’est plus compté comme une ouverture : un rebond du capteur ne déclenche plus de conseil.
-- La saison se calcule avec l’historique de la température extérieure de Home Assistant. Sans cet historique, la plage enregistrée reste inchangée.
+- Cartes pièce et logement refaites, moins de texte et plus visuelles : un bandeau avec le geste en quelques mots et sa raison en une ligne, un grand pictogramme, puis une échelle qui place la pièce dans votre plage (valeur actuelle, minimum et maximum des dernières 24 h, température dehors). Sur la carte logement, un point par pièce.
+- Les mesures deviennent des tuiles compactes, repliables ; celles qui sortent de votre plage restent visibles et s’encadrent. Les explications passent derrière le bouton « i » et dans « Détails ».
+- Même charte que Niak Weather : tailles de texte, étiquettes, couleurs, contours et sections repliables. La charte est désormais commune aux cartes Niak.
+- La température maximale de confort suit la saison : 24 °C l’hiver, 26 °C l’été par défaut, avec un passage progressif quand la température extérieure moyenne des 7 derniers jours monte de 12 à 20 °C. Sans historique extérieur, la plage enregistrée reste inchangée.
+- Nouveau réglage « Température maximum en été » ; les pièces existantes reçoivent 26 °C pour l’été, modifiable. Nouvelle option « Pièce non chauffée » : Niak ne conseille jamais de la réchauffer.
+- Un contact qui s’ouvre moins d’une minute n’est plus compté comme une ouverture.
 
-Bêta en observation. Après mise à jour HACS, redémarrez Home Assistant.
+Bêta en observation. Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page du navigateur ou de l’application.
 
 ## 0.9.0-beta.6 — Formulaires harmonisés
 

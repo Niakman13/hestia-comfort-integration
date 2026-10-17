@@ -36,6 +36,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.histories = {"temperature_history": deque(maxlen=360), "outdoor_history": deque(maxlen=360)}
         # (computed at, seven-day outdoor mean or None): the seasonal comfort range follows it.
         self.season = (None, None)
+        self.day_range = None
         self._season_failed = False
 
     async def async_start(self):
@@ -102,6 +103,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
             return max(0, (now - start).total_seconds() / 60) if start else None
         return {**self.config.get("evolution", {}),
                 "heated": self.config.get("heated", True), "outdoor_mean_7d": self.season[1],
+                "indoor_day_range": self.day_range,
                 "opening_minutes": {e: minutes(e, self.opened_since, "on") for e in self.config.get("windows", [])},
                 "presence_off_minutes": {e: minutes(e, self.absent_since, "off") for e in self.config.get("presence", [])},
                 **{k: list(v) for k, v in self.histories.items()}}
@@ -173,28 +175,43 @@ class ComfortCoordinator(DataUpdateCoordinator):
         if stamp and (now - stamp).total_seconds() < SEASON_REFRESH_SECONDS:
             return
         self.season = (now, await self._outdoor_mean(now))
+        self.day_range = await self._indoor_range(now)
 
-    async def _outdoor_mean(self, now):
-        """Seven-day mean of the outdoor temperature from hourly statistics; None when not known."""
-        entity_id = self._outdoor_entity()
-        if not entity_id:
-            return None
+    async def _statistics(self, entity_id, start, end, types):
+        """Hourly statistics rows of one entity; None when the recorder cannot answer."""
         try:
             from homeassistant.components.recorder import get_instance
             from homeassistant.components.recorder.statistics import statistics_during_period
             stats = await get_instance(self.hass).async_add_executor_job(
-                statistics_during_period, self.hass, now - timedelta(days=7), now, {entity_id}, "hour", None, {"mean"})
-        except Exception:  # the comfort range then simply stays as saved
+                statistics_during_period, self.hass, start, end, {entity_id}, "hour", None, types)
+        except Exception:  # the card then simply shows less
             if not self._season_failed:
                 self._season_failed = True
-                self.logger.warning("Seasonal comfort range unavailable: outdoor statistics could not be read", exc_info=True)
+                self.logger.warning("Home Assistant statistics could not be read", exc_info=True)
             return None
-        means = [row["mean"] for row in stats.get(entity_id, []) if isinstance(row.get("mean"), (int, float))]
+        return stats.get(entity_id, [])
+
+    async def _outdoor_mean(self, now):
+        """Seven-day mean of the outdoor temperature from hourly statistics; None when not known."""
+        entity_id = self._outdoor_entity()
+        rows = await self._statistics(entity_id, now - timedelta(days=7), now, {"mean"}) if entity_id else None
+        means = [row["mean"] for row in rows or [] if isinstance(row.get("mean"), (int, float))]
         # Three days of hourly means at least: a recent sensor must not set the season alone.
         if len(means) < 72:
             return None
         value = sum(means) / len(means)
         return value if -40 <= value <= 60 else None
+
+    async def _indoor_range(self, now):
+        """Lowest and highest hourly indoor temperature over the last 24 hours."""
+        entity_id = self.config.get("sources", {}).get("indoor_temperature")
+        rows = await self._statistics(entity_id, now - timedelta(hours=24), now, {"min", "max"}) if entity_id else None
+        lows = [row["min"] for row in rows or [] if isinstance(row.get("min"), (int, float))]
+        highs = [row["max"] for row in rows or [] if isinstance(row.get("max"), (int, float))]
+        # Half a day of hours at least, so a fresh sensor does not draw a misleading range.
+        if len(lows) < 12 or len(highs) < 12:
+            return None
+        return {"min": round(min(lows), 1), "max": round(max(highs), 1)}
 
     def _weather_place(self):
         home = self.home_configuration.home if self.home_configuration else {}

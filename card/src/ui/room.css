@@ -1,0 +1,80 @@
+/* Cartes Confort refondues : uniquement des jetons et pièces de la charte commune (niak-charte.css). */
+/* Couleur de niveau : vert tout va bien, bleu à saisir, orange geste, rouge attention, gris à vérifier. */
+:where(.nc-c,.nc-mk.room,.nc-tile) { --c:color-mix(in srgb, var(--nw-fg2) 55%, var(--nw-bg)); }
+[data-level="calm"] { --c:var(--nw-calm); } [data-level="benefit"] { --c:var(--nw-cold); }
+[data-level="action"] { --c:var(--nw-level2); } [data-level="urgent"] { --c:var(--nw-level3); }
+/* Une couleur imposée par la carte (thème clair ou sombre forcé) ; sinon le thème Home Assistant. */
+:host([forced="light"]) { --nw-fg:#253047; --nw-fg2:#5b687b; --nw-bg:#fff; }
+:host([forced="dark"]) { --nw-fg:#edf1f7; --nw-fg2:#b2bdcd; --nw-bg:#222932; }
+ha-card.nc-c { overflow:hidden; border-radius:var(--nw-radius-card); background:var(--nw-bg); color:var(--nw-fg); font-family:var(--ha-font-family-body, Roboto, system-ui, sans-serif); container-type:inline-size; }
+.nc-hero { position:relative; isolation:isolate; overflow:hidden; padding:18px 20px 16px;
+  background:linear-gradient(115deg, var(--nw-bg) 32%, color-mix(in oklab, var(--c) 30%, var(--nw-bg)) 100%); }
+.nc-hero::after { content:''; position:absolute; width:230px; height:230px; right:-40px; top:-70px; border-radius:50%;
+  background:color-mix(in oklab, var(--c) 32%, transparent); filter:blur(36px); z-index:-1; }
+:host([flat]) .nc-hero::after { filter:none; opacity:.5; }
+.nc-top { display:flex; align-items:center; gap:8px; min-width:0; }
+.nc-top h2 { margin:0; font-size:var(--nw-fs-title); font-weight:700; letter-spacing:-.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.nc-top .nw-info { min-height:0; }
+.nc-top .nw-info .icon { width:15px; height:15px; }
+.nw-fold-head, .nc-configure, button.nc-tile { min-height:0; }
+.nc-level { margin-left:auto; }
+.nc-grid { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; align-items:center; margin-top:14px; }
+.nc-advice { margin:4px 0 6px; font-size:var(--nw-fs-value); font-weight:700; letter-spacing:-1px; line-height:1.1; text-wrap:balance; }
+.nc-line { margin:0; font-size:var(--nw-fs-text); font-weight:500; line-height:1.5; }
+.nc-line b { font-weight:700; }
+.nc-diskwrap { display:flex; flex-direction:column; align-items:center; }
+.nc-disk { width:88px; height:88px; border-radius:50%; display:grid; place-items:center; background:color-mix(in oklab, var(--c) 26%, var(--nw-bg));
+  color:color-mix(in oklab, var(--c) 60%, var(--nw-fg)); box-shadow:0 0 0 7px color-mix(in oklab, var(--c) 14%, transparent); }
+.nc-disk .icon { width:42px; height:42px; }
+.nc-cap { font-size:var(--nw-fs-small); color:var(--nw-fg2); text-align:center; margin-top:8px; max-width:110px; }
+.nc-why { margin-top:12px; padding:10px 12px; border-radius:var(--nw-radius); border:1px solid var(--nw-line); background:var(--nw-glass-strong); backdrop-filter:var(--nw-blur); font-size:var(--nw-fs-text); }
+.nc-why[hidden] { display:none; }
+.nc-why p { margin:0; } .nc-why p + p { margin-top:4px; }
+.nc-sec { margin-top:18px; }
+/* Échelle : piste fine, plage, anneau et sa bulle (comme le Ressenti de Niak Weather). */
+.nc-scale { position:relative; height:62px; margin:8px 6px 0; }
+.nc-track { position:absolute; left:0; right:0; top:30px; height:8px; border-radius:4px; background:color-mix(in srgb, var(--nw-fg) 9%, transparent); }
+.nc-band { position:absolute; top:30px; height:8px; border-radius:4px; background:color-mix(in oklab, var(--nw-calm) 75%, transparent); }
+.nc-day { position:absolute; top:32px; height:4px; border-radius:2px; background:color-mix(in srgb, var(--nw-fg) 40%, transparent); }
+.nc-ring { position:absolute; top:24px; width:20px; height:20px; margin-left:-10px; border-radius:50%; box-sizing:border-box; background:var(--nw-bg);
+  border:4px solid color-mix(in oklab, var(--c) 70%, var(--nw-fg)); box-shadow:0 1px 4px color-mix(in srgb, var(--nw-fg) 20%, transparent); }
+.nc-now { top:0; transform:translateX(-50%); font-size:var(--nw-fs-text); }
+.nc-mk { position:absolute; border-radius:50%; }
+.nc-mk.out { top:29px; width:10px; height:10px; margin-left:-5px; background:var(--nw-bg); border:2px solid color-mix(in oklab, var(--nw-cold) 75%, var(--nw-fg)); }
+.nc-mk.room { top:28px; width:12px; height:12px; margin-left:-6px; background:color-mix(in oklab, var(--c) 75%, var(--nw-fg)); box-shadow:0 0 0 2px var(--nw-bg); }
+.nc-lb { position:absolute; top:44px; transform:translateX(-50%); font-size:var(--nw-fs-small); color:var(--nw-fg2); white-space:nowrap; }
+.nc-lb.up { top:6px; } .nc-lb b { color:var(--nw-fg); }
+.nc-legend { margin-top:6px; }
+.nc-legend i { display:inline-block; }
+.k-band { width:10px; height:10px; border-radius:3px; background:color-mix(in oklab, var(--nw-calm) 75%, transparent); }
+.k-day { width:14px; height:4px; border-radius:2px; background:color-mix(in srgb, var(--nw-fg) 40%, transparent); }
+.k-out { width:9px; height:9px; border-radius:50%; border:2px solid color-mix(in oklab, var(--nw-cold) 75%, var(--nw-fg)); }
+.k-room { width:10px; height:10px; border-radius:50%; background:color-mix(in oklab, var(--nw-calm) 75%, var(--nw-fg)); }
+/* Corps : sections repliables. */
+.nc-body { padding:14px 20px 16px; border-top:1px solid var(--nw-line-soft); display:grid; gap:14px; }
+.nc-fold .nw-sum b { font-weight:600; color:color-mix(in oklab, var(--nw-level2) var(--nw-ink), var(--nw-fg)); }
+.nc-tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(112px, 1fr)); gap:8px; margin-top:12px; }
+.nc-tile { border:1px solid var(--nw-line); border-radius:var(--nw-radius); padding:10px 12px; min-width:0; }
+.nc-tile-h { display:flex; align-items:center; gap:6px; min-width:0; }
+.nc-tile-h .nw-label { overflow:hidden; text-overflow:ellipsis; }
+.nc-ic { display:grid; place-items:center; width:22px; height:22px; border-radius:7px; flex:none;
+  background:color-mix(in oklab, var(--c) 28%, transparent); color:color-mix(in oklab, var(--c) 60%, var(--nw-fg)); }
+.nc-ic .icon { width:14px; height:14px; }
+.nc-tile b { display:block; margin-top:6px; font-size:var(--nw-fs-title); font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.nc-tile b small { font-size:var(--nw-fs-small); font-weight:400; color:var(--nw-fg2); margin-left:2px; }
+.nc-tile em { display:block; font-style:normal; font-size:var(--nw-fs-small); color:var(--nw-fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.nc-tile.out { border-color:color-mix(in oklab, var(--c) 75%, var(--nw-fg)); background:color-mix(in oklab, var(--c) 10%, var(--nw-bg)); }
+.nc-tile.out em { font-weight:600; color:color-mix(in oklab, var(--c) var(--nw-ink), var(--nw-fg)); }
+button.nc-tile { font:inherit; color:inherit; text-align:left; cursor:pointer; background:none; }
+.nc-floor { grid-column:1/-1; display:flex; justify-content:space-between; align-items:center; margin-top:6px; }
+.nc-floor b { font-size:var(--nw-fs-small); }
+.nc-list { margin:10px 0 0; padding:0; list-style:none; display:grid; gap:6px; font-size:var(--nw-fs-text); }
+.nc-list span { color:var(--nw-fg2); }
+.nc-configure { margin-top:12px; gap:6px; cursor:pointer; }
+.nc-configure .icon { width:14px; height:14px; }
+.icon { width:18px; height:18px; flex:none; }
+@container (max-width:420px) {
+  .nc-hero { padding:16px; } .nc-body { padding:14px 16px; }
+  .nc-advice { font-size:26px; } .nc-disk { width:72px; height:72px; } .nc-disk .icon { width:34px; height:34px; }
+}
+:host([still]) * { animation:none !important; transition:none !important; }
