@@ -1,4 +1,6 @@
-## 0.9.0-beta.10 — Défilement corrigé, verre dépoli, pièces qui défilent
+## 0.9.1-beta.1 — Défilement corrigé, verre dépoli, pièces qui défilent
+
+Même contenu que la 0.9.0-beta.10, renumérotée : GitHub et HACS classaient « beta.10 » avant « beta.9 ».
 
 - Les conseils défilent vraiment : une mesure qui bouge (le CO₂ toutes les quelques secondes) ne relance plus le compte à rebours, qui restait bloqué sur le premier conseil.
 - La carte logement fait défiler les pièces qui demandent quelque chose, la plus urgente d’abord, avec le nom de la pièce.
