@@ -51,6 +51,22 @@ class AdapterFixture(unittest.IsolatedAsyncioTestCase):
 
 
 class AdapterTests(AdapterFixture):
+    async def test_an_unchanged_value_is_current_when_its_device_just_spoke(self):
+        from types import SimpleNamespace
+        coordinator = ComfortCoordinator(self.hass, self.entry)
+        five_hours = (dt_util.utcnow() - timedelta(hours=5)).timestamp()
+        self.hass.states.async_set("sensor.hum", "72", {"unit_of_measurement": "%", "device_class": "humidity"}, timestamp=five_hours)
+        self.hass.states.async_set("sensor.thermo", "19.9", {"unit_of_measurement": "°C", "device_class": "temperature"})
+        now = dt_util.utcnow()
+        registry = SimpleNamespace(async_get=lambda eid: SimpleNamespace(device_id="probe"))
+        siblings = [SimpleNamespace(entity_id="sensor.hum"), SimpleNamespace(entity_id="sensor.thermo")]
+        with patch("custom_components.niak_comfort.coordinator.er.async_get", return_value=registry), \
+             patch("custom_components.niak_comfort.coordinator.er.async_entries_for_device", return_value=siblings):
+            self.assertEqual(coordinator._reading("sensor.hum", "humidity", now).quality, "valid")
+        lonely = SimpleNamespace(async_get=lambda eid: SimpleNamespace(device_id=None))
+        with patch("custom_components.niak_comfort.coordinator.er.async_get", return_value=lonely):
+            self.assertEqual(coordinator._reading("sensor.hum", "humidity", now).quality, "stale")
+
     async def test_a_bouncing_contact_is_not_an_opening_until_it_lasts(self):
         coordinator = ComfortCoordinator(self.hass, self.entry)
         self.hass.states.async_set("binary_sensor.window", "on")
@@ -121,12 +137,13 @@ class AdapterTests(AdapterFixture):
         coordinator = ComfortCoordinator(self.hass, self.entry)
         first = await coordinator._async_update_data()
         self.assertEqual(first["assessment"]["level"], "urgent")
-        with patch("custom_components.niak_comfort.coordinator.dt_util.utcnow", return_value=dt_util.utcnow()+timedelta(hours=1)):
+        # Beyond the three-hour expiry with no news from the sensor or its device, a measure is no longer current.
+        with patch("custom_components.niak_comfort.coordinator.dt_util.utcnow", return_value=dt_util.utcnow()+timedelta(hours=4)):
             expired = await coordinator._async_update_data()
         self.assertEqual(expired["observations"]["co2"]["quality"], "stale")
         self.assertEqual(expired["assessment"]["action"], "unknown")
         self.assertNotIn("air", expired["assessment"]["needs"])
-        # The window contact and the heating action are states: an hour without change keeps them known.
+        # The window contact and the heating action are states: hours without change keep them known.
         self.assertEqual(expired["observations"]["window:binary_sensor.window"]["quality"], "valid")
         self.assertEqual(expired["observations"]["heating"]["quality"], "valid")
 

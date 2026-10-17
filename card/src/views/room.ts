@@ -151,15 +151,17 @@ function tileEntity(v:View,label:string):string|undefined {
     'Ventilation':o.ventilation_boost?.value===true?src('ventilation_boost'):src('ventilation')??src('ventilation_boost'),'Chauffage':src('heating')} as Record<string,string|undefined>)[label];
 }
 /** One compact frame per measure; it takes the level's outline when the measure leaves your range. */
+/** Why a measure has no value: silent for too long is not the same as gone. */
+const gone=(r?:{quality:string})=>r?.quality==='stale'?'pas de nouvelle mesure':'indisponible';
 export function tiles(v:View,config:Config):Tile[] {
   const o=v.observations,a=v.assessment,mods=new Set(config.modules??[]),list:Tile[]=[],air=a.features?.air;
   if(mods.has('humidity')&&o.indoor_humidity){const h=numeric(o.indoor_humidity),wet=a.needs.includes('dry');
-    list.push({ic:'drop',label:'Humidité',value:number(h),unit:'%',note:h===null?'indisponible':wet?'trop humide':'dans votre plage',level:wet?'action':'calm',out:wet});}
+    list.push({ic:'drop',label:'Humidité',value:number(h),unit:'%',note:h===null?gone(o.indoor_humidity):wet?'trop humide':'dans votre plage',level:wet?'action':'calm',out:wet});}
   if(mods.has('air')&&o.co2){const c=numeric(o.co2),high=air?.co2_status==='high';
-    list.push({ic:'air',label:'CO₂',value:number(c),unit:'ppm',note:c===null?'indisponible':high?'à renouveler':'dans votre plage',level:high?(a.level==='urgent'?'urgent':'action'):'calm',out:high});}
+    list.push({ic:'air',label:'CO₂',value:number(c),unit:'ppm',note:c===null?gone(o.co2):high?'à renouveler':'dans votre plage',level:high?(a.level==='urgent'?'urgent':'action'):'calm',out:high});}
   if(mods.has('air'))for(const [key,ic,label,status] of [['pm25','pm','Particules',air?.pm25_status],['voc','flask','COV',air?.voc_status]] as const){
     if(!o[key])continue;const x=numeric(o[key]),high=status==='high',treated=key==='pm25'&&high&&air?.pm25_treated===true;
-    list.push({ic,label,value:number(x),unit:o[key].unit??'',note:x===null?'indisponible':treated?'filtrées':high?'élevés':status==='uninterpreted'?'sans seuil':'dans votre plage',level:treated?'calm':high?'action':status==='ok'?'calm':'neutral',out:high});}
+    list.push({ic,label,value:number(x),unit:o[key].unit??'',note:x===null?gone(o[key]):treated?'filtrées':high?'élevés':status==='uninterpreted'?'sans seuil':'dans votre plage',level:treated?'calm':high?'action':status==='ok'?'calm':'neutral',out:high});}
   if(mods.has('windows')){const contacts=Object.entries(o).filter(([k])=>k.startsWith('window:')).map(([,r])=>r);
     if(contacts.length){const open=contacts.filter(r=>r.quality==='valid'&&r.value===true).length,flagged=(a.openings??[]).some(x=>x.flags.length>0&&x.open===true);
       list.push({ic:open?'open':'window',label:'Fenêtres',value:`${open}/${contacts.length}`,note:flagged?'à refermer':open?(open>1?`${open} ouvertes`:'1 ouverte'):'toutes fermées',level:flagged?'action':'neutral',out:flagged});}}

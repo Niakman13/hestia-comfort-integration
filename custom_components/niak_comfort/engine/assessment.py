@@ -28,7 +28,8 @@ class Settings:
     humidity_hysteresis: float = 3
     cooling_delta: float = 1.5
     drying_delta: float = 1.5
-    max_age_seconds: float = 1800
+    # Many sensors only send a value when it changes: three hours of silence is still a valid reading.
+    max_age_seconds: float = 10800
     gust_max: float = 45
     frost: float = 1.0
     sun_facade: float = 250

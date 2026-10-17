@@ -11,6 +11,23 @@ AIR_DEFAULTS = {"co2_potential": 800, "co2_action": 1000, "co2_urgent": 1500,
                 "pm25_action": 15, "humidity_high": 60}
 
 
+FRESHNESS_VERSION = 1
+OLD_MAX_AGE, MAX_AGE = 1800, 10800
+
+
+def apply_freshness(hass, entry):
+    """Once: rooms saved with the former 30-minute expiry move to 3 hours (sensors that report only on change)."""
+    config = deepcopy({**entry.data, **entry.options})
+    if config.get("home") or config.get("freshness_version", 0) >= FRESHNESS_VERSION:
+        return False
+    settings = config.get("settings", {})
+    if settings.get("max_age_seconds") == OLD_MAX_AGE:
+        config["settings"] = {**settings, "max_age_seconds": MAX_AGE}
+    config["freshness_version"] = FRESHNESS_VERSION
+    hass.config_entries.async_update_entry(entry, options=config)
+    return True
+
+
 def apply_air_references(hass, entry):
     """Apply once before the coordinator/update listener starts, preserving edits thereafter."""
     config = deepcopy({**entry.data, **entry.options})
