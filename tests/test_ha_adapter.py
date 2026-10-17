@@ -51,6 +51,14 @@ class AdapterFixture(unittest.IsolatedAsyncioTestCase):
 
 
 class AdapterTests(AdapterFixture):
+    async def test_the_thermostat_mode_reaches_the_card(self):
+        coordinator = ComfortCoordinator(self.hass, self.entry)
+        data = await coordinator._async_update_data()
+        self.assertEqual((data["observations"]["heating_mode"]["value"], data["observations"]["heating_mode"]["detail"]), ("heat", "hvac"))
+        self.hass.states.async_set("climate.test", "heat", {"hvac_action": "idle", "preset_mode": "frost"})
+        data = await coordinator._async_update_data()
+        self.assertEqual((data["observations"]["heating_mode"]["value"], data["observations"]["heating_mode"]["detail"]), ("frost", "preset"))
+
     async def test_an_unchanged_value_is_current_when_its_device_just_spoke(self):
         from types import SimpleNamespace
         coordinator = ComfortCoordinator(self.hass, self.entry)

@@ -1,3 +1,11 @@
+## 0.9.6-beta.1 — Mode du chauffage et échelle plus lisible
+
+- La tuile Chauffage indique le mode du thermostat : hors gel, éco, confort, boost…
+- Le minimum et le maximum des dernières 24 h sont plus visibles sur l’échelle.
+- Toutes les valeurs de l’échelle portent leur unité (« dehors 13,5 °C », « 20 °C »), et la bulle de température reste dans son cadre.
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 0.9.5-beta.1 — Fenêtres affichées tout de suite, valeurs stables valables
 
 - La durée d’aération est dans le conseil : « Aérez 3 à 8 min », puis, fenêtre ouverte, « Encore 5 min d’aération » et enfin « Vous pouvez refermer ».
