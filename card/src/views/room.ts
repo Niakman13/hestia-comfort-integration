@@ -33,7 +33,18 @@ export function advice(v:View):Advice {
       :html`${now} % d’humidité, l’air du dehors ${b('ne la changerait pas')}`;
   })();
   // How long, under the disk: the duration first, then where to open.
-  const span=duration?`${duration.min} à ${duration.max} min`:undefined,where=(x?:string)=>[span,x].filter(Boolean).join(' · ')||undefined;
+  const span=duration?`${duration.min} à ${duration.max} min`:undefined;
+  // The airing time is part of the gesture: in the title, before opening and while the window is open.
+  const opened_for=a.features?.ventilation?.opened_minutes??null;
+  const airing=(verb:string,fallback:string,line:TemplateResult|string):Advice=>{
+    if(a.action==='ok'){
+      if(duration&&opened_for!=null){const left=Math.round(duration.max-opened_for);
+        return left>0?{title:`Encore ${left} min d’aération`,line,disk:'open',cap:`ouvert depuis ${Math.round(opened_for)} min`}
+          :{title:'Vous pouvez refermer',line,disk:'shut',cap:`ouvert depuis ${Math.round(opened_for)} min`};}
+      return {title:'Aération en cours',line,disk:'open',cap:span?`${span} au total`:undefined};
+    }
+    return {title:span?`${verb} ${span}`:fallback,line,disk:'open',cap:first};
+  };
   const constraint=a.constraints.find(c=>c!=='heating_running'&&c!=='frost')??a.constraints[0];
   switch(a.reason){
     case 'within_comfort': return {title:'Rien à faire',line:html`${deg(ti)}, ${b('dans votre plage')}`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
@@ -45,14 +56,14 @@ export function advice(v:View):Advice {
       return {title:a.action==='fermer'?'Refermez':'Gardez fermé',line:html`${b(why)}${a.needs.length?' : le besoin attendra':''}`,disk:a.action==='fermer'?'shut':'window'};
     }
     case 'short_air_change': return {title:a.action==='ok'?'Aération en cours':'Aérez 5 minutes',line:html`Air à renouveler, ${b(a.constraints.includes('frost')?'il gèle dehors':'le chauffage tourne')}`,disk:'open',cap:a.action==='ok'?undefined:'Puis refermez'};
-    case 'air_needed': return {title:a.action==='ok'?'Aération en cours':'Renouvelez l’air',line:airWhy(v),disk:'open',cap:a.action==='ok'?span:where(first)};
-    case 'cooling_possible': return {title:a.action==='ok'?'Aération en cours':'Ouvrez pour rafraîchir',line:temps,disk:'open',cap:a.action==='ok'?span:where(first)};
+    case 'air_needed': return airing('Aérez','Renouvelez l’air',airWhy(v));
+    case 'cooling_possible': return airing('Ouvrez','Ouvrez pour rafraîchir',temps);
     case 'precool_possible': return {title:a.action==='ok'?'Laissez ouvert cette nuit':'Ouvrez pour la nuit',line:html`Demain sera chaud : ${b('stockez le frais')}`,disk:'moon',cap:first};
     case 'precool_later':
     case 'cooling_unavailable':
       return slot&&slot.kind==='open'?{title:`Ouvrez vers ${hour(slot.time)}`,line:html`Il fera ${b(number(slot.temperature)+' °C')} dehors`,disk:'moon',cap:slot.wind_bearing!=null?windFrom(slot.wind_bearing):undefined}
         :{title:'Gardez fermé',line:html`Il ne fait ${b('pas plus frais dehors')} pour l’instant`,disk:'clock'};
-    case 'drying_possible': return {title:a.action==='ok'?'Aération en cours':'Aérez pour assécher',line:water,disk:'open',cap:a.action==='ok'?span:where(first)};
+    case 'drying_possible': return airing('Aérez','Aérez pour assécher',water);
     case 'drying_unavailable': return {title:'Humidité à surveiller',line:incoming!=null?water:html`L’air du dehors ${b('n’est pas plus sec')}`,disk:'clock',cap:'Aérer n’aiderait pas'};
     case 'exchange_harmful': return {title:'Refermez',line:html`L’air du dehors ${b(a.temperature_delta!==null&&a.temperature_delta>0?'réchauffe la pièce':'refroidit la pièce')}`,disk:'shut'};
     case 'rehumidification_risk': return {title:'Refermez',line:incoming!=null?water:html`L’air du dehors ${b('est plus humide')}`,disk:'shut'};
