@@ -251,6 +251,22 @@ body.detail .simple-only{display:none}
 .dl li span{color:var(--nw-fg2)}
 @media (prefers-reduced-motion:reduce){.chev3{transition:none}}
 @media (max-width:420px){.advice{font-size:26px}.disk3{width:72px;height:72px}.disk3 svg{width:34px;height:34px}}
+
+/* ── Conseils qui défilent (comme la bulle de Niak Weather) ── */
+.tk-head{display:flex;align-items:center;gap:10px}
+.tk-bars{display:flex;gap:4px;margin-left:auto}
+.tk-bars button{width:22px;height:4px;padding:0;border:0;border-radius:2px;background:color-mix(in srgb,var(--nw-fg) 14%,transparent);cursor:pointer;position:relative;overflow:hidden}
+.tk-bars button i{position:absolute;inset:0;width:0;background:color-mix(in oklab,var(--sc,var(--c)) 70%,var(--nw-fg))}
+.tk-bars button.done i{width:100%}
+.tk-bars button.on i{animation:tkfill 4.5s linear forwards}
+.tk-paused .tk-bars button.on i{animation-play-state:paused}
+@keyframes tkfill{to{width:100%}}
+.tk-slide{transition:opacity .35s,transform .35s}
+.tk-slide.out{opacity:0;transform:translateY(-5px)}
+.tk-pill{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:var(--nw-fs-small);font-weight:600;background:color-mix(in oklab,var(--sc) 24%,transparent);color:color-mix(in oklab,var(--sc) var(--nw-ink),var(--nw-fg));margin-bottom:6px}
+.tk-count{font-size:var(--nw-fs-small);color:var(--nw-fg2)}
+.tk-wrap{cursor:pointer}
+@media (prefers-reduced-motion:reduce){.tk-bars button.on i{animation:none;width:100%}.tk-slide{transition:none}}
 </style>
 </head>
 <body>
@@ -279,6 +295,11 @@ body.detail .simple-only{display:none}
 <h2>0 bis. Carte logement · même charte</h2>
 <p class="lead">Même bandeau que la carte pièce : la pièce qui demande quelque chose donne le conseil. La barre place chaque pièce dans votre plage ; les tuiles sont groupées par étage et s’encadrent hors plage.</p>
 <div class="grid" id="v2home"></div>
+
+
+<h2>0 ter. Plusieurs conseils : ils défilent, comme dans Weather</h2>
+<p class="lead">Un conseil à la fois, toutes les 4,5 s, une barre par conseil (le plus important d’abord). Pause au survol, un appui passe au suivant, une barre permet d’y aller directement. La couleur du bandeau reste celle du conseil le plus important. Cas réels de ce soir chez Frank.</p>
+<div class="grid" id="ticker"></div>
 
 <h2>1. La barre de plage, élément commun à toutes les cartes</h2>
 <p class="lead">Inspirée de la room climate card. Elle dit tout d’un coup d’œil : votre plage (zone verte), où en est la pièce (trait plein), sa variation des dernières 24 h (fine barre grise), dehors (rond bleu) et la prévision (trait pointillé).</p>
@@ -451,6 +472,55 @@ document.getElementById('v2home').innerHTML=[
          {name:'Étage',mean:26.5,rooms:[rt('Chambre AL',27.2,'trop chaud','action',true),rt('Chambre M',26.4,'trop chaud','action',true),rt('Chambre A',25.9,'trop chaud','action',true)]}],
   more:['<b>Pourquoi l’étage</b> <span>· la chaleur y stagne : 2,0 °C de plus qu’en bas</span>','<b>Pour que l’air traverse</b> <span>· ouvrez aussi une fenêtre en bas, côté opposé</span>']}),
 ].join('');
+
+
+Object.assign(I,{fan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><path d="M12 10c-1-4 0-7 3-7 2 0 2 3-1 7m-2 4c1 4 0 7-3 7-2 0-2-3 1-7m2-2c4-1 7 0 7 3 0 2-3 2-7-1m-4 0c-4 1-7 0-7-3 0-2 3-2 7 1"/></svg>',
+ vmc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h11a3 3 0 1 0-3-3M4 12h15a3 3 0 1 1-3 3M4 17h7"/><path d="M19 4v4m-2-2h4"/></svg>'});
+const LV={calm:'var(--nw-calm)',benefit:'var(--nw-cold)',action:'var(--nw-level2)',urgent:'var(--nw-level3)',neutral:'color-mix(in srgb,var(--nw-fg2) 55%,var(--nw-bg))'};
+function tickerCard({name,lvl,pill,slides,r,tiles,more,open=false},idx){
+ const sl=s=>`<div class="tk-slide"><span class="tk-pill" style="--sc:${LV[s.lvl]}">${s.pill}</span><p class="advice">${s.title}</p><p class="reason">${s.line}</p></div>`;
+ return `<div class="nwc"><div class="c3 lvl-${lvl}" data-ticker="${idx}"><div class="c3-hero">
+  <div class="c3-top"><h2>${name}</h2><span class="i" title="Pourquoi ?">i</span><span class="chip3">${pill}</span></div>
+  <div class="c3-grid tk-wrap" title="Appuyez pour le conseil suivant"><div><div class="tk-head"><span class="nw-label">Conseils</span><span class="tk-count"></span><span class="tk-bars">${slides.map((s,i)=>`<button type="button" aria-label="Conseil ${i+1}" style="--sc:${LV[s.lvl]}"><i></i></button>`).join('')}</span></div><div class="tk-body">${sl(slides[0])}</div></div>
+   <div><div class="disk3 tk-disk">${I[slides[0].disk]}</div><div class="cap3 tk-cap">${slides[0].cap||''}</div></div></div>
+  <div class="sec"><div class="nw-label">Température</div>${scale(r)}${legend(r)}</div></div>
+  <div class="c3-body">${fold(tiles,'mesures',open)}
+   <div class="fold closed" style="margin-top:14px"><button class="sh" type="button" onclick="this.parentElement.classList.toggle('closed')"><span class="nw-label">Détails</span><span class="sum"></span><span class="chev3">${CH}</span></button><ul class="dl">${more.map(m=>`<li>${m}</li>`).join('')}</ul></div>
+  </div></div></div>`;
+}
+const TK=[
+ {name:'Salon',lvl:'action',pill:'3 conseils',open:true,
+  slides:[{lvl:'action',pill:'Geste conseillé',title:'Aérez pour assécher',line:'Humidité <b>63 %</b>, l’air du dehors est plus sec',disk:'open',cap:'Fenêtre Ouest'},
+          {lvl:'calm',pill:'En cours',title:'Le purificateur filtre',line:'Particules <b>40 µg/m³</b> · il tourne à 90 %',disk:'fan',cap:'Mi Air Purifier'},
+          {lvl:'neutral',pill:'À savoir',title:'Air extérieur inconnu',line:'Atmo France <b>ne répond pas</b> aujourd’hui',disk:'ask',cap:'Le conseil reste valable'}],
+  r:{lo:16,hi:30,band:[20,25],day:[21.5,23.5],now:23,out:20.2},
+  tiles:[mt('drop','Humidité|trop humide','63','%','action',true),mt('pm','Particules|filtrées','40','µg/m³','calm',true),mt('fan','Purificateur|filtre à 90 %','En marche','','calm',true),mt('air','CO₂','646','ppm'),mt('flask','COV','91',''),mt('win','Fenêtres|toutes fermées','0/3','','neutral')],
+  more:['<b>Pendant l’aération</b> <span>· passez le purificateur au ralenti : il filtrerait l’air du dehors</span>','<b>Ne répond pas</b> <span>· Qualité de l’air dehors (Atmo France)</span>','<b>Votre plage aujourd’hui</b> <span>· 20 à 25 °C · entre-saisons</span>']},
+ {name:'Chambre P',lvl:'action',pill:'2 conseils',
+  slides:[{lvl:'action',pill:'Geste conseillé',title:'Aérez pour assécher',line:'Humidité <b>77 %</b>, l’air du dehors est plus sec',disk:'open',cap:'Fenêtre P'},
+          {lvl:'calm',pill:'En cours',title:'La VMC renouvelle l’air',line:'Elle aide à <b>assécher</b> la pièce',disk:'vmc',cap:'VMC en marche'}],
+  r:{lo:16,hi:30,band:[19,25],day:[20.3,21.4],now:21.4,out:20.2},
+  tiles:[mt('drop','Humidité|trop humide','77','%','action',true),mt('vmc','VMC|renouvelle l’air','En marche','','calm',true),mt('win','Fenêtres|fermée','0/1','','neutral'),mt('heat','Chauffage|ne chauffe pas','Arrêté','','neutral')],
+  more:['<b>À régler</b> <span>· la VMC est déclarée comme purificateur ; une catégorie « ventilation » la ferait compter comme renouvellement d’air</span>','<b>Volet roulant P</b> <span>· automatisme et dérogation non reliés</span>']},
+];
+document.getElementById('ticker').innerHTML=TK.map(tickerCard).join('');
+// One ticker per card: 4.5 s per advice, pause on hover or focus, tap for the next one, a bar to jump.
+document.querySelectorAll('[data-ticker]').forEach(card=>{
+ const d=TK[+card.dataset.ticker],bars=[...card.querySelectorAll('.tk-bars button')],body=card.querySelector('.tk-body'),disk=card.querySelector('.tk-disk'),cap=card.querySelector('.tk-cap'),count=card.querySelector('.tk-count');
+ let i=0,timer=null,paused=false;const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+ const show=n=>{i=(n+d.slides.length)%d.slides.length;const s=d.slides[i];
+  bars.forEach((b,k)=>{b.classList.toggle('done',k<i);b.classList.remove('on');});void bars[i].offsetWidth;bars[i].classList.add('on');
+  const old=body.firstElementChild;old.classList.add('out');
+  setTimeout(()=>{body.innerHTML=`<div class="tk-slide"><span class="tk-pill" style="--sc:${LV[s.lvl]}">${s.pill}</span><p class="advice">${s.title}</p><p class="reason">${s.line}</p></div>`;disk.innerHTML=I[s.disk];cap.textContent=s.cap||'';disk.style.setProperty('--c',LV[s.lvl]);},reduce?0:250);
+  count.textContent=`${i+1} sur ${d.slides.length}`;restart();};
+ const restart=()=>{clearTimeout(timer);if(!paused&&!reduce)timer=setTimeout(()=>show(i+1),4500);};
+ card.querySelector('.tk-wrap').addEventListener('click',e=>{const b=e.target.closest('.tk-bars button');show(b?bars.indexOf(b):i+1);});
+ card.addEventListener('mouseenter',()=>{paused=true;card.classList.add('tk-paused');clearTimeout(timer);});
+ card.addEventListener('mouseleave',()=>{paused=false;card.classList.remove('tk-paused');restart();});
+ card.addEventListener('focusin',()=>{paused=true;card.classList.add('tk-paused');clearTimeout(timer);});
+ card.addEventListener('focusout',()=>{paused=false;card.classList.remove('tk-paused');restart();});
+ show(0);
+});
 
 document.getElementById('demo-range').innerHTML=range({lo:14,hi:30,band:[20,25],day:[22.8,25.4],now:25,out:17,fc:{v:25.8,t:'20 h'}});
 
