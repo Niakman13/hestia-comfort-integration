@@ -159,6 +159,13 @@ class ComfortCoordinator(DataUpdateCoordinator):
             # A purifier's on/off state is useful even without speed reporting.
             if state and state.attributes.get("percentage") is not None:
                 readings["purifier_speed"] = self._reading(selected["purifier"], "purifier_speed", now)
+        if selected.get("heating"):
+            # The thermostat's mode (frost protection, eco, comfort…), shown on the card; the advice does not use it.
+            state = self.hass.states.get(selected["heating"])
+            if state and state.state not in ("unknown", "unavailable"):
+                preset = state.attributes.get("preset_mode")
+                mode, detail = (preset, "preset") if preset and preset != "none" else (state.state, "hvac")
+                readings["heating_mode"] = Reading(mode, "valid", selected["heating"], state.last_reported.isoformat(), detail)
         outlook = weather_link.outlook(self.hass, self._weather_place())
         await self._refresh_season(now)
         # The card shows a contact as it is; the advice ignores an opening younger than the bounce delay.

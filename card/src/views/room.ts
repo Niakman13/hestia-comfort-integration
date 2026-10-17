@@ -125,8 +125,8 @@ export function scale(s:ScaleInput):TemplateResult {
   const pos=(x:number)=>(Math.min(hi,Math.max(lo,x))-lo)/(hi-lo)*100,pct=(x:number)=>pos(x).toFixed(2)+'%';
   const fmt=(x:number)=>number(Math.round(x*10)/10),unit=s.unit??'°C';
   const labels:{x:number;text:TemplateResult|string;len:number;row:'up'|'down';strong:boolean}[]=[];
-  if(s.band)labels.push({x:pos(s.band[0]),text:fmt(s.band[0]),len:4,row:'down',strong:false},{x:pos(s.band[1]),text:fmt(s.band[1]),len:4,row:'down',strong:false});
-  if(s.out!=null)labels.push({x:pos(s.out),text:'dehors '+fmt(s.out),len:11,row:'down',strong:true});
+  if(s.band)labels.push({x:pos(s.band[0]),text:fmt(s.band[0])+' '+unit,len:7,row:'down',strong:false},{x:pos(s.band[1]),text:fmt(s.band[1])+' '+unit,len:7,row:'down',strong:false});
+  if(s.out!=null)labels.push({x:pos(s.out),text:'dehors '+fmt(s.out)+' '+unit,len:14,row:'down',strong:true});
   if(s.rooms){
     // Rooms a few tenths apart share one label (« S·C »): every room stays named.
     const sorted=[...s.rooms].sort((x,y)=>x.value-y.value),groups:typeof sorted[]=[];
@@ -141,6 +141,8 @@ export function scale(s:ScaleInput):TemplateResult {
     const style=l.x<8?'left:0;transform:none':l.x>92?'right:0;left:auto;transform:none':`left:${l.x.toFixed(2)}%`;
     return [html`<span class=${'nc-lb'+(row==='up'?' up':'')} style=${style}>${l.text}</span>`];
   });
+  // The bubble stays inside the frame when the value sits near an end of the scale.
+  const bubble=(x:number)=>x<12?'left:0;transform:none':x>88?'right:0;left:auto;transform:none':'left:'+x.toFixed(2)+'%';
   const said=[s.now!=null?`Maintenant ${fmt(s.now)} ${unit}`:'',s.band?`plage ${fmt(s.band[0])} à ${fmt(s.band[1])} ${unit}`:'',s.out!=null?`dehors ${fmt(s.out)} ${unit}`:''].filter(Boolean).join(', ');
   return html`<div class="nc-scale" role="img" aria-label=${said}>
     <div class="nc-track"></div>
@@ -148,7 +150,7 @@ export function scale(s:ScaleInput):TemplateResult {
     ${s.day?html`<div class="nc-day" style=${`left:${pct(s.day.min)};width:${(pos(s.day.max)-pos(s.day.min)).toFixed(2)}%`}></div>`:nothing}
     ${s.out!=null?(s.outEntity?html`<button type="button" class="nc-mk out nc-hit" style=${'left:'+pct(s.out)} title="Détails : dehors" aria-label="Détails de la température dehors" @click=${(e:Event)=>moreInfo(e,s.outEntity!)}></button>`:html`<span class="nc-mk out" style=${'left:'+pct(s.out)}></span>`):nothing}
     ${(s.rooms??[]).map(r=>r.entity?html`<button type="button" class="nc-mk room nc-hit" data-level=${r.level} style=${'left:'+pct(r.value)} title=${r.name+' '+fmt(r.value)+' '+unit} aria-label=${'Détails : '+r.name} @click=${(e:Event)=>moreInfo(e,r.entity!)}></button>`:html`<span class="nc-mk room" data-level=${r.level} style=${'left:'+pct(r.value)} title=${r.name+' '+fmt(r.value)+' '+unit}></span>`)}
-    ${s.now!=null?html`<span class="nc-ring" style=${'left:'+pct(s.now)}></span>${s.nowEntity?html`<button type="button" class="nw-pill nc-now nc-hit" style=${'left:'+pct(s.now)} title="Détails de la température" @click=${(e:Event)=>moreInfo(e,s.nowEntity!)}>${fmt(s.now)} ${unit}</button>`:html`<span class="nw-pill nc-now" style=${'left:'+pct(s.now)}>${fmt(s.now)} ${unit}</span>`}`:nothing}
+    ${s.now!=null?html`<span class="nc-ring" style=${'left:'+pct(s.now)}></span>${s.nowEntity?html`<button type="button" class="nw-pill nc-now nc-hit" style=${bubble(pos(s.now))} title="Détails de la température" @click=${(e:Event)=>moreInfo(e,s.nowEntity!)}>${fmt(s.now)} ${unit}</button>`:html`<span class="nw-pill nc-now" style=${bubble(pos(s.now))}>${fmt(s.now)} ${unit}</span>`}`:nothing}
     ${placed}
   </div>
   <div class="nw-legend nc-legend">${s.band?html`<span><i class="k-band"></i>votre plage</span>`:nothing}${s.day?html`<span><i class="k-day"></i>min–max 24 h</span>`:nothing}${s.rooms?html`<span><i class="k-room"></i>pièces</span>`:nothing}${s.out!=null?html`<span><i class="k-out"></i>dehors</span>`:nothing}</div>`;
@@ -165,6 +167,8 @@ function tileEntity(v:View,label:string):string|undefined {
     'Ventilation':o.ventilation_boost?.value===true?src('ventilation_boost'):src('ventilation')??src('ventilation_boost'),'Chauffage':src('heating')} as Record<string,string|undefined>)[label];
 }
 /** One compact frame per measure; it takes the level's outline when the measure leaves your range. */
+/** Thermostat modes in plain French (presets first, then the plain heating mode). */
+const modeLabels:Record<string,string>={frost:'hors gel',eco:'éco',comfort:'confort',boost:'boost',away:'absence',sleep:'nuit',home:'présence',activity:'activité',off:'éteint',heat:'chauffage',auto:'programmé',heat_cool:'automatique'};
 /** Why a measure has no value: silent for too long is not the same as gone. */
 const gone=(r?:{quality:string})=>r?.quality==='stale'?'pas de nouvelle mesure':'indisponible';
 export function tiles(v:View,config:Config):Tile[] {
@@ -189,7 +193,8 @@ export function tiles(v:View,config:Config):Tile[] {
   if(mods.has('air')&&vent){const on=vent.on,fast=vent.boost===true;
     list.push({ic:'vmc',label:'Ventilation',value:on===null?'—':fast?'Rapide':on?'En marche':'Arrêtée',note:on?(fast?'grande vitesse':'renouvelle l’air'):on===false?'à l’arrêt':'indisponible',level:on?'calm':'neutral',out:on===true});}
   if(mods.has('coordination')&&o.heating){const label=heatingLabels[a.heating_action]??'Inconnu',running=a.heating_action==='heating';
-    list.push({ic:'heat',label:'Chauffage',value:running?'Chauffe':label,note:running?'chauffe la pièce':'observé, jamais commandé',level:'neutral',out:false});}
+    const raw=o.heating_mode?.quality==='valid'&&typeof o.heating_mode.value==='string'?o.heating_mode.value:null,mode=raw?modeLabels[raw]??raw:null;
+    list.push({ic:'heat',label:'Chauffage',value:running?'Chauffe':label,note:mode?`mode ${mode}`:running?'chauffe la pièce':'observé, jamais commandé',level:'neutral',out:false});}
   for(const t of list)t.entity=tileEntity(v,t.label);
   return list;
 }
