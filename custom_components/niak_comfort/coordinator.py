@@ -6,6 +6,7 @@ import logging
 
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.core import callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
@@ -213,6 +214,18 @@ class ComfortCoordinator(DataUpdateCoordinator):
             return None
         return {"min": round(min(lows), 1), "max": round(max(highs), 1)}
 
+    def _heard(self, entity_id, state):
+        """When the device last spoke: an unchanged humidity is current if its thermometer just reported."""
+        latest = state.last_reported
+        registry = er.async_get(self.hass)
+        entry = registry.async_get(entity_id)
+        if entry and entry.device_id:
+            for sibling in er.async_entries_for_device(registry, entry.device_id):
+                other = self.hass.states.get(sibling.entity_id)
+                if other and other.state not in ("unknown", "unavailable") and other.last_reported > latest:
+                    latest = other.last_reported
+        return latest
+
     def _weather_place(self):
         home = self.home_configuration.home if self.home_configuration else {}
         return home.get("weather") if home.get("configured") else None
@@ -243,7 +256,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         # HA last_reported tracks reception even when the measured value is unchanged.
         # It is not the sensor's physical sampling time.
         reading = normalize(kind, raw, unit,
-                            source=entity_id, reported_at=state.last_reported if state else None,
+                            source=entity_id, reported_at=self._heard(entity_id, state) if state else None,
                             now=now, max_age=None if kind in STATE_KINDS else self.settings.max_age_seconds)
         if kind == "window" and reading.value is True:
             since = self.opened_since.get(entity_id)

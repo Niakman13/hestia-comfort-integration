@@ -1,3 +1,11 @@
+## 0.9.5-beta.1 — Une valeur stable n’est plus « indisponible »
+
+- Beaucoup de capteurs n’envoient une valeur que lorsqu’elle change : une humidité stable pendant la nuit n’est plus considérée comme trop ancienne. Une valeur reste valable tant que son appareil donne signe de vie (par exemple, la température du même capteur).
+- Le délai d’expiration passe de 30 minutes à 3 heures ; les pièces réglées sur l’ancien délai sont mises à jour automatiquement.
+- Sur la carte, « pas de nouvelle mesure » (capteur silencieux) se distingue désormais d’« indisponible » (capteur perdu).
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 0.9.4-beta.1 — Des conseils chiffrés et plus clairs
 
 - Le conseil montre ce qu’il compare : « 60 % d’humidité, l’air du dehors la ferait descendre à 48 % », « 22 °C dedans, 15 °C dehors ».

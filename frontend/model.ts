@@ -106,7 +106,7 @@ export const intros:Record<string,string[]>={
 // The exterior sensors, by frame: title and keys.
 export const outdoorGroups:[string,string[]][]=[['Température et humidité',['outdoor_temperature','outdoor_humidity']],['Pluie et vent',['rain','wind_gust','wind_bearing']],['Soleil',['solar']]];
 // Only the settings still displayed inside the "Autres réglages" advanced frame.
-export const advancedDefaults:Record<string,number>={illuminance_low:100,gust_max:45,frost:1,sun_facade:250,max_age_seconds:1800};
+export const advancedDefaults:Record<string,number>={illuminance_low:100,gust_max:45,frost:1,sun_facade:250,max_age_seconds:10800};
 export function changedAdvanced(settings:Record<string,number>):number{return Object.entries(advancedDefaults).filter(([k,v])=>settings[k]!==undefined&&settings[k]!==v).length;}
 // One source in a list chosen by integration: its name, what it gives, and how to install it when missing.
 export interface Choice {value:string;label:string;hint:string;available:boolean;missing?:string;url?:string}

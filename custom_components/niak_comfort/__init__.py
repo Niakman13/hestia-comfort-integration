@@ -8,7 +8,7 @@ from .websocket import async_setup_websocket
 from .configuration import get_configuration
 from .panel import CARD_URL, async_setup_panel
 from .socle import async_remove_card
-from .air_references import apply_air_references
+from .air_references import apply_air_references, apply_freshness
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -26,6 +26,7 @@ async def async_setup_entry(hass, entry):
     if entry.data.get("home"):
         return True
     apply_air_references(hass, entry)
+    apply_freshness(hass, entry)
     coordinator = ComfortCoordinator(hass, entry)
     await coordinator.async_start()
     entry.runtime_data = coordinator
