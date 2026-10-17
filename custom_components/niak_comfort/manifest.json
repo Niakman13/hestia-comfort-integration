@@ -3,7 +3,8 @@
   "name": "Niak Comfort",
   "after_dependencies": [
     "lovelace",
-    "niak_weather"
+    "niak_weather",
+    "recorder"
   ],
   "codeowners": [
     "@Niakman13"
@@ -19,5 +20,5 @@
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/Niakman13/niak-comfort-integration/issues",
   "requirements": [],
-  "version": "0.9.0-beta.6"
+  "version": "0.9.0-beta.7"
 }

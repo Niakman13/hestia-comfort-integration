@@ -2,7 +2,7 @@
 
 Threshold defaults replay historical settings; they are not health standards.
 """
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 import math
 from datetime import datetime
 from typing import Mapping
@@ -34,6 +34,8 @@ class Settings:
     sun_facade: float = 250
     pm25_action: float = 25
     illuminance_low: float = 100
+    # Upper comfort limit once summer has settled in; `maximum` stays the winter limit.
+    summer_maximum: float = 26
 
     def __post_init__(self) -> None:
         if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v)
@@ -55,6 +57,28 @@ class Settings:
             raise ValueError("positive_settings_required")
         if not -30 <= self.frost <= 15:
             raise ValueError("invalid_frost_threshold")
+        if not self.minimum < self.summer_maximum <= 40:
+            raise ValueError("invalid_summer_maximum")
+
+
+# Seven-day mean outdoor temperature between which the comfort limit moves from winter to summer.
+SEASON_FROM, SEASON_TO = 12.0, 20.0
+
+
+def seasonal(settings: "Settings", outdoor_mean: float | None) -> tuple["Settings", dict]:
+    """Comfort range for the season: the upper limit follows the recent outdoor mean, smoothly.
+
+    Without a known mean the saved range is kept untouched; nothing is guessed from the calendar.
+    """
+    summer = max(settings.summer_maximum, settings.maximum)
+    if outdoor_mean is None or not math.isfinite(outdoor_mean):
+        return settings, {"known": False, "weight": None, "outdoor_mean": None,
+                          "minimum": settings.minimum, "maximum": settings.maximum}
+    weight = min(1.0, max(0.0, (outdoor_mean - SEASON_FROM) / (SEASON_TO - SEASON_FROM)))
+    maximum = round(settings.maximum + weight * (summer - settings.maximum), 1)
+    return replace(settings, maximum=maximum), {"known": True, "weight": round(weight, 2),
+                                                "outdoor_mean": round(outdoor_mean, 1),
+                                                "minimum": settings.minimum, "maximum": maximum}
 
 
 @dataclass(frozen=True)
@@ -147,6 +171,10 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         return reading.value if reading and reading.usable else None
     openings = openings or {}
     outlook = outlook or {}
+    context = context or {}
+    # The upper comfort limit follows the season; a room declared unheated never calls for warmth.
+    settings, season = seasonal(settings, context.get("outdoor_mean_7d"))
+    heated = context.get("heated", True) is not False
     ti, te = value("indoor_temperature"), value("outdoor_temperature")
     hi, he, co2 = value("indoor_humidity"), value("outdoor_humidity"), value("co2")
     gust, solar, bearing = value("wind_gust"), value("solar"), value("wind_bearing")
@@ -168,11 +196,10 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         # below it the precaution is checked, like an unconfigured one would not block.
         pollution = daily_air.value
     from .evolution import air_features, features, _shade
-    context = context or {}
     air_detail = air_features(readings, settings, context)
     old = previous.needs if previous else ()
     hot = ti is not None and ti > settings.maximum - (settings.temperature_hysteresis if "cool" in old else 0)
-    cold = ti is not None and ti < settings.minimum + (settings.temperature_hysteresis if "heat" in old else 0)
+    cold = heated and ti is not None and ti < settings.minimum + (settings.temperature_hysteresis if "heat" in old else 0)
     previous_co2 = previous.features.get("air", {}).get("co2_status") if previous else None
     co2_was_high = previous_co2 == "high" if previous_co2 is not None else "air" in old
     co2_air = co2 is not None and co2 >= settings.co2_action - (settings.co2_hysteresis if co2_was_high else 0)
@@ -272,7 +299,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
             action, reason = ("ok" if opened else "ouvrir"), ("air_needed" if air else "cooling_possible" if hot
                                                              else "precool_possible" if precool else "drying_possible")
     elif opened and delta is not None and ((ti >= (settings.minimum + settings.maximum) / 2 and delta > 0.5)
-                                          or (ti <= settings.minimum + 1 and delta < -0.5)):
+                                          or (heated and ti <= settings.minimum + 1 and delta < -0.5)):
         action, reason = "fermer", "exchange_harmful"
         level = "action"
     elif hot and sunny_open:
@@ -299,6 +326,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     unverified = tuple(k for k in ("pollution", "rain") if k not in readings and not (k == "rain" and all_sheltered))
     extended = features(readings, settings, context, openings, sun, details,
                         needs, action, reason, now, ai, ae, air_detail)
+    extended["season"] = {**season, "heated": heated}
     # A solar protection opportunity does not change the contact action. Existing
     # room needs and safety reasons retain their original priority.
     if (not constraints and reason == "within_comfort" and level == "calm"
