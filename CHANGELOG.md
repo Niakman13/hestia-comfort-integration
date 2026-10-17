@@ -1,3 +1,11 @@
+## 0.9.0-beta.8 — Une panne d’Atmo ne bloque plus le conseil
+
+- Quand l’indice de qualité de l’air extérieur ne répond plus (panne d’Atmo France), le conseil reste valable au lieu de demander de « regarder dehors ». La panne est signalée dans « Détails » et dans l’état technique. La pluie reste une protection : si son capteur se tait, Niak demande toujours de vérifier.
+- La carte distingue une source jamais configurée (« non suivie ») d’une source configurée qui ne répond pas (« indisponible »), et ne présente plus le chauffage comme une source extérieure.
+- L’Accueil Niak signale aussi une source qui ne répond pas, même quand le conseil reste valable.
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 0.9.0-beta.7 — Des cartes plus visuelles, une plage de confort qui suit les saisons
 
 - Cartes pièce et logement refaites, moins de texte et plus visuelles : un bandeau avec le geste en quelques mots et sa raison en une ligne, un grand pictogramme, puis une échelle qui place la pièce dans votre plage (valeur actuelle, minimum et maximum des dernières 24 h, température dehors). Sur la carte logement, un point par pièce.

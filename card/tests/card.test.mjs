@@ -6,11 +6,12 @@ import {join} from 'node:path';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 const root=new URL('../',import.meta.url),temp=await mkdtemp(join(tmpdir(),'niak-comfort-card-'));
-await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
+await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts','src/views/room.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
   bundle:true,platform:'node',format:'esm',outExtension:{'.js':'.mjs'},logLevel:'silent'});
 const {cleanConfig}=await import(pathToFileURL(join(temp,'types.mjs')));
 const {isView,numeric,summary,readingStatus,coverageText,windFrom,evolutionLines,co2Metric,solarMetric}=await import(pathToFileURL(join(temp,'view.mjs')));
 const {LiveView}=await import(pathToFileURL(join(temp,'live.mjs')));
+const {outsideGaps}=await import(pathToFileURL(join(temp,'views/room.mjs')));
 const fixtures=JSON.parse(await readFile(new URL('../preview/card-fixtures.json',import.meta.url),'utf8'));
 const fresh=()=>({...structuredClone(fixtures[0].view),computed_at:new Date().toISOString()});
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
@@ -156,4 +157,15 @@ test('humidity and shutter reasons introduced by the engine have readable summar
 const evolutionFixtures=JSON.parse(await readFile(new URL('../preview/evolution/real-fixtures.json',import.meta.url),'utf8'));
 test('the sixteen evolution engine scenes keep a readable compatible card',()=>{
  for(const scene of evolutionFixtures){assert.equal(isView(scene.view),true,scene.id);assert.notEqual(summary(scene.view)[0],'Conseil à vérifier',scene.id);}
+});
+
+test('an outdoor source that does not answer is « indisponible », a missing one « non suivi », the rest is not called outdoor',()=>{
+  const v=fresh();v.assessment={...v.assessment,reason:'verify_exterior',missing:['heating','pollution'],unverified:[]};
+  v.observations.pollution={value:null,quality:'unknown',source:'sensor.atmo',received_at:null,detail:'unavailable',unit:null};
+  v.observations.heating={value:null,quality:'unknown',source:'climate.poele',received_at:null,detail:'unavailable',unit:null};
+  assert.equal(outsideGaps(v),'Air extérieur indisponible');
+  v.assessment.unverified=['rain'];
+  assert.equal(outsideGaps(v),'Air extérieur indisponible, pluie non suivie');
+  v.assessment.missing=[];v.assessment.unverified=['rain','pollution'];
+  assert.equal(outsideGaps(v),'Pluie et air extérieur non suivis');
 });

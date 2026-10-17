@@ -201,6 +201,17 @@ class ComfortStatusTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Extérieur à configurer", status["details"])
         self.assertTrue(any(d.startswith("Information incomplète : Salon") for d in status["details"]))
 
+    async def test_a_silent_source_is_a_point_to_fix_even_when_advice_stands(self):
+        for name in ("Salon", "Chambre"):
+            self.room(name, reason="drying_possible")
+        silent = {"value": None, "quality": "unknown", "source": "sensor.atmo"}
+        for entry in self.hass.config_entries._entries.values():
+            entry.runtime_data.data = {"assessment": {"reason": "drying_possible", "missing": ["pollution"]}, "observations": {"pollution": silent}}
+        self.config.home = {"configured": True, "sources": {}, "revision": 1}
+        status = await comfort_status(self.hass)
+        self.assertEqual(status["level"], "action")
+        self.assertIn("La qualité de l’air dehors ne répond pas (toutes les pièces)", status["details"])
+
 
 class Resources:
     """Dashboard resources as the user interface keeps them (lovelace's storage collection), not loaded yet."""
