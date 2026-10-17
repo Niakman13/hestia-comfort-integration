@@ -2,7 +2,7 @@
 
 - La tuile Chauffage indique le mode du thermostat : hors gel, éco, confort, boost…
 - Le minimum et le maximum des dernières 24 h sont plus visibles sur l’échelle.
-- Toutes les valeurs de l’échelle portent leur unité (« dehors 13,5 °C », « 20 °C »), et la bulle de température reste dans son cadre.
+- Toutes les valeurs de l’échelle portent leur unité (« dehors 13,5 °C », « 20 °C »), et la bulle de température garde ses marges et reste dans son cadre.
 
 Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
 
