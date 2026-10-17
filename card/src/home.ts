@@ -5,7 +5,7 @@ import charte from './ui/niak-charte.css';
 import roomStyle from './ui/room.css';
 import {html as h2} from 'lit';
 import {isView,number,numeric} from './view';
-import {advice,scale,fold,hero,tileSummary,type CardState} from './views/room';
+import {advice,scale,fold,hero,tileSummary,pills,type CardState} from './views/room';
 import type {Connection,HomeAssistant,Unsubscribe,View,Level} from './types';
 
 interface FloorRef {floor_id:string|null;name:string;level:number|null}
@@ -103,7 +103,7 @@ export class NiakComfortHomeCard extends LitElement {
     const all=this.rooms.map(r=>this.roomTile(r)),outside=this.rooms.filter(r=>['action','urgent'].includes(r.assessment.level));
     const body=h2`<div class="nc-tiles">${floors.map(f=>h2`${floors.length>1?h2`<div class="nc-floor"><span class="nw-label">${f.name}</span><b>${number(f.mean)} °C</b></div>`:nothing}${this.rooms.filter(r=>f.room_ids.includes(r.entry_id)).map(r=>this.roomTile(r))}`)}</div>`;
     return html`<ha-card class="nc-c" data-level=${h.level}>
-      ${hero({name:this.config.title||'Mon logement',level:h.level as Level,advice:ad,scaleLabel:'Les pièces',scale:scale({band:season?[season.minimum,season.maximum]:null,out:h.outdoor_temperature,rooms}),st,why:h2`<p><b>Pièce suivie de près</b> · ${focus?focus.title:'aucune'}</p><p><b>Bilan</b> · ${h.partial?'mesures incomplètes dans au moins une pièce':'toutes les pièces répondent'}</p>`})}
+      ${hero({name:this.config.title||'Mon logement',level:h.level as Level,slides:[{...ad,level:h.level as Level,pill:pills[h.level as Level]}],scaleLabel:'Les pièces',scale:scale({band:season?[season.minimum,season.maximum]:null,out:h.outdoor_temperature,rooms}),st,why:h2`<p><b>Pièce suivie de près</b> · ${focus?focus.title:'aucune'}</p><p><b>Bilan</b> · ${h.partial?'mesures incomplètes dans au moins une pièce':'toutes les pièces répondent'}</p>`})}
       <div class="nc-body">
         ${fold({label:'Pièces',summary:tileSummary(all.length,outside.length,'pièce'),open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:this.uid+'-rooms',body,keep:outside.map(r=>this.roomTile(r))})}
         ${fold({label:'Détails',summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:this.uid+'-details',body:h2`<ul class="nc-list">${this.details(h)}</ul>`})}

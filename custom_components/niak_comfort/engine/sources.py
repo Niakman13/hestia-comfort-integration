@@ -38,11 +38,11 @@ def normalize(kind: str, value: object, unit: str | None = None, *,
         return invalid("future_timestamp")
     # A state (contact, heating action) holds until it changes: only measurements expire.
     state_kind = kind.split(":", 1)[0]
-    if state_kind in ("window", "rain", "pollution", "heating", "presence", "purifier", "cover", "cover_state", "shutter_auto", "shutter_override"):
+    if state_kind in ("window", "rain", "pollution", "heating", "presence", "purifier", "ventilation", "cover", "cover_state", "shutter_auto", "shutter_override"):
         max_age = None
     if max_age is not None and age > max_age:
         return invalid("expired", "stale")
-    if state_kind in ("window", "rain", "pollution", "presence", "purifier", "shutter_auto", "shutter_override"):
+    if state_kind in ("window", "rain", "pollution", "presence", "purifier", "ventilation", "shutter_auto", "shutter_override"):
         if isinstance(value, bool):
             result = value
         elif str(value).lower() in ("on", "off"):

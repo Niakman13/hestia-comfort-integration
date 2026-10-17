@@ -1,4 +1,5 @@
-import {html,nothing,type TemplateResult} from 'lit';
+import {html,nothing,LitElement,type TemplateResult} from 'lit';
+import {property,state} from 'lit/decorators.js';
 import type {Config,View,Level} from '../types';
 import {numeric,number,heatingLabels,coverageText,windFrom,sourceLabel,needs as needLabels,constraintLabels} from '../view';
 import {icon} from '../ui/icons';
@@ -74,6 +75,20 @@ function airWhy(v:View):TemplateResult {
   return html`${b(parts.join(', ')||'Air à renouveler')}`;
 }
 
+export interface Slide extends Advice {level:Level;pill:string}
+/** Every advice of the moment, the main one first: what to do, then the remedies already at work and what Niak cannot check. */
+export function slides(v:View):Slide[] {
+  const a=v.assessment,o=v.observations,air=a.features?.air,main=advice(v),out:Slide[]=[{...main,level:a.level,pill:pills[a.level]}];
+  if(air?.purifier?.on===true){const pm=numeric(o.pm25),speed=air.purifier.speed;
+    out.push({level:'calm',pill:'En cours',title:air.pm25_treated?'Le purificateur filtre':'Le purificateur tourne',
+      line:pm!==null?html`Particules ${b(number(pm)+' µg/m³')}${speed!=null?` · il tourne à ${number(speed)} %`:''}`:speed!=null?html`Il tourne à ${b(number(speed)+' %')}`:'Il filtre l’air de la pièce',disk:'fan',cap:v.names?.[o.purifier?.source??'']??undefined});}
+  if(air?.ventilation?.on===true)out.push({level:'calm',pill:'En cours',title:'La ventilation renouvelle l’air',line:a.needs.includes('dry')?html`Elle aide à ${b('assécher')}`:'Renouvellement continu',disk:'vmc'});
+  const silent=a.missing.some(k=>k in OUTSIDE&&!!o[k]);
+  if(silent&&a.reason!=='verify_exterior')out.push({level:'neutral',pill:'À savoir',title:a.missing.includes('pollution')&&a.missing.filter(k=>k in OUTSIDE).length===1?'Air extérieur inconnu':'Mesure extérieure manquante',line:outsideGaps(v),disk:'ask',cap:'Le conseil reste valable'});
+  if(a.slot&&a.slot.kind==='open'&&!['cooling_unavailable','precool_later'].includes(a.reason))out.push({level:'benefit',pill:'Plus tard',title:`Ouvrez vers ${hour(a.slot.time)}`,line:html`Dehors descendra à ${b(number(a.slot.temperature)+' °C')}`,disk:'moon'});
+  return out;
+}
+
 export interface ScaleInput {band?:[number,number]|null;day?:{min:number;max:number}|null;now?:number|null;out?:number|null;
   rooms?:{name:string;short:string;value:number;level:Level}[];unit?:string}
 /** The charter's scale (as Niak Weather's « Ressenti »): a thin track, your range, a ring with its value; labels never overlap. */
@@ -123,16 +138,19 @@ export function tiles(v:View,config:Config):Tile[] {
   if(mods.has('air')&&o.co2){const c=numeric(o.co2),high=air?.co2_status==='high';
     list.push({ic:'air',label:'CO₂',value:number(c),unit:'ppm',note:c===null?'indisponible':high?'à renouveler':'dans votre plage',level:high?(a.level==='urgent'?'urgent':'action'):'calm',out:high});}
   if(mods.has('air'))for(const [key,ic,label,status] of [['pm25','pm','Particules',air?.pm25_status],['voc','flask','COV',air?.voc_status]] as const){
-    if(!o[key])continue;const x=numeric(o[key]),high=status==='high';
-    list.push({ic,label,value:number(x),unit:o[key].unit??'',note:x===null?'indisponible':high?'élevés':status==='uninterpreted'?'sans seuil':'dans votre plage',level:high?'action':status==='ok'?'calm':'neutral',out:high});}
+    if(!o[key])continue;const x=numeric(o[key]),high=status==='high',treated=key==='pm25'&&high&&air?.pm25_treated===true;
+    list.push({ic,label,value:number(x),unit:o[key].unit??'',note:x===null?'indisponible':treated?'filtrées':high?'élevés':status==='uninterpreted'?'sans seuil':'dans votre plage',level:treated?'calm':high?'action':status==='ok'?'calm':'neutral',out:high});}
   if(mods.has('windows')){const contacts=Object.entries(o).filter(([k])=>k.startsWith('window:')).map(([,r])=>r);
     if(contacts.length){const open=contacts.filter(r=>r.quality==='valid'&&r.value===true).length,flagged=(a.openings??[]).some(x=>x.flags.length>0&&x.open===true);
       list.push({ic:open?'open':'window',label:'Fenêtres',value:`${open}/${contacts.length}`,note:flagged?'à refermer':open?(open>1?`${open} ouvertes`:'1 ouverte'):'toutes fermées',level:flagged?'action':'neutral',out:flagged});}}
   if(mods.has('shutters')){const s=a.sun,solar=numeric(o.solar),entering=(a.openings??[]).some(x=>x.flags.includes('sun_entering'));
     if(s||solar!==null){const night=!!s&&s.elevation<=0,value=night?'Nuit':solar===null?'—':solar<150?'Faible':solar<500?'Moyen':'Fort';
       list.push({ic:night?'moon':'sun',label:'Soleil',value,note:entering?'entre dans la pièce':night?'pas d’apport':solar===null?'non mesuré':`${number(solar)} W/m²`,level:entering?'action':'neutral',out:entering});}}
-  if(mods.has('air')&&o.purifier){const on=o.purifier.quality==='valid'?o.purifier.value===true:null;
-    list.push({ic:'fan',label:'Purificateur',value:on===null?'—':on?'En marche':'Arrêté',note:on&&numeric(o.purifier_speed)!==null?`${number(numeric(o.purifier_speed))} %`:'filtre les particules',level:'neutral',out:false});}
+  if(mods.has('air')&&o.purifier){const on=o.purifier.quality==='valid'?o.purifier.value===true:null,speed=numeric(o.purifier_speed);
+    // Running, it is a remedy at work: framed in green, like the measure it treats.
+    list.push({ic:'fan',label:'Purificateur',value:on===null?'—':on?'En marche':'Arrêté',note:on?(speed!==null?`filtre à ${number(speed)} %`:'filtre l’air'):on===false?'à l’arrêt':'indisponible',level:on?'calm':'neutral',out:on===true});}
+  if(mods.has('air')&&o.ventilation){const on=o.ventilation.quality==='valid'?o.ventilation.value===true:null;
+    list.push({ic:'vmc',label:'Ventilation',value:on===null?'—':on?'En marche':'Arrêtée',note:on?'renouvelle l’air':on===false?'à l’arrêt':'indisponible',level:on?'calm':'neutral',out:on===true});}
   if(mods.has('coordination')&&o.heating){const label=heatingLabels[a.heating_action]??'Inconnu',running=a.heating_action==='heating';
     list.push({ic:'heat',label:'Chauffage',value:running?'Chauffe':label,note:running?'chauffe la pièce':'observé, jamais commandé',level:'neutral',out:false});}
   return list;
@@ -169,12 +187,11 @@ export function whyLines(v:View):TemplateResult {
   return html`<p><b>Besoins</b> · ${a.needs.length?a.needs.map(n=>needLabels[n]??n).join(', '):'aucun parmi les mesures connues'}</p><p><b>Contraintes</b> · ${a.constraints.length?a.constraints.map(c=>constraintLabels[c]??c).join(', '):'aucune confirmée'}</p><p><b>Bilan</b> · ${coverageText(v)}</p>`;
 }
 /** Hero shared by the room and home cards: name, « i », level pill, the gesture, the disk, then the scale. */
-export function hero(o:{name:string;level:Level;advice:Advice;scaleLabel:string;scale:TemplateResult;st:CardState;why:TemplateResult;compact?:boolean}):TemplateResult {
-  const ad=o.advice;
+export function hero(o:{name:string;level:Level;slides:Slide[];scaleLabel:string;scale:TemplateResult;st:CardState;why:TemplateResult;compact?:boolean;still?:boolean}):TemplateResult {
+  const many=o.slides.length>1;
   return html`<div class="nc-hero">
-    <div class="nc-top"><h2>${o.name}</h2><button class="nw-info" aria-label="Pourquoi ce conseil ?" aria-expanded=${o.st.why} aria-controls=${o.st.uid+'-why'} @click=${()=>o.st.toggle('why')}>${icon('info')}</button><span class="nw-chip nc-level">${pills[o.level]}</span></div>
-    <div class="nc-grid"><div class="nc-copy"><div class="nw-label">Conseil</div><p class="nc-advice">${ad.title}</p>${ad.line?html`<p class="nc-line">${ad.line}</p>`:nothing}</div>
-      <div class="nc-diskwrap" aria-hidden="true"><div class="nc-disk">${icon(ad.disk)}</div>${ad.cap?html`<div class="nc-cap">${ad.cap}</div>`:nothing}</div></div>
+    <div class="nc-top"><h2>${o.name}</h2><button class="nw-info" aria-label="Pourquoi ce conseil ?" aria-expanded=${o.st.why} aria-controls=${o.st.uid+'-why'} @click=${()=>o.st.toggle('why')}>${icon('info')}</button><span class="nw-chip nc-level">${many?`${o.slides.length} conseils`:pills[o.level]}</span></div>
+    <niak-advice-ticker .slides=${o.slides} .still=${!!o.still}></niak-advice-ticker>
     <div class="nc-why" id=${o.st.uid+'-why'} ?hidden=${!o.st.why}>${o.why}</div>
     ${o.compact?nothing:html`<div class="nc-sec"><div class="nw-label">${o.scaleLabel}</div>${o.scale}</div>`}
   </div>`;
@@ -190,12 +207,47 @@ export function roomCard(v:View,config:Config,st:CardState,mini=false):TemplateR
   const a=v.assessment,f=a.features,ti=numeric(v.observations.indoor_temperature),te=numeric(v.observations.outdoor_temperature);
   const list=tiles(v,config),outside=list.filter(t=>t.out);
   const band:[number,number]|null=f?.season?[f.season.minimum,f.season.maximum]:null;
-  const sc=(config.modules??[]).includes('temperature')?scale({band,day:f?.day_range??null,now:ti,out:te}):html``;
+  const body=config.show_measures!==false&&list.length>0||config.show_details!==false;
+  const sc=(config.modules??[]).includes('temperature')&&config.show_scale!==false?scale({band,day:f?.day_range??null,now:ti,out:te}):html``;
   return html`<ha-card class="nc-c" data-level=${a.level}>
-    ${hero({name:config.title||v.title,level:a.level,advice:advice(v),scaleLabel:'Température',scale:sc,st,why:whyLines(v),compact:mini})}
-    ${mini?nothing:html`<div class="nc-body">
-      ${list.length?fold({label:'Mesures',summary:tileSummary(list.length,outside.length,'mesure'),open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tiles',body:html`<div class="nc-tiles">${list.map(tile)}</div>`,keep:outside.map(tile)}):nothing}
-      ${fold({label:'Détails',summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:st.uid+'-details',body:html`<ul class="nc-list">${details(v,config)}</ul>${st.configure?html`<button class="nw-badge nc-configure" @click=${st.configure}>${icon('settings')}Configurer cette pièce</button>`:nothing}`})}
+    ${hero({name:config.title||v.title,level:a.level,slides:slides(v),scaleLabel:'Température',scale:sc,st,why:whyLines(v),compact:mini||config.show_scale===false||!(config.modules??[]).includes('temperature'),still:config.animations===false||config.rotate===false})}
+    ${mini||!body?nothing:html`<div class="nc-body">
+      ${list.length&&config.show_measures!==false?fold({label:'Mesures',summary:tileSummary(list.length,outside.length,'mesure'),open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tiles',body:html`<div class="nc-tiles">${list.map(tile)}</div>`,keep:outside.map(tile)}):nothing}
+      ${config.show_details===false?nothing:fold({label:'Détails',summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:st.uid+'-details',body:html`<ul class="nc-list">${details(v,config)}</ul>${st.configure?html`<button class="nw-badge nc-configure" @click=${st.configure}>${icon('settings')}Configurer cette pièce</button>`:nothing}`})}
     </div>`}
   </ha-card>`;
 }
+
+/** The advices, one at a time every 4.5 s (as Niak Weather's ticker). Every slide sits in the same place,
+    so the card keeps the height of the longest one. Pauses on hover or focus; a tap shows the next one. */
+export class NiakAdviceTicker extends LitElement {
+  @property({attribute:false}) slides:Slide[]=[];
+  @property({type:Boolean}) still=false;
+  @state() private index=0;
+  @state() private paused=false;
+  private timer?:ReturnType<typeof setTimeout>;
+  createRenderRoot(){return this;}
+  connectedCallback(){super.connectedCallback();this.schedule();}
+  disconnectedCallback(){super.disconnectedCallback();clearTimeout(this.timer);}
+  protected willUpdate(changed:Map<string,unknown>){if(changed.has('slides')&&this.index>=this.slides.length)this.index=0;}
+  protected updated(){this.schedule();}
+  private get calm(){return this.still||matchMedia('(prefers-reduced-motion: reduce)').matches;}
+  private schedule(){clearTimeout(this.timer);if(this.slides.length>1&&!this.paused&&!this.calm)this.timer=setTimeout(()=>{this.index=(this.index+1)%this.slides.length;},4500);}
+  private go(i:number){this.index=(i+this.slides.length)%this.slides.length;}
+  private hold(on:boolean){this.paused=on;}
+  protected render(){
+    const list=this.slides,many=list.length>1,i=Math.min(this.index,list.length-1);
+    if(!list.length)return nothing;
+    return html`<div class="nc-grid" @mouseenter=${()=>this.hold(true)} @mouseleave=${()=>this.hold(false)} @focusin=${()=>this.hold(true)} @focusout=${()=>this.hold(false)}
+        @click=${(e:Event)=>{if(many&&!(e.target as HTMLElement).closest('.nc-bars'))this.go(i+1);}} style=${many?'cursor:pointer':''}>
+      <div class="nc-copy">
+        <div class="nc-tk-head"><span class="nw-label">${many?'Conseils':'Conseil'}</span>${many?html`<span class="nc-tk-count">${i+1} sur ${list.length}</span>
+          <span class="nc-bars">${list.map((s,k)=>html`<button type="button" aria-label=${`Conseil ${k+1} : ${s.title}`} aria-current=${k===i?'true':'false'} data-level=${s.level} class=${k<i?'done':k===i?(this.paused||this.calm?'done':'on'):''} @click=${()=>this.go(k)}><i></i></button>`)}</span>`:nothing}</div>
+        <div class="nc-stack" aria-live=${this.paused?'polite':'off'}>${list.map((s,k)=>html`<div class=${'nc-slide'+(k===i?' on':'')} aria-hidden=${k===i?'false':'true'}>
+          ${many?html`<span class="nw-chip nc-slide-pill" data-level=${s.level}>${s.pill}</span>`:nothing}<p class="nc-advice">${s.title}</p>${s.line?html`<p class="nc-line">${s.line}</p>`:nothing}</div>`)}</div>
+      </div>
+      <div class="nc-diskwrap nc-stack" aria-hidden="true">${list.map((s,k)=>html`<div class=${'nc-slide nc-diskslide'+(k===i?' on':'')} data-level=${s.level}><div class="nc-disk">${icon(s.disk)}</div>${s.cap?html`<div class="nc-cap">${s.cap}</div>`:nothing}</div>`)}</div>
+    </div>`;
+  }
+}
+if(!customElements.get('niak-advice-ticker'))customElements.define('niak-advice-ticker',NiakAdviceTicker);

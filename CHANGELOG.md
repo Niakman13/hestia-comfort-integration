@@ -1,3 +1,12 @@
+## 0.9.0-beta.9 — Les conseils défilent, la carte se règle
+
+- Quand il y a plusieurs conseils, ils défilent dans le bandeau, un toutes les 4,5 s, comme dans Niak Weather : le plus important d’abord, une barre par conseil, pause au survol, un appui pour passer au suivant. La carte garde la hauteur du conseil le plus long : plus de saut quand le texte change.
+- Le purificateur qui tourne pendant que les particules sont élevées est un remède en cours : les particules seules ne demandent plus d’aérer, et la carte l’indique (« Le purificateur filtre »).
+- Nouvelle source « Ventilation (VMC) » dans l’étape Air intérieur, distincte du purificateur : la carte indique qu’elle renouvelle l’air et aide à assécher.
+- Réglages de la carte refaits, comme pour Weather : format (complète, tuile, mini), échelle, mesures et détails affichés ou non, dépliés ou repliés au départ, défilement automatique des conseils.
+
+Si une VMC est déclarée comme purificateur dans une pièce, choisissez-la plutôt dans « Ventilation (VMC) ». Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 0.9.0-beta.8 — Une panne d’Atmo ne bloque plus le conseil
 
 - Quand l’indice de qualité de l’air extérieur ne répond plus (panne d’Atmo France), le conseil reste valable au lieu de demander de « regarder dehors ». La panne est signalée dans « Détails » et dans l’état technique. La pluie reste une protection : si son capteur se tait, Niak demande toujours de vérifier.

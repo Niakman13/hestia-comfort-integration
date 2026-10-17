@@ -4,10 +4,12 @@ export const MODULES = ['windows','air','temperature','humidity','shutters','coo
 export type Level = typeof LEVELS[number];
 export type Module = typeof MODULES[number];
 export type Format = 'mini'|'tile'|'intermediate'|'full';
-export const moduleLabels:Record<Module,string>={windows:'Fenêtres',air:'Qualité de l’air',temperature:'Température',humidity:'Humidité',shutters:'Soleil et volets',coordination:'Lien chauffage'};
+export const moduleLabels:Record<Module,string>={windows:'Fenêtres',air:'Qualité de l’air',temperature:'Température',humidity:'Humidité',shutters:'Soleil et volets',coordination:'Chauffage'};
 export interface Config {
   type: 'custom:niak-comfort-card'; entry_id?: string; title?: string; format?: Format;
   modules?: Module[]; animations?: boolean; glass_effect?: boolean; theme?: 'auto'|'light'|'dark';
+  /** What the card shows and how it opens: the scale, the measures, the details, and whether advices scroll by themselves. */
+  show_scale?: boolean; show_measures?: boolean; show_details?: boolean; measures_open?: boolean; details_open?: boolean; rotate?: boolean;
 }
 export interface Reading {
   value: number|boolean|string|null; quality:'valid'|'unknown'|'stale'|'estimated';
@@ -16,7 +18,7 @@ export interface Reading {
 export interface Features {
  shutters?:{entity_id:string;mode:'none'|'manual'|'connected';position:number|null;state:string|null;advice:'close'|'open'|null;message:string;shade_fraction:number|null;shade_model:'geometry'|'simple'|'unknown';manual_override:boolean|null;automatic:boolean|null}[];
  presence?:{state:'occupied'|'empty'|'unknown'|'not_configured';message:string};
- air?:{co2_status?:'high'|'ok'|'unknown'|'not_configured';pm25_status:'high'|'ok'|'unknown'|'not_configured';voc_status:'high'|'ok'|'uninterpreted'|'unknown'|'not_configured';voc_unit:string|null;purifier:{on:boolean|null;speed:number|null};coverage:string;message:string};
+ air?:{co2_status?:'high'|'ok'|'unknown'|'not_configured';pm25_status:'high'|'ok'|'unknown'|'not_configured';voc_status:'high'|'ok'|'uninterpreted'|'unknown'|'not_configured';voc_unit:string|null;purifier:{on:boolean|null;speed:number|null};pm25_treated?:boolean;ventilation?:{on:boolean|null}|null;coverage:string;message:string};
  ventilation?:{opened_minutes:number|null;duration_minutes:{min:number;max:number}|null;message:string;capacity:number|null};
  humidity?:{dew_point:number|null;incoming_relative:number|null;glass_temperature:number|null;condensation_risk:boolean|null;message:string};
  trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string};
@@ -56,7 +58,7 @@ export function cleanConfig(input:Config):Config {
   if(input.entry_id!==undefined && typeof input.entry_id!=='string') throw new Error('Choisissez une pièce Niak Comfort.');
   if(input.title!==undefined && typeof input.title!=='string') throw new Error('Le titre doit être un texte.');
   if(input.theme && !['auto','light','dark'].includes(input.theme)) throw new Error('Thème inconnu.');
-  for(const key of ['animations','glass_effect'] as const)
+  for(const key of ['animations','glass_effect','show_scale','show_measures','show_details','measures_open','details_open','rotate'] as const)
     if(input[key]!==undefined && typeof input[key]!=='boolean') throw new Error('Réglage d’affichage invalide.');
   if(input.modules && (!Array.isArray(input.modules) || input.modules.some(m=>!MODULES.includes(m)))) throw new Error('Rubrique inconnue.');
   return {...input, format:input.format??'tile', modules:[...new Set(input.modules??MODULES)]};

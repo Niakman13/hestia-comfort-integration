@@ -58,9 +58,12 @@ export class NiakComfortCard extends LitElement {
     const prefix=modal?'dialog-':'',fmt=this.config?.format,open=this.open;
     // Measures stay folded in the tile, open in the full card; out-of-range ones always show.
     const get=(k:string,fallback:boolean)=>open[prefix+k]??fallback;
-    return {why:get('why',false),tilesOpen:get('tilesOpen',modal||fmt==='full'||fmt==='intermediate'),detailsOpen:get('detailsOpen',false),uid:this.uid+(modal?'-dialog':'-main'),
+    // Opening at start follows the card's settings; the full card in its window always shows the measures.
+    const measures=modal||(this.config?.measures_open??(fmt==='full'||fmt==='intermediate')),details=this.config?.details_open??false;
+    const fallback=(k:string)=>k==='tilesOpen'?measures:k==='detailsOpen'?details:false;
+    return {why:get('why',false),tilesOpen:get('tilesOpen',measures),detailsOpen:get('detailsOpen',details),uid:this.uid+(modal?'-dialog':'-main'),
       // Read the current state at click time: two quick clicks must not overwrite each other.
-      toggle:k=>{const cur=this.open,fallback=k==='tilesOpen'&&(modal||fmt==='full'||fmt==='intermediate');this.open={...cur,[prefix+k]:!(cur[prefix+k]??fallback)};},
+      toggle:k=>{const cur=this.open;this.open={...cur,[prefix+k]:!(cur[prefix+k]??fallback(k))};},
       configure:this.hass?.user?.is_admin?()=>this.configure():undefined};
   }
   private openFull(event?:Event){this.openingControl=event?.currentTarget instanceof HTMLElement?event.currentTarget:undefined;this.dialogOpen=true;}

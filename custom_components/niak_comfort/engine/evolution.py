@@ -22,6 +22,9 @@ def air_features(readings, settings, context):
         value = _value(readings, key)
         return 'unknown' if value is None else 'high' if value >= threshold else 'ok'
     pm = status('pm25', settings.pm25_action)
+    purifier_on = _value(readings, 'purifier') is True
+    # A running purifier is the remedy for particles: they no longer call for opening.
+    pm_treated = pm == 'high' and purifier_on
     voc, threshold = readings.get('voc'), context.get('voc_threshold')
     vs = 'not_configured' if voc is None else 'unknown' if not voc.usable else 'uninterpreted'
     if (voc and voc.usable and isinstance(threshold, dict) and _number(threshold.get('value'))
@@ -33,13 +36,14 @@ def air_features(readings, settings, context):
     if missing:
         coverage += ' ; non suivies ou indisponibles : ' + ', '.join(missing)
     messages = []
-    if pm == 'high': messages.append('PM2.5 élevées : besoin d’air maintenu sous réserve des conditions extérieures.')
+    if pm == 'high': messages.append('PM2.5 élevées : le purificateur les filtre.' if pm_treated else 'PM2.5 élevées : besoin d’air maintenu sous réserve des conditions extérieures.')
     if vs == 'high': messages.append('COV au-dessus du seuil choisi : besoin d’air maintenu.')
     if vs == 'uninterpreted': messages.append('COV mesurés, interprétation indisponible sans seuil de même unité.')
     if 'purifier' in readings:
         messages.append('Le purificateur ne renouvelle pas l’air et ne retire pas le CO₂ ; son action sur les COV n’est pas présumée.')
     return dict(pm25_status=pm,voc_status=vs,voc_unit=voc.unit if voc else None,
-                purifier={'on':_value(readings,'purifier'),'speed':_value(readings,'purifier_speed')},
+                purifier={'on':_value(readings,'purifier'),'speed':_value(readings,'purifier_speed')},pm25_treated=pm_treated,
+                ventilation={'on':_value(readings,'ventilation')} if 'ventilation' in readings else None,
                 coverage=coverage,message=' '.join(messages) or 'Les mesures d’air restent distinctes.')
 
 

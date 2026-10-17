@@ -17,7 +17,7 @@ from .exterior import exterior_reading
 from .discovery import voc_device_class
 from . import weather_link
 
-STATE_KINDS = ("window", "heating", "rain", "pollution", "presence", "purifier", "cover", "cover_state", "shutter_auto", "shutter_override", "purifier_speed")
+STATE_KINDS = ("window", "heating", "rain", "pollution", "presence", "purifier", "ventilation", "cover", "cover_state", "shutter_auto", "shutter_override", "purifier_speed")
 
 
 class ComfortCoordinator(DataUpdateCoordinator):

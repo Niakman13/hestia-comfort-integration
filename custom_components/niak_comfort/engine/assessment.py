@@ -205,7 +205,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     co2_air = co2 is not None and co2 >= settings.co2_action - (settings.co2_hysteresis if co2_was_high else 0)
     air_detail["co2_status"] = ("not_configured" if "co2" not in readings else "unknown" if co2 is None
                                else "high" if co2_air else "ok")
-    air = co2_air or air_detail["pm25_status"] == "high" or air_detail["voc_status"] == "high"
+    air = co2_air or (air_detail["pm25_status"] == "high" and not air_detail["pm25_treated"]) or air_detail["voc_status"] == "high"
     wet = hi is not None and hi > settings.humidity_high - (settings.humidity_hysteresis if "dry" in old else 0)
     # Pre-cooling (template « prérefroidir »): at night, when tomorrow is announced well above the comfort range.
     tomorrow_max = outlook.get("tomorrow_max")
