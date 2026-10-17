@@ -10,6 +10,7 @@ from typing import Mapping
 from .sources import Reading
 from .wind import DRIVEN_RAIN_GUST, crossing as wind_crossing, open_first, side as wind_side
 from .outlook import rain_soon, slot as next_slot
+from . import learning
 
 LEVELS = ("calm", "benefit", "action", "urgent", "neutral")
 ACTIONS = ("ok", "ouvrir", "fermer", "attendre", "unknown")
@@ -218,6 +219,16 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     delta = te - ti if te is not None and ti is not None else None
     cool = delta is not None and delta <= -settings.cooling_delta
     dry = ai is not None and ae is not None and ai - ae >= settings.drying_delta
+    # What airing would really bring here, learned from the room's past openings (an ordinary room before
+    # that), instead of a full replacement of its air by the outdoor one.
+    drying = None
+    if wet and dry and ti is not None:
+        model = context.get("drying_model")
+        model = model if isinstance(model, Mapping) and all(isinstance(model.get(k), (int, float)) for k in ("tau", "residual", "rebound")) else {**learning.DEFAULT, "openings": 0}
+        drying = {**learning.outcome(model, ti, ai, ae), "tau": model["tau"], "openings": model.get("openings", 0),
+                  "later": learning.best_moment(model, ti, ai, ae, outlook.get("hours"), now) if now and not opened else None}
+    # Once open, the airing runs its course; before, it must be worth it.
+    worth = drying is not None and (opened or drying["gain"] >= learning.MIN_GAIN)
     windy = gust is not None and gust > settings.gust_max
     frost = te is not None and te <= settings.frost
     heating_running = value("heating") == "heating"
@@ -263,7 +274,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     checked = (rain is False or ("rain" not in readings and rain is None)) and pollution is not True
     thermal_known = ti is not None and te is not None
     optional_wet_exchange = ai is not None and ae is not None and ae > ai + 1
-    useful = air or ((hot or precool) and cool and not optional_wet_exchange) or (wet and dry and not cold)
+    useful = air or ((hot or precool) and cool and not optional_wet_exchange) or (wet and worth and not cold)
     opportunities = tuple(k for k, active in (("cool", cool and not optional_wet_exchange), ("dry", dry),
         ("air", co2 is not None and co2 >= settings.co2_potential)) if active) if not hard and not soft else ()
     missing = tuple(sorted(k for k in ({k for k, r in readings.items() if r.source and not r.usable
@@ -311,6 +322,10 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         action, reason = "attendre", "cooling_unavailable"
     elif cold:
         action, reason = ("fermer" if opened else "ok"), "heat_needed"
+    elif wet and drying and drying["later"]:
+        action, reason = "attendre", "drying_later"
+    elif wet and drying:
+        action, reason = "attendre", "drying_slow"
     elif wet:
         action, reason = "attendre", "drying_unavailable"
     elif precool:
@@ -330,6 +345,9 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     extended = features(readings, settings, context, openings, sun, details,
                         needs, action, reason, now, ai, ae, air_detail)
     extended["season"] = {**season, "heated": heated}
+    extended["drying"] = drying
+    if reason == "drying_possible" and drying:
+        extended["ventilation"]["duration_minutes"] = {"min": max(5, 5 * round(drying["minutes"] * .75 / 5)), "max": drying["minutes"]}
     # The last 24 hours of the room, widened by the current reading (statistics stop at the last full hour).
     day = context.get("indoor_day_range")
     if (isinstance(day, Mapping) and all(isinstance(day.get(k), (int, float)) and not isinstance(day.get(k), bool) and math.isfinite(day[k]) for k in ("min", "max"))

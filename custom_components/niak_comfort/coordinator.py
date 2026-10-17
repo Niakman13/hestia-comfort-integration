@@ -8,11 +8,13 @@ from homeassistant.helpers.event import async_call_later, async_track_state_chan
 from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.debounce import Debouncer
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, OPEN_DEBOUNCE_SECONDS, SEASON_REFRESH_SECONDS, SOURCES, VIEW_VERSION
+from .const import DOMAIN, LEARNING_REFRESH_SECONDS, OPEN_DEBOUNCE_SECONDS, SEASON_REFRESH_SECONDS, SOURCES, VIEW_VERSION
 from .engine.assessment import Opening, Settings, Sun, assess
+from .engine import learning
 from .engine.sources import normalize, Reading
 from .configuration import DATA_CONFIG
 from .exterior import exterior_reading
@@ -42,6 +44,11 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.season = (None, None)
         self.day_range = None
         self._season_failed = False
+        # What airing really does in this room, learned from its past openings (engine/learning.py).
+        self.drying_model = learning.fit([])
+        self._learning_due = None
+        self._learning_failed = False
+        self._learning_store = Store(hass, 1, f"{DOMAIN}.learning.{entry.entry_id}")
 
     async def async_start(self):
         self.config_entry.async_on_unload(self.async_stopped)
@@ -75,6 +82,9 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 self.opened_since.pop(entity_id, None)
             elif before == "off":
                 self.opened_since[entity_id] = now
+            if before == "on" and after == "off":
+                # Learn from this opening once the room has had time to give its water back.
+                self._learning_due = now + learning.REBOUND_AFTER + timedelta(minutes=5)
                 # Recompute right when the bounce delay ends, not at the next periodic refresh.
                 cancel = async_call_later(self.hass, OPEN_DEBOUNCE_SECONDS + 1, self._bounce_over)
                 self.stop_listeners.add(cancel)
@@ -110,7 +120,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
             return max(0, (now - start).total_seconds() / 60) if start else None
         return {**self.config.get("evolution", {}),
                 "heated": self.config.get("heated", True), "outdoor_mean_7d": self.season[1],
-                "indoor_day_range": self.day_range,
+                "indoor_day_range": self.day_range, "drying_model": self.drying_model,
                 "opening_minutes": {e: minutes(e, self.opened_since, "on") for e in self.config.get("windows", [])},
                 "presence_off_minutes": {e: minutes(e, self.absent_since, "off") for e in self.config.get("presence", [])},
                 **{k: list(v) for k, v in self.histories.items()}}
@@ -168,6 +178,9 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 readings["heating_mode"] = Reading(mode, "valid", selected["heating"], state.last_reported.isoformat(), detail)
         outlook = weather_link.outlook(self.hass, self._weather_place())
         await self._refresh_season(now)
+        if self._learning_due is None or now >= self._learning_due:
+            self._learning_due = now + timedelta(seconds=LEARNING_REFRESH_SECONDS)
+            self.config_entry.async_create_background_task(self.hass, self._learn(now), f"{DOMAIN} learning {self.entry_id}")
         # The card shows a contact as it is; the advice ignores an opening younger than the bounce delay.
         advice_readings = {k: (replace(r, value=False, detail="debounce") if k.startswith("window:") and self._bouncing(k[7:], r, now) else r)
                            for k, r in readings.items()}
@@ -180,12 +193,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 "names": {e: (state.name if (state := self.hass.states.get(e)) else e) for e in windows}}
 
     def _outdoor_entity(self):
-        if self.home_configuration:
-            sources = self.home_configuration.effective_sources(self.config)
-        else:
-            sources = {k: {"entity_id": v} for k, v in self.config.get("sources", {}).items()}
-        spec = sources.get("outdoor_temperature")
-        return spec["entity_id"] if spec else None
+        return self._source_entity("outdoor_temperature")
 
     async def _refresh_season(self, now):
         stamp = self.season[0]
@@ -229,6 +237,49 @@ class ComfortCoordinator(DataUpdateCoordinator):
         if len(lows) < 12 or len(highs) < 12:
             return None
         return {"min": round(min(lows), 1), "max": round(max(highs), 1)}
+
+    def _source_entity(self, key):
+        """The entity behind a room source, chosen in the room or shared by the home (outdoor ones)."""
+        if self.home_configuration and (spec := self.home_configuration.effective_sources(self.config).get(key)):
+            return spec["entity_id"]
+        return self.config.get("sources", {}).get(key)
+
+    async def _learn(self, now):
+        """Refit the room's airing model from the stored openings plus the recorder's recent history."""
+        stored = await self._learning_store.async_load() or {}
+        episodes = stored.get("episodes") if isinstance(stored.get("episodes"), list) else []
+        keys = ("indoor_temperature", "indoor_humidity", "outdoor_temperature", "outdoor_humidity")
+        sources = {k: self._source_entity(k) for k in keys}
+        windows = self.config.get("windows", [])
+        if windows and all(sources.values()) and "recorder" in self.hass.config.components:
+            try:
+                from homeassistant.components.recorder import get_instance, history
+                states = await get_instance(self.hass).async_add_executor_job(
+                    history.get_significant_states, self.hass, now - timedelta(days=10), now,
+                    [*windows, *sources.values()], None, True, False, False, True)
+                def points(entity_id):
+                    state = self.hass.states.get(entity_id)
+                    fahrenheit = bool(state) and state.attributes.get("unit_of_measurement") == "°F"
+                    out = []
+                    for row in states.get(entity_id, []):
+                        try:
+                            value = float(row.state)
+                        except (TypeError, ValueError):
+                            continue
+                        out.append((row.last_changed, (value - 32) * 5 / 9 if fahrenheit else value))
+                    return out
+                contacts = {e: [(row.last_changed, {"on": True, "off": False}.get(row.state)) for row in states.get(e, [])] for e in windows}
+                fresh = await self.hass.async_add_executor_job(learning.episodes, contacts, *(points(sources[k]) for k in keys))
+                episodes = learning.merge(episodes, fresh, now)
+                await self._learning_store.async_save({"episodes": episodes})
+            except Exception:  # the room then keeps what it learned before, or the default model
+                if not self._learning_failed:
+                    self._learning_failed = True
+                    self.logger.warning("Past openings could not be read for %s", self.config.get("name"), exc_info=True)
+        model = learning.fit(episodes)
+        if model != self.drying_model:
+            self.drying_model = model
+            await self.async_request_refresh()
 
     async def _bounce_over(self, _now):
         # A coroutine, so Home Assistant runs it in its own loop (a plain function would run in a worker thread).

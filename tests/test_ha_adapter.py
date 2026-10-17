@@ -86,6 +86,36 @@ class AdapterTests(AdapterFixture):
         data = await coordinator._async_update_data()
         self.assertTrue(data["assessment"]["openings"][0]["open"])
 
+    async def test_past_openings_are_learned_and_remembered(self):
+        from homeassistant.core import State
+        sources = {**self.entry.data["sources"], "indoor_humidity": "sensor.hum", "outdoor_humidity": "sensor.out_hum"}
+        self.hass.config_entries._entries[self.entry.entry_id] = self.entry
+        self.hass.config_entries.async_update_entry(self.entry, options={"sources": sources})
+        self.hass.config.components.add("recorder")
+        now = dt_util.utcnow()
+        start = now - timedelta(hours=5)
+        def row(entity_id, state, minutes):
+            return State(entity_id, state, last_changed=start + timedelta(minutes=minutes))
+        # Two hours open: the humidity falls from 80 % to 65 % at 20 °C, with 12 °C and 80 % outside.
+        history = {"binary_sensor.window": [row("binary_sensor.window", "off", 0), row("binary_sensor.window", "on", 30),
+                                            row("binary_sensor.window", "off", 150)],
+                   "sensor.inside": [row("sensor.inside", "68", 0)],
+                   "sensor.hum": [row("sensor.hum", str(80 - min(15, m / 8)), m) for m in range(0, 300, 5)],
+                   "sensor.outside": [row("sensor.outside", "12", 0)], "sensor.out_hum": [row("sensor.out_hum", "80", 0)]}
+        class FakeRecorder:
+            async def async_add_executor_job(self, function, *args):
+                return history
+        coordinator = ComfortCoordinator(self.hass, self.entry)
+        with patch("homeassistant.components.recorder.get_instance", return_value=FakeRecorder()):
+            await coordinator._learn(now)
+        self.assertEqual(coordinator.drying_model["openings"], 1)
+        self.assertEqual(len((await coordinator._learning_store.async_load())["episodes"]), 1)
+        # Without the recorder, what was stored is still known.
+        self.hass.config.components.remove("recorder")
+        again = ComfortCoordinator(self.hass, self.entry)
+        await again._learn(now)
+        self.assertEqual(again.drying_model, coordinator.drying_model)
+
     async def _season(self, rows):
         class FakeRecorder:
             async def async_add_executor_job(self, function, *args):

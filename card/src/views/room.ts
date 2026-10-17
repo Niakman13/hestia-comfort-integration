@@ -22,7 +22,13 @@ export function advice(v:View):Advice {
   const te=numeric(o.outdoor_temperature),hi=numeric(o.indoor_humidity),incoming=a.features?.humidity?.incoming_relative??null;
   const temps=html`${deg(ti)} dedans, ${b(deg(te)+' dehors')}`;
   // Humidity in plain words: where the outdoor air would bring the room once warmed inside.
+  // Once learned, the room's own past airings say where the humidity would really go.
+  const drying=a.features?.drying??null;
   const water=(()=>{
+    if(drying){const now=Math.round(drying.now),after=Math.round(drying.after),outside=numeric(o.outdoor_humidity);
+      return outside!==null&&Math.round(outside)>=now
+        ?html`Dehors ${Math.round(outside)} %, mais l’air froid contient peu d’eau : ${b('environ '+after+' %')} après l’aération`
+        :html`${now} % d’humidité, ${b('environ '+after+' %')} après l’aération`;}
     if(incoming==null||hi===null)return html`L’air du dehors est ${b('plus sec')}`;
     const target=Math.round(incoming),now=Math.round(hi),outside=numeric(o.outdoor_humidity);
     // The trap: a cold outdoor air at 79 % holds little water. Say it, or the advice looks wrong.
@@ -64,6 +70,15 @@ export function advice(v:View):Advice {
       return slot&&slot.kind==='open'?{title:`Ouvrez vers ${hour(slot.time)}`,line:html`Il fera ${b(number(slot.temperature)+' °C')} dehors`,disk:'moon',cap:slot.wind_bearing!=null?windFrom(slot.wind_bearing):undefined}
         :{title:'Gardez fermé',line:html`Il ne fait ${b('pas plus frais dehors')} pour l’instant`,disk:'clock'};
     case 'drying_possible': return airing('Aérez','Aérez pour assécher',water);
+    case 'drying_later': {const later=drying?.later;
+      return later?{title:`Aérez vers ${hour(later.time)}`,line:html`L’air sera plus sec : ${b('environ '+Math.round(later.after)+' %')} après ${later.minutes} min`,disk:'clock'}
+        :{title:'Aérez plus tard',line:water,disk:'clock'};}
+    case 'drying_slow': {
+      const vmc=a.features?.air?.ventilation;
+      const line=drying?html`Aérer ici : ${b(Math.round(drying.now)+' → '+Math.round(drying.after)+' %')} seulement`:water;
+      return vmc&&vmc.on!==true?{title:'Lancez la VMC',line,disk:'vmc',cap:'Aérer assèche peu ici'}
+        :{title:vmc?'Humidité à surveiller':'Aérer assèche peu ici',line,disk:'clock'};
+    }
     case 'drying_unavailable': return {title:'Humidité à surveiller',line:incoming!=null?water:html`L’air du dehors ${b('n’est pas plus sec')}`,disk:'clock',cap:'Aérer n’aiderait pas'};
     case 'exchange_harmful': return {title:'Refermez',line:html`L’air du dehors ${b(a.temperature_delta!==null&&a.temperature_delta>0?'réchauffe la pièce':'refroidit la pièce')}`,disk:'shut'};
     case 'rehumidification_risk': return {title:'Refermez',line:incoming!=null?water:html`L’air du dehors ${b('est plus humide')}`,disk:'shut'};
@@ -110,6 +125,8 @@ export function slides(v:View):Slide[] {
   if(air?.ventilation?.on===true){const fast=air.ventilation.boost===true;
     out.push({level:'calm',pill:'En cours',title:'La ventilation renouvelle l’air',line:a.needs.includes('dry')?html`Elle aide à ${b('assécher')}${fast?' · grande vitesse':''}`:fast?html`En ${b('grande vitesse')}`:'Renouvellement continu',disk:'vmc',cap:fast?'Grande vitesse':undefined});}
   // What Niak cannot check is information, not advice: it stays in « Détails ».
+  const later=a.features?.drying?.later;
+  if(later&&a.reason==='drying_possible')out.push({level:'benefit',pill:'Plus tard',title:`Encore mieux vers ${hour(later.time)}`,line:html`L’air sera plus sec : ${b('environ '+Math.round(later.after)+' %')}`,disk:'clock'});
   if(a.slot&&a.slot.kind==='open'&&!['cooling_unavailable','precool_later'].includes(a.reason))out.push({level:'benefit',pill:'Plus tard',title:`Ouvrez vers ${hour(a.slot.time)}`,line:html`Il fera ${b(number(a.slot.temperature)+' °C')} dehors`,disk:'moon'});
   return out;
 }
@@ -217,6 +234,8 @@ export function details(v:View,config:Config):TemplateResult[] {
   if(mods.has('shutters'))for(const s of f?.shutters??[]){if(s.mode==='none'||(!s.advice&&!s.manual_override&&s.position==null))continue;
     out.push(row(v.names?.[s.entity_id]??'Volet',[s.manual_override?'dérogation manuelle':s.advice==='close'?'à fermer':s.advice==='open'?'à ouvrir':'rien à faire',s.position!=null?`ouvert à ${number(s.position)} %`:''].filter(Boolean).join(' · ')));}
   if(mods.has('air')&&f?.presence&&f.presence.state!=='not_configured')out.push(row('Présence',{occupied:'quelqu’un est là',empty:'pièce vide',unknown:'inconnue'}[f.presence.state]??''));
+  // Where the drying promise comes from: this room's own airings, or an ordinary room until one is seen.
+  if(mods.has('humidity')&&f?.drying)out.push(row('Séchage',f.drying.openings?`appris sur ${f.drying.openings} aération${f.drying.openings>1?'s':''}`:'estimé, aucune aération observée'));
   if(mods.has('humidity')&&f?.humidity&&f.humidity.condensation_risk!==null)out.push(row('Buée',f.humidity.condensation_risk?'risque estimé':'aucun risque estimé'));
   const tr=f?.trends;
   if(mods.has('temperature')&&tr&&(tr.indoor!=null||tr.outdoor!=null))out.push(row('Tendance',[tr.indoor!=null?`dedans ${tr.indoor>0?'+':''}${number(tr.indoor)} °C/h`:'',tr.outdoor!=null?`dehors ${tr.outdoor>0?'+':''}${number(tr.outdoor)} °C/h`:''].filter(Boolean).join(', ')));
