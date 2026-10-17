@@ -15,6 +15,16 @@ def _value(readings, key):
     return r.value if r and r.usable else None
 
 
+def _ventilation(readings):
+    """A ventilation unit, possibly with a high-speed position: running if either position runs."""
+    keys = [k for k in ('ventilation', 'ventilation_boost') if k in readings]
+    if not keys:
+        return None
+    values = [_value(readings, k) for k in keys]
+    on = True if any(v is True for v in values) else False if all(v is False for v in values) else None
+    return {'on': on, 'boost': _value(readings, 'ventilation_boost') is True}
+
+
 def air_features(readings, settings, context):
     def status(key, threshold):
         if key not in readings:
@@ -43,7 +53,7 @@ def air_features(readings, settings, context):
         messages.append('Le purificateur ne renouvelle pas l’air et ne retire pas le CO₂ ; son action sur les COV n’est pas présumée.')
     return dict(pm25_status=pm,voc_status=vs,voc_unit=voc.unit if voc else None,
                 purifier={'on':_value(readings,'purifier'),'speed':_value(readings,'purifier_speed')},pm25_treated=pm_treated,
-                ventilation={'on':_value(readings,'ventilation')} if 'ventilation' in readings else None,
+                ventilation=_ventilation(readings),
                 coverage=coverage,message=' '.join(messages) or 'Les mesures d’air restent distinctes.')
 
 

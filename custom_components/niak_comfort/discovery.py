@@ -5,7 +5,7 @@ from homeassistant.helpers import area_registry as ar, device_registry as dr, en
 
 from .const import OUTDOOR_AREAS, SOURCES
 
-INDOOR = ("indoor_temperature", "indoor_humidity", "co2", "windows", "heating", "illuminance", "pm25", "voc", "purifier", "ventilation", "presence")
+INDOOR = ("indoor_temperature", "indoor_humidity", "co2", "windows", "heating", "illuminance", "pm25", "voc", "purifier", "ventilation", "ventilation_boost", "presence")
 OPENING_SOURCES = ("covers", "shutter_auto", "shutter_override")
 OUTDOOR = ("outdoor_temperature", "outdoor_humidity", "rain", "wind_gust", "wind_bearing", "solar", "pollution")
 CLASSES = {"temperature": "temperature", "humidity": "humidity", "co2": "carbon_dioxide",
@@ -83,6 +83,10 @@ def atmo_daily(hass, entry, state):
             and "J+" not in state.name and "Date de mise à jour" in attrs)
 
 
+VENTILATION_WORDS = ("vmc", "ventil", "extract", "aérat", "aerat", "hotte")
+BOOST_WORDS = ("turbo", "boost", "grande vitesse", "rapide", "vitesse 2", "speed 2")
+
+
 def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoor_ids=()):
     entry = er.async_get(hass).async_get(entity_id)
     state = hass.states.get(entity_id)
@@ -108,9 +112,17 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
     elif key == "purifier":
         if domain != "fan":
             return None
-    elif key == "ventilation":
-        # A ventilation unit (VMC) is often a fan or a relay; a binary sensor may report that it runs.
-        if domain not in ("fan", "switch", "binary_sensor") or (domain == "binary_sensor" and device_class not in ("running", "power", None)):
+    elif key in ("ventilation", "ventilation_boost"):
+        # A ventilation unit (VMC): any fan but a purifier, or a relay or sensor whose name says ventilation.
+        # A water heater, a pilot wire or a plug in the same room is never offered.
+        label = f"{state.name} {entity_id}".casefold()
+        if domain == "fan":
+            if "purif" in label:
+                return None
+        elif domain in ("switch", "binary_sensor"):
+            if device_class == "outlet" or not any(word in label for word in VENTILATION_WORDS):
+                return None
+        else:
             return None
     elif key == "illuminance":
         if domain != "sensor" or device_class != "illuminance" or attrs.get("unit_of_measurement") not in ("lx", "lux"):
@@ -207,7 +219,10 @@ def catalog(hass, area_id=None, selected=None, indoor_ids=(), *, keys=None, entr
                 items.append(c)
         # Outside: sensors of outdoor areas first. Inside: the room's own reference first.
         first = (lambda c: not c["outside"]) if key in OUTDOOR else (lambda c: not c["reference"])
-        result[key] = sorted(items, key=lambda c: (first(c), not c["local"], bool(c["warnings"]), c["name"].casefold()))
+        # A two-speed ventilation: the high-speed position goes to « grande vitesse », the other one first for the normal speed.
+        speed = (lambda c: not any(w in c["name"].casefold() for w in BOOST_WORDS)) if key == "ventilation_boost" else \
+            (lambda c: any(w in c["name"].casefold() for w in BOOST_WORDS)) if key == "ventilation" else (lambda c: False)
+        result[key] = sorted(items, key=lambda c: (first(c), not c["local"], speed(c), bool(c["warnings"]), c["name"].casefold()))
     return result
 
 

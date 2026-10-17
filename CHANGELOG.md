@@ -1,3 +1,10 @@
+## 0.9.2-beta.1 — Une VMC mieux reconnue, avec sa grande vitesse
+
+- Le choix « Ventilation (VMC) » ne propose plus que des ventilations : les ventilateurs (sauf les purificateurs) et les interrupteurs dont le nom l’évoque (VMC, ventilation, extraction, aération, hotte). Chauffe-eau, fil pilote et prises n’apparaissent plus, et les deux positions d’une VMC sont visibles.
+- Nouveau réglage facultatif « Ventilation · grande vitesse » pour la position Turbo d’une VMC à deux vitesses. La carte indique « grande vitesse » quand elle tourne.
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page. Dans la Chambre P : « Ventilation (VMC) » = VMC, « Ventilation · grande vitesse » = VMC Turbo, et retirez la VMC de « Purificateur ».
+
 ## 0.9.1-beta.1 — Défilement corrigé, verre dépoli, pièces qui défilent
 
 Même contenu que la 0.9.0-beta.10, renumérotée : GitHub et HACS classaient « beta.10 » avant « beta.9 ».

@@ -52,6 +52,17 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         self.assertEqual(self.proposals('salon')['indoor_temperature'], 'sensor.room')
         self.assertNotIn('sensor.device', [c['entity_id'] for c in catalog(self.hass, 'salon')['indoor_temperature']])
 
+    async def test_ventilation_offers_the_vmc_positions_not_every_relay(self):
+        for entity_id, name in (('fan.vmc', 'VMC'), ('fan.vmc_turbo', 'VMC Turbo'), ('switch.chauffe_eau', 'Chauffe eau'),
+                                ('switch.fil_pilote', 'Fil pilote'), ('switch.vmc_relais', 'VMC relais'), ('fan.purificateur', 'Purificateur')):
+            self.register(entity_id, None, 'salon', value='on', unit=None)
+            self.hass.states.async_set(entity_id, 'on', {'friendly_name': name})
+        found = catalog(self.hass, 'salon')
+        names = [c['entity_id'] for c in found['ventilation']]
+        self.assertEqual(set(names), {'fan.vmc', 'fan.vmc_turbo', 'switch.vmc_relais'})
+        self.assertEqual(names[-1], 'fan.vmc_turbo')
+        self.assertEqual(found['ventilation_boost'][0]['entity_id'], 'fan.vmc_turbo')
+
     async def test_device_area_and_entity_override(self):
         self.hass.config_entries._entries[self.entry.entry_id] = self.entry
         device = dr.async_get(self.hass).async_get_or_create(config_entry_id=self.entry.entry_id, identifiers={('fixture', 'station')})

@@ -1,4 +1,4 @@
-export const labels:Record<string,string>={indoor_temperature:'Température de la pièce',indoor_humidity:'Humidité de la pièce',co2:'CO₂',pm25:'Particules fines PM2.5',voc:'Composés organiques volatils (COV)',purifier:'Purificateur',ventilation:'Ventilation (VMC)',presence:'Présence dans la pièce',illuminance:'Luminosité',windows:'Fenêtres et portes vers l’extérieur',heating:'Chauffage',outdoor_temperature:'Température dehors',outdoor_humidity:'Humidité dehors',rain:'Pluie actuelle',wind_gust:'Rafales de vent',wind_bearing:'Direction du vent',solar:'Ensoleillement',pollution:'Qualité de l’air extérieur'};
+export const labels:Record<string,string>={indoor_temperature:'Température de la pièce',indoor_humidity:'Humidité de la pièce',co2:'CO₂',pm25:'Particules fines PM2.5',voc:'Composés organiques volatils (COV)',purifier:'Purificateur',ventilation:'Ventilation (VMC)',ventilation_boost:'Ventilation · grande vitesse',presence:'Présence dans la pièce',illuminance:'Luminosité',windows:'Fenêtres et portes vers l’extérieur',heating:'Chauffage',outdoor_temperature:'Température dehors',outdoor_humidity:'Humidité dehors',rain:'Pluie actuelle',wind_gust:'Rafales de vent',wind_bearing:'Direction du vent',solar:'Ensoleillement',pollution:'Qualité de l’air extérieur'};
 export const indoor=['indoor_temperature','indoor_humidity'] as const;
 export const outdoor=['outdoor_temperature','outdoor_humidity','rain','wind_gust','wind_bearing','solar','pollution'] as const;
 export const multiple=new Set(['windows','presence']);
@@ -48,7 +48,7 @@ export function measurement(c:Candidate):string {
 }
 export function defaultOpening():OpeningMeta {return {exposure:null,kind:'window',sheltered:false};}
 export function newRoom(area:{area_id:string;name:string}|null,name:string,d:Discovery):RoomConfig {
- const sources:Record<string,string>={};for(const key of [...indoor,'illuminance','co2','pm25','voc','purifier','ventilation','heating']){const value=d.suggestions[key];if(typeof value==='string')sources[key]=value;}
+ const sources:Record<string,string>={};for(const key of [...indoor,'illuminance','co2','pm25','voc','purifier','ventilation','ventilation_boost','heating']){const value=d.suggestions[key];if(typeof value==='string')sources[key]=value;}
  const windows=Array.isArray(d.suggestions.windows)?[...d.suggestions.windows]:[];
  const voc= d.candidates?.voc?.find(c=>c.entity_id===sources.voc),preset=vocPreset(voc);
  return {area_id:area?.area_id??null,name:area?.name??name,sources,presence:Array.isArray(d.suggestions.presence)?[...d.suggestions.presence]:[],windows,openings:Object.fromEntries(windows.map(id=>[id,defaultOpening()])),settings:{minimum:20,maximum:24,summer_maximum:26,...airReferenceDefaults},...(preset?{evolution:{voc_threshold:preset}}:{}),acknowledged:[]};
