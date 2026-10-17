@@ -67,15 +67,16 @@ class AdapterTests(AdapterFixture):
         with patch("custom_components.niak_comfort.coordinator.er.async_get", return_value=lonely):
             self.assertEqual(coordinator._reading("sensor.hum", "humidity", now).quality, "stale")
 
-    async def test_a_bouncing_contact_is_not_an_opening_until_it_lasts(self):
+    async def test_a_contact_shows_at_once_but_advice_waits_for_a_real_opening(self):
         coordinator = ComfortCoordinator(self.hass, self.entry)
         self.hass.states.async_set("binary_sensor.window", "on")
         coordinator.opened_since["binary_sensor.window"] = dt_util.utcnow()
         data = await coordinator._async_update_data()
-        self.assertFalse(data["observations"]["window:binary_sensor.window"]["value"])
-        coordinator.opened_since["binary_sensor.window"] = dt_util.utcnow() - timedelta(seconds=120)
-        data = await coordinator._async_update_data()
         self.assertTrue(data["observations"]["window:binary_sensor.window"]["value"])
+        self.assertFalse(data["assessment"]["openings"][0]["open"])
+        coordinator.opened_since["binary_sensor.window"] = dt_util.utcnow() - timedelta(seconds=45)
+        data = await coordinator._async_update_data()
+        self.assertTrue(data["assessment"]["openings"][0]["open"])
 
     async def _season(self, rows):
         class FakeRecorder:

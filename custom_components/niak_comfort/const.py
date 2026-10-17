@@ -2,8 +2,8 @@
 DOMAIN = "niak_comfort"
 VERSION = "0.9.5-beta.1"
 VIEW_VERSION = 1
-# A contact that opens for less than this is a bounce, not an opening to advise about.
-OPEN_DEBOUNCE_SECONDS = 60
+# A contact open for less than this is a bounce: shown at once, but advice waits for a real opening.
+OPEN_DEBOUNCE_SECONDS = 30
 # Seven-day outdoor mean (hourly statistics), refreshed at most this often.
 SEASON_REFRESH_SECONDS = 3600
 SOURCES = {

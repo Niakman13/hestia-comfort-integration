@@ -4,9 +4,10 @@ from dataclasses import asdict, replace
 from datetime import timedelta
 import logging
 
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
@@ -23,8 +24,10 @@ STATE_KINDS = ("window", "heating", "rain", "pollution", "presence", "purifier",
 
 class ComfortCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, entry):
-        super().__init__(hass, logging.getLogger(__name__), name=DOMAIN,
-                         config_entry=entry, update_interval=timedelta(seconds=30))
+        logger = logging.getLogger(__name__)
+        # A contact or a sensor that changes is shown within a second, not after the default 10 s grouping.
+        super().__init__(hass, logger, name=DOMAIN, config_entry=entry, update_interval=timedelta(seconds=30),
+                         request_refresh_debouncer=Debouncer(hass, logger, cooldown=1.0, immediate=True))
         self.config = {**entry.data, **entry.options}
         self.settings = Settings(**self.config.get("settings", {}))
         self.home_configuration = hass.data.get(DATA_CONFIG)
@@ -72,6 +75,9 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 self.opened_since.pop(entity_id, None)
             elif before == "off":
                 self.opened_since[entity_id] = now
+                # Recompute right when the bounce delay ends, not at the next periodic refresh.
+                cancel = async_call_later(self.hass, OPEN_DEBOUNCE_SECONDS + 1, self._bounce_over)
+                self.stop_listeners.add(cancel)
         if entity_id in self.config.get("presence", []):
             kind = new.attributes.get("device_class") if new else None
             if kind not in ("occupancy", "presence") or after != "off" or before not in ("on", "off"):
@@ -155,7 +161,10 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 readings["purifier_speed"] = self._reading(selected["purifier"], "purifier_speed", now)
         outlook = weather_link.outlook(self.hass, self._weather_place())
         await self._refresh_season(now)
-        self.previous = assess(readings, self.settings, self.previous, openings, self._sun(), outlook, now, context=self._context(now, readings))
+        # The card shows a contact as it is; the advice ignores an opening younger than the bounce delay.
+        advice_readings = {k: (replace(r, value=False, detail="debounce") if k.startswith("window:") and self._bouncing(k[7:], r, now) else r)
+                           for k, r in readings.items()}
+        self.previous = assess(advice_readings, self.settings, self.previous, openings, self._sun(), outlook, now, context=self._context(now, readings))
         return {"version": VIEW_VERSION, "entry_id": self.entry_id,
                 "area_id": self.config.get("area_id"), "title": self.config.get("name"),
                 "comfort_minimum": self.settings.minimum,
@@ -214,6 +223,14 @@ class ComfortCoordinator(DataUpdateCoordinator):
             return None
         return {"min": round(min(lows), 1), "max": round(max(highs), 1)}
 
+    async def _bounce_over(self, _now):
+        # A coroutine, so Home Assistant runs it in its own loop (a plain function would run in a worker thread).
+        await self.async_refresh()
+
+    def _bouncing(self, entity_id, reading, now):
+        since = self.opened_since.get(entity_id)
+        return reading.value is True and since is not None and (now - since).total_seconds() < OPEN_DEBOUNCE_SECONDS
+
     def _heard(self, entity_id, state):
         """When the device last spoke: an unchanged humidity is current if its thermometer just reported."""
         latest = state.last_reported
@@ -258,9 +275,4 @@ class ComfortCoordinator(DataUpdateCoordinator):
         reading = normalize(kind, raw, unit,
                             source=entity_id, reported_at=self._heard(entity_id, state) if state else None,
                             now=now, max_age=None if kind in STATE_KINDS else self.settings.max_age_seconds)
-        if kind == "window" and reading.value is True:
-            since = self.opened_since.get(entity_id)
-            # A contact that bounces (open for a few seconds) is not an opening: advice waits for a real one.
-            if since and (now - since).total_seconds() < OPEN_DEBOUNCE_SECONDS:
-                return replace(reading, value=False, detail="debounce")
         return reading
