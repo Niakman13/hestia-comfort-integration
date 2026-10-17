@@ -169,3 +169,8 @@ test('an outdoor source that does not answer is « indisponible », a missing on
   v.assessment.missing=[];v.assessment.unverified=['rain','pollution'];
   assert.equal(outsideGaps(v),'Pluie et air extérieur non suivis');
 });
+test('card display settings are booleans, kept as given',()=>{
+  const c=cleanConfig({type:'custom:niak-comfort-card',measures_open:false,details_open:true,rotate:false,show_scale:false});
+  assert.equal(c.measures_open,false);assert.equal(c.details_open,true);assert.equal(c.rotate,false);assert.equal(c.show_scale,false);
+  assert.throws(()=>cleanConfig({type:'custom:niak-comfort-card',rotate:'non'}));
+});

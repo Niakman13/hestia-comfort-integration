@@ -5,7 +5,7 @@ from homeassistant.helpers import area_registry as ar, device_registry as dr, en
 
 from .const import OUTDOOR_AREAS, SOURCES
 
-INDOOR = ("indoor_temperature", "indoor_humidity", "co2", "windows", "heating", "illuminance", "pm25", "voc", "purifier", "presence")
+INDOOR = ("indoor_temperature", "indoor_humidity", "co2", "windows", "heating", "illuminance", "pm25", "voc", "purifier", "ventilation", "presence")
 OPENING_SOURCES = ("covers", "shutter_auto", "shutter_override")
 OUTDOOR = ("outdoor_temperature", "outdoor_humidity", "rain", "wind_gust", "wind_bearing", "solar", "pollution")
 CLASSES = {"temperature": "temperature", "humidity": "humidity", "co2": "carbon_dioxide",
@@ -107,6 +107,10 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
             return None
     elif key == "purifier":
         if domain != "fan":
+            return None
+    elif key == "ventilation":
+        # A ventilation unit (VMC) is often a fan or a relay; a binary sensor may report that it runs.
+        if domain not in ("fan", "switch", "binary_sensor") or (domain == "binary_sensor" and device_class not in ("running", "power", None)):
             return None
     elif key == "illuminance":
         if domain != "sensor" or device_class != "illuminance" or attrs.get("unit_of_measurement") not in ("lx", "lux"):

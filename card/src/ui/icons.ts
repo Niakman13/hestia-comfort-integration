@@ -28,6 +28,7 @@ const paths:Record<string,string>={
   shut:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M17 12H8m3-3-3 3 3 3"/>',
   pm:'<circle cx="7" cy="8" r="1.4"/><circle cx="14" cy="6" r="1.1"/><circle cx="18" cy="11" r="1.4"/><circle cx="10" cy="14" r="1.1"/><circle cx="16" cy="17" r="1.3"/><circle cx="7" cy="19" r="1"/>',
   flask:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/>',
+  vmc:'<path d="M4 7h11a3 3 0 1 0-3-3M4 12h15a3 3 0 1 1-3 3M4 17h7"/><path d="M19 4v4m-2-2h4"/>',
   fan:'<circle cx="12" cy="12" r="2"/><path d="M12 10c-1-4 0-7 3-7 2 0 2 3-1 7m-2 4c1 4 0 7-3 7-2 0-2-3 1-7m2-2c4-1 7 0 7 3 0 2-3 2-7-1m-4 0c-4 1-7 0-7-3 0-2 3-2 7 1"/>'
 };
 export const icon = (name:string, cls='') => html`<svg class=${'icon '+cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${unsafeSVG(paths[name]??paths.info)}</svg>`;

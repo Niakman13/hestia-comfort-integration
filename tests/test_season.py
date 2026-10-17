@@ -97,5 +97,32 @@ class OutdoorGapTests(unittest.TestCase):
         self.assertEqual(result.reason, "verify_exterior")
 
 
+class AirTreatmentTests(unittest.TestCase):
+    """A running purifier is the remedy for particles; a ventilation unit is reported, never assumed to suffice."""
+    def room(self, **extra):
+        values = {"indoor_temperature": 22.0, "outdoor_temperature": 18.0, "indoor_humidity": 50.0,
+                  "outdoor_humidity": 50.0, "pm25": 40.0, "window:fen": False}
+        r = {k: Reading(v, "valid", "fictitious") for k, v in values.items()}
+        r.update(extra)
+        return r
+
+    def test_high_particles_ask_for_air_without_a_purifier(self):
+        self.assertIn("air", assess(self.room()).needs)
+
+    def test_a_running_purifier_treats_the_particles(self):
+        result = assess(self.room(purifier=Reading(True, "valid", "fan.purifier")))
+        self.assertNotIn("air", result.needs)
+        self.assertTrue(result.features["air"]["pm25_treated"])
+
+    def test_a_stopped_purifier_does_not(self):
+        result = assess(self.room(purifier=Reading(False, "valid", "fan.purifier")))
+        self.assertIn("air", result.needs)
+
+    def test_the_ventilation_state_is_published(self):
+        result = assess(self.room(ventilation=Reading(True, "valid", "fan.vmc")))
+        self.assertEqual(result.features["air"]["ventilation"], {"on": True})
+        self.assertIsNone(assess(self.room()).features["air"]["ventilation"])
+
+
 if __name__ == "__main__":
     unittest.main()
