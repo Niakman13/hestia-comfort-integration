@@ -1,5 +1,6 @@
 ## 0.9.5-beta.1 — Fenêtres affichées tout de suite, valeurs stables valables
 
+- La durée d’aération est dans le conseil : « Aérez 3 à 8 min », puis, fenêtre ouverte, « Encore 5 min d’aération » et enfin « Vous pouvez refermer ».
 - Une fenêtre qu’on ouvre apparaît sur la carte en une à deux secondes. Seul le conseil attend 30 secondes (au lieu d’une minute) pour ignorer les rebonds du contact, puis se met à jour aussitôt.
 - Quand l’air du dehors affiche plus d’humidité que dedans mais asséchera quand même la pièce, la carte l’explique : « Dehors 79 %, mais l’air froid contient peu d’eau : réchauffé chez vous, il ferait 46 % ».
 - Beaucoup de capteurs n’envoient une valeur que lorsqu’elle change : une humidité stable pendant la nuit n’est plus considérée comme trop ancienne. Une valeur reste valable tant que son appareil donne signe de vie (par exemple, la température du même capteur).
