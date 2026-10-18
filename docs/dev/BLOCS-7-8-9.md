@@ -94,4 +94,4 @@ Une dérogation de volet n’est suivie que si sa source est choisie. L’histor
 Les contrôles complémentaires utilisent la vraie carte compilée et des vues produites par le moteur Python (`scripts/evolution_fixtures.py`, `card/preview/evolution/real.html`). Le panneau compilé utilise des réponses de configuration et de découverte exportées depuis Home Assistant isolé (`scripts/evolution_setup_fixture.py`, `settings-real.html`). Ces bancs visuels n’accèdent pas au logement réel. Les tests de calcul et d’adaptation HA, les vérifications TypeScript et les tests des deux interfaces sont exécutés avant publication.
 
 
-Bêta 0.9.0-beta.3 du 16 octobre 2026 : les seuils sont placés avec leur capteur, accompagnés des références détaillées dans [SEUILS.md](SEUILS.md). Les nouveaux repères sont appliqués une seule fois aux pièces existantes, puis les personnalisations sont conservées. 
+Bêta 0.9.0-beta.3 du 16 octobre 2026 : les seuils sont placés avec leur capteur, accompagnés des références détaillées dans [SEUILS.md](../SEUILS.md). Les nouveaux repères sont appliqués une seule fois aux pièces existantes, puis les personnalisations sont conservées. 
