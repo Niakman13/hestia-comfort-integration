@@ -1,3 +1,16 @@
+## 1.0.0 — Première version stable
+
+Niak Confort conseille, pièce par pièce, le geste qui améliore vraiment le confort. Il ne commande aucun équipement.
+
+- **Des conseils utiles** : aérer, refermer, rafraîchir, assécher, lancer la VMC, attendre le bon moment. Sans geste utile, la carte reste calme.
+- **Chaque pièce apprend de ses aérations** : gain réaliste, durée propre à la pièce, meilleur moment selon la prévision de Niak Weather.
+- **La saison et la météo** : plage de confort qui suit la saison, pluie, rafales, orage, vigilance et qualité de l’air dehors, lien avec Niak Weather.
+- **Des cartes comme Niak Weather** : carte pièce (complète, tuile, tuile dépliée, mini, mesures, alerte) et carte logement (complète, tuile, liste, mini, alerte), avec le même panneau de réglages.
+- **Des couleurs qui disent s’il y a quelque chose à faire** : bleu tout va bien, vert à saisir, orange geste conseillé, rouge urgent ; une panne de capteur n’est jamais un conseil.
+- **Le panneau Niak** pour configurer les pièces, les capteurs et l’extérieur, avec l’état technique du logement.
+
+Depuis une préversion : mise à jour HACS, redémarrage de Home Assistant, puis rechargement de la page. Vos pièces et réglages sont conservés.
+
 ## 0.9.9.1 — Corrections
 
 - Juste après un démarrage de Home Assistant, un ou deux capteurs secondaires en retard (présence, luminosité…) ne bloquent plus la carte sur « Mesures en chargement » : le conseil s’affiche, seules leurs tuiles restent « en attente ».
