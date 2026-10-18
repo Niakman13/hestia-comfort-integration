@@ -78,6 +78,7 @@
           "drying_unavailable": "Drying unavailable",
           "drying_later": "Drying later",
           "drying_slow": "Little drying here",
+          "ventilation_possible": "Ventilation can dry",
           "incomplete_data": "Incomplete information",
           "optional_air_change": "Optional air renewal",
           "gust_open_windows": "Gusts: close",

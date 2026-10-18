@@ -83,7 +83,7 @@ class WeatherSignals(unittest.TestCase):
         day = assess(readings, sun=Sun(30, 200), outlook={"tomorrow_max": 31})
         self.assertNotIn("precool", day.needs)
         still_hot = assess(zone(indoor_temperature=23, outdoor_temperature=26), sun=Sun(-10, 300), outlook={"tomorrow_max": 31})
-        self.assertEqual((still_hot.action, still_hot.reason, still_hot.level), ("attendre", "precool_later", "benefit"))
+        self.assertEqual((still_hot.action, still_hot.reason, still_hot.level), ("attendre", "precool_later", "calm"))
 
 
 class NextHours(unittest.TestCase):

@@ -158,6 +158,10 @@ def report(f):
             "todo": todo, "tips": tips, "sources": sources, "columns": [label for _, label in COLUMNS], "rooms": rooms, "versions": versions}
 
 
+def _weather_air(spec):
+    return Sensor("pollution", f"Niak Weather · {spec.get('provider') or 'qualité de l’air'}", "ok" if spec.get("index") else "silent")
+
+
 def _sensor(hass, key, entity_id, now):
     state = hass.states.get(entity_id)
     if state is None:
@@ -203,8 +207,9 @@ async def facts(hass, version):
                     state = hass.states.get(entity_id)
                     room.available[key] = str(state.attributes.get("friendly_name") or entity_id) if state else entity_id
         rooms.append(room)
-    home = service.home_sources() if service.home.get("configured") else {}
-    exterior = [_sensor(hass, key, spec["entity_id"], now) for key, spec in home.items() if spec.get("entity_id")]
+    home = service.live_sources()
+    exterior = [_weather_air(spec) if spec.get("adapter") == "niak_air" else _sensor(hass, key, spec["entity_id"], now)
+                for key, spec in home.items() if spec.get("entity_id")]
     link = weather_link.status(hass)
     weather = next((p["title"] for p in link.get("places", []) if p["entry_id"] == service.home.get("weather")), "")
     free = [(a["area_id"], a["name"]) for a in overview(hass, used) if isinstance(a["suggestions"].get("indoor_temperature"), str)]

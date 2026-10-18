@@ -297,6 +297,21 @@ class Configuration:
             return True
         return not any(config.get("sources", {}).get(k) for k in OUTDOOR)
 
+    def live_sources(self, config=None):
+        """The exterior sources as read now: those saved, with the outdoor air following the source chosen in
+        Niak Weather when the home is linked to it, unless another kind of pollution sensor was picked."""
+        sources = self.effective_sources(config) if config is not None else (self.home_sources() if self.home.get("configured") else {})
+        if config is not None and not self.uses_home(config):
+            return sources
+        spec = sources.get("pollution")
+        if spec and spec.get("adapter") not in ("atmo_daily", "niak_index"):
+            return sources
+        found = weather_link.air(self.hass, self.home.get("weather")) if self.home.get("configured") else None
+        if found:
+            sources["pollution"] = {"entity_id": found["entity_id"], "adapter": "niak_air", "block_from": (spec or {}).get("block_from", 4),
+                                    "index": found.get("index"), "provider": found.get("provider"), "at": found.get("at")}
+        return sources
+
     def effective_sources(self, config):
         if self.uses_home(config):
             return self.home_sources()

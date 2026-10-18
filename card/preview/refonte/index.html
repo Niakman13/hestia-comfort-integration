@@ -267,6 +267,12 @@ body.detail .simple-only{display:none}
 .tk-count{font-size:var(--nw-fs-small);color:var(--nw-fg2)}
 .tk-wrap{cursor:pointer}
 @media (prefers-reduced-motion:reduce){.tk-bars button.on i{animation:none;width:100%}.tk-slide{transition:none}}
+.live-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,400px),1fr));gap:20px;align-items:start;margin:12px 0 28px}
+.live-fig{margin:0;display:grid;gap:10px}.live-fig figcaption{display:grid;gap:2px;font-size:13px}.live-fig figcaption span{color:var(--fg2,#5b687b)}
+niak-comfort-card,niak-comfort-home-card{display:block;min-width:0}
+.live-settings{border:1px solid color-mix(in srgb,currentColor 15%,transparent);border-radius:14px;padding:12px 16px;margin:0 0 24px;
+ --primary-text-color:currentColor;--secondary-text-color:color-mix(in srgb,currentColor 65%,transparent);--divider-color:color-mix(in srgb,currentColor 20%,transparent);--card-background-color:transparent}
+.live-settings summary,.archives>summary{cursor:pointer;font-weight:600}.archives{margin-top:32px}.archives>summary{font-size:18px;padding:12px 0}
 </style>
 </head>
 <body>
@@ -276,7 +282,7 @@ body.detail .simple-only{display:none}
     <h1>Refonte des cartes Confort</h1>
     <p class="lead">Maquettes de travail, données de la maison de Frank. Une seule règle : <b>on regarde d’abord, on lit ensuite</b>.</p>
     <ul class="rules">
-      <li>1 visuel principal</li><li>1 phrase de 6 mots maximum</li><li>Le détail se déplie</li><li>Vert = tout va bien · bleu = à saisir · orange = un geste · rouge = urgent</li>
+      <li>1 visuel principal</li><li>1 phrase de 6 mots maximum</li><li>Le détail se déplie</li><li>Bleu = tout va bien · vert = à saisir · orange = un geste utile · rouge = urgent · jaune = mesure hors plage</li><li>Un conseil apporte toujours un plus</li>
     </ul>
   </div>
   <div class="toggle" role="group" aria-label="Thème">
@@ -287,6 +293,15 @@ body.detail .simple-only{display:none}
 </div>
 
 
+<h2>0.9.8 · La vraie carte, telle qu’elle sera publiée</h2>
+<p class="lead">Rendu de la carte compilée, animations comprises. Chaque situation est calculée par le moteur Python (<code>scenes.py</code>) : rien n’est dessiné à la main. Le bandeau ne parle que s’il apporte un plus ; la couleur dit s’il y a quelque chose à faire.</p>
+<div class="live-grid" id="live098"></div>
+<h2>0.9.8 · Carte logement et ses nouveaux réglages</h2>
+<p class="lead">La pièce qui demande un geste donne le conseil ; les autres restent calmes. Les réglages ci-dessous pilotent la carte en direct.</p>
+<div class="live-grid"><div id="live098home"></div><details class="live-settings" open><summary>Réglages de la carte logement</summary><div id="live098home-editor"></div></details></div>
+<details class="live-settings"><summary>Réglages d’une carte pièce, pour comparer</summary><div id="live098room-editor"></div></details>
+
+<details class="archives"><summary>Anciennes maquettes (avant le 18 octobre : anciennes couleurs)</summary>
 <h2>0. Carte pièce · charte Niak Weather</h2>
 <p class="lead">Mêmes jetons que la carte Weather complète : tailles de texte, étiquettes en petites capitales, palette Aube, contours, bouton « i », sections repliables au chevron rond, échelle à anneau comme le Ressenti. On garde le dégradé et le rond à icône.</p>
 <div class="grid" id="v2"></div>
@@ -340,6 +355,7 @@ body.detail .simple-only{display:none}
 </div>
 <div class="grid" id="maison"></div>
 <p class="note">Chiffres réels : statistiques horaires de Home Assistant, juin à août 2026 (docs/ANALYSE-HISTORIQUE.md). Températures des pièces : relevé du 17 octobre.</p>
+</details>
 </main>
 
 <script>
@@ -632,5 +648,7 @@ const root=document.documentElement;
 document.querySelectorAll('[data-theme-set]').forEach(b=>b.onclick=()=>{const t=b.dataset.themeSet;if(t==='auto')root.removeAttribute('data-theme');else root.dataset.theme=t;document.querySelectorAll('[data-theme-set]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
 document.querySelectorAll('[data-level]').forEach(b=>b.onclick=()=>{document.body.classList.toggle('detail',b.dataset.level==='detail');document.querySelectorAll('[data-level]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
 </script>
+<script>customElements.get('home-assistant')||customElements.define('home-assistant',class extends HTMLElement{});</script>
+<script type="module">import('./apercu.js?t='+Date.now());</script>
 </body>
 </html>

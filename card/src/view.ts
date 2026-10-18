@@ -44,6 +44,7 @@ export const reasons:Record<string,[string,string]> = {
   cooling_possible:['Profitez de la fraîcheur','L’air extérieur est suffisamment plus frais pour aider cette pièce à retrouver votre plage de confort.'],
   drying_possible:['Un aérage peut assécher','L’air extérieur contient moins d’eau. Le gain annoncé tient compte de ce que les aérations passées ont vraiment donné dans cette pièce.'],
   drying_later:['Aérez plus tard','L’air du dehors sera nettement plus sec dans quelques heures : l’aération gagnera bien plus que maintenant.'],
+  ventilation_possible:['Lancez la VMC','Aérer assèche peu cette pièce, mais l’air du dehors est plus sec : la VMC le fera entrer mieux qu’une fenêtre.'],
   drying_slow:['Aérer assèche peu ici','Les aérations passées de cette pièce ont peu fait baisser l’humidité : l’humidité y revient vite ou l’air s’y renouvelle mal.'],
   exchange_harmful:['Refermez les fenêtres','La comparaison dedans/dehors montre un échange thermique défavorable au confort de cette pièce.'],
   cooling_unavailable:['Attendez un air plus frais','La pièce a besoin de fraîcheur, mais ouvrir maintenant ne fournit pas un échange suffisamment favorable.'],

@@ -43,6 +43,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         # (computed at, seven-day outdoor mean or None): the seasonal comfort range follows it.
         self.season = (None, None)
         self.day_range = None
+        self.humidity_floor = None
         self._season_failed = False
         # What airing really does in this room, learned from its past openings (engine/learning.py).
         self.drying_model = learning.fit([])
@@ -121,6 +122,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         return {**self.config.get("evolution", {}),
                 "heated": self.config.get("heated", True), "outdoor_mean_7d": self.season[1],
                 "indoor_day_range": self.day_range, "drying_model": self.drying_model,
+                "humidity_floor_3h": self.humidity_floor,
                 "opening_minutes": {e: minutes(e, self.opened_since, "on") for e in self.config.get("windows", [])},
                 "presence_off_minutes": {e: minutes(e, self.absent_since, "off") for e in self.config.get("presence", [])},
                 **{k: list(v) for k, v in self.histories.items()}}
@@ -136,7 +138,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 continue
             readings[key] = self._reading(entity_id, kind, now)
         if self.home_configuration:
-            for key, spec in self.home_configuration.effective_sources(self.config).items():
+            for key, spec in self.home_configuration.live_sources(self.config).items():
                 readings[key] = exterior_reading(self.hass.states.get(spec["entity_id"]), key, spec, now=now, max_age=self.settings.max_age_seconds)
         windows = self.config.get("windows", [])
         declared = self.config.get("openings", {})
@@ -201,6 +203,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
             return
         self.season = (now, await self._outdoor_mean(now))
         self.day_range = await self._indoor_range(now)
+        self.humidity_floor = await self._humidity_floor(now)
 
     async def _statistics(self, entity_id, start, end, types):
         """Hourly statistics rows of one entity; None when the recorder cannot answer."""
@@ -280,6 +283,13 @@ class ComfortCoordinator(DataUpdateCoordinator):
         if model != self.drying_model:
             self.drying_model = model
             await self.async_request_refresh()
+
+    async def _humidity_floor(self, now):
+        """Lowest indoor humidity of the last three full hours: above the threshold, the excess lasts."""
+        entity_id = self.config.get("sources", {}).get("indoor_humidity")
+        rows = await self._statistics(entity_id, now - timedelta(hours=4), now, {"min"}) if entity_id else None
+        lows = [row["min"] for row in rows or [] if isinstance(row.get("min"), (int, float))][-3:]
+        return min(lows) if len(lows) == 3 else None
 
     async def _bounce_over(self, _now):
         # A coroutine, so Home Assistant runs it in its own loop (a plain function would run in a worker thread).

@@ -126,5 +126,33 @@ class DryingAdviceTests(unittest.TestCase):
         self.assertIsNotNone(result.features["drying"]["later"])
 
 
+
+class UsefulAdviceTests(unittest.TestCase):
+    """A banner speaks only when it brings something."""
+    def room(self, humidity=64.0, outdoor=(13.0, 92.0), context=None, **extra):
+        values = {"indoor_temperature": 21.0, "outdoor_temperature": outdoor[0], "indoor_humidity": humidity,
+                  "outdoor_humidity": outdoor[1], "window:fen": False, **extra}
+        return assess({k: Reading(v, "valid", "fictitious") for k, v in values.items()}, context=context)
+
+    def test_a_little_above_the_threshold_for_a_moment_is_not_a_need(self):
+        # Default threshold 62 %: 64 % for a moment is fine, three hours above it or 68 % is not.
+        self.assertNotIn("dry", self.room(64.0).needs)
+        self.assertIn("dry", self.room(64.0, context={"humidity_floor_3h": 63.0}).needs)
+        self.assertIn("dry", self.room(68.0).needs)
+
+    def test_outdoor_air_as_wet_as_inside_leaves_the_banner_calm(self):
+        # Like the Salon on 18 October: 21 °C inside, 13 °C and 92 % outside, everything closed.
+        result = self.room(68.0)
+        self.assertIn(result.reason, ("drying_unavailable", "drying_slow"))
+        self.assertEqual((result.action, result.level), ("attendre", "calm"))
+
+    def test_the_ventilation_is_offered_where_the_window_dries_little(self):
+        slow = {"drying_model": {"tau": 250.0, "residual": 2.5, "rebound": 0.5, "openings": 6}}
+        result = self.room(78.0, outdoor=(12.0, 80.0), context=slow, ventilation=False)
+        self.assertEqual((result.reason, result.level), ("ventilation_possible", "action"))
+        quiet = self.room(78.0, outdoor=(12.0, 80.0), context=slow)
+        self.assertEqual((quiet.reason, quiet.level), ("drying_slow", "calm"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -65,3 +65,16 @@ export function cleanConfig(input:Config):Config {
   if(input.modules && (!Array.isArray(input.modules) || input.modules.some(m=>!MODULES.includes(m)))) throw new Error('Rubrique inconnue.');
   return {...input, format:input.format??'tile', modules:[...new Set(input.modules??MODULES)]};
 }
+
+/** The home card's settings: the same display choices as a room card, rooms instead of measures. */
+export interface HomeConfig {type:'custom:niak-comfort-home-card';title?:string;theme?:'auto'|'light'|'dark';
+  rotate?:boolean;show_scale?:boolean;show_rooms?:boolean;rooms_open?:boolean;show_details?:boolean;details_open?:boolean;
+  animations?:boolean;glass_effect?:boolean}
+export const HOME_FLAGS=['rotate','show_scale','show_rooms','rooms_open','show_details','details_open','animations','glass_effect'] as const;
+export function cleanHomeConfig(input:HomeConfig):HomeConfig {
+  if(!input||input.type!=='custom:niak-comfort-home-card')throw new Error('Type de carte invalide.');
+  if(input.title!==undefined&&typeof input.title!=='string')throw new Error('Le titre doit être un texte.');
+  if(input.theme&&!['auto','light','dark'].includes(input.theme))throw new Error('Thème inconnu.');
+  for(const k of HOME_FLAGS)if(input[k]!==undefined&&typeof input[k]!=='boolean')throw new Error('Réglage d’affichage invalide.');
+  return {...input};
+}

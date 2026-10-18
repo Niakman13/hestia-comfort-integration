@@ -79,6 +79,7 @@
           "drying_unavailable": "Assèchement indisponible",
           "drying_later": "Assécher plus tard",
           "drying_slow": "Aérer assèche peu ici",
+          "ventilation_possible": "La VMC peut assécher",
           "incomplete_data": "Information incomplète",
           "optional_air_change": "Renouvellement d’air facultatif",
           "gust_open_windows": "Rafales : fermer",

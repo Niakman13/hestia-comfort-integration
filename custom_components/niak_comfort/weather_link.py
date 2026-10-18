@@ -66,6 +66,15 @@ def exterior(hass, entry_id):
     return {"entry_id": station["entry_id"], "title": station["title"], "proposals": proposals}
 
 
+def air(hass, entry_id):
+    """Today's outdoor air from the source chosen in Niak Weather (Atmo France or a WAQI station), on Atmo's
+    1 to 6 scale; None when not linked, without an air source, or before Niak Weather 2.5.7."""
+    link = api(hass)
+    if not link or not entry_id or not hasattr(link, "air"):
+        return None
+    return link.air(entry_id)
+
+
 def _number(hass, entity_id):
     state = hass.states.get(entity_id) if entity_id else None
     try:
