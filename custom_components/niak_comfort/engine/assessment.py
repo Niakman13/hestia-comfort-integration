@@ -12,6 +12,10 @@ from .wind import DRIVEN_RAIN_GUST, crossing as wind_crossing, open_first, side 
 from .outlook import rain_soon, slot as next_slot
 from . import learning
 
+# Points above the humidity threshold that call for a gesture at once; below, only a lasting excess does.
+HUMIDITY_GRACE = 5
+# Reasons that only say « do not open »: with nothing open, they bring nothing and stay off the banner.
+QUIET_REASONS = ("drying_unavailable", "drying_slow", "opening_blocked", "heat_needed", "cooling_unavailable", "precool_later")
 LEVELS = ("calm", "benefit", "action", "urgent", "neutral")
 ACTIONS = ("ok", "ouvrir", "fermer", "attendre", "unknown")
 
@@ -208,7 +212,12 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     air_detail["co2_status"] = ("not_configured" if "co2" not in readings else "unknown" if co2 is None
                                else "high" if co2_air else "ok")
     air = co2_air or (air_detail["pm25_status"] == "high" and not air_detail["pm25_treated"]) or air_detail["voc_status"] == "high"
-    wet = hi is not None and hi > settings.humidity_high - (settings.humidity_hysteresis if "dry" in old else 0)
+    # A little above the threshold for an afternoon bothers nobody: humidity calls for a gesture when it is
+    # clearly high, or when it has stayed above the threshold for the last three hours.
+    lasting = context.get("humidity_floor_3h")
+    lasting = isinstance(lasting, (int, float)) and not isinstance(lasting, bool) and lasting > settings.humidity_high
+    wet = hi is not None and (hi > settings.humidity_high - settings.humidity_hysteresis if "dry" in old
+                              else hi > settings.humidity_high + HUMIDITY_GRACE or (hi > settings.humidity_high and lasting))
     # Pre-cooling (template « prérefroidir »): at night, when tomorrow is announced well above the comfort range.
     tomorrow_max = outlook.get("tomorrow_max")
     night = sun is not None and sun.elevation < 0
@@ -340,6 +349,18 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     heating = (value("heating") or "unknown") if "heating" in readings else "not_configured"
     first = tuple(open_first(details)) if action == "ouvrir" else ()
     coming = next_slot(outlook.get("hours") or [], now, ti, hot=hot or precool, cool_now=cool, margin=settings.cooling_delta) if now else None
+    # A banner speaks only when it brings something: a gesture now, a gesture to undo, a likely wrong reflex
+    # (opening when it is hotter outside), a precise later time, or another remedy such as the ventilation.
+    # The ventilation brings outdoor air too: it helps where the outdoor air is drier but the window renews little.
+    if reason == "drying_slow" and (air_detail.get("ventilation") or {}).get("on") is False:
+        reason = "ventilation_possible"
+    elif reason == "drying_later" or (reason in ("cooling_unavailable", "precool_later") and coming and coming["kind"] == "open"):
+        level = "benefit"
+    elif (reason in QUIET_REASONS and action != "fermer" and level != "urgent"
+          and not (reason == "cooling_unavailable" and delta is not None and delta > 0)
+          # Stale air or a hot room make people open by reflex: warning them off is still useful.
+          and not (reason == "opening_blocked" and ("air" in needs or ("cool" in needs and cool)))):
+        level = "neutral" if partial or level == "neutral" else "calm"
     # Protections never configured: the advice stands, the card says what Niak does not watch.
     unverified = tuple(k for k in ("pollution", "rain") if k not in readings and not (k == "rain" and all_sheltered))
     extended = features(readings, settings, context, openings, sun, details,

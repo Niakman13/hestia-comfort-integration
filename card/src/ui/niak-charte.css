@@ -32,6 +32,15 @@
   --nw-level1: var(--niak-level1-color, oklch(.88 .1 96));
   --nw-level2: var(--niak-level2-color, oklch(.81 .105 64));
   --nw-level3: var(--niak-level3-color, oklch(.74 .115 18));
+  /* Couleurs d'état, communes à toutes les cartes : elles disent s'il y a quelque chose à FAIRE, pas où tombe une mesure.
+     Bleu tout va bien · vert bénéfice à saisir ou en cours · orange geste utile maintenant · rouge urgent ·
+     ambre mesure hors de votre plage, sans geste demandé · gris (texte secondaire) à vérifier.
+     La vigilance météo garde sa propre échelle jaune / orange / rouge (--nw-level1 à 3). */
+  --nw-ok: var(--niak-ok-color, var(--nw-cold));
+  --nw-benefit: var(--niak-benefit-color, var(--nw-calm));
+  --nw-act: var(--niak-act-color, var(--nw-level2));
+  --nw-alert: var(--niak-alert-color, var(--nw-level3));
+  --nw-watch: var(--niak-watch-color, oklch(.84 .13 86));
   /* Part de couleur dans un texte coloré : 34 % reste lisible (contraste 4,5:1). */
   --nw-ink: 34%;
   --nw-ease: cubic-bezier(.2, .8, .2, 1);

@@ -8,6 +8,13 @@ from .engine.sources import normalize, Reading
 
 def exterior_reading(state, key, spec, *, now, max_age):
     entity_id = spec["entity_id"]
+    if spec.get("adapter") == "niak_air":
+        # Niak Weather's index from its chosen source, already on Atmo's 1 to 6 scale.
+        index = spec.get("index")
+        if not isinstance(index, int) or not 1 <= index <= 6:
+            return Reading(None, "unknown", source=entity_id, detail="unavailable")
+        # Like ATMO: an index can flag the precaution, never prove the air at these windows is good now.
+        return Reading(index >= spec.get("block_from", 4), "estimated", source=entity_id, received_at=spec.get("at"), detail="niak_weather_air")
     if not state:
         return Reading(None, "unknown", source=entity_id, detail="unavailable")
     adapter = spec.get("adapter", "direct")

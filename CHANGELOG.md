@@ -1,3 +1,16 @@
+## 0.9.8-beta.1 — Des conseils qui apportent un plus, des cartes plus vivantes
+
+- **Un conseil apporte toujours un plus.** Niak ne dit plus « gardez fermé » à quelqu’un qui n’allait pas ouvrir : sans geste utile, le bandeau reste calme (« Rien à faire »). Il parle pour un geste qui aide maintenant, une fenêtre à refermer, un mauvais réflexe à éviter (ouvrir quand il fait plus chaud dehors, ou pour aérer sous la pluie), un moment précis (« Ouvrez vers 22 h ») ou un autre équipement (« Lancez la VMC »).
+- **Les couleurs disent s’il y a quelque chose à faire**, comme sur vos autres cartes : bleu tout va bien, vert à saisir, orange geste conseillé, rouge urgent. Une mesure hors de votre plage, sans geste demandé, se repère en ambre.
+- **L’humidité compte quand elle gêne vraiment** : nettement au-dessus de votre seuil (5 points), ou au-dessus depuis trois heures.
+- **Des cartes plus vivantes** : une lumière douce qui se déplace dans le coin du bandeau, un anneau de lumière qui tourne autour du rond (lentement si tout va bien, plus vite pour un geste, très vite pour une alerte), des conseils qui se succèdent en glissant, des tuiles et une échelle qui arrivent en douceur. Tout se coupe avec le réglage « Animations » et respecte la réduction des animations de l’appareil.
+- Le rond du bandeau se tient en retrait du bord, et une mesure hors de votre plage se repère d’un coup d’œil : liseré ambre, et un point qui bat devant son état.
+- **L’air du dehors suit la source choisie dans Niak Weather** (Atmo France ou une station WAQI) quand le logement est relié à Niak Weather 2.5.7 ou plus : une panne d’Atmo France ne prive plus Niak Confort de l’indice du jour.
+- **La carte logement a ses réglages**, comme les cartes pièce : titre, défilement des conseils, échelle, sections Pièces et Détails (affichées, dépliées au départ), thème, animations et effet de verre.
+- Sur la carte logement, une pièce qui demande un geste l’affiche sur sa tuile, même non chauffée.
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 0.9.7-beta.1 — Chaque pièce apprend de ses aérations
 
 - **Les conseils d’aération apprennent de votre maison.** Niak relit les ouvertures des 10 derniers jours et retient, pour chaque pièce, ce qu’une aération y a vraiment donné : vitesse de séchage, humidité qui reste, humidité qui revient après la fermeture. Les nouvelles aérations s’ajoutent ensuite (jusqu’à 90 jours).

@@ -1,17 +1,19 @@
 /* Cartes Confort refondues : uniquement des jetons et pièces de la charte commune (niak-charte.css). */
-/* Couleur de niveau : vert tout va bien, bleu à saisir, orange geste, rouge attention, gris à vérifier. */
+/* Couleur d'état de la charte : bleu tout va bien, vert à saisir, orange geste, rouge attention,
+   jaune doux mesure hors plage sans geste, gris à vérifier. */
 :where(.nc-c,.nc-mk.room,.nc-tile) { --c:color-mix(in srgb, var(--nw-fg2) 55%, var(--nw-bg)); }
-[data-level="calm"] { --c:var(--nw-calm); } [data-level="benefit"] { --c:var(--nw-cold); }
-[data-level="action"] { --c:var(--nw-level2); } [data-level="urgent"] { --c:var(--nw-level3); }
+[data-level="calm"] { --c:var(--nw-ok); } [data-level="benefit"] { --c:var(--nw-benefit); }
+[data-level="action"] { --c:var(--nw-act); } [data-level="urgent"] { --c:var(--nw-alert); }
+[data-level="watch"] { --c:var(--nw-watch); }
 /* Une couleur imposée par la carte (thème clair ou sombre forcé) ; sinon le thème Home Assistant. */
 :host([forced="light"]) { --nw-fg:#253047; --nw-fg2:#5b687b; --nw-bg:#fff; }
 :host([forced="dark"]) { --nw-fg:#edf1f7; --nw-fg2:#b2bdcd; --nw-bg:#222932; }
 ha-card.nc-c { overflow:hidden; border-radius:var(--nw-radius-card); background:var(--nw-bg); color:var(--nw-fg); font-family:var(--ha-font-family-body, Roboto, system-ui, sans-serif); container-type:inline-size; }
 .nc-hero { position:relative; isolation:isolate; overflow:hidden; padding:18px 20px 16px;
   background:linear-gradient(115deg, var(--nw-bg) 32%, color-mix(in oklab, var(--c) 30%, var(--nw-bg)) 100%); }
-.nc-hero::after { content:''; position:absolute; width:230px; height:230px; right:-40px; top:-70px; border-radius:50%;
-  background:color-mix(in oklab, var(--c) 32%, transparent); filter:blur(36px); z-index:-1; }
-:host([flat]) .nc-hero::after { filter:none; opacity:.35; }
+/* La lumière du coin : un dégradé radial qui s'éteint tout seul, sans flou ni arête visible. */
+.nc-hero::after { content:''; position:absolute; width:360px; height:360px; right:-120px; top:-140px; z-index:-1; pointer-events:none;
+  background:radial-gradient(closest-side, color-mix(in oklab, var(--c) 36%, transparent), transparent); }
 .nc-top { display:flex; align-items:center; gap:8px; min-width:0; }
 .nc-top h2 { margin:0; font-size:var(--nw-fs-title); font-weight:700; letter-spacing:-.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .nc-top .nw-info { min-height:0; }
@@ -22,9 +24,12 @@ ha-card.nc-c { overflow:hidden; border-radius:var(--nw-radius-card); background:
 .nc-advice { margin:4px 0 6px; font-size:var(--nw-fs-value); font-weight:700; letter-spacing:-1px; line-height:1.1; text-wrap:balance; }
 .nc-line { margin:0; font-size:var(--nw-fs-text); font-weight:500; line-height:1.5; }
 .nc-line b { font-weight:700; }
-.nc-diskwrap { display:flex; flex-direction:column; align-items:center; }
-.nc-disk { width:88px; height:88px; border-radius:50%; display:grid; place-items:center; background:color-mix(in oklab, var(--c) 26%, var(--nw-bg));
-  color:color-mix(in oklab, var(--c) 60%, var(--nw-fg)); box-shadow:0 0 0 7px color-mix(in oklab, var(--c) 14%, transparent); }
+/* Le rond se tient en retrait du bord, avec de l'air autour de son anneau de lumière. */
+.nc-diskwrap { display:flex; flex-direction:column; align-items:center; margin:4px 14px 0 4px; }
+.nc-disk { width:88px; height:88px; border-radius:50%; display:grid; place-items:center;
+  background:radial-gradient(circle at 34% 28%, color-mix(in oklab, var(--c) 14%, var(--nw-bg)), color-mix(in oklab, var(--c) 32%, var(--nw-bg)) 75%);
+  color:color-mix(in oklab, var(--c) 62%, var(--nw-fg));
+  box-shadow:inset 0 1px 0 color-mix(in srgb, #fff 40%, transparent), 0 10px 28px -12px color-mix(in oklab, var(--c) 80%, transparent); }
 .nc-disk .icon { width:42px; height:42px; }
 .nc-cap { font-size:var(--nw-fs-small); color:var(--nw-fg2); text-align:center; margin-top:8px; max-width:110px; }
 .nc-why { margin-top:12px; padding:10px 12px; border-radius:var(--nw-radius); border:1px solid var(--nw-line); background:var(--nw-glass-strong); backdrop-filter:var(--nw-blur); -webkit-backdrop-filter:var(--nw-blur); font-size:var(--nw-fs-text); }
@@ -34,27 +39,28 @@ ha-card.nc-c { overflow:hidden; border-radius:var(--nw-radius-card); background:
 /* Échelle : piste fine, plage, anneau et sa bulle (comme le Ressenti de Niak Weather). */
 .nc-scale { position:relative; height:62px; margin:8px 10px 0; }
 .nc-track { position:absolute; left:0; right:0; top:30px; height:8px; border-radius:4px; background:color-mix(in srgb, var(--nw-fg) 9%, transparent); }
-.nc-band { position:absolute; top:30px; height:8px; border-radius:4px; background:color-mix(in oklab, var(--nw-calm) 75%, transparent); }
+.nc-band { position:absolute; top:30px; height:8px; border-radius:4px; background:color-mix(in oklab, var(--nw-ok) 80%, transparent); }
 .nc-day { position:absolute; top:31px; height:6px; border-radius:3px; background:color-mix(in srgb, var(--nw-fg) 72%, transparent); box-shadow:0 0 0 1.5px var(--nw-bg); }
 .nc-ring { position:absolute; top:24px; width:20px; height:20px; margin-left:-10px; border-radius:50%; box-sizing:border-box; background:var(--nw-bg);
   border:4px solid color-mix(in oklab, var(--c) 70%, var(--nw-fg)); box-shadow:0 1px 4px color-mix(in srgb, var(--nw-fg) 20%, transparent); }
 .nc-now { top:0; transform:translateX(-50%); font-size:var(--nw-fs-text); }
 .nc-mk { position:absolute; border-radius:50%; }
-.nc-mk.out { top:29px; width:10px; height:10px; margin-left:-5px; background:var(--nw-bg); border:2px solid color-mix(in oklab, var(--nw-cold) 75%, var(--nw-fg)); }
+.nc-mk.out { top:29px; width:10px; height:10px; margin-left:-5px; background:var(--nw-bg); border:2px solid var(--nw-fg2); }
 .nc-mk.room { top:28px; width:12px; height:12px; margin-left:-6px; background:color-mix(in oklab, var(--c) 75%, var(--nw-fg)); box-shadow:0 0 0 2px var(--nw-bg); }
 .nc-lb { position:absolute; top:44px; transform:translateX(-50%); font-size:var(--nw-fs-small); color:var(--nw-fg2); white-space:nowrap; }
 .nc-lb.up { top:6px; } .nc-lb b { color:var(--nw-fg); }
 .nc-legend { margin-top:6px; }
 .nc-legend i { display:inline-block; }
-.k-band { width:10px; height:10px; border-radius:3px; background:color-mix(in oklab, var(--nw-calm) 75%, transparent); }
+.k-band { width:10px; height:10px; border-radius:3px; background:color-mix(in oklab, var(--nw-ok) 80%, transparent); }
 .k-day { width:14px; height:6px; border-radius:3px; background:color-mix(in srgb, var(--nw-fg) 72%, transparent); }
-.k-out { width:9px; height:9px; border-radius:50%; border:2px solid color-mix(in oklab, var(--nw-cold) 75%, var(--nw-fg)); }
-.k-room { width:10px; height:10px; border-radius:50%; background:color-mix(in oklab, var(--nw-calm) 75%, var(--nw-fg)); }
+.k-out { width:9px; height:9px; border-radius:50%; border:2px solid var(--nw-fg2); }
+.k-room { width:10px; height:10px; border-radius:50%; background:color-mix(in oklab, var(--nw-ok) 75%, var(--nw-fg)); }
 /* Corps : sections repliables. */
 .nc-body { padding:14px 20px 16px; border-top:1px solid var(--nw-line-soft); display:grid; gap:14px; }
-.nc-fold .nw-sum b { font-weight:600; color:color-mix(in oklab, var(--nw-level2) var(--nw-ink), var(--nw-fg)); }
+.nc-body[hidden] { display:none; }
+.nc-fold .nw-sum b { font-weight:600; color:color-mix(in oklab, var(--nw-watch) var(--nw-ink), var(--nw-fg)); }
 .nc-tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(112px, 1fr)); gap:8px; margin-top:12px; }
-.nc-tile { border:1px solid var(--nw-line); border-radius:var(--nw-radius); padding:10px 12px; min-width:0; }
+.nc-tile { position:relative; overflow:hidden; border:1px solid var(--nw-line); border-radius:var(--nw-radius); padding:10px 12px; min-width:0; }
 .nc-tile-h { display:flex; align-items:center; gap:6px; min-width:0; }
 .nc-tile-h .nw-label { overflow:hidden; text-overflow:ellipsis; }
 .nc-ic { display:grid; place-items:center; width:22px; height:22px; border-radius:7px; flex:none;
@@ -63,8 +69,16 @@ ha-card.nc-c { overflow:hidden; border-radius:var(--nw-radius-card); background:
 .nc-tile b { display:block; margin-top:6px; font-size:var(--nw-fs-title); font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .nc-tile b small { font-size:var(--nw-fs-small); font-weight:400; color:var(--nw-fg2); margin-left:2px; }
 .nc-tile em { display:block; font-style:normal; font-size:var(--nw-fs-small); color:var(--nw-fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.nc-tile.out { border-color:color-mix(in oklab, var(--c) 75%, var(--nw-fg)); background:color-mix(in oklab, var(--c) 10%, var(--nw-bg)); }
-.nc-tile.out em { font-weight:600; color:color-mix(in oklab, var(--c) var(--nw-ink), var(--nw-fg)); }
+/* Mesure hors de votre plage : un liseré coloré à gauche, un voile léger, et un point qui bat devant « trop humide ». */
+.nc-tile.out { border-color:color-mix(in oklab, var(--c) 45%, var(--nw-line));
+  background:linear-gradient(120deg, color-mix(in oklab, var(--c) 16%, var(--nw-bg)), var(--nw-bg) 70%); }
+.nc-tile.out::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--c); }
+/* Le point et son onde dépassent de la ligne : la note n'est pas rognée, la tuile garde de la place pour l'onde. */
+.nc-tile.out em { display:flex; align-items:center; gap:7px; overflow:visible; padding-left:1px; font-weight:600; color:color-mix(in oklab, var(--c) 45%, var(--nw-fg)); }
+.nc-tile.out em::before { content:''; width:7px; height:7px; border-radius:50%; flex:none; background:var(--c);
+  box-shadow:0 0 0 0 color-mix(in oklab, var(--c) 70%, transparent); animation:nc-ping 2.4s ease-out infinite; }
+.nc-tile.out .nc-ic { background:var(--c); color:color-mix(in oklab, var(--c) 30%, #1d2530); }
+@keyframes nc-ping { 0% { box-shadow:0 0 0 0 color-mix(in oklab, var(--c) 70%, transparent); } 70%,100% { box-shadow:0 0 0 5px transparent; } }
 button.nc-tile { font:inherit; color:inherit; text-align:left; cursor:pointer; background:none; }
 .nc-floor { grid-column:1/-1; display:flex; justify-content:space-between; align-items:center; margin-top:6px; }
 .nc-floor b { font-size:var(--nw-fs-small); }
@@ -76,8 +90,44 @@ button.nc-tile { font:inherit; color:inherit; text-align:left; cursor:pointer; b
 @container (max-width:420px) {
   .nc-hero { padding:16px; } .nc-body { padding:14px 16px; }
   .nc-advice { font-size:26px; } .nc-disk { width:72px; height:72px; } .nc-disk .icon { width:34px; height:34px; }
+  .nc-diskwrap { margin:4px 8px 0 2px; }
 }
-:host([still]) * { animation:none !important; transition:none !important; }
+/* Mouvement : une lumière qui respire derrière le bandeau, un rond vivant, des entrées douces.
+   Seulement transform et opacity (léger pour le processeur) ; coupé par « Animations » et par la réduction des animations. */
+.nc-hero::after { animation:nc-drift 18s ease-in-out infinite alternate; }
+.nc-hero::before { content:''; position:absolute; width:280px; height:280px; left:-110px; bottom:-150px; z-index:-1; pointer-events:none;
+  background:radial-gradient(closest-side, color-mix(in oklab, var(--c) 16%, transparent), transparent); animation:nc-drift 24s ease-in-out -8s infinite alternate-reverse; }
+@keyframes nc-drift { 0% { transform:translate(0,0) scale(1); } 50% { transform:translate(-30px,18px) scale(1.1); } 100% { transform:translate(14px,30px) scale(.95); } }
+/* Un anneau de lumière tourne autour du rond : lent quand tout va bien, plus vif pour un geste, rapide pour une alerte.
+   Une piste fine reste visible dessous ; pour un geste, elle s'allume doucement. */
+.nc-disk { position:relative; }
+.nc-disk::before, .nc-disk::after { content:''; position:absolute; inset:-8px; border-radius:50%; pointer-events:none; }
+.nc-disk::after { border:1.5px solid color-mix(in oklab, var(--c) 24%, transparent); }
+.nc-disk::before { background:conic-gradient(from 0deg, transparent 0 58%, color-mix(in oklab, var(--c) 90%, var(--nw-fg)) 94%, transparent 100%);
+  -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  mask:radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  opacity:.75; animation:nc-spin 9s linear infinite; }
+[data-level="action"] .nc-disk::before { opacity:1; animation-duration:3.6s; }
+[data-level="urgent"] .nc-disk::before { opacity:1; animation-duration:1.8s; }
+[data-level="action"] .nc-disk::after, [data-level="urgent"] .nc-disk::after { animation:nc-glow 3.6s ease-in-out infinite; }
+[data-level="neutral"] .nc-disk::before { opacity:.4; animation-duration:14s; }
+@keyframes nc-glow { 50% { border-color:color-mix(in oklab, var(--c) 55%, transparent); transform:scale(1.04); } }
+
+@keyframes nc-spin { to { transform:rotate(360deg); } }
+/* Entrées : le conseil monte en place, les tuiles arrivent l'une après l'autre, l'anneau glisse vers sa valeur. */
+.nc-tiles > * { animation:nc-rise .5s var(--nw-ease) both; }
+.nc-tiles > :nth-child(2) { animation-delay:.05s; } .nc-tiles > :nth-child(3) { animation-delay:.1s; } .nc-tiles > :nth-child(4) { animation-delay:.15s; }
+.nc-tiles > :nth-child(5) { animation-delay:.2s; } .nc-tiles > :nth-child(n+6) { animation-delay:.25s; }
+@keyframes nc-rise { from { opacity:0; transform:translateY(8px) scale(.98); } }
+.nc-ring, .nc-now, .nc-mk.room { animation:nc-pop .7s var(--nw-ease) both; }
+.nc-band, .nc-day { animation:nc-grow .8s var(--nw-ease) both; transform-origin:left center; }
+@keyframes nc-pop { from { opacity:0; scale:.4; } }
+@keyframes nc-grow { from { opacity:0; transform:scaleX(.2); } }
+@media (prefers-reduced-motion:reduce) {
+  .nc-hero::before, .nc-hero::after, .nc-disk, .nc-disk::before, .nc-disk::after, .nc-tile.out em::before, .nc-stack > .nc-slide, .nc-tiles > *, .nc-ring, .nc-now, .nc-mk.room, .nc-band, .nc-day { animation:none !important; }
+  .nc-stack > .nc-slide { transform:none !important; filter:none !important; }
+}
+:host([still]) *, :host([still]) *::before, :host([still]) *::after { animation:none !important; transition:none !important; }
 
 /* Conseils qui défilent : tous empilés au même endroit, la hauteur est celle du plus long. */
 .nc-tk-head { display:flex; align-items:center; gap:8px; min-height:14px; }
@@ -92,8 +142,16 @@ button.nc-tile { font:inherit; color:inherit; text-align:left; cursor:pointer; b
 .nc-bars .on i { animation:nc-fill 4.5s linear forwards; }
 @keyframes nc-fill { to { width:100%; } }
 .nc-stack { display:grid; }
-.nc-stack > .nc-slide { grid-area:1/1; opacity:0; visibility:hidden; transition:opacity .35s, visibility .35s; }
-.nc-stack > .nc-slide.on { opacity:1; visibility:visible; }
+/* Passage d'un conseil à l'autre : le précédent s'efface vers le haut dans un léger flou, le suivant monte net à sa place ;
+   le rond se fond de l'un à l'autre en changeant d'échelle. */
+.nc-stack > .nc-slide { grid-area:1/1; opacity:0; visibility:hidden; transform:translateY(12px); filter:blur(6px);
+  transition:opacity .45s var(--nw-ease), transform .6s var(--nw-ease), filter .45s var(--nw-ease), visibility .6s; }
+.nc-stack > .nc-slide.out { transform:translateY(-12px); }
+.nc-stack > .nc-slide.on { opacity:1; visibility:visible; transform:none; filter:none; transition:none; animation:nc-in .6s var(--nw-ease) .1s both; }
+.nc-stack > .nc-diskslide.out { transform:scale(1.15); }
+.nc-stack > .nc-diskslide.on { animation-name:nc-disk-in; }
+@keyframes nc-in { from { opacity:0; transform:translateY(12px); filter:blur(6px); } }
+@keyframes nc-disk-in { from { opacity:0; transform:scale(.8); filter:blur(6px); } }
 .nc-slide-pill { margin:8px 0 2px; }
 .nc-diskslide { display:flex; flex-direction:column; align-items:center; }
 @media (prefers-reduced-motion:reduce) { .nc-stack > .nc-slide { transition:none; } .nc-bars .on i { animation:none; width:100%; } }

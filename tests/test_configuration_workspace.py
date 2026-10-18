@@ -197,3 +197,29 @@ class WorkspaceTests(AdapterFixture):
         self.register('binary_sensor.battery','battery',value='off')
         with self.assertRaises(ValueError):
             self.service.validate({'sources':{'rain':{'entity_id':'binary_sensor.battery','adapter':'binary'}}},home=True)
+
+
+class WeatherAirTests(AdapterFixture):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
+        self.service=Configuration(self.hass);await self.service.load()
+        self.now=dt_util.utcnow()
+
+    async def test_outdoor_air_follows_the_source_chosen_in_niak_weather(self):
+        atmo={'entity_id':'sensor.atmo_day','adapter':'atmo_daily','block_from':3}
+        self.service.home={'configured':True,'weather':'w1','sources':{'pollution':atmo}}
+        air={'entry_id':'w1','source':'waqi','provider':'WAQI','entity_id':'sensor.gardanne_aqi','index':3,'label':'Dégradé','at':self.now.isoformat()}
+        with patch('custom_components.niak_comfort.configuration.weather_link.air',return_value=air):
+            spec=self.service.live_sources()['pollution']
+        self.assertEqual((spec['entity_id'],spec['adapter'],spec['block_from']),('sensor.gardanne_aqi','niak_air',3))
+        self.assertEqual(self.service.home_sources()['pollution'],atmo)  # what was saved stays as it was
+        r=exterior_reading(None,'pollution',spec,now=self.now,max_age=1800)
+        self.assertEqual((r.quality,r.value,r.source),('estimated',True,'sensor.gardanne_aqi'))
+        r=exterior_reading(None,'pollution',{**spec,'index':None},now=self.now,max_age=1800)
+        self.assertEqual((r.quality,r.value),('unknown',None))
+
+    async def test_a_pollution_sensor_of_another_kind_is_kept(self):
+        own={'entity_id':'binary_sensor.pollution','adapter':'binary'}
+        self.service.home={'configured':True,'weather':'w1','sources':{'pollution':own}}
+        with patch('custom_components.niak_comfort.configuration.weather_link.air',return_value={'entity_id':'sensor.x','index':2}):
+            self.assertEqual(self.service.live_sources()['pollution'],own)

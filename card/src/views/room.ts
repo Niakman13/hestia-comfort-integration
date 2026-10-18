@@ -11,6 +11,8 @@ const b=(text:string)=>html`<b>${text}</b>`;
 const deg=(v:number|null)=>v===null?'—':number(v)+' °C';
 
 export interface Advice {title:string;line:TemplateResult|string;disk:string;cap?:string}
+/** Reasons that only say « keep closed »: the engine lowers them to calm when nothing is open and no reflex is at stake. */
+const QUIET=['drying_unavailable','drying_slow','opening_blocked','heat_needed','cooling_unavailable','precool_later'];
 /** The banner: the gesture in a few words, then why in one line. The full explanation stays behind « i ». */
 export function advice(v:View):Advice {
   const a=v.assessment,o=v.observations,ti=numeric(o.indoor_temperature);
@@ -52,6 +54,9 @@ export function advice(v:View):Advice {
     return {title:span?`${verb} ${span}`:fallback,line,disk:'open',cap:first};
   };
   const constraint=a.constraints.find(c=>c!=='heating_running'&&c!=='frost')??a.constraints[0];
+  // « Do not open » to someone who was not opening brings nothing: the banner stays calm, the measure on its tile.
+  if(QUIET.includes(a.reason)&&(a.level==='calm'||a.level==='neutral'))
+    return {title:'Rien à faire',line:html`Ouvrir ${b('n’apporterait rien')} pour l’instant`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
   switch(a.reason){
     case 'within_comfort': return {title:'Rien à faire',line:html`${deg(ti)}, ${b('dans votre plage')}`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
     case 'rain_open_windows': return {title:'Fermez, il pleut',line:html`La pluie ${b('entre par les ouvrants exposés')}`,disk:'rain'};
@@ -79,6 +84,7 @@ export function advice(v:View):Advice {
       return vmc&&vmc.on!==true?{title:'Lancez la VMC',line,disk:'vmc',cap:'Aérer assèche peu ici'}
         :{title:vmc?'Humidité à surveiller':'Aérer assèche peu ici',line,disk:'clock'};
     }
+    case 'ventilation_possible': return {title:'Lancez la VMC',line:drying?html`Aérer ici : ${b(Math.round(drying.now)+' → '+Math.round(drying.after)+' %')} seulement`:water,disk:'vmc',cap:'Elle assèchera mieux'};
     case 'drying_unavailable': return {title:'Humidité à surveiller',line:incoming!=null?water:html`L’air du dehors ${b('n’est pas plus sec')}`,disk:'clock',cap:'Aérer n’aiderait pas'};
     case 'exchange_harmful': return {title:'Refermez',line:html`L’air du dehors ${b(a.temperature_delta!==null&&a.temperature_delta>0?'réchauffe la pièce':'refroidit la pièce')}`,disk:'shut'};
     case 'rehumidification_risk': return {title:'Refermez',line:incoming!=null?water:html`L’air du dehors ${b('est plus humide')}`,disk:'shut'};
@@ -173,7 +179,8 @@ export function scale(s:ScaleInput):TemplateResult {
   <div class="nw-legend nc-legend">${s.band?html`<span><i class="k-band"></i>votre plage</span>`:nothing}${s.day?html`<span><i class="k-day"></i>min–max 24 h</span>`:nothing}${s.rooms?html`<span><i class="k-room"></i>pièces</span>`:nothing}${s.out!=null?html`<span><i class="k-out"></i>dehors</span>`:nothing}</div>`;
 }
 
-export interface Tile {ic:string;label:string;value:string;unit?:string;note:string;level:Level;out:boolean;entity?:string}
+/** `watch` (soft yellow): the measure leaves your range, without a gesture asked; orange stays for gestures. */
+export interface Tile {ic:string;label:string;value:string;unit?:string;note:string;level:Level|'watch';out:boolean;entity?:string}
 /** Opens Home Assistant's own details window (history, attributes) for an entity, as any dashboard card does. */
 export const moreInfo=(e:Event,entityId:string)=>{e.stopPropagation();(e.currentTarget as HTMLElement).dispatchEvent(new CustomEvent('hass-more-info',{detail:{entityId},bubbles:true,composed:true}));};
 /** The entity behind each tile: the one a tap opens. */
@@ -191,12 +198,12 @@ const gone=(r?:{quality:string})=>r?.quality==='stale'?'pas de nouvelle mesure':
 export function tiles(v:View,config:Config):Tile[] {
   const o=v.observations,a=v.assessment,mods=new Set(config.modules??[]),list:Tile[]=[],air=a.features?.air;
   if(mods.has('humidity')&&o.indoor_humidity){const h=numeric(o.indoor_humidity),wet=a.needs.includes('dry');
-    list.push({ic:'drop',label:'Humidité',value:number(h),unit:'%',note:h===null?gone(o.indoor_humidity):wet?'trop humide':'dans votre plage',level:wet?'action':'calm',out:wet});}
+    list.push({ic:'drop',label:'Humidité',value:number(h),unit:'%',note:h===null?gone(o.indoor_humidity):wet?'trop humide':'dans votre plage',level:wet?'watch':'calm',out:wet});}
   if(mods.has('air')&&o.co2){const c=numeric(o.co2),high=air?.co2_status==='high';
-    list.push({ic:'air',label:'CO₂',value:number(c),unit:'ppm',note:c===null?gone(o.co2):high?'à renouveler':'dans votre plage',level:high?(a.level==='urgent'?'urgent':'action'):'calm',out:high});}
+    list.push({ic:'air',label:'CO₂',value:number(c),unit:'ppm',note:c===null?gone(o.co2):high?'à renouveler':'dans votre plage',level:high?(a.level==='urgent'?'urgent':'watch'):'calm',out:high});}
   if(mods.has('air'))for(const [key,ic,label,status] of [['pm25','pm','Particules',air?.pm25_status],['voc','flask','COV',air?.voc_status]] as const){
     if(!o[key])continue;const x=numeric(o[key]),high=status==='high',treated=key==='pm25'&&high&&air?.pm25_treated===true;
-    list.push({ic,label,value:number(x),unit:o[key].unit??'',note:x===null?gone(o[key]):treated?'filtrées':high?'élevés':status==='uninterpreted'?'sans seuil':'dans votre plage',level:treated?'calm':high?'action':status==='ok'?'calm':'neutral',out:high});}
+    list.push({ic,label,value:number(x),unit:o[key].unit??'',note:x===null?gone(o[key]):treated?'filtrées':high?'élevés':status==='uninterpreted'?'sans seuil':'dans votre plage',level:treated?'calm':high?'watch':status==='ok'?'calm':'neutral',out:high});}
   if(mods.has('windows')){const contacts=Object.entries(o).filter(([k])=>k.startsWith('window:')).map(([,r])=>r);
     if(contacts.length){const open=contacts.filter(r=>r.quality==='valid'&&r.value===true).length,flagged=(a.openings??[]).some(x=>x.flags.length>0&&x.open===true);
       list.push({ic:open?'open':'window',label:'Fenêtres',value:`${open}/${contacts.length}`,note:flagged?'à refermer':open?(open>1?`${open} ouvertes`:'1 ouverte'):'toutes fermées',level:flagged?'action':'neutral',out:flagged});}}
@@ -292,7 +299,9 @@ export class NiakAdviceTicker extends LitElement {
   createRenderRoot(){return this;}
   connectedCallback(){super.connectedCallback();this.schedule();}
   disconnectedCallback(){super.disconnectedCallback();clearTimeout(this.timer);this.timer=undefined;}
-  protected willUpdate(changed:Map<string,unknown>){if(changed.has('slides')&&this.index>=this.slides.length)this.index=0;}
+  /** The advice that just left: it fades upward, whichever way the list turns. */
+  private previous=-1;
+  protected willUpdate(changed:Map<string,unknown>){if(changed.has('index'))this.previous=(changed.get('index') as number|undefined)??-1;if(changed.has('slides')&&this.index>=this.slides.length)this.index=0;}
   // The view is refreshed whenever a sensor moves (every few seconds for CO₂): a new list of slides
   // must not restart the countdown, or the first advice would never leave. Only a new slide, a pause
   // or a missing countdown starts one.
@@ -314,10 +323,10 @@ export class NiakAdviceTicker extends LitElement {
       <div class="nc-copy">
         <div class="nc-tk-head"><span class="nw-label">${many?'Conseils':'Conseil'}</span>${many?html`<span class="nc-tk-count">${i+1} sur ${list.length}</span>
           <span class="nc-bars">${list.map((s,k)=>html`<button type="button" aria-label=${`Conseil ${k+1} : ${s.title}`} aria-current=${k===i?'true':'false'} data-level=${s.level} class=${k<i?'done':k===i?(this.paused||this.calm?'done':'on'):''} @click=${()=>this.go(k)}><i></i></button>`)}</span>`:nothing}</div>
-        <div class="nc-stack" aria-live=${this.paused?'polite':'off'}>${list.map((s,k)=>html`<div class=${'nc-slide'+(k===i?' on':'')} aria-hidden=${k===i?'false':'true'}>
+        <div class="nc-stack" aria-live=${this.paused?'polite':'off'}>${list.map((s,k)=>html`<div class=${'nc-slide'+(k===i?' on':k===this.previous?' out':'')} aria-hidden=${k===i?'false':'true'}>
           ${many?html`<span class="nw-chip nc-slide-pill" data-level=${s.level}>${s.pill}</span>`:nothing}<p class="nc-advice">${s.title}</p>${s.line?html`<p class="nc-line">${s.line}</p>`:nothing}</div>`)}</div>
       </div>
-      <div class="nc-diskwrap nc-stack" aria-hidden="true">${list.map((s,k)=>html`<div class=${'nc-slide nc-diskslide'+(k===i?' on':'')} data-level=${s.level}><div class="nc-disk">${icon(s.disk)}</div>${s.cap?html`<div class="nc-cap">${s.cap}</div>`:nothing}</div>`)}</div>
+      <div class="nc-diskwrap nc-stack" aria-hidden="true">${list.map((s,k)=>html`<div class=${'nc-slide nc-diskslide'+(k===i?' on':k===this.previous?' out':'')} data-level=${s.level}><div class="nc-disk" data-disk=${s.disk}>${icon(s.disk)}</div>${s.cap?html`<div class="nc-cap">${s.cap}</div>`:nothing}</div>`)}</div>
     </div>`;
   }
 }

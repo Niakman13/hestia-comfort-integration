@@ -8,7 +8,7 @@ import {build} from 'esbuild';
 const root=new URL('../',import.meta.url),temp=await mkdtemp(join(tmpdir(),'niak-comfort-card-'));
 await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts','src/views/room.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
   bundle:true,platform:'node',format:'esm',outExtension:{'.js':'.mjs'},logLevel:'silent'});
-const {cleanConfig}=await import(pathToFileURL(join(temp,'types.mjs')));
+const {cleanConfig,cleanHomeConfig}=await import(pathToFileURL(join(temp,'types.mjs')));
 const {isView,numeric,summary,readingStatus,coverageText,windFrom,evolutionLines,co2Metric,solarMetric}=await import(pathToFileURL(join(temp,'view.mjs')));
 const {LiveView}=await import(pathToFileURL(join(temp,'live.mjs')));
 const {outsideGaps,advice,slides}=await import(pathToFileURL(join(temp,'views/room.mjs')));
@@ -188,7 +188,22 @@ test('the drying advice speaks of what this room really gains, how long, and whe
   assert.equal(slides(v).filter(s=>s.title.startsWith('Encore mieux vers')).length,1);
   v.assessment={...v.assessment,reason:'drying_later',action:'attendre'};
   a=advice(v);assert.match(a.title,/^Aérez vers /);assert.match(plain(a.line),/environ 62 % après 35 min/);
-  v.assessment={...v.assessment,reason:'drying_slow',features:{...v.assessment.features,drying:{...drying,after:74,gain:2},air:{...(v.assessment.features?.air??{}),ventilation:{on:false,boost:false}}}};
+  v.assessment={...v.assessment,reason:'ventilation_possible',level:'action',features:{...v.assessment.features,drying:{...drying,after:74,gain:2},air:{...(v.assessment.features?.air??{}),ventilation:{on:false,boost:false}}}};
   a=advice(v);assert.equal(a.title,'Lancez la VMC');assert.match(plain(a.line),/76 → 74 %/);
-  v.assessment.features.air.ventilation=null;assert.equal(advice(v).title,'Aérer assèche peu ici');
+});
+test('a « keep closed » that brings nothing leaves the banner calm',()=>{
+  const v=fresh();
+  for(const reason of ['drying_unavailable','drying_slow','opening_blocked','heat_needed','cooling_unavailable','precool_later']){
+    v.assessment={...v.assessment,reason,level:'calm',action:'attendre'};
+    const a=advice(v);assert.equal(a.title,'Rien à faire',reason);assert.match(plain(a.line),/n’apporterait rien/);
+  }
+  v.assessment={...v.assessment,reason:'opening_blocked',level:'action',action:'attendre'};
+  assert.notEqual(advice(v).title,'Rien à faire');
+});
+
+test('the home card keeps its display settings and refuses wrong ones',()=>{
+  const c=cleanHomeConfig({type:'custom:niak-comfort-home-card',rotate:false,show_rooms:false,rooms_open:true,animations:false,glass_effect:false});
+  assert.equal(c.rotate,false);assert.equal(c.show_rooms,false);assert.equal(c.glass_effect,false);
+  assert.throws(()=>cleanHomeConfig({type:'custom:niak-comfort-home-card',show_scale:'oui'}));
+  assert.throws(()=>cleanHomeConfig({type:'custom:niak-comfort-card'}));
 });
