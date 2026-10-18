@@ -52,7 +52,7 @@ La carte est fournie par l’intégration : rien d’autre à installer.
 
 ## Premiers pas
 
-1. **Vos pièces** : Niak propose toutes les pièces où il trouve une température. Décochez celles à ne pas suivre, puis créez-les d’un coup.
+1. **Vos pièces** : Niak reprend vos pièces Home Assistant et les capteurs qui y sont rangés. Décochez celles à ne pas suivre, puis créez-les d’un coup.
 2. **L’extérieur** : dans **Réglages généraux**, reprenez Niak Weather en un clic, ou choisissez vos capteurs. Il sert à toutes les pièces.
 3. **Chaque pièce** : **Configurer** ouvre ses réglages. Niak propose les capteurs de la pièce : vous gardez, changez ou retirez.
 4. **La carte** : sur un tableau de bord, **Ajouter une carte → Niak Confort**.
