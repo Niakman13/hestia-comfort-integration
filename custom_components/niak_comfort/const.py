@@ -1,6 +1,6 @@
 """Stable keys for the first observation-only alpha."""
 DOMAIN = "niak_comfort"
-VERSION = "0.9.9-beta.1"
+VERSION = "0.9.9.1"
 VIEW_VERSION = 1
 # A contact open for less than this is a bounce: shown at once, but advice waits for a real opening.
 OPEN_DEBOUNCE_SECONDS = 30
