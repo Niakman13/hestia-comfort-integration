@@ -233,3 +233,10 @@ test('the new formats and their settings: lists checked, alert hidden when nothi
   const h=cleanHomeConfig({type:'custom:niak-comfort-home-card',format:'list',list_order:'floor',banner_blocks:['rooms']});
   assert.equal(h.list_order,'floor');assert.throws(()=>cleanHomeConfig({type:'custom:niak-comfort-home-card',format:'grille'}));
 });
+
+test('right after a start, one or two late secondary sensors do not hide the advice',()=>{
+  const silent={value:null,quality:'unknown',source:'sensor.fp2',received_at:null,detail:'unavailable',unit:null};
+  const v=fresh();v.starting=true;v.observations={...v.observations,illuminance:silent,'presence:binary_sensor.fp2':silent};
+  v.assessment={...v.assessment,reason:'drying_slow',level:'calm',action:'attendre',missing:['illuminance','presence:binary_sensor.fp2']};
+  assert.notEqual(advice(v).title,'Mesures en chargement');
+});

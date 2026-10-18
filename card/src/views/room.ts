@@ -57,8 +57,10 @@ export function advice(v:View):Advice {
   const constraint=a.constraints.find(c=>c!=='heating_running'&&c!=='frost')??a.constraints[0];
   // A silent sensor is not advice: the banner says what Niak cannot see, the tiles show which ones.
   const failed=a.missing.filter(k=>!!o[k]&&k!=='pollution'),count=failed.length;
-  if(count&&v.starting)return {title:'Mesures en chargement',line:html`Home Assistant ${b('vient de démarrer')}`,disk:'clock',pill:'Démarrage',level:'neutral'};
-  if(failed.includes('indoor_temperature')||count>=3){const one=count===1;
+  // Only when the room cannot be read: one or two secondary sensors late after a start leave the advice as it is.
+  const blind=failed.includes('indoor_temperature')||count>=3;
+  if(blind&&v.starting)return {title:'Mesures en chargement',line:html`Home Assistant ${b('vient de démarrer')}`,disk:'clock',pill:'Démarrage',level:'neutral'};
+  if(blind){const one=count===1;
     return {title:'Mesures absentes',line:html`${b(`${count} capteur${one?'':'s'} ne répond${one?'':'ent'} pas`)} · détail dans Mesures`,disk:'mute',pill:'Capteurs muets',level:'neutral'};}
   // « Do not open » to someone who was not opening brings nothing: the banner stays calm, the measure on its tile.
   if(QUIET.includes(a.reason)&&(a.level==='calm'||a.level==='neutral'))

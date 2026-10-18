@@ -1,3 +1,10 @@
+## 0.9.9.1 — Corrections
+
+- Juste après un démarrage de Home Assistant, un ou deux capteurs secondaires en retard (présence, luminosité…) ne bloquent plus la carte sur « Mesures en chargement » : le conseil s’affiche, seules leurs tuiles restent « en attente ».
+- Un logement relié à Niak Weather sans qualité de l’air choisie ne reprend plus l’indice de Weather.
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 0.9.9-beta.1 — Les formats de Niak Weather et des pannes qui ne sont plus des conseils
 
 - **Six formats pour la carte pièce**, comme Niak Weather : complète, tuile (le conseil et ses pastilles, qui se déplie d’un appui), tuile dépliée, mini (une ligne), mesures (les tuiles seules) et alerte (visible seulement quand un geste est conseillé).
