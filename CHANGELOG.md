@@ -1,3 +1,14 @@
+## 0.9.9-beta.1 — Les formats de Niak Weather et des pannes qui ne sont plus des conseils
+
+- **Six formats pour la carte pièce**, comme Niak Weather : complète, tuile (le conseil et ses pastilles, qui se déplie d’un appui), tuile dépliée, mini (une ligne), mesures (les tuiles seules) et alerte (visible seulement quand un geste est conseillé).
+- **Cinq formats pour la carte logement** : complète, tuile, liste des pièces, mini et alerte.
+- **Un appui long** sur une tuile (un appui sur mini et alerte) ouvre la carte complète en fenêtre, une page de votre choix, ou rien.
+- **Panneaux de réglages refaits comme celui de Niak Weather** : le format en liste, puis des groupes repliables qui changent avec lui (Visuel et performance, Bandeau, Échelle, Mesures, Détails, Fonctionnalités). Le contenu du bandeau, les repères de l’échelle, les pastilles et les rubriques se cochent et s’ordonnent. Le réglage du thème disparaît : la carte suit Home Assistant.
+- **Une panne n’est plus un conseil** : juste après un démarrage, « Mesures en chargement » et des tuiles « en attente » ; si les capteurs restent muets, « Mesures absentes » en gris, avec leur nombre plutôt qu’une longue liste, et sans échelle vide ; un capteur secondaire muet laisse le bandeau calme et sa tuile passe en pointillés.
+- Le survol d’une section n’affiche plus de bande grise : c’est le chevron qui s’allume.
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 0.9.8-beta.1 — Des conseils qui apportent un plus, des cartes plus vivantes
 
 - **Un conseil apporte toujours un plus.** Niak ne dit plus « gardez fermé » à quelqu’un qui n’allait pas ouvrir : sans geste utile, le bandeau reste calme (« Rien à faire »). Il parle pour un geste qui aide maintenant, une fenêtre à refermer, un mauvais réflexe à éviter (ouvrir quand il fait plus chaud dehors, ou pour aérer sous la pluie), un moment précis (« Ouvrez vers 22 h ») ou un autre équipement (« Lancez la VMC »).

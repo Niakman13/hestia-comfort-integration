@@ -22,15 +22,17 @@ DAY = {"indoor_day_range": {"min": 19.6, "max": 22.4}, "heated": True, "outdoor_
 VMC = "fan.vmc"
 
 
-def view(entry_id, title, values, *, context=None, sun=Sun(25, 220), outlook=None, names=None):
+def view(entry_id, title, values, *, context=None, sun=Sun(25, 220), outlook=None, names=None, silent=(), starting=False):
     readings = {k: Reading(v, "valid", f"sensor.demo_{k.replace(':', '_')}", NOW.isoformat(), None, UNITS.get(k)) for k, v in values.items()}
+    for k in silent:  # a configured sensor that does not answer (unavailable in Home Assistant)
+        readings[k] = Reading(None, "unknown", f"sensor.demo_{k.replace(':', '_')}", None, "unavailable", UNITS.get(k))
     if "ventilation" in readings:
         readings["ventilation"] = Reading(values["ventilation"], "valid", VMC, NOW.isoformat())
     result = assess(readings, Settings(humidity_high=60), None, None, sun, outlook or {}, NOW, context={**DAY, **(context or {})})
     return {"version": 1, "entry_id": entry_id, "area_id": entry_id, "title": title, "comfort_minimum": 20,
             "computed_at": NOW.isoformat(), "assessment": result.to_dict(),
             "observations": {k: asdict(r) for k, r in readings.items()},
-            "names": names or {"binary_sensor.demo_fenetre": "Fenêtre ouest"}}
+            "names": names or {"binary_sensor.demo_fenetre": "Fenêtre ouest"}, "starting": starting}
 
 
 def base(**extra):
@@ -61,6 +63,15 @@ SCENES = [
           names={"binary_sensor.demo_fenetre": "Fenêtre chambre P", VMC: "VMC"})),
     ("urgent", "Urgent", "Rouge : la pluie entre par une fenêtre exposée.",
      view("urgent", "Chambre M", base(rain=True, **{"window:binary_sensor.demo_fenetre": True}), names={"binary_sensor.demo_fenetre": "Fenêtre Marylou"})),
+    ("demarrage", "Juste après un démarrage",
+     "Ce n’est pas un conseil : Home Assistant vient de démarrer, les capteurs arrivent un à un. Pastille « Démarrage », tuiles qui scintillent.",
+     view("demarrage", "Salon", base(), silent=("indoor_temperature", "indoor_humidity", "outdoor_temperature", "outdoor_humidity", "co2"), starting=True)),
+    ("muette", "La pièce ne répond plus",
+     "Ce n’est pas un conseil : gris, « Capteurs muets », le nombre plutôt qu’une liste ; pas d’échelle vide ; tuiles en pointillés.",
+     view("muette", "Salon", base(), silent=("indoor_temperature", "indoor_humidity", "outdoor_temperature", "outdoor_humidity", "co2"))),
+    ("isole", "Un capteur secondaire muet",
+     "Le reste fonctionne : bandeau calme, seule la tuile CO₂ passe en pointillés.",
+     view("isole", "Chambre A", base(), silent=("co2",))),
 ]
 
 home_rooms = [SCENES[1][3] | {"entry_id": "h-salon", "title": "Salon"},

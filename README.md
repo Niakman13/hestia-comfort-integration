@@ -1,6 +1,6 @@
 # Niak Comfort — intégration
 
-[![release](https://img.shields.io/github/v/release/Niakman13/niak-comfort-integration?include_prereleases&cacheSeconds=3600)](https://github.com/Niakman13/niak-comfort-integration/releases)
+[![release](https://img.shields.io/github/v/release/Niakman13/niak-comfort-integration?cacheSeconds=86400)](https://github.com/Niakman13/niak-comfort-integration/releases)
 [![Validate](https://github.com/Niakman13/niak-comfort-integration/actions/workflows/validate.yml/badge.svg)](https://github.com/Niakman13/niak-comfort-integration/actions/workflows/validate.yml)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange)](https://hacs.xyz)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -9,75 +9,132 @@
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-frankblemont-FFDD00?logo=buymeacoffee&logoColor=black)](https://www.buymeacoffee.com/frankblemont)
 [![PayPal](https://img.shields.io/badge/PayPal-Donate-00457C?logo=paypal&logoColor=white)](https://paypal.me/frankblemont)
 
-Le confort de chaque pièce, expliqué : ouvrir, fermer, attendre ou ne rien faire, et pourquoi. Une seule intégration contient le moteur, la page de configuration **Niak Confort** et la carte.
+<img src="custom_components/niak_comfort/brand/icon.png" alt="" width="96" align="right">
 
-**Version 0.9.8-beta.1 — bêta de test, en observation.** Niak conseille, il ne commande aucun équipement. Home Assistant 2026.10.0 minimum.
+**Le confort de chaque pièce, expliqué.** Niak Confort regarde vos pièces et le temps dehors. Il dit en une phrase quoi faire : ouvrir, fermer, attendre ou rien. Et il dit pourquoi.
 
-**Logement et étages** : regroupement des pièces par étage Home Assistant, moyennes et conseils d’aération, avec prise en charge du plain-pied. Voir [le fonctionnement et les vérifications](docs/ETAGES.md).
+Il conseille seulement : il ne commande aucun équipement.
 
-## Soleil, aération et air
+![Niak Confort — la carte d’une pièce qui conseille d’aérer, à côté de la carte du logement](docs/images/niak-comfort-banner.png)
 
-Les volets peuvent être manuels (bois, battants ou autres), reliés à Home Assistant, ou absents. Niak donne des conseils sans commander les équipements et sans inventer la position d’un volet manuel. Les dimensions facultatives affinent les estimations d’ombre et d’aération.
+## Pourquoi
 
-La carte suit le temps d’ouverture connu, les tendances de température et le risque de buée estimé. Les durées d’aération restent indicatives. PM2.5, COV, présence et purificateur sont facultatifs : les polluants restent distingués, et une pièce vide conserve son suivi. Les COV nécessitent un seuil choisi dans l’unité du capteur.
+Un thermomètre donne un chiffre. Il ne dit pas s’il faut ouvrir la fenêtre.
 
-Voir [le périmètre et les limites des blocs 7 à 9](docs/BLOCS-7-8-9.md).
+Niak Confort compare dedans et dehors, et répond aux questions de tous les jours :
 
-## Le hub Niak
+- **Il fait chaud** : faut-il ouvrir maintenant, ce soir, ou garder fermé ?
+- **C’est humide** : aérer va-t-il vraiment assécher la pièce ? Combien de temps ?
+- **L’air est lourd** : le CO₂ monte, c’est le moment d’aérer.
+- **Il pleut, le vent souffle** : quelle fenêtre refermer ?
 
-Le menu regroupe **Accueil Niak**, **Weather** et **Confort**, selon les intégrations installées. Confort affiche vos pièces avec **Configurer** ; les réglages d’une pièce restent dans cette pièce, avec six rubriques sans défilement horizontal. L’extérieur partagé se règle dans **Réglages généraux**. Les textes d’aide et l’origine des valeurs par défaut sont accessibles par des boutons nommés ; les recommandations restent visibles.
+Chaque pièce apprend de ses aérations : les conseils s’ajustent à votre maison.
 
-Dans **Accueil Niak → Réglages**, choisissez de suivre les couleurs et la police du thème Home Assistant ou d’utiliser la palette Niak. Le choix est mémorisé ; Niak suit le mode clair ou sombre de Home Assistant. La section **Affichage** reste visible pour gérer l’entrée du menu Home Assistant.
+Toute la famille lit la même carte. Elle ne parle que quand un geste aide vraiment.
+
+## Ce qu’il faut
+
+- Home Assistant **2026.10** ou plus récent.
+- Un thermomètre dans chaque pièce à suivre. C’est le seul capteur obligatoire.
+- En plus, si vous en avez : humidité, CO₂, contacts de fenêtres, thermostat, VMC, purificateur, volets, présence.
+- Pour l’extérieur : [Niak Weather](https://github.com/Niakman13/niak-weather-integration) (conseillé) ou vos propres capteurs.
 
 ## Installation
 
-1. Dans HACS, ouvrir le bouton ci-dessous (ou ⋮ → **Dépôts personnalisés** : `https://github.com/Niakman13/niak-comfort-integration`, catégorie **Intégration**), puis télécharger. Afficher les versions bêta si nécessaire.
-2. Redémarrer Home Assistant.
-3. Ajouter **Niak Comfort** dans Paramètres → Appareils et services.
-4. Ouvrir **Niak** dans la barre latérale, onglet **Confort** : Niak propose toutes les pièces où il trouve une température. Décochez celles à ne pas suivre et créez-les d’un coup.
-5. Dans un tableau de bord, ajoutez la carte **Niak Confort** (une pièce) ou **Niak Confort · logement** (toutes les pièces).
+1. Dans HACS, ⋮ → **Dépôts personnalisés** : ajoutez `https://github.com/Niakman13/niak-comfort-integration`, catégorie **Intégration**.
+2. Installez **Niak Comfort**, puis redémarrez Home Assistant.
+3. **Paramètres → Appareils et services → Ajouter une intégration → Niak Comfort.**
+4. Ouvrez **Niak** dans la barre latérale, onglet **Confort**.
 
-[![Ouvrir Niak Comfort dans HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Niakman13&repository=niak-comfort-integration&category=integration)
+[![Ouvrir dans HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Niakman13&repository=niak-comfort-integration&category=integration)
 
-La carte est incluse : rien à déclarer. Niak Confort l’ajoute lui-même aux ressources des tableaux de bord et la tient à jour, pour que l’application mobile la trouve aussi. L’ancien dépôt séparé de la carte (`niak-comfort`) est archivé ; si vous l’aviez installé, supprimez-le de HACS.
+La carte est fournie par l’intégration : rien d’autre à installer.
 
-## Mon logement
+## Premiers pas
 
-- **Pièces** : rattachées à une pièce Home Assistant (Niak propose ses capteurs) ou libres (« Étage », « Suite parentale »). Les pièces extérieures (Extérieur, Jardin, Terrasse…) ne sont pas proposées comme pièces.
-- **Capteurs** : les propositions de la pièce, ou n’importe quel capteur avec le sélecteur de Home Assistant (recherche, « Pièce ▸ Appareil »). Une station mixte rattachée à l’extérieur peut servir de mesure intérieure.
-- **Ouvrants** : pour chaque fenêtre ou porte, son exposition (N, NE, E…), son type (fenêtre, porte-fenêtre, vasistas, porte) et s’il est abrité par une avancée de toit.
-- **Extérieur** : température, humidité, pluie actuelle (mm/h), rafales, ensoleillement (W/m²) et indice ATMO. Choisi une fois, utilisé par toutes les pièces.
-- Les capteurs à vérifier demandent une confirmation, mémorisée ensuite. Rien n’est enregistré avant **Enregistrer**.
+1. **Vos pièces** : Niak propose toutes les pièces où il trouve une température. Décochez celles à ne pas suivre, puis créez-les d’un coup.
+2. **L’extérieur** : dans **Réglages généraux**, reprenez Niak Weather en un clic, ou choisissez vos capteurs. Il sert à toutes les pièces.
+3. **Chaque pièce** : **Configurer** ouvre ses réglages. Niak propose les capteurs de la pièce : vous gardez, changez ou retirez.
+4. **La carte** : sur un tableau de bord, **Ajouter une carte → Niak Confort**.
 
-## Ce que Niak conseille
-
-Trop chaud, trop froid, air à renouveler (CO₂), air trop humide : Niak compare dedans et dehors et dit si ouvrir aide. Il conseille de fermer les ouvrants exposés à la pluie (pas ceux qui sont abrités), de ne rien laisser ouvert au-delà de 45 km/h de rafales, de limiter l’aération quand il gèle ou que le chauffage tourne (une aération courte reste conseillée si le CO₂ est élevé), et signale la fenêtre ouverte par laquelle le soleil chauffe la pièce. Avec l’exposition des ouvrants et la direction du vent, il dit **quelles fenêtres ouvrir** (au vent et sous le vent) pour faire traverser l’air, et repère la pluie poussée sous un avant-toit. Tous les seuils se règlent dans les réglages avancés de chaque pièce.
-
-## Avec Niak Weather
-
-Si [Niak Weather](https://github.com/Niakman13/niak-weather-integration) (2.1.0b1 ou plus récent) est installé, la page de l’extérieur propose de reprendre sa station en un clic. Niak Confort lit alors aussi ses alertes et ses prévisions : orage, vigilance orange ou rouge, pluie qui arrive (« refermez avant la pluie »), créneau d’ouverture (« ouvrez vers 21 h, vent d’ouest ») et pré-rafraîchissement la nuit avant une journée chaude.
-
-Une mesure absente reste inconnue : aucune valeur de remplacement. Si la pluie ou la qualité de l’air ne sont pas suivies, Niak conseille quand même et le précise sur la carte.
+Rien n’est enregistré avant **Enregistrer**. [Le guide pas à pas](docs/guide.md).
 
 ## Les cartes
 
-- **Niak Confort** : une pièce, avec son conseil, ses mesures en bulles et ses ouvrants.
-- **Niak Confort · logement** : la synthèse de toutes les pièces (celle qui demande le plus d’attention, la plus chaude et la plus fraîche, ce qui est ouvert, l’air qui traverse, par où commencer pour rafraîchir).
+Deux cartes à choisir dans **Ajouter une carte** :
 
-## À venir
+- **Niak Confort** : une pièce. Son conseil, sa température dans votre plage, ses mesures. Formats : complète, tuile, tuile dépliée, mini, mesures, alerte (visible seulement quand un geste est conseillé).
+- **Niak Confort · logement** : toutes les pièces. Les conseils qui comptent, la température de chaque pièce, l’air qui traverse. Formats : complète, tuile, liste des pièces, mini, alerte.
 
-Volets et luminosité, taille des ouvrants et aération traversante, durée d’aération, buée, présence, particules et COV, prévisions. Le détail est dans le cahier des charges du projet.
+Comme pour Niak Weather, un appui long sur une tuile (un appui sur mini et alerte) ouvre la carte complète en fenêtre, une page de votre choix, ou rien.
 
-## Pour les développeurs
+La couleur dit s’il y a quelque chose à faire :
 
-- Tests Python : Python 3.14, `pip install -r requirements-test.txt`, puis `python -m unittest discover -s tests -p 'test_*.py'`.
-- Panneau : `cd frontend && npm ci && npm run validate` (produit `custom_components/niak_comfort/frontend/panel.js`).
-- Carte : `cd card && npm ci && npm run validate` (produit `custom_components/niak_comfort/frontend/niak-comfort-card.js`). Banc de la carte avec des données fictives : `card/preview/card.html`.
-- Chargement des cartes : `cd card && npx playwright install chromium firefox && NIAK_TEST_FIREFOX=1 npm run test:loading`. Vérifie les cartes logement et pièce, ainsi que leur éditeur, avant et après l’initialisation de Home Assistant, sur deux onglets, avec cache et rechargement. [Diagnostic et validation](docs/CHARGEMENT-CARTES.md).
-- API WebSocket v1 en lecture : `niak_comfort/entries`, `niak_comfort/view`, `niak_comfort/subscribe`.
+- **bleu** : tout va bien ;
+- **vert** : un bénéfice à saisir (« Aérez vers 23 h ») ;
+- **orange** : un geste conseillé maintenant ;
+- **rouge** : urgent (la pluie entre).
 
-Licence MIT — Niakman13.
+![Quatre pièces : tout va bien, aérer plus tard, lancer la VMC, fermer car il pleut](docs/images/niak-comfort-situations.png)
 
-### Formulaires harmonisés
+Un appui sur une mesure ouvre son historique dans Home Assistant. [Lire les conseils](docs/guide.md#lire-les-conseils).
 
-Les réglages du hub partagent les mêmes composants : blocs par sujet, titres et espacements cohérents, aides en info-bulles et avertissements visibles. Weather regroupe les prévisions, alertes et saison, mesures de la station, air, pollens et entités. Les réglages généraux de Confort présentent leurs capteurs en lignes ouvertes dans chaque groupe. Les détails avancés restent repliables.
+## Le panneau Niak
+
+Tout se règle dans le panneau **Niak** de la barre latérale, onglet **Confort**. Pas de YAML, pas de nom d’entité à connaître.
+
+![Le panneau Niak, onglet Confort : les pièces du logement](docs/images/niak-comfort-panneau.png)
+
+- **Vue d’ensemble** : vos pièces, avec **Configurer**, et ce qui reste à régler.
+- **Réglages généraux** : l’extérieur, commun à toutes les pièces.
+- Une pièce se règle en six onglets : Température, Ouvertures, Air intérieur, Présence, Chauffage, La pièce.
+
+Chaque réglage a son aide. Les seuils sont expliqués avec leurs sources ([les repères](docs/SEUILS.md)).
+
+## Avec Niak Weather et l’écosystème Niak
+
+Niak Confort fonctionne seul. Avec [Niak Weather](https://github.com/Niakman13/niak-weather-integration), il devient plus malin :
+
+- l’extérieur se règle en un clic : la station de votre lieu Weather ;
+- il anticipe : « Refermez avant la pluie », « Ouvrez vers 22 h », rafraîchir la nuit avant une journée chaude ;
+- il tient compte des vigilances et des orages ;
+- l’air du dehors suit la source choisie dans Weather (Atmo France ou une station WAQI). Si Atmo France tombe en panne, Confort garde l’indice du jour. Il faut Niak Weather 2.5.7 ou plus récent.
+
+Les deux briques partagent le panneau **Niak** et la même charte. L’**Accueil Niak** montre l’état de chacune.
+
+## Pour vos automatisations
+
+Chaque pièce crée quelques entités :
+
+| Entité | Ce qu’elle dit |
+| --- | --- |
+| **Situation** | Tout va bien, potentiel, geste conseillé, attention, information incomplète |
+| **Geste** | Ouvrir, fermer, attendre, aucun nouveau geste |
+| **Raison** | Pourquoi : pluie, CO₂, rafraîchissement possible, soleil qui entre… |
+| **Chauffage observé** | Chauffe, au repos, arrêté |
+| **Couverture des données** | Toutes les sources répondent, ou bilan partiel |
+
+Par exemple : une notification quand le geste du salon passe à **Fermer**. [Le détail des entités](docs/guide.md#pour-vos-automatisations).
+
+## Documentation
+
+| Page | Ce qu’elle explique |
+| --- | --- |
+| [Guide d’utilisation](docs/guide.md) | Premiers pas, extérieur, pièces, lire les conseils, équipements, apprentissage, entités |
+| [Dépannage](docs/depannage.md) | « Ne répond pas », carte invisible, sources, Niak Weather, journaux |
+| [Les repères](docs/SEUILS.md) | CO₂, particules, humidité, COV : les seuils proposés et leurs sources |
+| [Notes techniques](docs/dev/README.md) | Pour les développeurs : tests, interfaces, notes de conception |
+
+## Limites
+
+Niak Confort conseille. Il n’ouvre, ne ferme et ne règle rien.
+
+Une mesure absente reste inconnue : rien n’est inventé.
+
+Les durées d’aération, l’ombre et la buée sont des estimations. Elles ne remplacent pas une mesure.
+
+Un indice de qualité de l’air du jour ne mesure pas l’air devant vos fenêtres.
+
+## Licence
+
+[MIT](LICENSE) — Niakman13.

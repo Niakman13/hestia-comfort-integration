@@ -3,13 +3,43 @@ export const ACTIONS = ['ok','ouvrir','fermer','attendre','unknown'] as const;
 export const MODULES = ['windows','air','temperature','humidity','shutters','coordination'] as const;
 export type Level = typeof LEVELS[number];
 export type Module = typeof MODULES[number];
-export type Format = 'mini'|'tile'|'intermediate'|'full';
+/** Like Niak Weather: full, tile (folds), intermediate (the tile unfolded), mini (one line), measures (the tiles alone),
+ *  alert (only while a gesture is asked, hidden otherwise). */
+export const FORMATS = ['full','tile','intermediate','mini','measures','alert'] as const;
+export type Format = typeof FORMATS[number];
+/** What scrolls after the advice of the moment: remedies at work (purifier, ventilation), a better moment later. */
+export const BANNER_BLOCKS = ['remedies','later'] as const;
+export type BannerBlock = typeof BANNER_BLOCKS[number];
+/** Marks of the temperature scale; none removes the scale. */
+export const SCALE_MARKS = ['band','day','out'] as const;
+export type ScaleMark = typeof SCALE_MARKS[number];
+/** Chips under the advice of a folded tile, and values on a mini line. */
+export const CHIPS = ['temperature','humidity','co2'] as const;
+export type Chip = typeof CHIPS[number];
+/** What an unfolded tile shows, in this order. */
+export const TILE_BLOCKS = ['scale','measures','details'] as const;
+export type TileBlock = typeof TILE_BLOCKS[number];
+/** A long press (a tap on mini and alert): the full card in a window, a dashboard page, or nothing. */
+export const HOLD_ACTIONS = ['popup','page','none'] as const;
+export type HoldAction = typeof HOLD_ACTIONS[number];
 export const moduleLabels:Record<Module,string>={windows:'Fenêtres',air:'Qualité de l’air',temperature:'Température',humidity:'Humidité',shutters:'Soleil et volets',coordination:'Chauffage'};
 export interface Config {
   type: 'custom:niak-comfort-card'; entry_id?: string; title?: string; format?: Format;
   modules?: Module[]; animations?: boolean; glass_effect?: boolean; theme?: 'auto'|'light'|'dark';
   /** What the card shows and how it opens: the scale, the measures, the details, and whether advices scroll by themselves. */
   show_scale?: boolean; show_measures?: boolean; show_details?: boolean; measures_open?: boolean; details_open?: boolean; rotate?: boolean;
+  banner_blocks?: BannerBlock[]; scale_marks?: ScaleMark[]; tile_chips?: Chip[]; tile_blocks?: TileBlock[]; mini_values?: Chip[];
+  hold_action?: HoldAction; hold_path?: string;
+}
+/** A list setting: only known values, each once, in the given order. */
+function list<T extends string>(value:unknown,known:readonly T[],name:string):T[]|undefined{
+  if(value===undefined)return undefined;
+  if(!Array.isArray(value)||value.some(v=>!known.includes(v)))throw new Error(`Réglage « ${name} » invalide.`);
+  return [...new Set(value as T[])];
+}
+function hold(input:{hold_action?:unknown;hold_path?:unknown}){
+  if(input.hold_action!==undefined&&!HOLD_ACTIONS.includes(input.hold_action as HoldAction))throw new Error('Appui long inconnu.');
+  if(input.hold_path!==undefined&&typeof input.hold_path!=='string')throw new Error('La page à ouvrir doit être un chemin.');
 }
 export interface Reading {
   value: number|boolean|string|null; quality:'valid'|'unknown'|'stale'|'estimated';
@@ -42,7 +72,7 @@ export interface Opening {
 }
 export interface View {
   version:1; entry_id:string; area_id:string|null; title:string; computed_at:string;
-  assessment:Assessment; observations:Record<string,Reading>; names?:Record<string,string>;
+  assessment:Assessment; observations:Record<string,Reading>; names?:Record<string,string>; /** Home Assistant (or the room) has just started: silent sensors are still loading. */ starting?:boolean;
 }
 export interface ViewEvent {version:1; view?:View; reload?:boolean; unavailable?:boolean}
 export type Unsubscribe = () => Promise<void>|void;
@@ -56,25 +86,37 @@ export interface HomeAssistant {
 export interface Entry {entry_id:string; title:string; area_id:string|null}
 export function cleanConfig(input:Config):Config {
   if(!input || input.type!=='custom:niak-comfort-card') throw new Error('Type de carte Niak Comfort invalide.');
-  if(input.format && !['mini','tile','intermediate','full'].includes(input.format)) throw new Error('Format de carte inconnu.');
+  if(input.format && !FORMATS.includes(input.format)) throw new Error('Format de carte inconnu.');
   if(input.entry_id!==undefined && typeof input.entry_id!=='string') throw new Error('Choisissez une pièce Niak Comfort.');
   if(input.title!==undefined && typeof input.title!=='string') throw new Error('Le titre doit être un texte.');
   if(input.theme && !['auto','light','dark'].includes(input.theme)) throw new Error('Thème inconnu.');
   for(const key of ['animations','glass_effect','show_scale','show_measures','show_details','measures_open','details_open','rotate'] as const)
     if(input[key]!==undefined && typeof input[key]!=='boolean') throw new Error('Réglage d’affichage invalide.');
   if(input.modules && (!Array.isArray(input.modules) || input.modules.some(m=>!MODULES.includes(m)))) throw new Error('Rubrique inconnue.');
-  return {...input, format:input.format??'tile', modules:[...new Set(input.modules??MODULES)]};
+  hold(input);
+  const lists={banner_blocks:list(input.banner_blocks,BANNER_BLOCKS,'bandeau'),scale_marks:list(input.scale_marks,SCALE_MARKS,'échelle'),
+    tile_chips:list(input.tile_chips,CHIPS,'pastilles'),tile_blocks:list(input.tile_blocks,TILE_BLOCKS,'tuile dépliée'),mini_values:list(input.mini_values,CHIPS,'ligne')};
+  return {...input,...Object.fromEntries(Object.entries(lists).filter(([,v])=>v!==undefined)), format:input.format??'tile', modules:[...new Set(input.modules??MODULES)]};
 }
 
 /** The home card's settings: the same display choices as a room card, rooms instead of measures. */
-export interface HomeConfig {type:'custom:niak-comfort-home-card';title?:string;theme?:'auto'|'light'|'dark';
+export const HOME_FORMATS = ['full','tile','list','mini','alert'] as const;
+export type HomeFormat = typeof HOME_FORMATS[number];
+/** What scrolls in the home banner: the rooms' advice, and gestures for the whole house (cross ventilation). */
+export const HOME_BANNER = ['rooms','house'] as const;
+export interface HomeConfig {type:'custom:niak-comfort-home-card';title?:string;theme?:'auto'|'light'|'dark';format?:HomeFormat;
   rotate?:boolean;show_scale?:boolean;show_rooms?:boolean;rooms_open?:boolean;show_details?:boolean;details_open?:boolean;
-  animations?:boolean;glass_effect?:boolean}
+  animations?:boolean;glass_effect?:boolean;banner_blocks?:(typeof HOME_BANNER[number])[];list_order?:'urgent'|'floor';
+  hold_action?:HoldAction;hold_path?:string}
 export const HOME_FLAGS=['rotate','show_scale','show_rooms','rooms_open','show_details','details_open','animations','glass_effect'] as const;
 export function cleanHomeConfig(input:HomeConfig):HomeConfig {
   if(!input||input.type!=='custom:niak-comfort-home-card')throw new Error('Type de carte invalide.');
   if(input.title!==undefined&&typeof input.title!=='string')throw new Error('Le titre doit être un texte.');
   if(input.theme&&!['auto','light','dark'].includes(input.theme))throw new Error('Thème inconnu.');
   for(const k of HOME_FLAGS)if(input[k]!==undefined&&typeof input[k]!=='boolean')throw new Error('Réglage d’affichage invalide.');
-  return {...input};
+  if(input.format&&!HOME_FORMATS.includes(input.format))throw new Error('Format de carte inconnu.');
+  if(input.list_order!==undefined&&!['urgent','floor'].includes(input.list_order))throw new Error('Ordre des pièces inconnu.');
+  hold(input);
+  const banner=list(input.banner_blocks,HOME_BANNER,'bandeau');
+  return {...input,...(banner?{banner_blocks:banner}:{})};
 }

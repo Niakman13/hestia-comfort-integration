@@ -1,6 +1,6 @@
 import {html,nothing,LitElement,type TemplateResult} from 'lit';
 import {property,state} from 'lit/decorators.js';
-import type {Config,View,Level} from '../types';
+import {SCALE_MARKS,CHIPS,TILE_BLOCKS,type Config,type View,type Level,type Format,type BannerBlock,type Chip} from '../types';
 import {numeric,number,heatingLabels,coverageText,windFrom,sourceLabel,needs as needLabels,constraintLabels} from '../view';
 import {icon} from '../ui/icons';
 
@@ -10,7 +10,8 @@ const hour=(iso:string)=>{const h=new Date(iso).getHours();return h===0?'minuit'
 const b=(text:string)=>html`<b>${text}</b>`;
 const deg=(v:number|null)=>v===null?'—':number(v)+' °C';
 
-export interface Advice {title:string;line:TemplateResult|string;disk:string;cap?:string}
+export interface Advice {title:string;line:TemplateResult|string;disk:string;cap?:string;
+  /** A state that is not advice (sensors loading or silent) brings its own words and colour. */ pill?:string;level?:Level}
 /** Reasons that only say « keep closed »: the engine lowers them to calm when nothing is open and no reflex is at stake. */
 const QUIET=['drying_unavailable','drying_slow','opening_blocked','heat_needed','cooling_unavailable','precool_later'];
 /** The banner: the gesture in a few words, then why in one line. The full explanation stays behind « i ». */
@@ -54,6 +55,11 @@ export function advice(v:View):Advice {
     return {title:span?`${verb} ${span}`:fallback,line,disk:'open',cap:first};
   };
   const constraint=a.constraints.find(c=>c!=='heating_running'&&c!=='frost')??a.constraints[0];
+  // A silent sensor is not advice: the banner says what Niak cannot see, the tiles show which ones.
+  const failed=a.missing.filter(k=>!!o[k]&&k!=='pollution'),count=failed.length;
+  if(count&&v.starting)return {title:'Mesures en chargement',line:html`Home Assistant ${b('vient de démarrer')}`,disk:'clock',pill:'Démarrage',level:'neutral'};
+  if(failed.includes('indoor_temperature')||count>=3){const one=count===1;
+    return {title:'Mesures absentes',line:html`${b(`${count} capteur${one?'':'s'} ne répond${one?'':'ent'} pas`)} · détail dans Mesures`,disk:'mute',pill:'Capteurs muets',level:'neutral'};}
   // « Do not open » to someone who was not opening brings nothing: the banner stays calm, the measure on its tile.
   if(QUIET.includes(a.reason)&&(a.level==='calm'||a.level==='neutral'))
     return {title:'Rien à faire',line:html`Ouvrir ${b('n’apporterait rien')} pour l’instant`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
@@ -97,8 +103,9 @@ export function advice(v:View):Advice {
       return {title:gesture,line:html`${outsideGaps(v)} : ${b('regardez dehors avant')}`,disk:'ask',cap:'Si le temps le permet'};
     }
     case 'incomplete_data': {
-      const failed=a.missing.filter(k=>!!o[k]);
-      return {title:failed.length?'Mesure à vérifier':'Bilan partiel',line:failed.length?html`${b(coverageText(v).replace(/^Mesures à vérifier : /,''))} ne répond pas`:html`Les mesures connues sont ${b('dans votre plage')}`,disk:'ask'};
+      // One or two secondary sensors silent, nothing else to say: a calm banner, the silent tile shows it.
+      return failed.length?{title:'Rien à faire',line:html`${b(coverageText(v).replace(/^Mesures à vérifier : /,''))} ne répond pas`,disk:'check',pill:failed.length>1?'Capteurs muets':'Un capteur muet',level:'neutral'}
+        :{title:'Bilan partiel',line:html`Les mesures connues sont ${b('dans votre plage')}`,disk:'check'};
     }
   }
   return {title:pills[a.level],line:'',disk:a.action==='ouvrir'?'open':a.action==='fermer'?'shut':'window'};
@@ -123,17 +130,17 @@ function airWhy(v:View):TemplateResult {
 
 export interface Slide extends Advice {level:Level;pill:string}
 /** Every advice of the moment, the main one first: what to do, then the remedies already at work and what Niak cannot check. */
-export function slides(v:View):Slide[] {
-  const a=v.assessment,o=v.observations,air=a.features?.air,main=advice(v),out:Slide[]=[{...main,level:a.level,pill:pills[a.level]}];
-  if(air?.purifier?.on===true){const pm=numeric(o.pm25),speed=air.purifier.speed;
+export function slides(v:View,blocks:readonly BannerBlock[]=['remedies','later']):Slide[] {
+  const a=v.assessment,o=v.observations,air=a.features?.air,main=advice(v),out:Slide[]=[{...main,level:main.level??a.level,pill:main.pill??pills[a.level]}];
+  if(blocks.includes('remedies')&&air?.purifier?.on===true){const pm=numeric(o.pm25),speed=air.purifier.speed;
     out.push({level:'calm',pill:'En cours',title:air.pm25_treated?'Le purificateur filtre':'Le purificateur tourne',
       line:pm!==null?html`Particules ${b(number(pm)+' µg/m³')}${speed!=null?` · il tourne à ${number(speed)} %`:''}`:speed!=null?html`Il tourne à ${b(number(speed)+' %')}`:'Il filtre l’air de la pièce',disk:'fan',cap:v.names?.[o.purifier?.source??'']??undefined});}
-  if(air?.ventilation?.on===true){const fast=air.ventilation.boost===true;
+  if(blocks.includes('remedies')&&air?.ventilation?.on===true){const fast=air.ventilation.boost===true;
     out.push({level:'calm',pill:'En cours',title:'La ventilation renouvelle l’air',line:a.needs.includes('dry')?html`Elle aide à ${b('assécher')}${fast?' · grande vitesse':''}`:fast?html`En ${b('grande vitesse')}`:'Renouvellement continu',disk:'vmc',cap:fast?'Grande vitesse':undefined});}
   // What Niak cannot check is information, not advice: it stays in « Détails ».
   const later=a.features?.drying?.later;
-  if(later&&a.reason==='drying_possible')out.push({level:'benefit',pill:'Plus tard',title:`Encore mieux vers ${hour(later.time)}`,line:html`L’air sera plus sec : ${b('environ '+Math.round(later.after)+' %')}`,disk:'clock'});
-  if(a.slot&&a.slot.kind==='open'&&!['cooling_unavailable','precool_later'].includes(a.reason))out.push({level:'benefit',pill:'Plus tard',title:`Ouvrez vers ${hour(a.slot.time)}`,line:html`Il fera ${b(number(a.slot.temperature)+' °C')} dehors`,disk:'moon'});
+  if(blocks.includes('later')&&later&&a.reason==='drying_possible')out.push({level:'benefit',pill:'Plus tard',title:`Encore mieux vers ${hour(later.time)}`,line:html`L’air sera plus sec : ${b('environ '+Math.round(later.after)+' %')}`,disk:'clock'});
+  if(blocks.includes('later')&&a.slot&&a.slot.kind==='open'&&!['cooling_unavailable','precool_later'].includes(a.reason))out.push({level:'benefit',pill:'Plus tard',title:`Ouvrez vers ${hour(a.slot.time)}`,line:html`Il fera ${b(number(a.slot.temperature)+' °C')} dehors`,disk:'moon'});
   return out;
 }
 
@@ -220,10 +227,13 @@ export function tiles(v:View,config:Config):Tile[] {
     const raw=o.heating_mode?.quality==='valid'&&typeof o.heating_mode.value==='string'?o.heating_mode.value:null,mode=raw?modeLabels[raw]??raw:null;
     list.push({ic:'heat',label:'Chauffage',value:running?'Chauffe':label,note:mode?`mode ${mode}`:running?'chauffe la pièce':'observé, jamais commandé',level:'neutral',out:false});}
   for(const t of list)t.entity=tileEntity(v,t.label);
-  return list;
+  // Right after a start, a silent sensor is still on its way, not broken.
+  return v.starting?list.map(t=>t.note==='indisponible'||t.note==='pas de nouvelle mesure'?{...t,note:'en attente'}:t):list;
 }
-export const tile=(t:Tile)=>t.entity?html`<button type="button" class=${'nc-tile'+(t.out?' out':'')} data-level=${t.level} title=${'Détails : '+t.label} @click=${(e:Event)=>moreInfo(e,t.entity!)}>${tileBody(t)}</button>`:html`<div class=${'nc-tile'+(t.out?' out':'')} data-level=${t.level}>${tileBody(t)}</div>`;
-const tileBody=(t:Tile)=>html`<div class="nc-tile-h"><span class="nc-ic">${icon(t.ic)}</span><span class="nw-label">${t.label}</span></div><b>${t.value}${t.unit?html`<small>${t.unit}</small>`:nothing}</b><em>${t.note}</em>`;
+// Only a sensor that stopped answering is drawn muted, not a measure that was never configured (« non mesuré »).
+const tileClass=(t:Tile)=>'nc-tile'+(t.out?' out':'')+(['indisponible','pas de nouvelle mesure','en attente'].includes(t.note)?' mute':'');
+export const tile=(t:Tile)=>t.entity?html`<button type="button" class=${tileClass(t)} data-level=${t.level} title=${'Détails : '+t.label} @click=${(e:Event)=>moreInfo(e,t.entity!)}>${tileBody(t)}</button>`:html`<div class=${tileClass(t)} data-level=${t.level}>${tileBody(t)}</div>`;
+const tileBody=(t:Tile)=>html`<div class="nc-tile-h"><span class="nc-ic">${icon(t.ic)}</span><span class="nw-label">${t.label}</span></div><b>${t.value}${t.unit&&t.value!=='—'?html`<small>${t.unit}</small>`:nothing}</b><em>${t.note}</em>`;
 
 const row=(t:string,x:string)=>html`<li><b>${t}</b><span> · ${x}</span></li>`;
 /** One short line per fact: the long explanations of 0.9 become « title · fact ». */
@@ -257,13 +267,14 @@ export function whyLines(v:View):TemplateResult {
   return html`<p><b>Besoins</b> · ${a.needs.length?a.needs.map(n=>needLabels[n]??n).join(', '):'aucun parmi les mesures connues'}</p><p><b>Contraintes</b> · ${a.constraints.length?a.constraints.map(c=>constraintLabels[c]??c).join(', '):'aucune confirmée'}</p><p><b>Bilan</b> · ${coverageText(v)}</p>`;
 }
 /** Hero shared by the room and home cards: name, « i », level pill, the gesture, the disk, then the scale. */
-export function hero(o:{name:string;level:Level;slides:Slide[];scaleLabel:string;scale:TemplateResult;st:CardState;why:TemplateResult;compact?:boolean;still?:boolean}):TemplateResult {
+export function hero(o:{name:string;level:Level;slides:Slide[];scaleLabel:string;scale:TemplateResult;st:CardState;why:TemplateResult;compact?:boolean;still?:boolean;small?:boolean;after?:TemplateResult|typeof nothing}):TemplateResult {
   const many=o.slides.length>1;
-  return html`<div class="nc-hero">
-    <div class="nc-top"><h2>${o.name}</h2><button class="nw-info" aria-label="Pourquoi ce conseil ?" aria-expanded=${o.st.why} aria-controls=${o.st.uid+'-why'} @click=${()=>o.st.toggle('why')}>${icon('info')}</button><span class="nw-chip nc-level">${many?`${o.slides.length} conseils`:pills[o.level]}</span></div>
+  return html`<div class=${'nc-hero'+(o.small?' nc-compact':'')}>
+    <div class="nc-top"><h2>${o.name}</h2><button class="nw-info" aria-label="Pourquoi ce conseil ?" aria-expanded=${o.st.why} aria-controls=${o.st.uid+'-why'} @click=${()=>o.st.toggle('why')}>${icon('info')}</button><span class="nw-chip nc-level">${many?`${o.slides.length} conseils`:o.slides[0]?.pill??pills[o.level]}</span></div>
     <niak-advice-ticker .slides=${o.slides} .still=${!!o.still}></niak-advice-ticker>
     <div class="nc-why" id=${o.st.uid+'-why'} ?hidden=${!o.st.why}>${o.why}</div>
     ${o.compact?nothing:html`<div class="nc-sec nw-glass"><div class="nw-label">${o.scaleLabel}</div>${o.scale}</div>`}
+    ${o.after??nothing}
   </div>`;
 }
 /** A folding section with the charter's round chevron; out-of-range tiles stay visible when folded. */
@@ -271,19 +282,64 @@ export function fold(o:{label:string;summary:TemplateResult|string;open:boolean;
   return html`<div class=${'nc-fold'+(o.open?' open':'')}><button class="nw-fold-head" aria-expanded=${o.open} aria-controls=${o.id} @click=${o.onToggle}><span class="nw-label">${o.label}</span><span class="nw-sum">${o.summary}</span><span class="nw-chevron">${icon('chevron')}</span></button>
     <div id=${o.id}>${o.open?o.body:o.keep?.length?html`<div class="nc-tiles">${o.keep}</div>`:nothing}</div></div>`;
 }
-export const tileSummary=(n:number,k:number,unit:string)=>n?html`${n} ${unit}${n>1?'s':''}${k?html` · <b>${k} hors de votre plage</b>`:' · toutes dans votre plage'}`:html`Aucune ${unit}`;
-/** The room card; the mini format keeps only the banner. */
-export function roomCard(v:View,config:Config,st:CardState,mini=false):TemplateResult {
+/** « 4 mesures · 1 hors de votre plage · 2 muettes »: a silent measure is never counted as in range. */
+export const tileSummary=(n:number,k:number,unit:string,mute=0,waiting=false)=>n?html`${n} ${unit}${n>1?'s':''}${k?html` · <b>${k} hors de votre plage</b>`:''}${mute?(waiting?` · ${mute} en attente`:` · ${mute} muette${mute>1?'s':''}`):''}${!k&&!mute?' · toutes dans votre plage':''}`:html`Aucune ${unit}`;
+/** The few values a tile or a mini line shows, out of range in amber. */
+function chipValues(v:View,which:readonly Chip[]):{ic:string;text:string;out:boolean;entity?:string}[]{
+  const o=v.observations,a=v.assessment,out=[];
+  for(const c of which){
+    if(c==='temperature'){const t=numeric(o.indoor_temperature);if(t!==null)out.push({ic:'temp',text:number(t)+' °C',out:a.needs.includes('cool')||a.needs.includes('heat'),entity:o.indoor_temperature?.source??undefined});}
+    if(c==='humidity'){const h=numeric(o.indoor_humidity);if(h!==null)out.push({ic:'drop',text:number(h)+' %',out:a.needs.includes('dry'),entity:o.indoor_humidity?.source??undefined});}
+    if(c==='co2'){const x=numeric(o.co2);if(x!==null)out.push({ic:'air',text:number(x)+' ppm',out:a.features?.air?.co2_status==='high',entity:o.co2?.source??undefined});}
+  }
+  return out;
+}
+const chipRow=(list:ReturnType<typeof chipValues>)=>list.length?html`<div class="nc-chips">${list.map(c=>c.entity
+  ?html`<button type="button" class=${'nc-chip nc-hit'+(c.out?' out':'')} title="Détails" @click=${(e:Event)=>moreInfo(e,c.entity!)}>${icon(c.ic)}${c.text}</button>`
+  :html`<span class=${'nc-chip'+(c.out?' out':'')}>${icon(c.ic)}${c.text}</span>`)}</div>`:nothing;
+/** Is something asked of the person? The alert format shows only then. */
+export const asking=(v:View)=>['action','urgent'].includes(slides(v)[0]?.level??v.assessment.level);
+/** The room card in each format; null when the alert format has nothing to say. */
+export function roomCard(v:View,config:Config,st:CardState,format:Format='full'):TemplateResult|null {
   const a=v.assessment,f=a.features,ti=numeric(v.observations.indoor_temperature),te=numeric(v.observations.outdoor_temperature);
-  const list=tiles(v,config),outside=list.filter(t=>t.out);
-  const band:[number,number]|null=f?.season?[f.season.minimum,f.season.maximum]:null;
-  const body=config.show_measures!==false&&list.length>0||config.show_details!==false;
-  const sc=(config.modules??[]).includes('temperature')&&config.show_scale!==false?scale({band,day:f?.day_range??null,now:ti,out:te,nowEntity:v.observations.indoor_temperature?.source??undefined,outEntity:v.observations.outdoor_temperature?.source??undefined}):html``;
-  return html`<ha-card class="nc-c" data-level=${a.level}>
-    ${hero({name:config.title||v.title,level:a.level,slides:slides(v),scaleLabel:'Température',scale:sc,st,why:whyLines(v),compact:mini||config.show_scale===false||!(config.modules??[]).includes('temperature'),still:config.animations===false||config.rotate===false})}
-    ${mini||!body?nothing:html`<div class="nc-body">
-      ${list.length&&config.show_measures!==false?fold({label:'Mesures',summary:tileSummary(list.length,outside.length,'mesure'),open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tiles',body:html`<div class="nc-tiles">${list.map(tile)}</div>`,keep:outside.map(tile)}):nothing}
-      ${config.show_details===false?nothing:fold({label:'Détails',summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:st.uid+'-details',body:html`<ul class="nc-list">${details(v,config)}</ul>${st.configure?html`<button class="nw-badge nc-configure" @click=${st.configure}>${icon('settings')}Configurer cette pièce</button>`:nothing}`})}
+  const list=tiles(v,config),outside=list.filter(t=>t.out),muted=list.filter(t=>tileClass(t).includes(' mute'));
+  const marks=config.scale_marks??(config.show_scale===false?[]:SCALE_MARKS);
+  const band:[number,number]|null=f?.season&&marks.includes('band')?[f.season.minimum,f.season.maximum]:null;
+  const sc=(config.modules??[]).includes('temperature')&&marks.length&&ti!==null
+    ?scale({band,day:marks.includes('day')?f?.day_range??null:null,now:ti,out:marks.includes('out')?te:null,nowEntity:v.observations.indoor_temperature?.source??undefined,outEntity:v.observations.outdoor_temperature?.source??undefined}):null;
+  const all=slides(v,config.banner_blocks),top=all[0]?.level??a.level,name=config.title||v.title;
+  const still=config.animations===false||config.rotate===false;
+  const summary=tileSummary(list.length,outside.length,'mesure',muted.length,!!v.starting);
+  const grid=html`<div class="nc-tiles">${list.map(tile)}</div>`;
+  const detailList=html`<ul class="nc-list">${details(v,config)}</ul>${st.configure?html`<button class="nw-badge nc-configure" @click=${st.configure}>${icon('settings')}Configurer cette pièce</button>`:nothing}`;
+  const scaleBox=sc?html`<div class="nc-sec nw-glass"><div class="nw-label">Température</div>${sc}</div>`:nothing;
+  if(format==='mini'){
+    const values=chipValues(v,config.mini_values??['temperature']),temp=values.find(c=>c.ic==='temp');
+    return html`<ha-card class="nc-c nc-line-card" data-level=${top}><div class="nc-disk" data-disk=${all[0]?.disk}>${icon(all[0]?.disk??'check')}</div>
+      <div class="nc-line-text"><span>${name}</span><b>${all[0]?.title}</b></div>${chipRow(values.filter(c=>c!==temp))}${temp?html`<span class="nc-line-value">${temp.text.replace(' °C','')}<small> °C</small></span>`:nothing}</ha-card>`;
+  }
+  if(format==='measures')
+    return html`<ha-card class="nc-c nc-measures-card" data-level="neutral"><div class="nc-mhead"><h2>${name}</h2><span class="nw-sum">${summary}</span></div><div class="nc-mbody">${config.scale_marks?.length?scaleBox:nothing}${grid}</div></ha-card>`;
+  if(format==='alert'){
+    if(!asking(v))return null;
+    return html`<ha-card class="nc-c" data-level=${top}>${hero({name,level:top,slides:all,scaleLabel:'',scale:html``,st,why:whyLines(v),compact:true,small:true,still})}</ha-card>`;
+  }
+  if(format==='tile'||format==='intermediate'){
+    const blocks=config.tile_blocks??TILE_BLOCKS;
+    const body=blocks.map(b=>b==='scale'?scaleBox:b==='measures'?(list.length?grid:nothing):html`<div class="nc-tile-details"><div class="nw-label">Détails</div>${detailList}</div>`);
+    const chips=st.tilesOpen?nothing:chipRow(chipValues(v,config.tile_chips??CHIPS));
+    return html`<ha-card class="nc-c" data-level=${top} ?data-starting=${!!v.starting}>
+      ${hero({name,level:top,slides:all,scaleLabel:'',scale:html``,st,why:whyLines(v),compact:true,small:true,still,after:chips})}
+      ${blocks.length?html`<div class="nc-body nc-tile-body">${fold({label:'Mesures et détails',summary:list.length?summary:'',open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tile',body:html`<div class="nc-tile-blocks">${body}</div>`})}</div>`:nothing}
+    </ha-card>`;
+  }
+  const measures=list.length&&config.show_measures!==false;
+  const body=measures||config.show_details!==false;
+  return html`<ha-card class="nc-c" data-level=${top} ?data-starting=${!!v.starting}>
+    ${hero({name,level:top,slides:all,scaleLabel:'Température',scale:sc??html``,st,why:whyLines(v),compact:!sc,still})}
+    ${!body?nothing:html`<div class="nc-body">
+      ${measures?fold({label:'Mesures',summary,open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tiles',body:grid,keep:list.filter(t=>t.out||tileClass(t).includes(' mute')).map(tile)}):nothing}
+      ${config.show_details===false?nothing:fold({label:'Détails',summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:st.uid+'-details',body:detailList})}
     </div>`}
   </ha-card>`;
 }
@@ -321,7 +377,7 @@ export class NiakAdviceTicker extends LitElement {
     return html`<div class="nc-grid" @mouseenter=${()=>this.hold(true)} @mouseleave=${()=>this.hold(false)} @focusin=${()=>this.hold(true)} @focusout=${()=>this.hold(false)}
         @click=${(e:Event)=>{if(many&&!(e.target as HTMLElement).closest('.nc-bars'))this.go(i+1);}} style=${many?'cursor:pointer':''}>
       <div class="nc-copy">
-        <div class="nc-tk-head"><span class="nw-label">${many?'Conseils':'Conseil'}</span>${many?html`<span class="nc-tk-count">${i+1} sur ${list.length}</span>
+        <div class="nc-tk-head"><span class="nw-label">${many?'Conseils':list[0]?.pill&&list[0].level==='neutral'?'État':'Conseil'}</span>${many?html`<span class="nc-tk-count">${i+1} sur ${list.length}</span>
           <span class="nc-bars">${list.map((s,k)=>html`<button type="button" aria-label=${`Conseil ${k+1} : ${s.title}`} aria-current=${k===i?'true':'false'} data-level=${s.level} class=${k<i?'done':k===i?(this.paused||this.calm?'done':'on'):''} @click=${()=>this.go(k)}><i></i></button>`)}</span>`:nothing}</div>
         <div class="nc-stack" aria-live=${this.paused?'polite':'off'}>${list.map((s,k)=>html`<div class=${'nc-slide'+(k===i?' on':k===this.previous?' out':'')} aria-hidden=${k===i?'false':'true'}>
           ${many?html`<span class="nw-chip nc-slide-pill" data-level=${s.level}>${s.pill}</span>`:nothing}<p class="nc-advice">${s.title}</p>${s.line?html`<p class="nc-line">${s.line}</p>`:nothing}</div>`)}</div>

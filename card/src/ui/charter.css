@@ -12,7 +12,7 @@
 * {box-sizing:border-box} body {margin:0;max-width:1460px;padding:28px 28px 0;margin-inline:auto} [hidden] {display:none!important}
 button,input,select {font:inherit;color:inherit} button {cursor:pointer} button:disabled {opacity:.4;cursor:default}
 button,select,input[type="number"] {border:1px solid var(--line);border-radius:8px;background:var(--bg)}
-button {padding:9px 13px;transition:background .2s var(--ease)} button:hover {background:color-mix(in srgb,var(--fg) 7%,var(--bg))}
+button {padding:9px 13px;transition:background .2s var(--ease)}
 :focus-visible {outline:2px solid var(--accent);outline-offset:3px} ::selection {background:color-mix(in srgb,var(--accent) 30%,var(--bg));color:var(--fg)}
 input {caret-color:var(--accent)} input[type="range"] {width:100%;margin:8px 0 0;accent-color:var(--accent)}
 input[type="checkbox"] {width:17px;height:17px;flex-shrink:0;margin:0} select {max-width:100%;padding:9px 26px 9px 10px} input[type="number"] {padding:8px;width:100%}
