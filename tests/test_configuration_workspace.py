@@ -223,3 +223,8 @@ class WeatherAirTests(AdapterFixture):
         self.service.home={'configured':True,'weather':'w1','sources':{'pollution':own}}
         with patch('custom_components.niak_comfort.configuration.weather_link.air',return_value={'entity_id':'sensor.x','index':2}):
             self.assertEqual(self.service.live_sources()['pollution'],own)
+
+    async def test_no_outdoor_air_chosen_stays_without_air(self):
+        self.service.home={'configured':True,'weather':'w1','sources':{}}
+        with patch('custom_components.niak_comfort.configuration.weather_link.air',return_value={'entity_id':'sensor.x','index':2}):
+            self.assertNotIn('pollution',self.service.live_sources())

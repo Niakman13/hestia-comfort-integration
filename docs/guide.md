@@ -42,6 +42,8 @@ Confort reprend alors :
 
 L’air du dehors suit la source choisie dans Niak Weather : Atmo France ou une station WAQI. Changez-la dans Weather : Confort suit. Il faut Niak Weather 2.5.7 ou plus récent.
 
+Vous avez choisi **Pas de qualité de l’air** dans Confort ? Ce choix est respecté : l’air de Weather n’est pas pris en compte.
+
 ### Avec vos propres capteurs
 
 Choisissez **Vos propres capteurs**, puis chaque mesure. Toutes sont facultatives :
