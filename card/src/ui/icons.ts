@@ -25,6 +25,7 @@ const paths:Record<string,string>={
   alert:'<path d="m12 3 10 18H2L12 3Zm0 6v5m0 3v.1"/>',
   ask:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/>',
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  mute:'<path d="M3 3l18 18M8.6 16.4a5 5 0 0 1 6.8 0M5.2 12.9a9.9 9.9 0 0 1 4.6-2.6M18.8 12.9a10 10 0 0 0-2.3-1.6M2 9.3a15 15 0 0 1 4.4-2.7M22 9.3A15 15 0 0 0 11 5.6M12 20h.01"/>',
   shut:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M17 12H8m3-3-3 3 3 3"/>',
   pm:'<circle cx="7" cy="8" r="1.4"/><circle cx="14" cy="6" r="1.1"/><circle cx="18" cy="11" r="1.4"/><circle cx="10" cy="14" r="1.1"/><circle cx="16" cy="17" r="1.3"/><circle cx="7" cy="19" r="1"/>',
   flask:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/>',

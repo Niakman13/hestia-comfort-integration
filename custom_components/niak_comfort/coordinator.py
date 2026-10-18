@@ -12,7 +12,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, LEARNING_REFRESH_SECONDS, OPEN_DEBOUNCE_SECONDS, SEASON_REFRESH_SECONDS, SOURCES, VIEW_VERSION
+from .const import DOMAIN, LEARNING_REFRESH_SECONDS, OPEN_DEBOUNCE_SECONDS, SEASON_REFRESH_SECONDS, SOURCES, STARTUP_GRACE_SECONDS, VIEW_VERSION
 from .engine.assessment import Opening, Settings, Sun, assess
 from .engine import learning
 from .engine.sources import normalize, Reading
@@ -37,6 +37,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.entry_id = entry.entry_id
         self.stop_listeners = set()
         self.opened_since = {}
+        self.started = dt_util.utcnow()
         self.absent_since = {}
         self.history_reports = {}
         self.histories = {"temperature_history": deque(maxlen=360), "outdoor_history": deque(maxlen=360)}
@@ -192,7 +193,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 "comfort_minimum": self.settings.minimum,
                 "computed_at": now.isoformat(), "assessment": self.previous.to_dict(),
                 "observations": {k: asdict(v) for k, v in readings.items()},
-                "names": {e: (state.name if (state := self.hass.states.get(e)) else e) for e in windows}}
+                "names": {e: (state.name if (state := self.hass.states.get(e)) else e) for e in windows},
+                "starting": (now - self.started).total_seconds() < STARTUP_GRACE_SECONDS}
 
     def _outdoor_entity(self):
         return self._source_entity("outdoor_temperature")

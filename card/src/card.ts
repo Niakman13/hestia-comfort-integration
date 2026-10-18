@@ -5,7 +5,7 @@ import charte from './ui/niak-charte.css';
 import roomStyle from './ui/room.css';
 import {cleanConfig,type Config,type View,type HomeAssistant} from './types';
 import {icon} from './ui/icons';
-import {roomCard,type CardState} from './views/room';
+import {roomCard,asking,type CardState} from './views/room';
 import {LiveView} from './live';
 import './editor';
 import './home';
@@ -30,6 +30,9 @@ export class NiakComfortCard extends LitElement {
   @state() private problem?:string;
   @state() private open:Record<string,boolean>={};
   @state() private dialogOpen=false;
+  /** Set by Home Assistant in the card editor's preview and while the dashboard is edited. */
+  @property({type:Boolean}) preview=false;
+  @property({type:Boolean}) editMode=false;
   private uid=`nc-${++instances}`;
   private openingControl?:HTMLElement;
   private live=new LiveView(v=>{this.view=v;this.problem=undefined;},code=>{this.problem=code;},()=>{this.view=undefined;this.closeFull();});
@@ -40,14 +43,16 @@ export class NiakComfortCard extends LitElement {
   }
   static getConfigElement(){return document.createElement('niak-comfort-card-editor');}
   static getStubConfig():Config{return {type:'custom:niak-comfort-card',format:'tile'};}
-  getCardSize(){return this.config?.format==='mini'?3:this.config?.format==='full'?10:6;}
+  getCardSize(){const f=this.config?.format;return f==='mini'?1:f==='alert'?2:f==='full'?10:f==='measures'?4:3;}
   getGridOptions(){return {columns:this.config?.format==='full'?'full':12,rows:'auto',min_columns:6};}
   connectedCallback(){super.connectedCallback();this.connect();}
   disconnectedCallback(){super.disconnectedCallback();this.live.stop();this.closeFull();}
   protected updated(changed:PropertyValues){
     if(changed.has('hass')||changed.has('config')) this.connect();
     const theme=this.config?.theme==='auto'||!this.config?.theme?(this.hass?.themes?.darkMode===false?'light':'dark'):this.config.theme;
-    this.setAttribute('theme',theme);this.toggleAttribute('still',this.config?.animations===false);this.toggleAttribute('flat',this.config?.glass_effect===false);
+    this.setAttribute('theme',theme);this.toggleAttribute('still',this.config?.animations===false);
+    // An alert with nothing to say takes no room on the dashboard.
+    this.toggleAttribute('empty',this.config?.format==='alert'&&!!this.view&&!asking(this.view)&&!this.preview&&!this.editMode);this.toggleAttribute('flat',this.config?.glass_effect===false);
     // The new cards follow the Home Assistant theme, like Niak Weather; a theme forced in the card's settings still wins.
     if(this.config?.theme==='light'||this.config?.theme==='dark')this.setAttribute('forced',this.config.theme);else this.removeAttribute('forced');
     const dialog=this.renderRoot.querySelector<HTMLDialogElement>('dialog');
@@ -76,11 +81,31 @@ export class NiakComfortCard extends LitElement {
     // Navigate inside Home Assistant, without reloading the whole page.
     history.pushState(null,'',path);window.dispatchEvent(new CustomEvent('location-changed',{detail:{replace:false}}));
   }
+  /** What a long press (a tap on mini and alert) does: the full card in a window by default, a page, or nothing. */
+  private act=(e:Event)=>{
+    const c=this.config!,action=c.hold_action??(c.hold_path?'page':'popup');
+    if(action==='none')return;
+    if(action==='page'&&c.hold_path){history.pushState(null,'',c.hold_path);window.dispatchEvent(new CustomEvent('location-changed',{detail:{replace:false}}));return;}
+    this.openFull(e);
+  };
+  private pressTimer?:ReturnType<typeof setTimeout>;
+  private held=false;
+  private press=(e:PointerEvent)=>{if(e.button!==0)return;this.held=false;clearTimeout(this.pressTimer);
+    this.pressTimer=setTimeout(()=>{this.held=true;this.act(e);},500);};
+  private release=()=>{clearTimeout(this.pressTimer);};
+  // After a long press, the click that follows must not also fold the tile or open a measure.
+  private swallow={handleEvent:(e:Event)=>{if(this.held){e.stopPropagation();e.preventDefault();this.held=false;}},capture:true};
   private panel(full:boolean,modal=false){
-    const mini=!full&&this.config!.format==='mini';
-    const card=roomCard(this.view!,this.config!,this.state(modal),mini);
-    // The mini format opens the full card in a window.
-    return mini?html`<div class="nc-mini" role="button" tabindex="0" aria-label="Ouvrir la carte complète" @click=${this.openFull} @keydown=${(e:KeyboardEvent)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();this.openFull(e);}}}>${card}</div>`:card;
+    const format=full?'full':this.config!.format??'tile';
+    const card=roomCard(this.view!,this.config!,this.state(modal),format);
+    // The alert format has nothing to say: hidden on the dashboard, a short note in the card editor's preview.
+    if(card===null)return this.preview||this.editMode?html`<ha-card class="nc-c nc-alert-note" data-level="calm"><p>Alerte · ${this.view!.title} : rien à signaler. La carte n’apparaît que lorsqu’un geste est conseillé.</p></ha-card>`:nothing;
+    if(format==='full')return card;
+    const tap=format==='mini'||format==='alert';
+    const label=tap?'Ouvrir la carte complète':undefined;
+    return html`<div class="nc-hold" role=${tap?'button':'group'} tabindex=${tap?0:-1} aria-label=${label??this.view!.title}
+      @click=${tap?this.act:this.swallow} @pointerdown=${tap?undefined:this.press} @pointerup=${this.release} @pointerleave=${this.release} @pointercancel=${this.release} @contextmenu=${(e:Event)=>{if(this.held)e.preventDefault();}}
+      @keydown=${(e:KeyboardEvent)=>{if(tap&&(e.key==='Enter'||e.key===' ')){e.preventDefault();this.act(e);}}}>${card}</div>`;
   }
   protected render(){
     if(!this.config)return nothing;

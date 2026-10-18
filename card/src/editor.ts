@@ -1,99 +1,153 @@
-import {LitElement,html,css,type PropertyValues} from 'lit';
+import {LitElement,html,css,nothing} from 'lit';
 import {property,state} from 'lit/decorators.js';
-import {cleanConfig,cleanHomeConfig,MODULES,moduleLabels,type Config,type HomeConfig,type Module,type HomeAssistant,type Entry} from './types';
-import {icon} from './ui/icons';
+import {cleanConfig,cleanHomeConfig,MODULES,moduleLabels,SCALE_MARKS,CHIPS,TILE_BLOCKS,type Config,type HomeConfig,type HomeAssistant,type Entry} from './types';
+
+/* The editors are built like Niak Weather's: the room (or title) and the format on top, then folding groups that
+   change with the format. The theme follows Home Assistant: it is no longer offered. */
+type Item={name:string;title?:string};
+const toggle=(name:string)=>({name,selector:{boolean:{}}});
+const group=(title:string,icon:string,schema:unknown[],expanded=false)=>({type:'expandable',name:'',title,icon,flatten:true,expanded,schema});
+const choices=(name:string,options:[string,string][])=>({name,selector:{select:{multiple:true,reorder:true,mode:'list',options:options.map(([value,label])=>({value,label}))}}});
+const dropdown=(name:string,options:[string,string][])=>({name,required:true,selector:{select:{mode:'dropdown',options:options.map(([value,label])=>({value,label}))}}});
+const look=()=>group('Visuel et performance','mdi:palette-outline',[toggle('animations'),toggle('glass_effect')],true);
+const hold=(action:string)=>group('Fonctionnalités','mdi:tune-variant',[
+  dropdown('hold_action',[['popup','Ouvrir la carte complète en fenêtre'],['page','Ouvrir une page'],['none','Rien']]),
+  ...(action==='page'?[{name:'hold_path',selector:{text:{}}}]:[])]);
+const chipOptions:[string,string][]=[['temperature','Température'],['humidity','Humidité'],['co2','CO₂']];
+const markOptions:[string,string][]=[['band','Votre plage'],['day','Min–max 24 h'],['out','Dehors']];
+const bannerOptions:[string,string][]=[['remedies','Remèdes en cours (purificateur, VMC)'],['later','Plus tard (meilleur moment)']];
+const labels:Record<string,string>={entry_id:'Pièce',title:'Titre facultatif',format:'Format',animations:'Animations',glass_effect:'Effet verre dépoli',
+  rotate:'Faire défiler les conseils',banner_blocks:'Contenu du bandeau',scale_marks:'Repères de l’échelle',modules:'Rubriques',measures_open:'Mesures dépliées au départ',
+  show_details:'Section Détails',details_open:'Détails dépliés au départ',tile_chips:'Pastilles de la tuile repliée',tile_blocks:'Contenu de la tuile dépliée',
+  mini_values:'Valeurs de la ligne',hold_action:'Appui long',hold_path:'Page à ouvrir',show_scale:'Échelle des pièces',show_rooms:'Section Pièces',rooms_open:'Pièces dépliées au départ',
+  list_order:'Ordre des pièces'};
+const helpers:Record<string,string>={
+  animations:'Coupées, la lumière et l’anneau restent fixes et les conseils ne défilent plus seuls.',
+  glass_effect:'Le flou demande beaucoup de ressources : à couper sur un appareil lent. Coupé, le verre devient plus opaque.',
+  rotate:'Toutes les 4,5 s ; décoché, ils changent d’un appui.',
+  banner_blocks:'Le conseil du moment reste toujours. Cochez ce qui défile après lui, dans l’ordre.',
+  scale_marks:'Tout décocher retire l’échelle.',modules:'Tout décocher retire la section ; faites glisser pour l’ordre.',
+  measures_open:'Repliées, les mesures hors de votre plage restent visibles.',
+  tile_chips:'Sous le conseil ; une mesure hors plage passe en ambre.',tile_blocks:'Ce qui s’ouvre d’un appui, dans l’ordre.',
+  mini_values:'À droite du conseil.',hold_action:'La carte complète par-dessus la page, une page de votre tableau de bord, ou rien.',
+  hold_path:'Le chemin de la page, par exemple /confort ou /lovelace/confort.',rooms_open:'Repliées, les pièces qui demandent un geste restent visibles.'};
+const styles=css`.note{color:var(--secondary-text-color);font-size:13px;line-height:1.6;margin:0 0 16px}.note.warn{color:var(--primary-text-color)}a{color:var(--primary-color)}`;
+/** A link inside Home Assistant opens there, without reloading the page. */
+const follow=(e:MouseEvent)=>{e.preventDefault();history.pushState(null,'',(e.currentTarget as HTMLAnchorElement).getAttribute('href')??'/niak/confort');
+  window.dispatchEvent(new CustomEvent('location-changed',{bubbles:true,composed:true}));};
+/** Mini and alert act on a simple tap; the other formats on a long press. */
+const labelFor=(format:string|undefined)=>(item:Item)=>item.title??(item.name==='hold_action'&&['mini','alert'].includes(format??'')?'Appui':labels[item.name]??item.name);
+const helperFor=(item:Item)=>helpers[item.name]??'';
+/** Drop empty values, a page path that no longer applies, and defaults the card did not hold: the YAML stays short. */
+function tidy(next:Record<string,unknown>,before:Record<string,unknown>,defaults:Record<string,unknown>){
+  if(next.hold_action!=='page')delete next.hold_path;
+  for(const k of Object.keys(next)){
+    if(next[k]===''||next[k]===undefined){delete next[k];continue;}
+    if(!(k in before)&&k in defaults&&JSON.stringify(next[k])===JSON.stringify(defaults[k]))delete next[k];
+  }
+  return next;
+}
 
 export class ComfortEditor extends LitElement {
   @property({attribute:false}) hass?:HomeAssistant;
   @state() private config?:Config;
-  @state() private entries:Entry[]=[];
-  @state() private error='';
-  private connection?:HomeAssistant['connection'];
-  private generation=0;
-  static styles=css`
-    :host {display:block;color:var(--primary-text-color);font:14px/1.5 var(--paper-font-body1_-_font-family,Roboto,system-ui,sans-serif)}
-    * {box-sizing:border-box}h3 {font-size:16px;margin:24px 0 12px}p {font-size:13px;color:var(--secondary-text-color)}.hint {margin:-6px 0 10px 28px;font-size:12px}
-    label {display:flex;flex-direction:column;gap:6px;margin:12px 0}input,select,button {font:inherit;color:inherit;border:1px solid var(--divider-color,#bdc5d1);border-radius:8px;background:var(--card-background-color,#fff);padding:10px;max-width:100%;min-height:40px}
-    .check {flex-direction:row;align-items:center;gap:10px}.check input {width:18px;height:18px;min-height:18px;margin:0;accent-color:var(--primary-color)}
-    .row {display:flex;gap:10px;align-items:center}.row label {flex:1}.row button {display:flex;align-items:center;justify-content:center;min-width:40px;padding:8px}.icon {width:18px;height:18px}
-    :focus-visible {outline:2px solid var(--primary-color);outline-offset:3px}button {cursor:pointer}button:disabled {opacity:.4;cursor:default}
-  `;
-  setConfig(config:Config){this.config=cleanConfig(config);}
-  protected updated(changed:PropertyValues){if(changed.has('hass')&&this.hass?.connection!==this.connection){this.connection=this.hass?.connection;void this.load();}}
-  disconnectedCallback(){super.disconnectedCallback();this.generation++;this.connection=undefined;}
-  connectedCallback(){super.connectedCallback();if(this.hass)void this.load();}
-  private async load(){
-    if(!this.hass)return;const generation=++this.generation;this.error='';this.entries=[];
-    try{const entries=await this.hass.callWS<Entry[]>({type:'niak_comfort/entries'});if(generation===this.generation){this.entries=entries;if(!entries.length)this.error='Aucune pièce Niak Comfort chargée. Ajoutez une pièce dans l’intégration.';}}
-    catch{if(generation===this.generation)this.error='La liste des pièces est indisponible. Vérifiez que l’intégration Niak Comfort est installée et chargée.';}
+  /** The integration's rooms; null when it does not answer. */
+  @state() private entries?:Entry[]|null;
+  private asked=false;
+  static styles=styles;
+  setConfig(config:Config){const next=cleanConfig(config);if(this.config&&JSON.stringify(next)===JSON.stringify(this.config))return;this.config=next;}
+  protected shouldUpdate(changed:Map<PropertyKey,unknown>){
+    // Home Assistant pushes every state change to editors: nothing here depends on them.
+    if(changed.has('hass')&&!this.asked&&this.hass){this.asked=true;
+      this.hass.callWS<Entry[]>({type:'niak_comfort/entries'}).then(e=>{this.entries=e;},()=>{this.entries=null;});}
+    return !(changed.size===1&&changed.has('hass'));
   }
-  private change(patch:Partial<Config>){
-    this.config=cleanConfig({...this.config!,...patch});
+  private schema(){
+    const c=this.config!,f=c.format??'tile',action=c.hold_action??(c.hold_path?'page':'popup');
+    const rooms=this.entries&&this.entries.length>1?[{name:'entry_id',selector:{select:{mode:'dropdown',options:this.entries.map(e=>({value:e.entry_id,label:e.title}))}}}]:[];
+    const format={name:'format',selector:{select:{mode:'list',options:[
+      {value:'full',label:'Complète : bandeau, échelle, mesures et détails'},{value:'tile',label:'Tuile : le conseil et ses pastilles, se déplie d’un appui'},
+      {value:'intermediate',label:'Tuile dépliée : la même, ouverte au départ'},{value:'mini',label:'Mini : une ligne, le conseil et la température'},
+      {value:'measures',label:'Mesures : les tuiles de la pièce, sans conseil'},{value:'alert',label:'Alerte : visible seulement quand un geste est conseillé'}]}}};
+    const head=[...rooms,{name:'title',selector:{text:{}}},format];
+    const rubriques=choices('modules',MODULES.filter(m=>m!=='temperature').map(m=>[m,moduleLabels[m]]));
+    if(f==='mini')return [...head,look(),group('Contenu de la ligne','mdi:view-list-outline',[choices('mini_values',chipOptions)],true),hold(action)];
+    if(f==='alert')return [...head,look(),group('Bandeau','mdi:view-day-outline',[choices('banner_blocks',bannerOptions),toggle('rotate')],true),hold(action)];
+    if(f==='measures')return [...head,look(),group('Contenu','mdi:view-grid-outline',[rubriques,choices('scale_marks',markOptions)],true),hold(action)];
+    if(f==='tile'||f==='intermediate')return [...head,look(),
+      group('Tuile repliée','mdi:view-day-outline',[choices('tile_chips',chipOptions),choices('banner_blocks',bannerOptions),toggle('rotate')],true),
+      group('Tuile dépliée','mdi:view-grid-outline',[choices('tile_blocks',[['scale','Échelle de température'],['measures','Mesures'],['details','Détails']]),rubriques,choices('scale_marks',markOptions)]),
+      hold(action)];
+    return [...head,look(),
+      group('Bandeau','mdi:view-day-outline',[choices('banner_blocks',bannerOptions),toggle('rotate')],true),
+      group('Échelle de température','mdi:thermometer',[choices('scale_marks',markOptions)]),
+      group('Mesures','mdi:view-grid-outline',[rubriques,toggle('measures_open')]),
+      group('Détails','mdi:text-box-outline',[toggle('show_details'),toggle('details_open')])];
+  }
+  private changed(e:CustomEvent<{value:Record<string,unknown>}>){
+    e.stopPropagation();if(!this.config)return;
+    const v=e.detail.value,next:Record<string,unknown>={...this.config,...v};
+    // The scale needs the temperature module; the lists replace the older on/off switches they cover.
+    if(Array.isArray(v.modules))next.modules=[...(v.modules as string[]),...((this.config.modules??MODULES).includes('temperature')?['temperature']:[])];
+    if('scale_marks' in v)delete next.show_scale;
+    if('modules' in v)delete next.show_measures;
+    this.config=cleanConfig(tidy(next,this.config as unknown as Record<string,unknown>,this.defaults(this.config)) as unknown as Config);
     this.dispatchEvent(new CustomEvent('config-changed',{detail:{config:this.config},bubbles:true,composed:true}));
   }
-  private module(id:Module,enabled:boolean){const current=this.config?.modules??[];this.change({modules:enabled?[...current,id]:current.filter(m=>m!==id)});}
-  private move(id:Module){const order=[...(this.config?.modules??[])],i=order.indexOf(id);if(i>0){[order[i-1],order[i]]=[order[i],order[i-1]];this.change({modules:order});}}
-  private check(key:keyof Config,label:string,fallback:boolean,hint?:string,disabled=false){
-    const c=this.config!,value=(c[key] as boolean|undefined)??fallback;
-    return html`<label class="check"><input type="checkbox" .checked=${value} ?disabled=${disabled} @change=${(e:Event)=>this.change({[key]:(e.target as HTMLInputElement).checked} as Partial<Config>)}>${label}</label>${hint?html`<p class="hint">${hint}</p>`:null}`;
+  private defaults(c:Config):Record<string,unknown>{
+    return {animations:true,glass_effect:true,rotate:true,show_details:true,details_open:false,measures_open:false,
+      banner_blocks:['remedies','later'],tile_chips:[...CHIPS],tile_blocks:[...TILE_BLOCKS],mini_values:['temperature'],hold_action:c.hold_path?'page':'popup',
+      scale_marks:c.show_scale===false||c.format==='measures'?[]:[...SCALE_MARKS]};
   }
   protected render(){
-    const c=this.config;if(!c)return html``;
-    const order=[...c.modules??[],...MODULES.filter(m=>!c.modules?.includes(m))],full=c.format==='full'||c.format==='intermediate',mini=c.format==='mini';
-    return html`<h3>La carte</h3>
-      <label>Pièce<select .value=${c.entry_id??''} @change=${(e:Event)=>this.change({entry_id:(e.target as HTMLSelectElement).value||undefined})}><option value="" ?selected=${!c.entry_id}>Automatique · une seule pièce configurée</option>
-        ${c.entry_id&&!this.entries.some(e=>e.entry_id===c.entry_id)?html`<option value=${c.entry_id} selected>Pièce sélectionnée · à vérifier</option>`:null}
-        ${this.entries.map(e=>html`<option value=${e.entry_id} ?selected=${e.entry_id===c.entry_id}>${e.title}</option>`)}</select></label>
-      ${this.error?html`<p role="status">${this.error}</p><button @click=${()=>this.load()}>Recharger les pièces</button>`:null}
-      <label>Titre facultatif<input type="text" maxlength="100" .value=${c.title??''} @input=${(e:Event)=>this.change({title:(e.target as HTMLInputElement).value})}></label>
-      <label>Format<select .value=${full?'full':c.format??'tile'} @change=${(e:Event)=>this.change({format:(e.target as HTMLSelectElement).value as Config['format']})}>
-        <option value="full">Complète : bandeau, échelle, mesures et détails</option><option value="tile">Tuile : mesures repliées au départ</option><option value="mini">Mini : le bandeau seul, un appui ouvre la complète</option></select></label>
-      <h3>Contenu</h3>
-      ${this.check('rotate','Faire défiler les conseils',true,'Quand il y a plusieurs conseils, ils défilent toutes les 4,5 s. Décoché, ils changent seulement d’un appui.')}
-      ${this.check('show_scale','Échelle de température',true,'Votre plage, la température actuelle, le minimum et le maximum des dernières 24 h et dehors.',mini)}
-      ${this.check('show_measures','Section Mesures',true,undefined,mini)}
-      ${this.check('measures_open','Mesures dépliées au départ',full,'Repliées, les mesures hors de votre plage restent visibles.',mini||c.show_measures===false)}
-      ${this.check('show_details','Section Détails',true,undefined,mini)}
-      ${this.check('details_open','Détails dépliés au départ',false,undefined,mini||c.show_details===false)}
-      <h3>Rubriques des mesures</h3><p class="hint">Masquer une rubrique change l’affichage, pas le calcul du conseil.</p>
-      ${order.filter(id=>id!=='temperature').map(id=>html`<div class="row"><label class="check"><input type="checkbox" .checked=${!!c.modules?.includes(id)} @change=${(e:Event)=>this.module(id,(e.target as HTMLInputElement).checked)}>${moduleLabels[id]}</label><button aria-label=${'Monter '+moduleLabels[id]} ?disabled=${!c.modules?.includes(id)||c.modules.indexOf(id)===0} @click=${()=>this.move(id)}>${icon('up')}</button></div>`)}
-      <h3>Visuel et performance</h3><label>Thème<select .value=${c.theme??'auto'} @change=${(e:Event)=>this.change({theme:(e.target as HTMLSelectElement).value as Config['theme']})}><option value="auto">Suivre Home Assistant</option><option value="light">Clair</option><option value="dark">Sombre</option></select></label>
-      ${this.check('animations','Animations',true,'Coupées, les conseils ne défilent plus seuls et rien ne bouge.')}
-      ${this.check('glass_effect','Effet de verre',true,'Le décocher allège l’affichage sur les appareils lents. La réduction des animations de votre appareil est toujours respectée.')}
-      <p class="hint">Les capteurs et préférences se règlent dans Niak Confort, accessible depuis la barre latérale de Home Assistant.</p>`;
+    if(!this.config||!this.hass)return nothing;
+    const c=this.config;
+    const data={...this.defaults(c),hold_action:c.hold_action??(c.hold_path?'page':'popup'),
+      ...c,scale_marks:c.scale_marks??(c.show_scale===false||c.format==='measures'?[]:[...SCALE_MARKS]),modules:c.show_measures===false?[]:(c.modules??MODULES).filter(m=>m!=='temperature')};
+    const one=this.entries?.length===1?this.entries[0]:this.entries?.find(e=>e.entry_id===c.entry_id);
+    return html`${this.entries===null?html`<p class="note warn">L’intégration Niak Confort ne répond pas : vérifiez qu’elle est installée et chargée.</p>`
+      :this.entries?.length===0?html`<p class="note warn">Aucune pièce : ouvrez <a href="/niak/confort" @click=${follow}>Niak Confort</a> dans la barre latérale pour en ajouter une.</p>`
+      :html`<p class="note">${one?html`Pièce : <b>${one.title}</b>. `:nothing}Les capteurs et préférences se règlent dans <a href="/niak/confort" @click=${follow}>Niak Confort</a>.</p>`}
+      <ha-form .hass=${this.hass} .data=${data} .schema=${this.schema()} .computeLabel=${labelFor(c.format)} .computeHelper=${helperFor} @value-changed=${this.changed}></ha-form>`;
   }
 }
 if(!customElements.get('niak-comfort-card-editor'))customElements.define('niak-comfort-card-editor',ComfortEditor);
 
-/** The home card's settings, laid out like the room card's: the card, its content, then visuals and performance. */
+const HOME_DEFAULTS:Record<string,unknown>={format:'full',animations:true,glass_effect:true,rotate:true,show_scale:true,show_rooms:true,rooms_open:false,show_details:true,details_open:false,
+  banner_blocks:['rooms','house'],list_order:'urgent',hold_action:'popup'};
+/** The home card's editor, built the same way. */
 export class ComfortHomeEditor extends LitElement {
   @property({attribute:false}) hass?:HomeAssistant;
   @state() private config?:HomeConfig;
-  static styles=ComfortEditor.styles;
+  static styles=styles;
   setConfig(config:HomeConfig){this.config=cleanHomeConfig(config);}
-  private change(patch:Partial<HomeConfig>){
-    this.config=cleanHomeConfig({...this.config!,...patch});
+  protected shouldUpdate(changed:Map<PropertyKey,unknown>){return !(changed.size===1&&changed.has('hass')&&!!this.config);}
+  private schema(){
+    const c=this.config!,f=c.format??'full',action=c.hold_action??(c.hold_path?'page':'popup');
+    const format={name:'format',selector:{select:{mode:'list',options:[
+      {value:'full',label:'Complète : bandeau, échelle des pièces, pièces et détails'},{value:'tile',label:'Tuile : le conseil de la pièce qui demande le plus, l’échelle des pièces'},
+      {value:'list',label:'Liste des pièces : une ligne par pièce'},{value:'mini',label:'Mini : une ligne pour toute la maison'},
+      {value:'alert',label:'Alerte : visible seulement si une pièce demande un geste'}]}}};
+    const head=[{name:'title',selector:{text:{}}},format];
+    const banner=group('Bandeau','mdi:view-day-outline',[choices('banner_blocks',[['rooms','Conseils des pièces'],['house','Gestes pour toute la maison (air traversant)']]),toggle('rotate')],true);
+    if(f==='mini')return [...head,look(),hold(action)];
+    if(f==='alert')return [...head,look(),banner,hold(action)];
+    if(f==='list')return [...head,look(),group('Contenu','mdi:format-list-bulleted',[dropdown('list_order',[['urgent','Celles qui demandent un geste d’abord'],['floor','Par étage']])],true)];
+    if(f==='tile')return [...head,look(),banner,group('Pièces','mdi:view-grid-outline',[toggle('show_scale'),toggle('show_rooms'),toggle('rooms_open')]),hold(action)];
+    return [...head,look(),banner,group('Échelle des pièces','mdi:thermometer',[toggle('show_scale')]),
+      group('Pièces','mdi:view-grid-outline',[toggle('show_rooms'),toggle('rooms_open')]),group('Détails','mdi:text-box-outline',[toggle('show_details'),toggle('details_open')])];
+  }
+  private changed(e:CustomEvent<{value:Record<string,unknown>}>){
+    e.stopPropagation();if(!this.config)return;
+    this.config=cleanHomeConfig(tidy({...this.config,...e.detail.value},this.config as unknown as Record<string,unknown>,HOME_DEFAULTS) as unknown as HomeConfig);
     this.dispatchEvent(new CustomEvent('config-changed',{detail:{config:this.config},bubbles:true,composed:true}));
   }
-  private check(key:keyof HomeConfig,label:string,fallback:boolean,hint?:string,disabled=false){
-    const value=(this.config![key] as boolean|undefined)??fallback;
-    return html`<label class="check"><input type="checkbox" .checked=${value} ?disabled=${disabled} @change=${(e:Event)=>this.change({[key]:(e.target as HTMLInputElement).checked} as Partial<HomeConfig>)}>${label}</label>${hint?html`<p class="hint">${hint}</p>`:null}`;
-  }
   protected render(){
-    const c=this.config;if(!c)return html``;
-    return html`<h3>La carte</h3>
-      <label>Titre facultatif<input type="text" maxlength="100" placeholder="Mon logement" .value=${c.title??''} @input=${(e:Event)=>this.change({title:(e.target as HTMLInputElement).value||undefined})}></label>
-      <h3>Contenu</h3>
-      ${this.check('rotate','Faire défiler les conseils',true,'Quand plusieurs pièces demandent quelque chose, leurs conseils défilent toutes les 4,5 s. Décoché, ils changent seulement d’un appui.')}
-      ${this.check('show_scale','Échelle des pièces',true,'Votre plage, la température de chaque pièce et dehors.')}
-      ${this.check('show_rooms','Section Pièces',true)}
-      ${this.check('rooms_open','Pièces dépliées au départ',false,'Repliées, les pièces qui demandent un geste restent visibles.',c.show_rooms===false)}
-      ${this.check('show_details','Section Détails',true)}
-      ${this.check('details_open','Détails dépliés au départ',false,undefined,c.show_details===false)}
-      <h3>Visuel et performance</h3><label>Thème<select .value=${c.theme??'auto'} @change=${(e:Event)=>this.change({theme:(e.target as HTMLSelectElement).value as HomeConfig['theme']})}><option value="auto">Suivre Home Assistant</option><option value="light">Clair</option><option value="dark">Sombre</option></select></label>
-      ${this.check('animations','Animations',true,'Coupées, les conseils ne défilent plus seuls et rien ne bouge.')}
-      ${this.check('glass_effect','Effet de verre',true,'Le décocher allège l’affichage sur les appareils lents. La réduction des animations de votre appareil est toujours respectée.')}
-      <p class="hint">Les pièces et préférences se règlent dans Niak Confort, accessible depuis la barre latérale de Home Assistant.</p>`;
+    if(!this.config||!this.hass)return nothing;
+    const c=this.config;
+    const data={...HOME_DEFAULTS,hold_action:c.hold_action??(c.hold_path?'page':'popup'),...c};
+    return html`<p class="note">Toutes les pièces de Niak Confort. Elles se règlent dans <a href="/niak/confort" @click=${follow}>Niak Confort</a>.</p>
+      <ha-form .hass=${this.hass} .data=${data} .schema=${this.schema()} .computeLabel=${labelFor(c.format)} .computeHelper=${helperFor} @value-changed=${this.changed}></ha-form>`;
   }
 }
 if(!customElements.get('niak-comfort-home-card-editor'))customElements.define('niak-comfort-home-card-editor',ComfortHomeEditor);

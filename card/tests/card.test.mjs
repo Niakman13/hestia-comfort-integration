@@ -11,7 +11,7 @@ await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts','src/views/
 const {cleanConfig,cleanHomeConfig}=await import(pathToFileURL(join(temp,'types.mjs')));
 const {isView,numeric,summary,readingStatus,coverageText,windFrom,evolutionLines,co2Metric,solarMetric}=await import(pathToFileURL(join(temp,'view.mjs')));
 const {LiveView}=await import(pathToFileURL(join(temp,'live.mjs')));
-const {outsideGaps,advice,slides}=await import(pathToFileURL(join(temp,'views/room.mjs')));
+const {outsideGaps,advice,slides,roomCard}=await import(pathToFileURL(join(temp,'views/room.mjs')));
 const fixtures=JSON.parse(await readFile(new URL('../preview/card-fixtures.json',import.meta.url),'utf8'));
 const fresh=()=>({...structuredClone(fixtures[0].view),computed_at:new Date().toISOString()});
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
@@ -206,4 +206,30 @@ test('the home card keeps its display settings and refuses wrong ones',()=>{
   assert.equal(c.rotate,false);assert.equal(c.show_rooms,false);assert.equal(c.glass_effect,false);
   assert.throws(()=>cleanHomeConfig({type:'custom:niak-comfort-home-card',show_scale:'oui'}));
   assert.throws(()=>cleanHomeConfig({type:'custom:niak-comfort-card'}));
+});
+
+test('silent sensors are a state, not advice: loading after a start, then muted; one secondary sensor keeps the banner calm',()=>{
+  const silent={value:null,quality:'unknown',source:'sensor.x',received_at:null,detail:'unavailable',unit:null};
+  const v=fresh();v.observations={...v.observations,indoor_temperature:silent,indoor_humidity:silent,co2:silent};
+  v.assessment={...v.assessment,reason:'incomplete_data',level:'neutral',action:'unknown',missing:['co2','indoor_humidity','indoor_temperature']};
+  v.starting=true;let a=advice(v);assert.equal(a.title,'Mesures en chargement');assert.equal(a.pill,'Démarrage');
+  v.starting=false;a=advice(v);assert.equal(a.title,'Mesures absentes');assert.match(plain(a.line),/3 capteurs ne répondent pas/);
+  const w=fresh();w.observations={...w.observations,co2:silent};w.assessment={...w.assessment,reason:'incomplete_data',level:'neutral',missing:['co2']};
+  a=advice(w);assert.equal(a.title,'Rien à faire');assert.equal(a.pill,'Un capteur muet');
+});
+
+test('the new formats and their settings: lists checked, alert hidden when nothing is asked',()=>{
+  const c=cleanConfig({type:'custom:niak-comfort-card',format:'alert',banner_blocks:['later'],scale_marks:[],tile_chips:['humidity','humidity'],hold_action:'page',hold_path:'/confort'});
+  assert.deepEqual(c.tile_chips,['humidity']);assert.equal(c.format,'alert');
+  assert.throws(()=>cleanConfig({type:'custom:niak-comfort-card',format:'grand'}));
+  assert.throws(()=>cleanConfig({type:'custom:niak-comfort-card',scale_marks:['nuit']}));
+  assert.throws(()=>cleanConfig({type:'custom:niak-comfort-card',hold_action:'vibrer'}));
+  const st={why:false,tilesOpen:false,detailsOpen:false,uid:'t',toggle(){}};
+  const calm=fresh();calm.assessment={...calm.assessment,level:'calm',reason:'within_comfort'};
+  assert.equal(roomCard(calm,cleanConfig({type:'custom:niak-comfort-card',format:'alert'}),st,'alert'),null);
+  const asked=fresh();asked.assessment={...asked.assessment,level:'action',reason:'air_needed',action:'ouvrir'};
+  assert.notEqual(roomCard(asked,cleanConfig({type:'custom:niak-comfort-card',format:'alert'}),st,'alert'),null);
+  assert.match(flat(roomCard(asked,cleanConfig({type:'custom:niak-comfort-card',format:'mini'}),st,'mini')),/nc-line-card/);
+  const h=cleanHomeConfig({type:'custom:niak-comfort-home-card',format:'list',list_order:'floor',banner_blocks:['rooms']});
+  assert.equal(h.list_order,'floor');assert.throws(()=>cleanHomeConfig({type:'custom:niak-comfort-home-card',format:'grille'}));
 });
