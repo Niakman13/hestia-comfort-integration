@@ -87,12 +87,11 @@ export class NiakComfortHomeCard extends LitElement {
   private details(h:Home){
     const row=(t:string,x:string)=>h2`<li><b>${t}</b><span> · ${x}</span></li>`,out=[];
     if(h.start_with)out.push(row('Commencez par',h.start_with+(h.start_floor?` (${h.start_floor.name})`:'')));
-    if(h.floor_contrast){const c=h.floor_contrast;out.push(row(c.warmer,`${number(c.difference)} °C de plus que ${c.cooler}${c.partial?' · mesures incomplètes':''}`));}
+    if(h.floor_contrast){const c=h.floor_contrast;out.push(row(c.warmer,`${number(c.difference)} °C de plus que ${c.cooler}`));}
     if(h.hottest&&h.coolest)out.push(row('Écart entre pièces',`${number(h.spread)} °C (${h.hottest.title} la plus chaude, ${h.coolest.title} la plus fraîche)`));
     if(h.ventilation){const v=h.ventilation;out.push(row(v.kind==='cross'?'Air traversant':'Effet cheminée',`${v.openings.map(o=>`${o.title} — ${o.name}`).join(' + ')}${v.engaged?' · déjà ouverts':''}`));}
     if(h.open_rooms.length)out.push(row('Ouvert',h.open_rooms.map(r=>`${r.title} (${r.open.length})`).join(', ')));
     for(const s of h.sun_entering)out.push(row('Soleil qui entre',s.title));
-    if(h.partial)out.push(row('Bilan','sur les mesures disponibles'));
     return out;
   }
   /** One slide per room that asks for something, the most urgent first, then what the home can do as a whole. */
@@ -108,7 +107,9 @@ export class NiakComfortHomeCard extends LitElement {
       return {...ad,level:r.assessment.level as Level,pill:r.title,line:cool&&h.start_floor?h2`${ad.line} · <b>${h.start_floor.name}</b> d’abord`:ad.line};});
     if(blocks.includes('house')&&h.ventilation&&!h.ventilation.engaged)out.push({level:'benefit',pill:'Logement',title:h.ventilation.kind==='cross'?'Faites traverser l’air':'Ouvrez en bas et en haut',
       line:h2`${h.ventilation.openings.map(o=>o.name).join(' + ')}`,disk:'open'});
-    return out.length?out:[{...calmAdvice,level:h.level as Level,pill:pills[h.level as Level]}];
+    // A sensor that stops answering is a matter for the Niak panel, not an advice for the home.
+    const calm=(h.level==='neutral'?'calm':h.level) as Level;
+    return out.length?out:[{...calmAdvice,level:calm,pill:pills[calm]}];
   }
   protected render(){
     if(!this.config)return nothing;
@@ -153,7 +154,7 @@ export class NiakComfortHomeCard extends LitElement {
   private homeCard(h:Home,muteAdvice:(Advice&{pill:string;level:Level})|undefined,format:HomeFormat){
     if(!this.config)return nothing;
     const focus=this.rooms.find(r=>r.entry_id===h.focus);
-    const calmAdvice={title:h.partial?'Bilan partiel':'Rien à faire',line:h2`Toutes les pièces sont <b>${h.partial?'suivies avec les mesures disponibles':'dans votre plage'}</b>`,disk:h.open_rooms.length?'open':'check',cap:h.open_rooms.length?undefined:'Tout est fermé'};
+    const calmAdvice={title:'Rien à faire',line:h2`Toutes les pièces sont <b>dans votre plage</b>`,disk:h.open_rooms.length?'open':'check',cap:h.open_rooms.length?undefined:'Tout est fermé'};
     const homeSlides=muteAdvice?[{...muteAdvice}]:this.slides(h,calmAdvice);
     const shorts=this.shorts(this.rooms),season=(focus??this.rooms[0])?.assessment.features?.season;
     const rooms=this.rooms.flatMap(r=>{const t=numeric(r.observations.indoor_temperature);return t===null?[]:[{name:r.title,entity:r.observations.indoor_temperature?.source??undefined,short:shorts.get(r.entry_id)!,value:t,level:(r.assessment.features?.season?.heated===false&&!['action','urgent'].includes(r.assessment.level)?'neutral':r.assessment.level) as Level}];});
@@ -177,7 +178,7 @@ export class NiakComfortHomeCard extends LitElement {
     }
     const small=format==='tile'||format==='alert';
     return html`<ha-card class="nc-c" data-level=${top} ?data-starting=${this.rooms.some(r=>r.starting)}>
-      ${hero({name,level:top,slides:homeSlides,small,compact:c.show_scale===false||format==='alert',still,scaleLabel:'Les pièces',scale:scale({band:season?[season.minimum,season.maximum]:null,out:h.outdoor_temperature,rooms,outEntity:this.rooms[0]?.observations.outdoor_temperature?.source??undefined}),st,why:h2`<p><b>Pièce suivie de près</b> · ${focus?focus.title:'aucune'}</p><p><b>Bilan</b> · ${h.partial?'mesures incomplètes dans au moins une pièce':'toutes les pièces répondent'}</p>`})}
+      ${hero({name,level:top,slides:homeSlides,small,compact:c.show_scale===false||format==='alert',still,scaleLabel:'Les pièces',scale:scale({band:season?[season.minimum,season.maximum]:null,out:h.outdoor_temperature,rooms,outEntity:this.rooms[0]?.observations.outdoor_temperature?.source??undefined}),st,why:h2`<p><b>Pièce suivie de près</b> · ${focus?focus.title:'aucune'}</p>`})}
       ${format==='alert'?nothing:html`<div class="nc-body" ?hidden=${c.show_rooms===false&&(c.show_details===false||format==='tile')}>
         ${c.show_rooms===false?nothing:fold({label:'Pièces',summary:tileSummary(all.length,outside.length,'pièce'),open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:this.uid+'-rooms',body,keep:outside.map(r=>this.roomTile(r))})}
         ${c.show_details===false||format==='tile'?nothing:fold({label:'Détails',summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:this.uid+'-details',body:h2`<ul class="nc-list">${this.details(h)}</ul>`})}

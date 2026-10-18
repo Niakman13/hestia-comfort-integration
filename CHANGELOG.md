@@ -1,3 +1,9 @@
+## 1.0.2 — Carte logement plus calme
+
+- Un capteur qui ne répond plus (présence, luminosité…) n’affiche plus « Bilan partiel » ni « À vérifier » sur la carte logement : elle reste sur « Rien à faire ». L’état des capteurs se consulte dans le panneau Niak.
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 1.0.1 — Appui long sur la carte logement
 
 - La carte logement complète et la liste des pièces ont, elles aussi, leur groupe « Fonctionnalités » : un appui long peut ouvrir une page de votre tableau de bord (par exemple votre page Maison). Sur la carte complète, le choix est « Rien » ou « Ouvrir une page ».
