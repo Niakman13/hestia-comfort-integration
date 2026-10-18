@@ -1,6 +1,6 @@
 import {LitElement,html,css,nothing} from 'lit';
 import {property,state} from 'lit/decorators.js';
-import {cleanConfig,cleanHomeConfig,MODULES,moduleLabels,SCALE_MARKS,CHIPS,TILE_BLOCKS,type Config,type HomeConfig,type HomeAssistant,type Entry} from './types';
+import {cleanConfig,cleanHomeConfig,MODULES,moduleLabels,SCALE_MARKS,CHIPS,TILE_BLOCKS,homeAction,type Config,type HomeConfig,type HomeAssistant,type Entry} from './types';
 
 /* The editors are built like Niak Weather's: the room (or title) and the format on top, then folding groups that
    change with the format. The theme follows Home Assistant: it is no longer offered. */
@@ -10,8 +10,9 @@ const group=(title:string,icon:string,schema:unknown[],expanded=false)=>({type:'
 const choices=(name:string,options:[string,string][])=>({name,selector:{select:{multiple:true,reorder:true,mode:'list',options:options.map(([value,label])=>({value,label}))}}});
 const dropdown=(name:string,options:[string,string][])=>({name,required:true,selector:{select:{mode:'dropdown',options:options.map(([value,label])=>({value,label}))}}});
 const look=()=>group('Visuel et performance','mdi:palette-outline',[toggle('animations'),toggle('glass_effect')],true);
-const hold=(action:string)=>group('Fonctionnalités','mdi:tune-variant',[
-  dropdown('hold_action',[['popup','Ouvrir la carte complète en fenêtre'],['page','Ouvrir une page'],['none','Rien']]),
+/** On a full card, the full card in a window would show itself again: only a page, or nothing. */
+const hold=(action:string,full=false)=>group('Fonctionnalités','mdi:tune-variant',[
+  dropdown('hold_action',full?[['none','Rien'],['page','Ouvrir une page']]:[['popup','Ouvrir la carte complète en fenêtre'],['page','Ouvrir une page'],['none','Rien']]),
   ...(action==='page'?[{name:'hold_path',selector:{text:{}}}]:[])]);
 const chipOptions:[string,string][]=[['temperature','Température'],['humidity','Humidité'],['co2','CO₂']];
 const markOptions:[string,string][]=[['band','Votre plage'],['day','Min–max 24 h'],['out','Dehors']];
@@ -123,7 +124,7 @@ export class ComfortHomeEditor extends LitElement {
   setConfig(config:HomeConfig){this.config=cleanHomeConfig(config);}
   protected shouldUpdate(changed:Map<PropertyKey,unknown>){return !(changed.size===1&&changed.has('hass')&&!!this.config);}
   private schema(){
-    const c=this.config!,f=c.format??'full',action=c.hold_action??(c.hold_path?'page':'popup');
+    const c=this.config!,f=c.format??'full',action=homeAction(c);
     const format={name:'format',selector:{select:{mode:'list',options:[
       {value:'full',label:'Complète : bandeau, échelle des pièces, pièces et détails'},{value:'tile',label:'Tuile : le conseil de la pièce qui demande le plus, l’échelle des pièces'},
       {value:'list',label:'Liste des pièces : une ligne par pièce'},{value:'mini',label:'Mini : une ligne pour toute la maison'},
@@ -132,20 +133,23 @@ export class ComfortHomeEditor extends LitElement {
     const banner=group('Bandeau','mdi:view-day-outline',[choices('banner_blocks',[['rooms','Conseils des pièces'],['house','Gestes pour toute la maison (air traversant)']]),toggle('rotate')],true);
     if(f==='mini')return [...head,look(),hold(action)];
     if(f==='alert')return [...head,look(),banner,hold(action)];
-    if(f==='list')return [...head,look(),group('Contenu','mdi:format-list-bulleted',[dropdown('list_order',[['urgent','Celles qui demandent un geste d’abord'],['floor','Par étage']])],true)];
+    if(f==='list')return [...head,look(),group('Contenu','mdi:format-list-bulleted',[dropdown('list_order',[['urgent','Celles qui demandent un geste d’abord'],['floor','Par étage']])],true),hold(action)];
     if(f==='tile')return [...head,look(),banner,group('Pièces','mdi:view-grid-outline',[toggle('show_scale'),toggle('show_rooms'),toggle('rooms_open')]),hold(action)];
     return [...head,look(),banner,group('Échelle des pièces','mdi:thermometer',[toggle('show_scale')]),
-      group('Pièces','mdi:view-grid-outline',[toggle('show_rooms'),toggle('rooms_open')]),group('Détails','mdi:text-box-outline',[toggle('show_details'),toggle('details_open')])];
+      group('Pièces','mdi:view-grid-outline',[toggle('show_rooms'),toggle('rooms_open')]),group('Détails','mdi:text-box-outline',[toggle('show_details'),toggle('details_open')]),hold(action,true)];
   }
   private changed(e:CustomEvent<{value:Record<string,unknown>}>){
     e.stopPropagation();if(!this.config)return;
-    this.config=cleanHomeConfig(tidy({...this.config,...e.detail.value},this.config as unknown as Record<string,unknown>,HOME_DEFAULTS) as unknown as HomeConfig);
+    const next={...this.config,...e.detail.value} as HomeConfig;
+    // Changing format resets an action the new format does not offer (a window on the full card).
+    if((next.format??'full')==='full'&&next.hold_action==='popup')delete next.hold_action;
+    this.config=cleanHomeConfig(tidy(next as unknown as Record<string,unknown>,this.config as unknown as Record<string,unknown>,{...HOME_DEFAULTS,hold_action:homeAction({...next,hold_action:undefined,hold_path:undefined})}) as unknown as HomeConfig);
     this.dispatchEvent(new CustomEvent('config-changed',{detail:{config:this.config},bubbles:true,composed:true}));
   }
   protected render(){
     if(!this.config||!this.hass)return nothing;
     const c=this.config;
-    const data={...HOME_DEFAULTS,hold_action:c.hold_action??(c.hold_path?'page':'popup'),...c};
+    const data={...HOME_DEFAULTS,...c,hold_action:homeAction(c)};
     return html`<p class="note">Toutes les pièces de Niak Confort. Elles se règlent dans <a href="/niak/confort" @click=${follow}>Niak Confort</a>.</p>
       <ha-form .hass=${this.hass} .data=${data} .schema=${this.schema()} .computeLabel=${labelFor(c.format)} .computeHelper=${helperFor} @value-changed=${this.changed}></ha-form>`;
   }
