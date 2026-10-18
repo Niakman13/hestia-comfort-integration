@@ -120,3 +120,5 @@ export function cleanHomeConfig(input:HomeConfig):HomeConfig {
   const banner=list(input.banner_blocks,HOME_BANNER,'bandeau');
   return {...input,...(banner?{banner_blocks:banner}:{})};
 }
+/** What a long press does on the home card: a page when one is set, else a window, except on the full card (nothing). */
+export const homeAction=(c:HomeConfig)=>c.hold_action??(c.hold_path?'page':(c.format??'full')==='full'?'none':'popup');

@@ -6,7 +6,7 @@ import roomStyle from './ui/room.css';
 import {html as h2} from 'lit';
 import {isView,number,numeric} from './view';
 import {advice,scale,fold,hero,tileSummary,pills,moreInfo,type CardState,type Advice,type Slide} from './views/room';
-import {cleanHomeConfig,type Connection,type HomeAssistant,type HomeConfig,type HomeFormat,type Unsubscribe,type View,type Level} from './types';
+import {cleanHomeConfig,homeAction,type Connection,type HomeAssistant,type HomeConfig,type HomeFormat,type Unsubscribe,type View,type Level} from './types';
 import {icon} from './ui/icons';
 
 interface FloorRef {floor_id:string|null;name:string;level:number|null}
@@ -123,7 +123,7 @@ export class NiakComfortHomeCard extends LitElement {
     return this.renderCard(h,undefined);
   }
   private act=(e:Event)=>{
-    const c=this.config!,action=c.hold_action??(c.hold_path?'page':'popup');
+    const c=this.config!,action=homeAction(c);
     if(action==='none')return;
     if(action==='page'&&c.hold_path){history.pushState(null,'',c.hold_path);window.dispatchEvent(new CustomEvent('location-changed',{detail:{replace:false}}));return;}
     this.dialogOpen=true;void e;
@@ -137,7 +137,8 @@ export class NiakComfortHomeCard extends LitElement {
   private renderCard(h:Home,muteAdvice?:Advice&{pill:string;level:Level}){
     if(!this.config)return nothing;
     const format=this.config.format??'full';
-    if(format==='full')return this.homeCard(h,muteAdvice,'full');
+    // The full card answers a long press only when a page is set (a window would show itself again).
+    if(format==='full'&&homeAction(this.config)!=='page')return this.homeCard(h,muteAdvice,'full');
     const card=this.homeCard(h,muteAdvice,format);
     if(card===null)return this.preview||this.editMode?html`<ha-card class="nc-c nc-alert-note" data-level="calm"><p>Alerte · ${this.config.title||'Mon logement'} : rien à signaler. La carte n’apparaît que lorsqu’une pièce demande un geste.</p></ha-card>`:nothing;
     const tap=format==='mini'||format==='alert';

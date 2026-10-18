@@ -1,3 +1,9 @@
+## 1.0.1 — Appui long sur la carte logement
+
+- La carte logement complète et la liste des pièces ont, elles aussi, leur groupe « Fonctionnalités » : un appui long peut ouvrir une page de votre tableau de bord (par exemple votre page Maison). Sur la carte complète, le choix est « Rien » ou « Ouvrir une page ».
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 1.0.0 — Première version stable
 
 Niak Confort conseille, pièce par pièce, le geste qui améliore vraiment le confort. Il ne commande aucun équipement.

@@ -8,7 +8,7 @@ import {build} from 'esbuild';
 const root=new URL('../',import.meta.url),temp=await mkdtemp(join(tmpdir(),'niak-comfort-card-'));
 await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts','src/views/room.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
   bundle:true,platform:'node',format:'esm',outExtension:{'.js':'.mjs'},logLevel:'silent'});
-const {cleanConfig,cleanHomeConfig}=await import(pathToFileURL(join(temp,'types.mjs')));
+const {cleanConfig,cleanHomeConfig,homeAction}=await import(pathToFileURL(join(temp,'types.mjs')));
 const {isView,numeric,summary,readingStatus,coverageText,windFrom,evolutionLines,co2Metric,solarMetric}=await import(pathToFileURL(join(temp,'view.mjs')));
 const {LiveView}=await import(pathToFileURL(join(temp,'live.mjs')));
 const {outsideGaps,advice,slides,roomCard}=await import(pathToFileURL(join(temp,'views/room.mjs')));
@@ -239,4 +239,11 @@ test('right after a start, one or two late secondary sensors do not hide the adv
   const v=fresh();v.starting=true;v.observations={...v.observations,illuminance:silent,'presence:binary_sensor.fp2':silent};
   v.assessment={...v.assessment,reason:'drying_slow',level:'calm',action:'attendre',missing:['illuminance','presence:binary_sensor.fp2']};
   assert.notEqual(advice(v).title,'Mesures en chargement');
+});
+
+test('the home card can open a page on a long press, in every format',()=>{
+  assert.equal(homeAction(cleanHomeConfig({type:'custom:niak-comfort-home-card'})),'none');
+  assert.equal(homeAction(cleanHomeConfig({type:'custom:niak-comfort-home-card',hold_path:'/lovelace/maison'})),'page');
+  assert.equal(homeAction(cleanHomeConfig({type:'custom:niak-comfort-home-card',format:'list'})),'popup');
+  assert.equal(homeAction(cleanHomeConfig({type:'custom:niak-comfort-home-card',format:'list',hold_action:'page',hold_path:'/maison'})),'page');
 });
