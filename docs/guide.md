@@ -69,14 +69,36 @@ La **vue d’ensemble** liste vos pièces. **Configurer** ouvre les réglages d�
 
 ![Les réglages d’une pièce : l’onglet Ouvertures](images/niak-comfort-reglages.png)
 
-Une pièce peut être :
+### Niak part de vos pièces Home Assistant
 
-- **rattachée à une pièce Home Assistant** : Niak propose ses capteurs ;
-- **libre** : « Étage », « Suite parentale »… Vous choisissez les capteurs.
+Vous avez déjà rangé vos appareils par pièce dans Home Assistant ? Niak s’en sert. Presque tout est prérempli.
+
+- **Les pièces** : Niak propose chaque pièce Home Assistant qui a un thermomètre. Vous cochez, il les crée d’un coup.
+- **Les capteurs** : pour chaque mesure, il propose ceux de la pièce. Un capteur compte s’il est rangé dans la pièce, lui ou son appareil.
+- **La température et l’humidité de la pièce** : si vous les avez choisies dans Home Assistant, Niak les prend en premier.
+- **L’étage** : celui de la pièce dans Home Assistant.
+
+Vous vérifiez, vous gardez, vous changez. Rien n’est choisi sans vous.
+
+Plusieurs capteurs possibles ? Niak les montre tous et vous choisissez.
+
+Un capteur d’une autre pièce, ou d’un appareil dehors, demande une confirmation.
+
+Un capteur mal rangé ? Corrigez sa pièce dans Home Assistant : Niak le proposera au bon endroit. Vous pouvez aussi choisir n’importe quel capteur avec le sélecteur de Home Assistant.
+
+Une pièce ajoutée plus tard dans Home Assistant apparaît dans **À améliorer** : « Bureau pas encore suivie ».
+
+Niak ne devine rien d’un nom : il suit le rangement de Home Assistant et la nature des capteurs.
+
+### Pièce libre
+
+Une pièce sans pièce Home Assistant : « Étage », « Suite parentale »… Vous choisissez les capteurs et, si besoin, l’étage.
 
 Les pièces extérieures (Jardin, Terrasse…) ne sont pas proposées comme pièces.
 
-Chaque pièce a six onglets. Le cadre **À quoi sert cette étape ?** explique chacun.
+### Six onglets par pièce
+
+Chaque pièce a six onglets, détaillés ci-dessous. Le cadre **À quoi sert cette étape ?** explique chacun.
 
 ### Température
 
