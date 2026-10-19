@@ -36,7 +36,7 @@ Toute la famille lit la même carte. Elle ne parle que quand un geste aide vraim
 
 - Home Assistant **2026.10** ou plus récent.
 - Un thermomètre dans chaque pièce à suivre. C’est le seul capteur obligatoire.
-- En plus, si vous en avez : humidité, CO₂, contacts de fenêtres, thermostat, VMC, purificateur, volets, présence.
+- En plus, si vous en avez : humidité, CO₂, contacts de fenêtres, thermostat, VMC, purificateur, volets (Adaptive Cover Pro reconnu tout seul), présence.
 - Pour l’extérieur : [Niak Weather](https://github.com/Niakman13/niak-weather-integration) (conseillé) ou vos propres capteurs.
 
 ## Installation
@@ -102,6 +102,18 @@ Niak Confort fonctionne seul. Avec [Niak Weather](https://github.com/Niakman13/n
 
 Les deux briques partagent le panneau **Niak** et la même charte. L’**Accueil Niak** montre l’état de chacune.
 
+## Avec Adaptive Cover Pro
+
+Vos volets sont pilotés par [Adaptive Cover Pro](https://github.com/jrhubott/adaptive-cover-pro) ? Niak le reconnaît tout seul, dès que vous choisissez le volet d’une fenêtre :
+
+- il lit ses interrupteurs (intégration, pilotage automatique, suivi du soleil, mode climat, détection de la reprise à la main) : rien à renseigner ;
+- il reprend l’orientation exacte de la fenêtre, sa largeur et sa hauteur ;
+- quand Adaptive Cover Pro pilote le volet, Niak ne vous demande pas de le faire ;
+- s’il est coupé, Niak vous prévient, même avant que le soleil n’arrive : « à fermer avant 13 h 50 » ;
+- la carte a une tuile **Volet** : position, et qui le pilote.
+
+Niak ne commande toujours rien. Il faut Niak Confort 1.1.3 ou plus récent. Voir [le guide](docs/guide.md#avec-adaptive-cover-pro).
+
 ## Pour vos automatisations
 
 Chaque pièce crée quelques entités :
@@ -121,7 +133,7 @@ Par exemple : une notification quand le geste du salon passe à **Fermer**. [Le 
 | Page | Ce qu’elle explique |
 | --- | --- |
 | [Guide d’utilisation](docs/guide.md) | Premiers pas, extérieur, pièces, lire les conseils, équipements, apprentissage, entités |
-| [Dépannage](docs/depannage.md) | « Ne répond pas », carte invisible, sources, Niak Weather, journaux |
+| [Dépannage](docs/depannage.md) | « Ne répond pas », carte invisible, sources, Niak Weather, volets, journaux |
 | [Les repères](docs/SEUILS.md) | CO₂, particules, humidité, COV : les seuils proposés et leurs sources |
 | [Notes techniques](docs/dev/README.md) | Pour les développeurs : tests, interfaces, notes de conception |
 
