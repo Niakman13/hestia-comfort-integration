@@ -12,7 +12,9 @@ NAME = "Adaptive Cover Pro"
 # Role → (domain, key at the end of the unique id, translation key or entity id).
 ROLES = {"auto": ("switch", "automatic_control"), "enabled": ("switch", "integration_enabled"),
          "override": ("binary_sensor", "manual_override"), "sun": ("binary_sensor", "sun_infront"),
-         "target": ("sensor", "target_position"), "sun_start": ("sensor", "start_sun"), "sun_end": ("sensor", "end_sun")}
+         "target": ("sensor", "target_position"), "sun_start": ("sensor", "start_sun"), "sun_end": ("sensor", "end_sun"),
+         "override_end": ("sensor", "manual_override_end_time"), "tracking": ("switch", "sun_tracking"),
+         "detection": ("switch", "manual_override_detection"), "climate": ("switch", "climate_mode")}
 
 
 def _role(entry):
@@ -53,6 +55,23 @@ def find_all(hass):
         for cover in _covers(hass, config_entry_id, roles):
             result[cover] = {**roles, "name": NAME}
     return result
+
+
+def facts(hass, roles):
+    """What Adaptive Cover Pro knows of the window: its exact bearing, and why the cover stands where it does."""
+    target = hass.states.get(roles["target"]) if roles.get("target") else None
+    attrs = target.attributes if target else {}
+    azimuth = attrs.get("azimuth_window")
+    reason = attrs.get("position_explanation") or attrs.get("reason")
+    return {"azimuth": float(azimuth) if isinstance(azimuth, (int, float)) and 0 <= azimuth <= 360 else None,
+            "reason": reason if isinstance(reason, str) and reason else None}
+
+
+def exposure(azimuth):
+    """The nearest of the eight exposures for an exact bearing."""
+    if azimuth is None:
+        return None
+    return ("N", "NE", "E", "SE", "S", "SO", "O", "NO")[round(azimuth / 45) % 8]
 
 
 def find(hass, cover_entity):

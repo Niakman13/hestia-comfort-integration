@@ -101,6 +101,27 @@ class EvolutionTests(unittest.TestCase):
         self.assertEqual(s['advice'],'close'); self.assertIn('coupé',s['message']); self.assertTrue(s['sun_front'])
         # Out of its field of view, the sun does not reach the window: nothing to close.
         self.assertIsNone(run(False,False)['advice'])
+        # Automatic control on, but its sun tracking is off: it is not really driving.
+        q=zone(indoor_temperature=28,solar=700); q['cover:a']=Reading(100,'valid','cover.v')
+        q['shutter_auto:switch.auto']=Reading(True,'valid','switch.auto'); q['shutter_sun:a']=Reading(True,'valid','binary_sensor.s')
+        q['shutter_tracking:a']=Reading(False,'valid','switch.t')
+        s=assess(q,openings=o,sun=Sun(30,270)).features['shutters'][0]
+        self.assertEqual((s['advice'],s['off'],s['driving']),('close','tracking',False)); self.assertIn('suivi du soleil',s['message'])
+        # Without its detection, its override signal says nothing.
+        o2={'a':Opening(exposure='O',shutter='connected',cover_entity='cover.v',override_entity='binary_sensor.o',driver='adaptive_cover_pro')}
+        q=zone(indoor_temperature=28,solar=700); q['cover:a']=Reading(100,'valid','cover.v')
+        q['shutter_override:binary_sensor.o']=Reading(True,'valid','binary_sensor.o'); q['shutter_detection:a']=Reading(False,'valid','switch.d')
+        self.assertIsNone(assess(q,openings=o2,sun=Sun(30,270)).features['shutters'][0]['manual_override'])
+    def test_sun_arriving_soon_closes_before_and_exact_bearing_counts(self):
+        o={'a':Opening(shutter='connected',cover_entity='cover.v',auto_entity='switch.auto',driver='adaptive_cover_pro',azimuth=273)}
+        q=zone(indoor_temperature=28); q['cover:a']=Reading(100,'valid','cover.v'); q['shutter_auto:switch.auto']=Reading(False,'valid','switch.auto')
+        q['shutter_sun:a']=Reading(False,'valid','binary_sensor.s'); q['shutter_sun_start:a']=Reading((NOW+timedelta(minutes=50)).isoformat(),'valid','sensor.s')
+        s=assess(q,openings=o,sun=Sun(30,200),now=NOW).features['shutters'][0]
+        self.assertEqual(s['advice'],'close'); self.assertTrue(s['soon']); self.assertIn('arrive sur la fenêtre',s['message'])
+        q['shutter_sun_start:a']=Reading((NOW+timedelta(hours=5)).isoformat(),'valid','sensor.s')
+        self.assertIsNone(assess(q,openings=o,sun=Sun(30,200),now=NOW).features['shutters'][0]['advice'])
+        from engine.assessment import facade_share
+        self.assertGreater(facade_share(None,Sun(30,273),273),facade_share('S',Sun(30,273)))
     def test_trend_uses_real_timed_history(self):
         ctx={'temperature_history':[((NOW-timedelta(minutes=20)).isoformat(),20),((NOW-timedelta(minutes=10)).isoformat(),21),(NOW.isoformat(),22)]}
         self.assertEqual(assess(zone(),now=NOW,context=ctx).features['trends']['indoor'],6)

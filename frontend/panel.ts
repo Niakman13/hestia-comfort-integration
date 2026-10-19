@@ -318,13 +318,20 @@ export class ComfortSetup extends LitElement {
   <label class="check"><input type="checkbox" .checked=${d.heated===false} @change=${(e:Event)=>this.draft={...d,heated:!(e.target as HTMLInputElement).checked}}>Pièce non chauffée : ne jamais conseiller de la réchauffer</label></div>`;
  return nothing;
  }
- /** Who moves the cover. Adaptive Cover Pro is recognised by itself; any other automation is told by hand. */
+ /** Who moves the cover. Adaptive Cover Pro is recognised by itself and each signal it gives is shown;
+     any other automation is told by hand. Full width, below the cover's own fields. */
  private coverDriver(id:string,cover?:string|null){
-  const driver=cover?this.discovery?.drivers?.[cover]:undefined;
-  const manual=html`${this.openingSource(id,'auto_entity','shutter_auto','Interrupteur qui active le pilotage automatique')}${this.openingSource(id,'override_entity','shutter_override','Capteur « repris à la main »')}`;
-  if(driver)return html`<p class="hint"><b>Détecté : ${driver.name}.</b> Niak lit son pilotage automatique, la reprise à la main et le soleil devant la fenêtre : rien à renseigner. Quand il pilote le volet, Niak ne vous demande plus de le faire.</p>
-   <details class="group"><summary>Choisir d’autres signaux (facultatif)</summary>${manual}</details>`;
-  return html`<details class="group"><summary>Pilotage automatique (facultatif)</summary><p class="hint">Si une automatisation ouvre et ferme ce volet, indiquez l’interrupteur qui l’active et, s’il existe, le capteur qui signale que vous avez repris la main. Niak ne commande rien : il évite seulement de vous conseiller ce que l’automatisme fait déjà.</p>${manual}</details>`;
+  const m=this.draft!.openings[id]??defaultOpening(),driver=cover?this.discovery?.drivers?.[cover]:undefined;
+  const fields=html`${this.openingSource(id,'auto_entity','shutter_auto','Interrupteur qui active le pilotage automatique')}${this.openingSource(id,'override_entity','shutter_override','Capteur « repris à la main »')}`;
+  if(!driver)return html`<div class="wide"><h4>Qui pilote ce volet ?</h4><p class="hint">Si une automatisation ouvre et ferme ce volet, indiquez l’interrupteur qui l’active et, s’il existe, le capteur qui signale que vous avez repris la main. Niak ne commande rien : il évite seulement de vous conseiller ce que l’automatisme fait déjà.</p>${fields}</div>`;
+  const sig=driver.signals,row=(label:string,s:{name:string;on:boolean}|null|undefined,on:string,off:string)=>s?html`<li><b>${label}</b> · ${s.on?on:off}<span class="hint"> (${s.name})</span></li>`:nothing;
+  const names:Record<string,string>={N:'Nord',NE:'Nord-Est',E:'Est',SE:'Sud-Est',S:'Sud',SO:'Sud-Ouest',O:'Ouest',NO:'Nord-Ouest'};
+  return html`<div class="wide driver"><h4>Piloté par ${driver.name}</h4>
+   <p class="hint">Niak lit ces signaux tout seul, rien à renseigner :</p>
+   <ul>${row('Intégration',sig?.enabled,'activée','désactivée : elle ne pilote rien')}${row('Pilotage automatique',sig?.auto,'activé','coupé')}${row('Suivi du soleil',sig?.tracking,'activé','coupé')}${row('Mode climat',sig?.climate,'activé','coupé : il ne ferme pas contre la chaleur')}${row('Détection de la reprise à la main',sig?.detection,'activée','coupée : Niak ne saura pas si vous avez bougé le volet')}${row('Repris à la main',sig?.override,'oui','non')}${row('Soleil devant la fenêtre',sig?.sun,'oui','non')}
+    ${driver.azimuth!=null?html`<li><b>Orientation de la fenêtre</b> · ${Math.round(driver.azimuth)}°${driver.exposure?` (${names[driver.exposure]})`:''}${driver.exposure&&m.exposure!==driver.exposure?html` <button class="link" @click=${()=>this.setOpening(id,{exposure:driver.exposure})}>Utiliser pour l’exposition</button>`:nothing}</li>`:nothing}</ul>
+   <p class="hint">Ainsi, quand ${driver.name} pilote le volet, Niak ne vous demande pas de le faire ; s’il est coupé, Niak vous prévient avant que le soleil n’arrive sur la fenêtre. Niak ne commande rien.</p>
+   <details class="group"><summary>Utiliser d’autres signaux que ceux de ${driver.name}</summary>${fields}</details></div>`;
  }
  private openingDetails(id:string){const m=this.draft!.openings[id]??defaultOpening();return html`<div class="opening">
   <label>Exposition<select @change=${(e:Event)=>this.setOpening(id,{exposure:(e.target as HTMLSelectElement).value||null})}><option value="" ?selected=${!m.exposure}>Je ne sais pas</option>${exposures.map(([v,l])=>html`<option value=${v} ?selected=${m.exposure===v}>${l}</option>`)}</select></label>
@@ -334,7 +341,7 @@ export class ComfortSetup extends LitElement {
   ${m.shutter==='manual'?html`<p class="hint">Position non mesurée. Les conseils resteront conditionnels : si votre volet est ouvert, vous pouvez le fermer.</p>`:nothing}
   ${m.shutter==='connected'?this.openingSource(id,'cover_entity','covers','Volet de cet ouvrant'):nothing}
   ${m.shutter==='connected'?this.coverDriver(id,m.cover_entity):nothing}
-  <details class="group"><summary>Dimensions et ombre (facultatif)</summary><p class="hint">En mètres. L’ombre et la capacité d’aération seront estimées ; laissez vide ce que vous ne connaissez pas.</p>${([['width','Largeur de l’ouvrant'],['height','Hauteur de l’ouvrant'],['overhang_depth','Profondeur de l’avancée'],['overhang_gap','Écart entre avancée et haut de l’ouvrant']] as const).map(([key,label])=>html`<label>${label} (m)<input type="number" min="0" step="0.01" .value=${m[key]===undefined?'':String(m[key])} @input=${(e:Event)=>{const value=(e.target as HTMLInputElement).value;this.setOpening(id,{[key]:value===''?undefined:Number(value)});}}></label>`)}</details></div>`;}
+  <details class="group"><summary>Dimensions et avancée de toit (pour l’ombre)</summary><p class="hint">En mètres. L’ombre et la capacité d’aération seront estimées ; laissez vide ce que vous ne connaissez pas.</p>${([['width','Largeur de l’ouvrant'],['height','Hauteur de l’ouvrant'],['overhang_depth','Profondeur de l’avancée'],['overhang_gap','Écart entre avancée et haut de l’ouvrant']] as const).map(([key,label])=>html`<label>${label} (m)<input type="number" min="0" step="0.01" .value=${m[key]===undefined?'':String(m[key])} @input=${(e:Event)=>{const value=(e.target as HTMLInputElement).value;this.setOpening(id,{[key]:value===''?undefined:Number(value)});}}></label>`)}</details></div>`;}
  private field(key:string){
   const all=this.discovery?.candidates[key]??[],selected=this.selected(key),room=this.draft;
   const proposals=(this.exteriorDraft?all.filter(c=>c.outside):all.filter(c=>c.local)).filter(c=>!selected.includes(c.entity_id));

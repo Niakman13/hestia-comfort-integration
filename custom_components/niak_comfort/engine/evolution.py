@@ -77,9 +77,10 @@ def _presence(readings, context):
 
 def _shade(meta, sun):
     from .assessment import EXPOSURES
-    if sun is None or meta.exposure not in EXPOSURES:
+    bearing = meta.azimuth if meta.azimuth is not None else EXPOSURES.get(meta.exposure)
+    if sun is None or bearing is None:
         return None, 'unknown'
-    gap = math.radians(((sun.azimuth-EXPOSURES[meta.exposure]+540)%360)-180)
+    gap = math.radians(((sun.azimuth-bearing+540)%360)-180)
     facing = math.cos(gap)
     if sun.elevation <= 0 or facing <= 0:
         return 1.0, 'simple'
@@ -90,7 +91,20 @@ def _shade(meta, sun):
     return (round(1-1/3,2) if meta.sheltered else 0.0), 'simple'
 
 
-def _shutters(readings, settings, openings, sun, details, needs):
+def _soon(start, now, within=120):
+    """« 13 h 50 » when the sun reaches the window within two hours, else None (local time of the reading)."""
+    from datetime import datetime
+    try:
+        moment = datetime.fromisoformat(start) if isinstance(start, str) else None
+    except ValueError:
+        return None
+    if moment is None or now is None or moment.tzinfo is None or now.tzinfo is None:
+        return None
+    minutes = (moment - now).total_seconds() / 60
+    return moment.strftime('%H h %M') if 0 < minutes <= within else None
+
+
+def _shutters(readings, settings, openings, sun, details, needs, now=None):
     by_id={d['entity_id']:d for d in details}
     result=[]
     for eid,meta in openings.items():
@@ -103,7 +117,7 @@ def _shutters(readings, settings, openings, sun, details, needs):
         # replaces it here rather than attenuating the same facade twice.
         if model == 'geometry':
             from .assessment import facade_share, facade_irradiance
-            watts=facade_irradiance(facade_share(meta.exposure,sun),sun,_value(readings,'solar'))
+            watts=facade_irradiance(facade_share(meta.exposure,sun,meta.azimuth),sun,_value(readings,'solar'))
             if watts is not None: watts *= 1-shade
         position = _value(readings,'cover:'+eid) if meta.shutter == 'connected' else None
         state = _value(readings,'cover_state:'+eid) if meta.shutter == 'connected' else None
@@ -113,6 +127,12 @@ def _shutters(readings, settings, openings, sun, details, needs):
         driven=meta.driver=='adaptive_cover_pro'
         front=_value(readings,'shutter_sun:'+eid) if driven else None
         target=_value(readings,'shutter_target:'+eid) if driven else None
+        switch=lambda name:_value(readings,f'shutter_{name}:'+eid) if driven else None
+        enabled,tracking,detection,climate=switch('enabled'),switch('tracking'),switch('detection'),switch('climate')
+        # Without its detection, a hand on the cover goes unseen: the override signal says nothing.
+        if detection is False: override=None
+        off=('disabled' if enabled is False else 'auto' if automatic is False else 'tracking' if tracking is False else None) if driven else None
+        driving=driven and automatic is True and off is None
         strong=watts is not None and watts >= settings.sun_facade
         if front is False: strong=False
         elif front is True and watts is None: strong=True
@@ -131,12 +151,22 @@ def _shutters(readings, settings, openings, sun, details, needs):
         elif sun is not None and sun.elevation < 0 and 'heat' in needs and position != 0 and state != 'closed':
             advice='close'
             tip=' Si le volet est ouvert, fermez-le pour protéger la pièce du froid nocturne.' if manual else ' Fermez le volet pour protéger la pièce du froid nocturne.'
+        # The sun is about to reach the window of a room already too warm: close before, not after.
+        start=_value(readings,'shutter_sun_start:'+eid) if driven else None
+        soon=_soon(start,now)
+        if (not advice and override is not True and soon is not None and front is not True and 'cool' in needs
+                and position != 0 and state != 'closed'):
+            advice='close'
+            tip=f' Le soleil arrive sur la fenêtre à {soon} : fermez le volet avant.'
         if driven and override is not True:
-            if automatic is True:
+            if driving:
                 # It moves the cover itself: Niak does not ask the person to do it twice.
                 advice,tip=None,' Adaptive Cover Pro pilote le volet' + (f', position visée {target:g} %.' if target is not None else '.')
-            elif automatic is False and advice:
-                tip += ' Le pilotage automatique d’Adaptive Cover Pro est coupé.'
+                if 'cool' in needs and climate is False:
+                    tip += ' Son mode climat est coupé : il ne ferme pas contre la chaleur.'
+            elif off and advice:
+                tip += {'disabled':' Adaptive Cover Pro est désactivé pour ce volet.','auto':' Le pilotage automatique d’Adaptive Cover Pro est coupé.',
+                        'tracking':' Le suivi du soleil d’Adaptive Cover Pro est coupé.'}[off]
         message += tip
         if model == 'geometry': message += ' Ombre estimée par géométrie.'
         elif model == 'simple': message += ' Ombre estimée par modèle simple.'
@@ -145,8 +175,11 @@ def _shutters(readings, settings, openings, sun, details, needs):
             message += ' Luminosité intérieure faible ; elle ne prouve pas la position du volet.'
         result.append(dict(entity_id=eid,mode=meta.shutter,position=position,state=state,advice=advice,message=message,
                            shade_fraction=shade,shade_model=model,manual_override=override,automatic=automatic,
+                           driving=driving,off=off,detection=detection,climate=climate,
                            cover=meta.cover_entity,driver=meta.driver,sun_front=front,target=target,
-                           sun_start=_value(readings,'shutter_sun_start:'+eid) if driven else None,
+                           sun_start=start,soon=soon is not None and advice=='close' and front is not True,
+                           reason=_value(readings,'shutter_reason:'+eid) if driven else None,
+                           override_end=_value(readings,'shutter_override_end:'+eid) if driven else None,
                            sun_end=_value(readings,'shutter_sun_end:'+eid) if driven else None))
     return result
 
@@ -219,7 +252,7 @@ def features(readings,settings,context,openings,sun,details,needs,action,reason,
     vm='Durée indicative avant réévaluation ; les mesures restent prioritaires, sans garantie de renouvellement complet.'
     if capacity is not None: vm+=' Capacité estimée en m² effectifs, avec hypothèse d’ouverture ; débit non mesuré.'
     if opened and elapsed is None: vm+=' Ouvert depuis une durée inconnue.'
-    return dict(shutters=_shutters(readings,settings,openings,sun,details,needs),presence=_presence(readings,context),air=air,
+    return dict(shutters=_shutters(readings,settings,openings,sun,details,needs,now),presence=_presence(readings,context),air=air,
                 ventilation=dict(opened_minutes=elapsed,duration_minutes=duration,message=vm,capacity=capacity),
                 humidity=dict(dew_point=dew,incoming_relative=incoming,glass_temperature=glass,condensation_risk=condensation,message=hmessage),
                 trends=dict(indoor=_slope(context.get('temperature_history'),now),outdoor=_slope(context.get('outdoor_history'),now),window_minutes=30,

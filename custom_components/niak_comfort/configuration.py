@@ -79,8 +79,17 @@ class Configuration:
         return {"version": 1, "revision": self.revision(), "candidates": candidates,
                 "suggestions": suggestions(candidates, area_id) if area_id else {},
                 # Covers driven by Adaptive Cover Pro: their signals are read without being chosen.
-                "drivers": {cover: {"name": roles["name"], "auto": roles.get("auto"), "override": roles.get("override")}
-                            for cover, roles in cover_link.find_all(self.hass).items()}}
+                "drivers": {cover: self._driver(roles) for cover, roles in cover_link.find_all(self.hass).items()}}
+
+    def _driver(self, roles):
+        """What the panel shows of Adaptive Cover Pro: each signal Niak reads, with its current state."""
+        def signal(role):
+            state = self.hass.states.get(roles[role]) if roles.get(role) else None
+            return {"entity_id": roles[role], "name": state.name, "on": state.state == "on"} if state else None
+        known = cover_link.facts(self.hass, roles)
+        return {"name": roles["name"], "auto": roles.get("auto"), "override": roles.get("override"),
+                "signals": {role: signal(role) for role in ("enabled", "auto", "tracking", "detection", "override", "sun", "climate")},
+                "azimuth": known["azimuth"], "exposure": cover_link.exposure(known["azimuth"])}
 
     def weather_proposal(self, entry_id=None):
         """Niak Weather's station as exterior sources, ready for the exterior page."""

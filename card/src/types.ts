@@ -47,7 +47,7 @@ export interface Reading {
 }
 export interface Features {
  shutters?:{entity_id:string;mode:'none'|'manual'|'connected';position:number|null;state:string|null;advice:'close'|'open'|null;message:string;shade_fraction:number|null;shade_model:'geometry'|'simple'|'unknown';manual_override:boolean|null;automatic:boolean|null;
-  cover?:string|null;driver?:'adaptive_cover_pro'|null;sun_front?:boolean|null;target?:number|null;sun_start?:string|null;sun_end?:string|null}[];
+  cover?:string|null;driver?:'adaptive_cover_pro'|null;sun_front?:boolean|null;target?:number|null;sun_start?:string|null;sun_end?:string|null;soon?:boolean;driving?:boolean;off?:'disabled'|'auto'|'tracking'|null;detection?:boolean|null;climate?:boolean|null;reason?:string|null;override_end?:string|null}[];
  presence?:{state:'occupied'|'empty'|'unknown'|'not_configured';message:string};
  air?:{co2_status?:'high'|'ok'|'unknown'|'not_configured';pm25_status:'high'|'ok'|'unknown'|'not_configured';voc_status:'high'|'ok'|'uninterpreted'|'unknown'|'not_configured';voc_unit:string|null;purifier:{on:boolean|null;speed:number|null};pm25_treated?:boolean;ventilation?:{on:boolean|null;boost?:boolean}|null;coverage:string;message:string};
  ventilation?:{opened_minutes:number|null;duration_minutes:{min:number;max:number}|null;message:string;capacity:number|null};

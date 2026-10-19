@@ -269,4 +269,6 @@ test('a cover driven by Adaptive Cover Pro has its own tile, and asks nothing wh
   assert.deepEqual([t.value,t.note,t.out,t.entity],['Ouvert','automatique · soleil devant',false,'cover.v']);
   v.assessment.features.shutters=[{...base,automatic:false,advice:'close'}];
   t=tiles(v,c).find(x=>x.label==='Volet');assert.deepEqual([t.note,t.out,t.level],['à fermer',true,'action']);
+  v.assessment.features.shutters=[{...base,automatic:false,advice:'close',soon:true,sun_start:'2026-10-19T13:50:00+02:00'}];
+  t=tiles(v,c).find(x=>x.label==='Volet');assert.match(t.note,/^à fermer avant \d\d h \d\d$/);
 });
