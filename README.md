@@ -1,6 +1,6 @@
 # Niak Comfort — intégration
 
-[![release](https://img.shields.io/github/v/release/Niakman13/niak-comfort-integration?cacheSeconds=86400)](https://github.com/Niakman13/niak-comfort-integration/releases)
+[![release](https://img.shields.io/github/v/release/Niakman13/niak-comfort-integration?cacheSeconds=3600)](https://github.com/Niakman13/niak-comfort-integration/releases)
 [![Validate](https://github.com/Niakman13/niak-comfort-integration/actions/workflows/validate.yml/badge.svg)](https://github.com/Niakman13/niak-comfort-integration/actions/workflows/validate.yml)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange)](https://hacs.xyz)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)

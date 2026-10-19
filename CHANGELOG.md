@@ -1,3 +1,14 @@
+## 1.1.1 — Volets mieux compris
+
+- Le panneau montre, en pleine largeur, ce que Niak lit d’Adaptive Cover Pro : intégration, pilotage automatique, suivi du soleil, mode climat, détection de la reprise à la main, soleil devant la fenêtre, orientation exacte.
+- Si l’un de ces interrupteurs coupe le pilotage, Niak le dit et reprend ses conseils ; sans détection, il ignore le signal « repris à la main ».
+- Le soleil sur la fenêtre est calculé avec l’orientation exacte donnée par Adaptive Cover Pro.
+- Niak prévient avant que le soleil n’arrive sur la fenêtre d’une pièce déjà trop chaude (« à fermer avant 13 h 50 »).
+- Les détails donnent la raison d’Adaptive Cover Pro et l’heure de fin d’une reprise à la main.
+- Nouvelle icône Niak Confort dans HACS ; badge de version corrigé.
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 1.1.0 — Adaptive Cover Pro reconnu
 
 - **Adaptive Cover Pro est détecté tout seul** : pour un volet connecté qu’il pilote, Niak lit son pilotage automatique, la reprise à la main, le soleil devant la fenêtre et la position visée. Plus rien à renseigner.

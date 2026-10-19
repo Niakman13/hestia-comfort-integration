@@ -99,6 +99,8 @@ class Opening:
     override_entity: str | None = None
     # The integration that drives the cover with the sun (« adaptive_cover_pro »), when one is recognised.
     driver: str | None = None
+    # The window's exact bearing in degrees, when the cover's driver knows it (Adaptive Cover Pro).
+    azimuth: float | None = None
     width: float | None = None
     height: float | None = None
     overhang_depth: float | None = None
@@ -151,11 +153,13 @@ def absolute_humidity(t: float | None, rh: float | None) -> float | None:
     return 6.112 * math.exp(17.67 * t / (t + 243.5)) * rh * 2.1674 / (273.15 + t)
 
 
-def facade_share(exposure: str | None, sun: Sun | None) -> float:
-    """Share of the sun facing a facade, as in the template: cos(elevation)·cos(azimuth gap)."""
-    if exposure not in EXPOSURES or sun is None or sun.elevation <= 0:
+def facade_share(exposure: str | None, sun: Sun | None, azimuth: float | None = None) -> float:
+    """Share of the sun facing a facade, as in the template: cos(elevation)·cos(azimuth gap).
+    An exact bearing, when known, replaces the eight-point exposure."""
+    facing = azimuth if azimuth is not None else EXPOSURES.get(exposure)
+    if facing is None or sun is None or sun.elevation <= 0:
         return 0.0
-    gap = ((sun.azimuth - EXPOSURES[exposure] + 540) % 360) - 180
+    gap = ((sun.azimuth - facing + 540) % 360) - 180
     return max(math.cos(math.radians(sun.elevation)) * math.cos(math.radians(gap)), 0.0)
 
 
@@ -248,7 +252,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     for entity_id, reading in contacts.items():
         meta = openings.get(entity_id, Opening())
         is_open = reading.usable and reading.value is True
-        share = facade_share(meta.exposure, sun)
+        share = facade_share(meta.exposure, sun, meta.azimuth)
         watts = facade_irradiance(share, sun, solar)
         shade, shade_model = _shade(meta, sun)
         if watts is not None and shade_model == "geometry":

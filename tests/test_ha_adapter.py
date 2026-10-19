@@ -139,7 +139,7 @@ class AdapterTests(AdapterFixture):
         registry = er.async_get(self.hass)
         for domain, key, value, attributes in (("switch", "automatic_control", "on", {}), ("binary_sensor", "manual_override", "off", {}),
                                                ("binary_sensor", "sun_infront", "on", {}),
-                                               ("sensor", "target_position", "30", {"unit_of_measurement": "%", "actual_positions": {"cover.volet": 100}})):
+                                               ("sensor", "target_position", "30", {"unit_of_measurement": "%", "actual_positions": {"cover.volet": 100}, "azimuth_window": 273.0, "position_explanation": "position par défaut"})):
             entry = registry.async_get_or_create(domain, "adaptive_cover_pro", "acp_" + key, suggested_object_id="volet_" + key)
             self.hass.states.async_set(entry.entity_id, value, attributes)
         self.hass.states.async_set("cover.volet", "open", {"current_position": 100})
@@ -147,12 +147,13 @@ class AdapterTests(AdapterFixture):
         found = cover_link.find(self.hass, "cover.volet")
         self.assertEqual((found["auto"], found["override"], found["sun"]), ("switch.volet_automatic_control", "binary_sensor.volet_manual_override", "binary_sensor.volet_sun_infront"))
         entry = ConfigEntry(domain="niak_comfort", title="Salon", unique_id="salon2", version=1, minor_version=1, source="user",
-            data=self.entry.data, options={"openings": {"binary_sensor.window": {"shutter": "connected", "cover_entity": "cover.volet", "exposure": "O"}}},
+            data=self.entry.data, options={"openings": {"binary_sensor.window": {"shutter": "connected", "cover_entity": "cover.volet"}}},
             discovery_keys={}, subentries_data=[])
         data = await ComfortCoordinator(self.hass, entry)._async_update_data()
         shutter = data["assessment"]["features"]["shutters"][0]
         self.assertEqual((shutter["driver"], shutter["automatic"], shutter["sun_front"], shutter["target"]), ("adaptive_cover_pro", True, True, 30))
         self.assertIsNone(shutter["advice"])
+        self.assertEqual(data["assessment"]["openings"][0]["exposure"], "O")
     async def test_real_state_mapping_and_sensor_output(self):
         coordinator = ComfortCoordinator(self.hass, self.entry)
         coordinator.data = await coordinator._async_update_data()

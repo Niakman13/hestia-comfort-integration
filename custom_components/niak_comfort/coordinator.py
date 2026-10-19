@@ -155,9 +155,12 @@ class ComfortCoordinator(DataUpdateCoordinator):
             drivers = self.drivers = self._drivers()
         for e, roles in drivers.items():
             if e in openings:
-                o = openings[e]
+                o, known = openings[e], cover_link.facts(self.hass, roles)
                 openings[e] = replace(o, driver="adaptive_cover_pro", auto_entity=o.auto_entity or roles.get("auto"),
-                                      override_entity=o.override_entity or roles.get("override"))
+                                      override_entity=o.override_entity or roles.get("override"), azimuth=known["azimuth"],
+                                      exposure=o.exposure or cover_link.exposure(known["azimuth"]))
+                if known["reason"]:
+                    readings[f"shutter_reason:{e}"] = Reading(known["reason"], "valid", roles.get("target"), now.isoformat())
         for entity_id in windows:
             readings[f"window:{entity_id}"] = self._reading(entity_id, "window", now)
         for entity_id in self.config.get("presence", []):
@@ -184,10 +187,16 @@ class ComfortCoordinator(DataUpdateCoordinator):
             for role, kind in (("sun", "shutter_sun"), ("target", "shutter_target")):
                 if roles.get(role):
                     readings[f"{kind}:{entity_id}"] = self._reading(roles[role], kind, now)
-            for role in ("sun_start", "sun_end"):
+            # Its own switches: on, following the sun, watching for a hand on the cover, closing against heat.
+            for role in ("enabled", "tracking", "detection", "climate"):
+                if roles.get(role):
+                    readings[f"shutter_{role}:{entity_id}"] = self._reading(roles[role], "shutter_auto", now)
+            for role in ("sun_start", "sun_end", "override_end"):
                 state = self.hass.states.get(roles[role]) if roles.get(role) else None
-                if state and state.state not in ("unknown", "unavailable", ""):
-                    readings[f"shutter_{role}:{entity_id}"] = Reading(state.state, "valid", roles[role], state.last_reported.isoformat())
+                moment = dt_util.parse_datetime(state.state) if state else None
+                # In local time, so that « 13 h 50 » reads as the person's clock.
+                if moment:
+                    readings[f"shutter_{role}:{entity_id}"] = Reading(dt_util.as_local(moment).isoformat(), "valid", roles[role], state.last_reported.isoformat())
         if selected.get("purifier"):
             state = self.hass.states.get(selected["purifier"])
             # A purifier's on/off state is useful even without speed reporting.
