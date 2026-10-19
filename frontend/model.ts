@@ -19,7 +19,7 @@ export interface Area {floor_id?:string|null;area_id:string;name:string;outdoor:
 export interface Snapshot {version:1;revision:string;floors?:{floor_id:string;name:string;level:number|null}[];areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null};niak_weather?:{installed:boolean;places:{entry_id:string;title:string}[]};integrations?:{atmofrance?:boolean}}
 export interface Discovery {version:1;revision:string;candidates:Record<string,Candidate[]>;suggestions:Record<string,string|string[]>;drivers?:Record<string,Driver>}
 export interface DriverSignal {entity_id:string;name:string;on:boolean}
-export interface Driver {name:string;auto:string|null;override:string|null;signals?:Partial<Record<'enabled'|'auto'|'tracking'|'detection'|'override'|'sun'|'climate',DriverSignal|null>>;azimuth?:number|null;exposure?:string|null}
+export interface Driver {name:string;auto:string|null;override:string|null;signals?:Partial<Record<'enabled'|'auto'|'tracking'|'detection'|'override'|'sun'|'climate',DriverSignal|null>>;azimuth?:number|null;exposure?:string|null;width?:number|null;height?:number|null}
 // The technical state of the home (health.py): orange (bad) stops something, tip could be better, none is not used.
 export type Level='ok'|'bad'|'tip'|'none';
 export type Target={kind:'room';entry_id:string;label:string}|{kind:'exterior';label:string}|{kind:'area';area_id:string;label:string};

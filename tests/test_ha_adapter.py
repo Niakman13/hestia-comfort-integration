@@ -154,6 +154,12 @@ class AdapterTests(AdapterFixture):
         self.assertEqual((shutter["driver"], shutter["automatic"], shutter["sun_front"], shutter["target"]), ("adaptive_cover_pro", True, True, 30))
         self.assertIsNone(shutter["advice"])
         self.assertEqual(data["assessment"]["openings"][0]["exposure"], "O")
+    async def test_adaptive_cover_pro_window_size_and_bearing_come_from_its_settings(self):
+        from types import SimpleNamespace
+        from custom_components.niak_comfort import cover_link
+        entry = SimpleNamespace(data={}, options={"set_azimuth": 273.0, "window_width": 1.4, "window_height": 0.96})
+        hass = SimpleNamespace(states=SimpleNamespace(get=lambda e: None), config_entries=SimpleNamespace(async_get_entry=lambda i: entry))
+        self.assertEqual(cover_link.facts(hass, {"entry": "acp"}), {"azimuth": 273.0, "reason": None, "width": 1.4, "height": 0.96})
     async def test_real_state_mapping_and_sensor_output(self):
         coordinator = ComfortCoordinator(self.hass, self.entry)
         coordinator.data = await coordinator._async_update_data()

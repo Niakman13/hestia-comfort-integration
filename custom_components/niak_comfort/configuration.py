@@ -89,7 +89,8 @@ class Configuration:
         known = cover_link.facts(self.hass, roles)
         return {"name": roles["name"], "auto": roles.get("auto"), "override": roles.get("override"),
                 "signals": {role: signal(role) for role in ("enabled", "auto", "tracking", "detection", "override", "sun", "climate")},
-                "azimuth": known["azimuth"], "exposure": cover_link.exposure(known["azimuth"])}
+                "azimuth": known["azimuth"], "exposure": cover_link.exposure(known["azimuth"]),
+                "width": known["width"], "height": known["height"]}
 
     def weather_proposal(self, entry_id=None):
         """Niak Weather's station as exterior sources, ready for the exterior page."""

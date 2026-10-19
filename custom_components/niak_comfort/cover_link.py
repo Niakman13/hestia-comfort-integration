@@ -53,7 +53,7 @@ def find_all(hass):
     result = {}
     for config_entry_id, roles in entries.items():
         for cover in _covers(hass, config_entry_id, roles):
-            result[cover] = {**roles, "name": NAME}
+            result[cover] = {**roles, "name": NAME, "entry": config_entry_id}
     return result
 
 
@@ -61,10 +61,15 @@ def facts(hass, roles):
     """What Adaptive Cover Pro knows of the window: its exact bearing, and why the cover stands where it does."""
     target = hass.states.get(roles["target"]) if roles.get("target") else None
     attrs = target.attributes if target else {}
-    azimuth = attrs.get("azimuth_window")
+    config = hass.config_entries.async_get_entry(roles["entry"]) if roles.get("entry") else None
+    options = {**config.data, **config.options} if config else {}
+    azimuth = attrs.get("azimuth_window", options.get("set_azimuth"))
     reason = attrs.get("position_explanation") or attrs.get("reason")
+    # The window's size, as told to Adaptive Cover Pro (metres).
+    size = lambda key: float(options[key]) if isinstance(options.get(key), (int, float)) and 0 < options[key] < 20 else None
     return {"azimuth": float(azimuth) if isinstance(azimuth, (int, float)) and 0 <= azimuth <= 360 else None,
-            "reason": reason if isinstance(reason, str) and reason else None}
+            "reason": reason if isinstance(reason, str) and reason else None,
+            "width": size("window_width"), "height": size("window_height")}
 
 
 def exposure(azimuth):
