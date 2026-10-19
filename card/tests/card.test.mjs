@@ -247,3 +247,26 @@ test('the home card can open a page on a long press, in every format',()=>{
   assert.equal(homeAction(cleanHomeConfig({type:'custom:niak-comfort-home-card',format:'list'})),'popup');
   assert.equal(homeAction(cleanHomeConfig({type:'custom:niak-comfort-home-card',format:'list',hold_action:'page',hold_path:'/maison'})),'page');
 });
+test('a running ventilation or purifier is never counted out of your range',()=>{
+  const v=fresh();v.assessment={...v.assessment,level:'calm',reason:'within_comfort',needs:[],features:{...v.assessment.features,air:{...(v.assessment.features?.air??{}),co2_status:'ok',ventilation:{on:true,boost:false}}}};
+  v.observations={...v.observations,purifier:{value:true,quality:'valid',source:'fan.p'}};
+  const st={why:false,tilesOpen:false,detailsOpen:false,uid:'t',toggle(){}};
+  const text=plain(roomCard(v,cleanConfig({type:'custom:niak-comfort-card',format:'measures',modules:['air','humidity']}),st,'measures'));
+  assert.match(text,/En marche/);assert.doesNotMatch(text,/hors de votre plage/);
+});
+test('the home card names what a room needs, as measured',async()=>{
+  const {needs}=await import(pathToFileURL(join(temp,'views/room.mjs')));
+  const v=fresh();v.observations={...v.observations,indoor_humidity:{value:68,quality:'valid',unit:'%'},voc:{value:282,quality:'valid',unit:'ppb'}};
+  v.assessment={...v.assessment,level:'action',needs:['dry'],openings:[],features:{...v.assessment.features,air:{...(v.assessment.features?.air??{}),co2_status:'ok',voc_status:'high',ventilation:{on:true,boost:false}}}};
+  assert.deepEqual(needs(v),['68 % trop humide','282 COV élevés']);
+});
+test('a cover driven by Adaptive Cover Pro has its own tile, and asks nothing while it drives',async()=>{
+  const {tiles}=await import(pathToFileURL(join(temp,'views/room.mjs')));
+  const v=fresh(),base={entity_id:'binary_sensor.w',mode:'connected',position:100,state:'open',advice:null,message:'',shade_fraction:null,shade_model:'unknown',manual_override:false,automatic:true,cover:'cover.v',driver:'adaptive_cover_pro',sun_front:true,target:30};
+  v.assessment={...v.assessment,features:{...v.assessment.features,shutters:[base]}};
+  const c=cleanConfig({type:'custom:niak-comfort-card',modules:['shutters']});
+  let t=tiles(v,c).find(x=>x.label==='Volet');
+  assert.deepEqual([t.value,t.note,t.out,t.entity],['Ouvert','automatique · soleil devant',false,'cover.v']);
+  v.assessment.features.shutters=[{...base,automatic:false,advice:'close'}];
+  t=tiles(v,c).find(x=>x.label==='Volet');assert.deepEqual([t.note,t.out,t.level],['à fermer',true,'action']);
+});

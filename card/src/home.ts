@@ -5,7 +5,7 @@ import charte from './ui/niak-charte.css';
 import roomStyle from './ui/room.css';
 import {html as h2} from 'lit';
 import {isView,number,numeric} from './view';
-import {advice,scale,fold,hero,tileSummary,pills,moreInfo,type CardState,type Advice,type Slide} from './views/room';
+import {advice,needs,scale,fold,hero,tileSummary,pills,moreInfo,type CardState,type Advice,type Slide} from './views/room';
 import {cleanHomeConfig,homeAction,type Connection,type HomeAssistant,type HomeConfig,type HomeFormat,type Unsubscribe,type View,type Level} from './types';
 import {icon} from './ui/icons';
 
@@ -81,8 +81,8 @@ export class NiakComfortHomeCard extends LitElement {
   private roomTile(r:View){
     const t=numeric(r.observations.indoor_temperature),a=r.assessment,lvl=a.level as Level,unheated=a.features?.season?.heated===false;
     const note=t===null?'mesure indisponible':['action','urgent'].includes(lvl)?advice(r).title.toLowerCase():a.needs.includes('cool')?'trop chaud':a.needs.includes('heat')?'trop frais':unheated?'non chauffée':'dans votre plage';
-    const out=['action','urgent'].includes(lvl);
-    return h2`<button class=${'nc-tile'+(out?' out':'')} data-level=${unheated&&!out?'neutral':lvl} @click=${(e:Event)=>{const id=r.observations.indoor_temperature?.source;if(id)moreInfo(e,id);else this.open(r);}} title=${'Détails : '+r.title}><div class="nc-tile-h"><span class="nw-label">${r.title}</span></div><b>${number(t)}<small>°C</small></b><em>${note}</em></button>`;
+    const out=['action','urgent'].includes(lvl),need=out?needs(r):[];
+    return h2`<button class=${'nc-tile'+(out?' out':'')} data-level=${unheated&&!out?'neutral':lvl} @click=${(e:Event)=>{const id=r.observations.indoor_temperature?.source;if(id)moreInfo(e,id);else this.open(r);}} title=${'Détails : '+r.title}><div class="nc-tile-h"><span class="nw-label">${r.title}</span></div><b>${number(t)}<small>°C</small></b><em>${need.length?h2`<niak-note-ticker .notes=${need} .still=${this.config?.animations===false||this.config?.rotate===false}></niak-note-ticker>`:note}</em></button>`;
   }
   private details(h:Home){
     const row=(t:string,x:string)=>h2`<li><b>${t}</b><span> · ${x}</span></li>`,out=[];

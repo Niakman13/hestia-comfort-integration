@@ -19,9 +19,9 @@ from .engine.sources import normalize, Reading
 from .configuration import DATA_CONFIG
 from .exterior import exterior_reading
 from .discovery import voc_device_class
-from . import weather_link
+from . import cover_link, weather_link
 
-STATE_KINDS = ("window", "heating", "rain", "pollution", "presence", "purifier", "ventilation", "cover", "cover_state", "shutter_auto", "shutter_override", "purifier_speed")
+STATE_KINDS = ("window", "heating", "rain", "pollution", "presence", "purifier", "ventilation", "cover", "cover_state", "shutter_auto", "shutter_override", "shutter_sun", "shutter_target", "purifier_speed")
 
 
 class ComfortCoordinator(DataUpdateCoordinator):
@@ -57,6 +57,10 @@ class ComfortCoordinator(DataUpdateCoordinator):
         ids = set(self.config.get("sources", {}).values()) | set(self.config.get("windows", [])) | set(self.config.get("presence", []))
         for meta in self.config.get("openings", {}).values():
             ids.update(meta[k] for k in ("cover_entity", "auto_entity", "override_entity") if meta.get(k))
+        # Covers driven by Adaptive Cover Pro: its signals are read without being chosen by hand.
+        self.drivers = self._drivers()
+        for roles in self.drivers.values():
+            ids.update(v for k, v in roles.items() if k in cover_link.ROLES)
         ids.add("sun.sun")
         if self.home_configuration:
             ids |= {s["entity_id"] for s in self.home_configuration.effective_sources(self.config).values()}
@@ -146,6 +150,14 @@ class ComfortCoordinator(DataUpdateCoordinator):
         # Older rooms declared rain shelter for the whole room instead of per opening.
         sheltered = self.config.get("rain_exposed") is False
         openings = {e: Opening(**{"sheltered": sheltered, **declared.get(e, {})}) for e in windows}
+        drivers = getattr(self, "drivers", None)
+        if drivers is None:
+            drivers = self.drivers = self._drivers()
+        for e, roles in drivers.items():
+            if e in openings:
+                o = openings[e]
+                openings[e] = replace(o, driver="adaptive_cover_pro", auto_entity=o.auto_entity or roles.get("auto"),
+                                      override_entity=o.override_entity or roles.get("override"))
         for entity_id in windows:
             readings[f"window:{entity_id}"] = self._reading(entity_id, "window", now)
         for entity_id in self.config.get("presence", []):
@@ -164,9 +176,18 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 if state and state.attributes.get("current_position") is not None:
                     readings[f"cover:{entity_id}"] = self._reading(cover, "cover", now)
                 readings[f"cover_state:{entity_id}"] = self._reading(cover, "cover_state", now)
+            opening = openings[entity_id]
             for field, kind in (("auto_entity", "shutter_auto"), ("override_entity", "shutter_override")):
-                if meta.get(field):
-                    readings[f"{kind}:{meta[field]}"] = self._reading(meta[field], kind, now)
+                if getattr(opening, field):
+                    readings[f"{kind}:{getattr(opening, field)}"] = self._reading(getattr(opening, field), kind, now)
+            roles = drivers.get(entity_id) or {}
+            for role, kind in (("sun", "shutter_sun"), ("target", "shutter_target")):
+                if roles.get(role):
+                    readings[f"{kind}:{entity_id}"] = self._reading(roles[role], kind, now)
+            for role in ("sun_start", "sun_end"):
+                state = self.hass.states.get(roles[role]) if roles.get(role) else None
+                if state and state.state not in ("unknown", "unavailable", ""):
+                    readings[f"shutter_{role}:{entity_id}"] = Reading(state.state, "valid", roles[role], state.last_reported.isoformat())
         if selected.get("purifier"):
             state = self.hass.states.get(selected["purifier"])
             # A purifier's on/off state is useful even without speed reporting.
@@ -316,6 +337,16 @@ class ComfortCoordinator(DataUpdateCoordinator):
     def _weather_place(self):
         home = self.home_configuration.home if self.home_configuration else {}
         return home.get("weather") if home.get("configured") else None
+
+    def _drivers(self):
+        """{opening: Adaptive Cover Pro's entities} for each connected cover it drives."""
+        try:
+            driven = cover_link.find_all(self.hass)
+        except Exception:  # A changed Adaptive Cover Pro must never stop the room.
+            self.logger.warning("Adaptive Cover Pro could not be read", exc_info=True)
+            return {}
+        return {e: driven[m["cover_entity"]] for e, m in self.config.get("openings", {}).items()
+                if m.get("shutter") == "connected" and m.get("cover_entity") in driven}
 
     def _sun(self):
         state = self.hass.states.get("sun.sun")

@@ -109,26 +109,45 @@ def _shutters(readings, settings, openings, sun, details, needs):
         state = _value(readings,'cover_state:'+eid) if meta.shutter == 'connected' else None
         override=_value(readings,'shutter_override:'+meta.override_entity) if meta.override_entity else None
         automatic=_value(readings,'shutter_auto:'+meta.auto_entity) if meta.auto_entity else None
+        # Adaptive Cover Pro knows whether the sun really stands in front of this window (its field of view).
+        driven=meta.driver=='adaptive_cover_pro'
+        front=_value(readings,'shutter_sun:'+eid) if driven else None
+        target=_value(readings,'shutter_target:'+eid) if driven else None
+        strong=watts is not None and watts >= settings.sun_facade
+        if front is False: strong=False
+        elif front is True and watts is None: strong=True
         advice=None
         message='Position non mesurée.' if position is None else f'Position mesurée : {position:g} %.'
+        manual=meta.shutter == 'manual'
+        tip=''
         if override is True:
             message += ' Dérogation active respectée.'
-        elif watts is not None and watts >= settings.sun_facade and 'cool' in needs and position != 0 and state != 'closed':
+        elif strong and 'cool' in needs and position != 0 and state != 'closed':
             advice='close'
-            message += ' Si le volet est ouvert, fermez-le pour limiter les apports solaires.' if meta.shutter == 'manual' else 'Fermez le volet exposé pour limiter les apports solaires.'
-        elif watts is not None and watts >= settings.sun_facade and 'heat' in needs and position != 100 and state != 'open':
+            tip=' Si le volet est ouvert, fermez-le pour limiter les apports solaires.' if manual else ' Fermez le volet exposé pour limiter les apports solaires.'
+        elif strong and 'heat' in needs and position != 100 and state != 'open':
             advice='open'
-            message += ' Si le volet est fermé, ouvrez-le pour profiter du soleil.' if meta.shutter == 'manual' else 'Ouvrez le volet pour profiter du soleil.'
+            tip=' Si le volet est fermé, ouvrez-le pour profiter du soleil.' if manual else ' Ouvrez le volet pour profiter du soleil.'
         elif sun is not None and sun.elevation < 0 and 'heat' in needs and position != 0 and state != 'closed':
             advice='close'
-            message += ' Si le volet est ouvert, fermez-le pour protéger la pièce du froid nocturne.' if meta.shutter == 'manual' else 'Fermez le volet pour protéger la pièce du froid nocturne.'
+            tip=' Si le volet est ouvert, fermez-le pour protéger la pièce du froid nocturne.' if manual else ' Fermez le volet pour protéger la pièce du froid nocturne.'
+        if driven and override is not True:
+            if automatic is True:
+                # It moves the cover itself: Niak does not ask the person to do it twice.
+                advice,tip=None,' Adaptive Cover Pro pilote le volet' + (f', position visée {target:g} %.' if target is not None else '.')
+            elif automatic is False and advice:
+                tip += ' Le pilotage automatique d’Adaptive Cover Pro est coupé.'
+        message += tip
         if model == 'geometry': message += ' Ombre estimée par géométrie.'
         elif model == 'simple': message += ' Ombre estimée par modèle simple.'
         light=_value(readings,'illuminance')
         if light is not None and light < settings.illuminance_low:
             message += ' Luminosité intérieure faible ; elle ne prouve pas la position du volet.'
         result.append(dict(entity_id=eid,mode=meta.shutter,position=position,state=state,advice=advice,message=message,
-                           shade_fraction=shade,shade_model=model,manual_override=override,automatic=automatic))
+                           shade_fraction=shade,shade_model=model,manual_override=override,automatic=automatic,
+                           cover=meta.cover_entity,driver=meta.driver,sun_front=front,target=target,
+                           sun_start=_value(readings,'shutter_sun_start:'+eid) if driven else None,
+                           sun_end=_value(readings,'shutter_sun_end:'+eid) if driven else None))
     return result
 
 

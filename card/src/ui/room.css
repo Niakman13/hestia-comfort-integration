@@ -75,6 +75,10 @@ ha-card.nc-c { overflow:hidden; border-radius:var(--nw-radius-card); background:
 .nc-tile.out::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--c); }
 /* Le point et son onde dépassent de la ligne : la note n'est pas rognée, la tuile garde de la place pour l'onde. */
 .nc-tile.out em { display:flex; align-items:center; gap:7px; overflow:visible; padding-left:1px; font-weight:600; color:color-mix(in oklab, var(--c) 45%, var(--nw-fg)); }
+.nc-notes { display:grid; min-width:0; }
+.nc-notes > span { grid-area:1/1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:0; transition:opacity .4s var(--nw-ease); }
+.nc-notes > span.on { opacity:1; }
+niak-note-ticker { display:block; flex:1; min-width:0; }
 .nc-tile.out em::before { content:''; width:7px; height:7px; border-radius:50%; flex:none; background:var(--c);
   box-shadow:0 0 0 0 color-mix(in oklab, var(--c) 70%, transparent); animation:nc-ping 2.4s ease-out infinite; }
 .nc-tile.out .nc-ic { background:var(--c); color:color-mix(in oklab, var(--c) 30%, #1d2530); }

@@ -38,11 +38,11 @@ def normalize(kind: str, value: object, unit: str | None = None, *,
         return invalid("future_timestamp")
     # A state (contact, heating action) holds until it changes: only measurements expire.
     state_kind = kind.split(":", 1)[0]
-    if state_kind in ("window", "rain", "pollution", "heating", "presence", "purifier", "ventilation", "cover", "cover_state", "shutter_auto", "shutter_override"):
+    if state_kind in ("window", "rain", "pollution", "heating", "presence", "purifier", "ventilation", "cover", "cover_state", "shutter_auto", "shutter_override", "shutter_sun", "shutter_target"):
         max_age = None
     if max_age is not None and age > max_age:
         return invalid("expired", "stale")
-    if state_kind in ("window", "rain", "pollution", "presence", "purifier", "ventilation", "shutter_auto", "shutter_override"):
+    if state_kind in ("window", "rain", "pollution", "presence", "purifier", "ventilation", "shutter_auto", "shutter_override", "shutter_sun"):
         if isinstance(value, bool):
             result = value
         elif str(value).lower() in ("on", "off"):
@@ -74,7 +74,7 @@ def normalize(kind: str, value: object, unit: str | None = None, *,
             elif unit != "°C":
                 return invalid("incompatible_unit")
             bounds = (-80, 80)
-        elif state_kind in ("cover", "purifier_speed") and unit in ("%", None):
+        elif state_kind in ("cover", "purifier_speed", "shutter_target") and unit in ("%", None):
             bounds = (0, 100)
         elif kind == "illuminance" and unit in ("lx", "lux"):
             bounds = (0, 1000000)

@@ -189,7 +189,9 @@ export function scale(s:ScaleInput):TemplateResult {
 }
 
 /** `watch` (soft yellow): the measure leaves your range, without a gesture asked; orange stays for gestures. */
-export interface Tile {ic:string;label:string;value:string;unit?:string;note:string;level:Level|'watch';out:boolean;entity?:string}
+export interface Tile {ic:string;label:string;value:string;unit?:string;note:string;level:Level|'watch';out:boolean;entity?:string;
+  /** A device at work (purifier, ventilation): framed like a measure, never counted out of your range. */
+  remedy?:boolean}
 /** Opens Home Assistant's own details window (history, attributes) for an entity, as any dashboard card does. */
 export const moreInfo=(e:Event,entityId:string)=>{e.stopPropagation();(e.currentTarget as HTMLElement).dispatchEvent(new CustomEvent('hass-more-info',{detail:{entityId},bubbles:true,composed:true}));};
 /** The entity behind each tile: the one a tap opens. */
@@ -219,16 +221,22 @@ export function tiles(v:View,config:Config):Tile[] {
   if(mods.has('shutters')){const s=a.sun,solar=numeric(o.solar),entering=(a.openings??[]).some(x=>x.flags.includes('sun_entering'));
     if(s||solar!==null){const night=!!s&&s.elevation<=0,value=night?'Nuit':solar===null?'—':solar<150?'Faible':solar<500?'Moyen':'Fort';
       list.push({ic:night?'moon':'sun',label:'Soleil',value,note:entering?'entre dans la pièce':night?'pas d’apport':solar===null?'non mesuré':`${number(solar)} W/m²`,level:entering?'action':'neutral',out:entering});}}
+  // A connected cover: where it stands, and who moves it (Adaptive Cover Pro, the person, or nobody yet).
+  if(mods.has('shutters'))for(const s of a.features?.shutters??[]){if(s.mode!=='connected')continue;
+    const p=s.position,shut=p===0||(p==null&&s.state==='closed'),open=p===100||(p==null&&s.state==='open'),act=s.manual_override!==true&&!!s.advice;
+    const auto=s.driver&&s.automatic===true&&s.manual_override!==true;
+    const note=s.manual_override===true?'repris à la main':act?(s.advice==='close'?'à fermer':'à ouvrir'):auto?(s.sun_front?'automatique · soleil devant':'automatique'):s.driver&&s.automatic===false?'automatisme coupé':s.state==null&&p==null?'indisponible':'rien à faire';
+    list.push({ic:shut?'shut':'window',label:'Volet',value:shut?'Fermé':open?'Ouvert':p!=null?number(p):'—',unit:!shut&&!open&&p!=null?'%':undefined,note,level:act?'action':auto?'calm':'neutral',out:act,entity:s.cover??undefined});}
   if(mods.has('air')&&o.purifier){const on=o.purifier.quality==='valid'?o.purifier.value===true:null,speed=numeric(o.purifier_speed);
     // Running, it is a remedy at work: framed in green, like the measure it treats.
-    list.push({ic:'fan',label:'Purificateur',value:on===null?'—':on?'En marche':'Arrêté',note:on?(speed!==null?`filtre à ${number(speed)} %`:'filtre l’air'):on===false?'à l’arrêt':'indisponible',level:on?'calm':'neutral',out:on===true});}
+    list.push({ic:'fan',label:'Purificateur',value:on===null?'—':on?'En marche':'Arrêté',note:on?(speed!==null?`filtre à ${number(speed)} %`:'filtre l’air'):on===false?'à l’arrêt':'indisponible',level:on?'calm':'neutral',out:on===true,remedy:true});}
   const vent=air?.ventilation;
   if(mods.has('air')&&vent){const on=vent.on,fast=vent.boost===true;
-    list.push({ic:'vmc',label:'Ventilation',value:on===null?'—':fast?'Rapide':on?'En marche':'Arrêtée',note:on?(fast?'grande vitesse':'renouvelle l’air'):on===false?'à l’arrêt':'indisponible',level:on?'calm':'neutral',out:on===true});}
+    list.push({ic:'vmc',label:'Ventilation',value:on===null?'—':fast?'Rapide':on?'En marche':'Arrêtée',note:on?(fast?'grande vitesse':'renouvelle l’air'):on===false?'à l’arrêt':'indisponible',level:on?'calm':'neutral',out:on===true,remedy:true});}
   if(mods.has('coordination')&&o.heating){const label=heatingLabels[a.heating_action]??'Inconnu',running=a.heating_action==='heating';
     const raw=o.heating_mode?.quality==='valid'&&typeof o.heating_mode.value==='string'?o.heating_mode.value:null,mode=raw?modeLabels[raw]??raw:null;
     list.push({ic:'heat',label:'Chauffage',value:running?'Chauffe':label,note:mode?`mode ${mode}`:running?'chauffe la pièce':'observé, jamais commandé',level:'neutral',out:false});}
-  for(const t of list)t.entity=tileEntity(v,t.label);
+  for(const t of list)t.entity??=tileEntity(v,t.label);
   // Right after a start, a silent sensor is still on its way, not broken.
   return v.starting?list.map(t=>t.note==='indisponible'||t.note==='pas de nouvelle mesure'?{...t,note:'en attente'}:t):list;
 }
@@ -251,7 +259,9 @@ export function details(v:View,config:Config):TemplateResult[] {
   const vent=f?.ventilation;
   if(mods.has('windows')&&vent){if(vent.opened_minutes!=null)out.push(row('Ouvert depuis',`${number(vent.opened_minutes)} min`));}
   if(mods.has('shutters'))for(const s of f?.shutters??[]){if(s.mode==='none'||(!s.advice&&!s.manual_override&&s.position==null))continue;
-    out.push(row(v.names?.[s.entity_id]??'Volet',[s.manual_override?'dérogation manuelle':s.advice==='close'?'à fermer':s.advice==='open'?'à ouvrir':'rien à faire',s.position!=null?`ouvert à ${number(s.position)} %`:''].filter(Boolean).join(' · ')));}
+    const hour=(x?:string|null)=>{const d=x?new Date(x):null;return d&&!isNaN(+d)?d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}).replace(':',' h '):null;},from=hour(s.sun_start),to=hour(s.sun_end);
+    out.push(row(v.names?.[s.entity_id]??'Volet',[s.manual_override?'repris à la main':s.advice==='close'?'à fermer':s.advice==='open'?'à ouvrir':s.driver&&s.automatic===true?'piloté par Adaptive Cover Pro':'rien à faire',
+      s.position!=null?`ouvert à ${number(s.position)} %`:'',s.driver&&s.target!=null&&s.target!==s.position?`visé ${number(s.target)} %`:'',from&&to?`soleil de ${from} à ${to}`:''].filter(Boolean).join(' · ')));}
   if(mods.has('air')&&f?.presence&&f.presence.state!=='not_configured')out.push(row('Présence',{occupied:'quelqu’un est là',empty:'pièce vide',unknown:'inconnue'}[f.presence.state]??''));
   // Where the drying promise comes from: this room's own airings, or an ordinary room until one is seen.
   if(mods.has('humidity')&&f?.drying)out.push(row('Séchage',f.drying.openings?`appris sur ${f.drying.openings} aération${f.drying.openings>1?'s':''}`:'estimé, aucune aération observée'));
@@ -304,7 +314,7 @@ export const asking=(v:View)=>['action','urgent'].includes(slides(v)[0]?.level??
 /** The room card in each format; null when the alert format has nothing to say. */
 export function roomCard(v:View,config:Config,st:CardState,format:Format='full'):TemplateResult|null {
   const a=v.assessment,f=a.features,ti=numeric(v.observations.indoor_temperature),te=numeric(v.observations.outdoor_temperature);
-  const list=tiles(v,config),outside=list.filter(t=>t.out),muted=list.filter(t=>tileClass(t).includes(' mute'));
+  const list=tiles(v,config),outside=list.filter(t=>t.out&&!t.remedy),muted=list.filter(t=>tileClass(t).includes(' mute'));
   const marks=config.scale_marks??(config.show_scale===false?[]:SCALE_MARKS);
   const band:[number,number]|null=f?.season&&marks.includes('band')?[f.season.minimum,f.season.maximum]:null;
   const sc=(config.modules??[]).includes('temperature')&&marks.length&&ti!==null
@@ -340,7 +350,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full')
   return html`<ha-card class="nc-c" data-level=${top} ?data-starting=${!!v.starting}>
     ${hero({name,level:top,slides:all,scaleLabel:'Température',scale:sc??html``,st,why:whyLines(v),compact:!sc,still})}
     ${!body?nothing:html`<div class="nc-body">
-      ${measures?fold({label:'Mesures',summary,open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tiles',body:grid,keep:list.filter(t=>t.out||tileClass(t).includes(' mute')).map(tile)}):nothing}
+      ${measures?fold({label:'Mesures',summary,open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tiles',body:grid,keep:list.filter(t=>(t.out&&!t.remedy)||tileClass(t).includes(' mute')).map(tile)}):nothing}
       ${config.show_details===false?nothing:fold({label:'Détails',summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:st.uid+'-details',body:detailList})}
     </div>`}
   </ha-card>`;
@@ -389,3 +399,35 @@ export class NiakAdviceTicker extends LitElement {
   }
 }
 if(!customElements.get('niak-advice-ticker'))customElements.define('niak-advice-ticker',NiakAdviceTicker);
+
+/** What a room needs, as measured: « 68 % trop humide », « 282 COV élevés ». The home card shows it under
+    the room, since the advice itself is already in its banner. A device at work is not a need. */
+export function needs(v:View):string[] {
+  const o=v.observations,a=v.assessment,air=a.features?.air,out:string[]=[],val=(k:string)=>numeric(o[k]);
+  const t=val('indoor_temperature'),h=val('indoor_humidity'),c=val('co2'),pm=val('pm25'),voc=val('voc');
+  if(a.needs.includes('cool'))out.push(t!==null?`${number(t)} °C trop chaud`:'trop chaud');
+  if(a.needs.includes('heat'))out.push(t!==null?`${number(t)} °C trop frais`:'trop frais');
+  if(a.needs.includes('dry'))out.push(h!==null?`${number(h)} % trop humide`:'trop humide');
+  if(air?.co2_status==='high')out.push(c!==null?`${number(c)} ppm de CO₂`:'CO₂ élevé');
+  if(air?.pm25_status==='high'&&air?.pm25_treated!==true)out.push(pm!==null?`${number(pm)} particules élevées`:'particules élevées');
+  if(air?.voc_status==='high')out.push(voc!==null?`${number(voc)} COV élevés`:'COV élevés');
+  if((a.openings??[]).some(x=>x.flags.length>0&&x.open===true))out.push('fenêtre à refermer');
+  return out;
+}
+
+/** Short texts one at a time, every 3 s, in the same place; still when animations are off. */
+export class NiakNoteTicker extends LitElement {
+  @property({attribute:false}) notes:string[]=[];
+  @property({type:Boolean}) still=false;
+  @state() private index=0;
+  private timer?:ReturnType<typeof setInterval>;
+  createRenderRoot(){return this;}
+  connectedCallback(){super.connectedCallback();this.timer=setInterval(()=>{
+    if(this.notes.length>1&&!this.still&&!matchMedia('(prefers-reduced-motion: reduce)').matches)this.index=(this.index+1)%this.notes.length;},3000);}
+  disconnectedCallback(){super.disconnectedCallback();clearInterval(this.timer);this.timer=undefined;}
+  protected render(){
+    const list=this.notes,i=this.index%Math.max(1,list.length);
+    return html`<span class="nc-notes" title=${list.join(' · ')}>${list.map((n,k)=>html`<span class=${k===i?'on':''} aria-hidden=${k===i?'false':'true'}>${n}</span>`)}</span>`;
+  }
+}
+if(!customElements.get('niak-note-ticker'))customElements.define('niak-note-ticker',NiakNoteTicker);
