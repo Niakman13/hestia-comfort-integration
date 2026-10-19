@@ -1,3 +1,9 @@
+## 1.1.3 — Correction des volets
+
+- Une fonction d’Adaptive Cover Pro désactivée (par exemple le mode climat) n’est plus comptée comme un capteur qui ne répond pas : plus de « À vérifier » ni de « Ne répond pas » au nom de la fenêtre.
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 1.1.2 — Dimensions reprises d’Adaptive Cover Pro
 
 - La largeur, la hauteur et l’orientation de la fenêtre sont reprises des réglages d’Adaptive Cover Pro ; une valeur saisie dans Niak reste prioritaire.

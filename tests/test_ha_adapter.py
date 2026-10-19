@@ -142,6 +142,8 @@ class AdapterTests(AdapterFixture):
                                                ("sensor", "target_position", "30", {"unit_of_measurement": "%", "actual_positions": {"cover.volet": 100}, "azimuth_window": 273.0, "position_explanation": "position par défaut"})):
             entry = registry.async_get_or_create(domain, "adaptive_cover_pro", "acp_" + key, suggested_object_id="volet_" + key)
             self.hass.states.async_set(entry.entity_id, value, attributes)
+        climate = registry.async_get_or_create("switch", "adaptive_cover_pro", "acp_climate_mode", suggested_object_id="volet_climate_mode")
+        self.hass.states.async_set(climate.entity_id, "unavailable")
         self.hass.states.async_set("cover.volet", "open", {"current_position": 100})
         from custom_components.niak_comfort import cover_link
         found = cover_link.find(self.hass, "cover.volet")
@@ -153,6 +155,8 @@ class AdapterTests(AdapterFixture):
         shutter = data["assessment"]["features"]["shutters"][0]
         self.assertEqual((shutter["driver"], shutter["automatic"], shutter["sun_front"], shutter["target"]), ("adaptive_cover_pro", True, True, 30))
         self.assertIsNone(shutter["advice"])
+        # A feature it leaves unavailable (climate mode) is not a sensor that stopped answering.
+        self.assertFalse(any(k.startswith("shutter_") for k in data["assessment"]["missing"]))
         self.assertEqual(data["assessment"]["openings"][0]["exposure"], "O")
     async def test_adaptive_cover_pro_window_size_and_bearing_come_from_its_settings(self):
         from types import SimpleNamespace
