@@ -11,6 +11,7 @@ Puis ouvrez **Confort → Vue d’ensemble**. La section **À régler** liste ch
 - [L’extérieur et Niak Weather](#lextérieur-et-niak-weather)
 - [La qualité de l’air](#la-qualité-de-lair)
 - [Un conseil semble faux](#un-conseil-semble-faux)
+- [Volets et Adaptive Cover Pro](#volets-et-adaptive-cover-pro)
 - [Les journaux](#les-journaux)
 - [Signaler un problème](#signaler-un-problème)
 
@@ -100,6 +101,20 @@ Vérifiez aussi les réglages de la pièce :
 « **Rien à faire** » alors qu’il fait chaud ? Dehors n’est pas plus frais, ou ouvrir n’aiderait pas. Niak ne parle que pour un geste utile.
 
 La durée d’aération change ? La pièce apprend. Les premiers jours, elle reste prudente.
+
+## Volets et Adaptive Cover Pro
+
+**« Piloté par Adaptive Cover Pro » n’apparaît pas** dans le panneau :
+
+- la fenêtre doit avoir **Volet connecté** et le bon volet choisi ;
+- ce volet doit faire partie des volets réglés dans Adaptive Cover Pro ;
+- après avoir ajouté Adaptive Cover Pro, rechargez Niak Confort (ou redémarrez Home Assistant).
+
+**Niak dit « automatisme coupé »** alors qu’Adaptive Cover Pro est installé : un de ses interrupteurs est éteint (Integration Enabled, Automatic Control ou Sun Tracking). Le panneau dit lequel.
+
+**Niak vous demande de fermer le volet** : Adaptive Cover Pro ne le pilote pas en ce moment, et le soleil arrive sur une pièce trop chaude.
+
+Le mode climat ou une autre fonction d’Adaptive Cover Pro est indisponible ? Niak l’ignore : ce n’est pas un capteur en panne.
 
 ## Les journaux
 

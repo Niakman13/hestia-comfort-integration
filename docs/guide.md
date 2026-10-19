@@ -276,6 +276,28 @@ En été, Niak conseille de protéger les façades au soleil. En hiver, il signa
 
 Avec une avancée de toit et ses dimensions, l’ombre est estimée. Sans dimensions, un modèle simple est utilisé.
 
+### Avec Adaptive Cover Pro
+
+Si [Adaptive Cover Pro](https://github.com/jrhubott/adaptive-cover-pro) pilote un volet, Niak le reconnaît dès que vous choisissez ce volet dans **Ouvertures**. Le panneau affiche alors « Piloté par Adaptive Cover Pro » et la liste de ce qu’il lit.
+
+Ce que Niak lit tout seul :
+
+| Dans Adaptive Cover Pro | Ce qu’en fait Niak |
+|---|---|
+| Integration Enabled, Automatic Control, Sun Tracking | Les trois allumés : Adaptive Cover Pro pilote, Niak ne vous demande rien. Un seul coupé : Niak reprend ses conseils et dit lequel. |
+| Manual Override Detection, Dérogation manuelle | Vous avez repris la main : Niak la respecte. Détection coupée : Niak ignore ce signal. |
+| Climate Mode | Coupé dans une pièce trop chaude : Niak signale qu’il ne ferme pas contre la chaleur. |
+| Soleil devant | Plus précis que la façade seule : sans soleil devant la fenêtre, rien à fermer. |
+| Début et fin du soleil | Pièce déjà trop chaude : « à fermer avant 13 h 50 », si Adaptive Cover Pro ne pilote pas. |
+| Position cible, raison | Visibles dans les détails de la carte. |
+| Orientation, largeur, hauteur de la fenêtre | Reprises pour le calcul du soleil et de l’ombre. Une valeur saisie dans Niak reste prioritaire. |
+
+Une fonction qu’Adaptive Cover Pro laisse indisponible (par exemple le mode climat non configuré) est simplement ignorée : ce n’est pas une panne.
+
+Sur la carte de la pièce, la tuile **Volet** donne la position et une courte note : « automatique », « automatique · soleil devant », « automatisme coupé », « à fermer avant 13 h 50 » ou « à la main jusqu’à 15 h 00 ».
+
+Seule l’avancée de toit reste à saisir : Adaptive Cover Pro ne la connaît pas.
+
 ## Chaque pièce apprend
 
 Une aération ne remplace jamais tout l’air. Chaque pièce sèche à sa façon.
