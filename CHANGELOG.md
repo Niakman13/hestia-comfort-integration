@@ -1,3 +1,10 @@
+## 1.1.2 — Dimensions reprises d’Adaptive Cover Pro
+
+- La largeur, la hauteur et l’orientation de la fenêtre sont reprises des réglages d’Adaptive Cover Pro ; une valeur saisie dans Niak reste prioritaire.
+- Quand Adaptive Cover Pro est détecté, le panneau ne propose plus de choisir d’autres signaux.
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 1.1.1 — Volets mieux compris
 
 - Le panneau montre, en pleine largeur, ce que Niak lit d’Adaptive Cover Pro : intégration, pilotage automatique, suivi du soleil, mode climat, détection de la reprise à la main, soleil devant la fenêtre, orientation exacte.

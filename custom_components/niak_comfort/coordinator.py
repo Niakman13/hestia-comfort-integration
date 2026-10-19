@@ -158,7 +158,9 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 o, known = openings[e], cover_link.facts(self.hass, roles)
                 openings[e] = replace(o, driver="adaptive_cover_pro", auto_entity=o.auto_entity or roles.get("auto"),
                                       override_entity=o.override_entity or roles.get("override"), azimuth=known["azimuth"],
-                                      exposure=o.exposure or cover_link.exposure(known["azimuth"]))
+                                      exposure=o.exposure or cover_link.exposure(known["azimuth"]),
+                                      width=o.width if o.width is not None else known["width"],
+                                      height=o.height if o.height is not None else known["height"])
                 if known["reason"]:
                     readings[f"shutter_reason:{e}"] = Reading(known["reason"], "valid", roles.get("target"), now.isoformat())
         for entity_id in windows:
