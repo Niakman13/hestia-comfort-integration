@@ -1,7 +1,7 @@
 import {html,nothing,LitElement,type TemplateResult} from 'lit';
 import {property,state} from 'lit/decorators.js';
 import {SCALE_MARKS,CHIPS,TILE_BLOCKS,type Config,type View,type Level,type Format,type BannerBlock,type Chip} from '../types';
-import {numeric,number,heatingLabels,coverageText,windFrom,sourceLabel,needs as needLabels,constraintLabels} from '../view';
+import {numeric,number,heatingLabels,coverageText,windFrom,sourceLabel,needs as needLabels,constraintLabels,shortWhy} from '../view';
 import {icon} from '../ui/icons';
 
 /** The level, said in two or three words: the colour is never the only signal. */
@@ -74,7 +74,7 @@ export function advice(v:View):Advice {
       const why=constraint?constraintLabels[constraint]??constraint:'Contrainte extérieure';
       return {title:a.action==='fermer'?'Refermez':'Gardez fermé',line:html`${b(why)}${a.needs.length?' : le besoin attendra':''}`,disk:a.action==='fermer'?'shut':'window'};
     }
-    case 'short_air_change': return {title:a.action==='ok'?'Aération en cours':'Aérez 5 minutes',line:html`Air à renouveler, ${b(a.constraints.includes('frost')?'il gèle dehors':'le chauffage tourne')}`,disk:'open',cap:a.action==='ok'?undefined:'Puis refermez'};
+    case 'short_air_change': return {title:a.action==='ok'?'Aération en cours':'Aérez 5 minutes',line:html`Air à renouveler, ${b(shortWhy(a.constraints))}`,disk:'open',cap:a.action==='ok'?undefined:'Puis refermez'};
     case 'air_needed': return airing('Aérez','Renouvelez l’air',airWhy(v));
     case 'cooling_possible': return airing('Ouvrez','Ouvrez pour rafraîchir',temps);
     case 'precool_possible': return {title:a.action==='ok'?'Laissez ouvert cette nuit':'Ouvrez pour la nuit',line:html`Demain sera chaud : ${b('stockez le frais')}`,disk:'moon',cap:first};

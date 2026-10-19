@@ -90,7 +90,8 @@ def outlook(hass, entry_id):
         return {}
     storm = hass.states.get(entity(hass, entry_id, "orage") or "")
     vigilance = hass.states.get(entity(hass, entry_id, "vigilance") or "")
-    return {"storm": {"on": True, "off": False}.get(storm.state) if storm else None,
+    station = link.station(entry_id)
+    return {"station": tuple(sorted(station["sensors"])) if station else (),"storm": {"on": True, "off": False}.get(storm.state) if storm else None,
             "vigilance": VIGILANCE.get(vigilance.state) if vigilance else None,
             "rain_in_hours": _number(hass, entity(hass, entry_id, "next_rain")),
             "tomorrow_max": _number(hass, entity(hass, entry_id, "maximale_demain")),

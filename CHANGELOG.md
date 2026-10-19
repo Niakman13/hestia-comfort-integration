@@ -1,3 +1,12 @@
+## 1.1.4 — La station avant la prévision
+
+- Quand Niak Weather a une station qui mesure la pluie et les rafales, ce sont ses mesures qui comptent. Sec, vent calme et pas de pluie dans l’heure : malgré un orage prévu ou une vigilance orange, Confort propose « Aérez 5 minutes » si l’air en a besoin.
+- Sans station, rien ne change : la prévision Météo-France garde le dernier mot.
+- Il pleut, le vent souffle fort, la pluie arrive dans l’heure ou la vigilance est rouge : tout reste fermé, comme avant.
+- Pas d’ouverture longue sous un orage prévu : seulement une aération courte.
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 1.1.3 — Correction des volets
 
 - Une fonction d’Adaptive Cover Pro désactivée (par exemple le mode climat) n’est plus comptée comme un capteur qui ne répond pas : plus de « À vérifier » ni de « Ne répond pas » au nom de la fenêtre.
