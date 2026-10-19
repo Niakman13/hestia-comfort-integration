@@ -15,7 +15,7 @@
 
 Il conseille seulement : il ne commande aucun équipement.
 
-![Niak Confort — la carte d’une pièce qui conseille d’aérer, à côté de la carte du logement](docs/images/niak-comfort-banner.png)
+![Niak Confort — le confort de chaque pièce, expliqué : la carte d’une pièce qui conseille d’aérer vers 23 h, à côté de la carte du logement](docs/images/niak-comfort-banner.png)
 
 ## Pourquoi
 
