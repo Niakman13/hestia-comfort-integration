@@ -259,4 +259,5 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         found = weather_link.outlook(self.hass, 'nw1')
         self.assertEqual((found['storm'], found['vigilance'], found['rain_in_hours'], found['tomorrow_max']), (True, 2, 0.5, 31.2))
         self.assertEqual(len(found['hours']), 1)
+        self.assertEqual(found['station'], ())
         self.assertEqual(weather_link.outlook(self.hass, None), {})

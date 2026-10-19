@@ -5,7 +5,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "niak_comfort"))
-from engine.assessment import Opening, Sun, assess
+from engine.assessment import Opening, Settings, Sun, assess
 from engine.wind import crossing, open_first, side
 from engine.outlook import rain_soon, slot
 from test_engine import zone
@@ -64,6 +64,34 @@ class WeatherSignals(unittest.TestCase):
         self.assertEqual((orange.action, orange.reason), ("attendre", "opening_blocked"))
         yellow = assess(zone(indoor_temperature=27, outdoor_temperature=18), outlook={"vigilance": 1})
         self.assertEqual(yellow.action, "ouvrir")
+
+    def test_a_local_station_outweighs_a_forecast_storm(self):
+        # The salon on 19 Oct.: a storm forecast all day and an orange vigilance, but dry and calm at the station.
+        salon = dict(indoor_temperature=21.3, outdoor_temperature=18.1, indoor_humidity=74, outdoor_humidity=85,
+                     co2=1098, wind_gust=10.8)
+        station = ("humidity", "rain_rate", "temperature", "wind_gust")
+        forecast = {"storm": True, "vigilance": 2, "rain_in_hours": 3, "station": station}
+        room = Settings(co2_potential=900, co2_action=1050)  # the salon calls for air from 1 050 ppm
+        result = assess(zone(**salon), room, outlook=forecast)
+        self.assertEqual((result.action, result.reason), ("ouvrir", "short_air_change"))
+        self.assertIn("storm", result.constraints)
+        # Without a station measuring rain and gusts, Météo-France keeps the last word.
+        for missing in ((), ("rain_rate", "temperature"), ("temperature", "wind_gust")):
+            with self.subTest(station=missing):
+                blocked = assess(zone(**salon), room, outlook={**forecast, "station": missing})
+                self.assertEqual((blocked.action, blocked.reason), ("attendre", "opening_blocked"))
+        # The station itself still decides: rain now, strong gusts, rain within the hour or a red vigilance block.
+        for changes, outlook in (({"rain": True}, {}), ({"wind_gust": 60}, {}), ({}, {"rain_in_hours": 0.5}),
+                                 ({}, {"vigilance": 3}), ({"rain": None}, {})):
+            with self.subTest(changes=changes, outlook=outlook):
+                blocked = assess(zone(**{**salon, **changes}), room, outlook={**forecast, **outlook})
+                self.assertNotIn(blocked.action, ("ouvrir", "ok"))
+        # A forecast storm with an open window and nothing to gain still asks to close, without urgency.
+        opened = assess(zone(**{"window:a": True, "wind_gust": 10}), outlook=forecast)
+        self.assertEqual((opened.action, opened.level), ("fermer", "action"))
+        # Only a short airing: no long opening to cool down or to dry under a forecast storm.
+        warm = assess(zone(indoor_temperature=27, outdoor_temperature=18, wind_gust=10), outlook=forecast)
+        self.assertEqual((warm.action, warm.reason), ("attendre", "opening_blocked"))
 
     def test_rain_coming_closes_exposed_openings_only(self):
         soon = assess(zone(**{"window:a": True}), outlook={"rain_in_hours": 0.5})

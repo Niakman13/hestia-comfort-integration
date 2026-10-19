@@ -277,12 +277,19 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     # heating only soften the advice: a confirmed air need still gets a short airing.
     storm = outlook.get("storm") is True
     vigilance = (outlook.get("vigilance") or 0) >= 2  # orange or red, from Niak Weather
+    soon = rain_soon(outlook.get("rain_in_hours")) if rain is not True else None
+    # The storm and the orange vigilance are forecasts. When Niak Weather's own station measures the rain
+    # and the gusts here, it has the last word: dry, calm and no rain within the hour, they only shorten
+    # the airing. Without such a station, or with a red vigilance, the forecast still keeps everything shut.
+    station = outlook.get("station") or ()
+    measured = ("rain_rate" in station and "wind_gust" in station and value("rain") is False
+                and gust is not None and not windy and soon is None)
+    forecast_only = measured and (outlook.get("vigilance") or 0) < 3
     constraints = tuple(k for k, active in (("rain", rain is True), ("storm", storm), ("vigilance", vigilance), ("gust", windy),
                                             ("pollution", pollution is True), ("frost", frost), ("heating_running", heating_running)) if active)
-    hard = [c for c in constraints if c in ("rain", "storm", "vigilance", "gust", "pollution")]
-    soon = rain_soon(outlook.get("rain_in_hours")) if rain is not True else None
+    hard = [c for c in constraints if c in ("rain", "gust", "pollution") or (c in ("storm", "vigilance") and not forecast_only)]
     rain_coming = soon is not None and any(d["open"] and rained_on(d["entity_id"]) for d in details)
-    soft = [c for c in constraints if c in ("frost", "heating_running")]
+    soft = [c for c in constraints if c in ("frost", "heating_running") or (c in ("storm", "vigilance") and forecast_only)]
     # A configured protection that does not answer blocks the advice; one never configured does not.
     # Rain still guards an opening when its sensor stops answering. A daily outdoor-air index that is
     # down (Atmo France outage) behaves like one never configured: the advice stands, the gap is reported.
@@ -305,7 +312,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         action, reason = "fermer", "rain_open_windows"
     elif windy and opened:
         action, reason = "fermer", "gust_open_windows"
-    elif opened and (storm or vigilance):
+    elif opened and ("storm" in hard or "vigilance" in hard):
         action, reason, level = "fermer", "opening_blocked", "urgent" if storm else "action"
     elif rain_coming:
         action, reason, level = "fermer", "rain_soon", "action"
@@ -319,7 +326,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         action, reason = ("ok" if opened else "ouvrir"), "short_air_change"
     elif soft and opened:
         action, reason, level = "fermer", "opening_blocked", "action"
-    elif soft and (hot or wet):
+    elif soft and (hot or wet or precool):
         action, reason = "attendre", "opening_blocked"
     elif useful:
         if not checked or not thermal_known:

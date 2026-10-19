@@ -86,10 +86,15 @@ export function summary(v:View):[string,string] {
   }
   if(a.reason==='rain_soon'&&a.rain_soon_minutes!=null) return ['Refermez avant la pluie',`La pluie arrive dans ${a.rain_soon_minutes<60?a.rain_soon_minutes+' min':'une heure'} sur les ouvrants exposés.`];
   if(a.reason==='short_air_change'){
-    const why=a.constraints.includes('frost')?'il gèle dehors':'le chauffage tourne';
+    const why=shortWhy(a.constraints);
     return [a.action==='ok'?'Aération en cours, pas trop longtemps':'Aérez quelques minutes',`Les mesures demandent de l’air neuf, mais ${why} : une aération courte suffit.`];
   }
   return reasons[a.reason]??['Conseil à vérifier','Cette raison n’est pas reconnue par la carte. Mettez à jour la carte et l’intégration ensemble.'];
+}
+
+// Why the airing stays short. A forecast storm or vigilance only shortens it when the station sees it dry and calm.
+export function shortWhy(c:string[]):string{
+  return c.includes('storm')?'un orage est prévu':c.includes('vigilance')?'une vigilance météo est en cours':c.includes('frost')?'il gèle dehors':'le chauffage tourne';
 }
 
 // A contact is named as the person knows it (« Fenêtre Ouest »), never as a generic « Contact de fenêtre ».
