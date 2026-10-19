@@ -85,7 +85,8 @@ class Configuration:
         """What the panel shows of Adaptive Cover Pro: each signal Niak reads, with its current state."""
         def signal(role):
             state = self.hass.states.get(roles[role]) if roles.get(role) else None
-            return {"entity_id": roles[role], "name": state.name, "on": state.state == "on"} if state else None
+            available = state and state.state not in ("unknown", "unavailable")
+            return {"entity_id": roles[role], "name": state.name, "on": state.state == "on"} if available else None
         known = cover_link.facts(self.hass, roles)
         return {"name": roles["name"], "auto": roles.get("auto"), "override": roles.get("override"),
                 "signals": {role: signal(role) for role in ("enabled", "auto", "tracking", "detection", "override", "sun", "climate")},

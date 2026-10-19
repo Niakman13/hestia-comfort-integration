@@ -186,12 +186,15 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 if getattr(opening, field):
                     readings[f"{kind}:{getattr(opening, field)}"] = self._reading(getattr(opening, field), kind, now)
             roles = drivers.get(entity_id) or {}
+            # Adaptive Cover Pro's own signals are extras: one it leaves unavailable (a disabled
+            # feature) is simply not read, never counted as a sensor that stopped answering.
+            live = lambda role: roles.get(role) and (s := self.hass.states.get(roles[role])) and s.state not in ("unknown", "unavailable")
             for role, kind in (("sun", "shutter_sun"), ("target", "shutter_target")):
-                if roles.get(role):
+                if live(role):
                     readings[f"{kind}:{entity_id}"] = self._reading(roles[role], kind, now)
             # Its own switches: on, following the sun, watching for a hand on the cover, closing against heat.
             for role in ("enabled", "tracking", "detection", "climate"):
-                if roles.get(role):
+                if live(role):
                     readings[f"shutter_{role}:{entity_id}"] = self._reading(roles[role], "shutter_auto", now)
             for role in ("sun_start", "sun_end", "override_end"):
                 state = self.hass.states.get(roles[role]) if roles.get(role) else None
