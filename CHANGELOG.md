@@ -1,3 +1,14 @@
+## 1.1.0 — Adaptive Cover Pro reconnu
+
+- **Adaptive Cover Pro est détecté tout seul** : pour un volet connecté qu’il pilote, Niak lit son pilotage automatique, la reprise à la main, le soleil devant la fenêtre et la position visée. Plus rien à renseigner.
+- Quand Adaptive Cover Pro pilote le volet, Niak ne vous demande plus de le fermer ; s’il est coupé, le conseil le dit.
+- Nouvelle tuile « Volet » sur la carte pièce : ouvert, fermé ou position, et qui le pilote. Les détails donnent les heures de soleil sur la fenêtre.
+- Carte logement : une pièce qui demande un geste fait défiler ses besoins mesurés (« 68 % trop humide », « 282 COV élevés ») au lieu de répéter le conseil.
+- Réglages du volet plus clairs, sans libellé en double.
+- Une VMC ou un purificateur en marche n’est plus compté « hors de votre plage ».
+
+Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
+
 ## 1.0.2 — Carte logement plus calme
 
 - Un capteur qui ne répond plus (présence, luminosité…) n’affiche plus « Bilan partiel » ni « À vérifier » sur la carte logement : elle reste sur « Rien à faire ». L’état des capteurs se consulte dans le panneau Niak.

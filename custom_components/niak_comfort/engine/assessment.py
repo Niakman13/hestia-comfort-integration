@@ -97,6 +97,8 @@ class Opening:
     cover_entity: str | None = None
     auto_entity: str | None = None
     override_entity: str | None = None
+    # The integration that drives the cover with the sun (« adaptive_cover_pro »), when one is recognised.
+    driver: str | None = None
     width: float | None = None
     height: float | None = None
     overhang_depth: float | None = None

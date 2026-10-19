@@ -88,6 +88,19 @@ class EvolutionTests(unittest.TestCase):
         q=zone(indoor_temperature=18)
         self.assertEqual(assess(q,openings={'a':Opening(shutter='manual')},sun=Sun(-10,180)).features['shutters'][0]['advice'],'close')
         self.assertEqual(assess(q,openings={'a':Opening()},sun=Sun(-10,180)).features['shutters'],[])
+    def test_adaptive_cover_pro_drives_or_is_switched_off(self):
+        o={'a':Opening(exposure='O',shutter='connected',cover_entity='cover.v',auto_entity='switch.auto',driver='adaptive_cover_pro')}
+        def run(auto,front):
+            q=zone(indoor_temperature=28,solar=700); q['cover:a']=Reading(100,'valid','cover.v')
+            q['shutter_auto:switch.auto']=Reading(auto,'valid','switch.auto'); q['shutter_sun:a']=Reading(front,'valid','binary_sensor.s')
+            q['shutter_target:a']=Reading(20,'valid','sensor.t')
+            return assess(q,openings=o,sun=Sun(30,270)).features['shutters'][0]
+        s=run(True,True)
+        self.assertIsNone(s['advice']); self.assertIn('Adaptive Cover Pro pilote',s['message']); self.assertEqual(s['target'],20)
+        s=run(False,True)
+        self.assertEqual(s['advice'],'close'); self.assertIn('coupé',s['message']); self.assertTrue(s['sun_front'])
+        # Out of its field of view, the sun does not reach the window: nothing to close.
+        self.assertIsNone(run(False,False)['advice'])
     def test_trend_uses_real_timed_history(self):
         ctx={'temperature_history':[((NOW-timedelta(minutes=20)).isoformat(),20),((NOW-timedelta(minutes=10)).isoformat(),21),(NOW.isoformat(),22)]}
         self.assertEqual(assess(zone(),now=NOW,context=ctx).features['trends']['indoor'],6)

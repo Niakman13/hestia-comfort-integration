@@ -8,7 +8,7 @@ import math
 
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers import area_registry as ar
-from . import weather_link
+from . import cover_link, weather_link
 from .floors import floor_catalog, room_floor
 from .const import DOMAIN, OUTDOOR_AREAS, SOURCES
 from .discovery import INDOOR, OUTDOOR, candidate, catalog, overview, suggestions, voc_device_class
@@ -77,7 +77,10 @@ class Configuration:
                       for k in ("indoor_temperature", "indoor_humidity")} - {None}
         candidates = catalog(self.hass, area_id, selected, indoor_ids)
         return {"version": 1, "revision": self.revision(), "candidates": candidates,
-                "suggestions": suggestions(candidates, area_id) if area_id else {}}
+                "suggestions": suggestions(candidates, area_id) if area_id else {},
+                # Covers driven by Adaptive Cover Pro: their signals are read without being chosen.
+                "drivers": {cover: {"name": roles["name"], "auto": roles.get("auto"), "override": roles.get("override")}
+                            for cover, roles in cover_link.find_all(self.hass).items()}}
 
     def weather_proposal(self, entry_id=None):
         """Niak Weather's station as exterior sources, ready for the exterior page."""
