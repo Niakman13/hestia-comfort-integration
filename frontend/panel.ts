@@ -137,7 +137,32 @@ export class ComfortSetup extends LitElement {
   const ok=rooms.filter(r=>learnState(r.twin).cls==='ok').length;
   const sorted=[...rooms].sort((a,b)=>learnState(a.twin).rank-learnState(b.twin).rank||a.title.localeCompare(b.title,'fr'));
   return frame('Apprentissage',html`<p class="tw-sum">Apprentissage optimal pour ${ok} pièce${ok>1?'s':''} sur ${rooms.length} : leurs conseils sont optimisés. Les autres restent estimés pour l’instant.</p>
-   <div class="tw-grid">${sorted.map(r=>this.twinCard(r.title,r.twin))}</div>`,{className:'wide'});
+   <div class="tw-grid">${sorted.map(r=>this.twinCard(r.title,r.twin))}</div>${this.learningQuestions()}${this.learningWeek()}`,{className:'wide'});
+ }
+ /** Questions on the habits found: a « yes » names a cause; nothing is ever guessed without it. */
+ private learningQuestions(){
+  const asked=(this.twins?.rooms??[]).flatMap(r=>(r.questions??[]).map(q=>({...q,entry_id:r.entry_id})));
+  if(!asked.length)return nothing;
+  const answer=async(entry_id:string,key:string,value:string)=>{
+   try{await this.hass!.callWS({type:'niak_comfort/answer',entry_id,key,answer:value});this.twins=await this.hass!.callWS<Twins>({type:'niak_comfort/twins'});}
+   catch(e){this.error=this.message(e);}};
+  return html`<h3 class="tw-sub">Pour affiner l’apprentissage</h3>${asked.map(q=>html`<div class="tw-q"><p>${q.text}<small>${q.hint}</small></p>
+   <div class="tw-btns">${[['yes','Oui'],['no','Non'],['unknown','Je ne sais pas']].map(([v,l])=>html`<button @click=${()=>void answer(q.entry_id,q.key,v)}>${l}</button>`)}</div></div>`)}`;
+ }
+ /** The week of the feedback loop, over every room: airings followed, what they gave, predictions held. */
+ private learningWeek(){
+  const weeks=(this.twins?.rooms??[]).map(r=>({title:r.title,w:r.week})).filter(x=>x.w&&(x.w.followed||x.w.ignored));
+  if(!weeks.length)return nothing;
+  const sum=(k:'followed'|'ignored'|'evaluated'|'held')=>weeks.reduce((n,x)=>n+x.w![k],0);
+  const dry=weeks.filter(x=>x.w!.gains.humidity!=null),gain=dry.length?dry.reduce((n,x)=>n+x.w!.gains.humidity,0)/dry.length:null;
+  const best=[...dry].sort((a,b)=>a.w!.gains.humidity-b.w!.gains.humidity)[0];
+  const tile=(value:string,label:string)=>html`<div><b>${value}</b><span>${label}</span></div>`;
+  return html`<h3 class="tw-sub">Cette semaine</h3><div class="tw-week">
+   ${tile(String(sum('followed')),sum('followed')>1?'aérations conseillées et suivies':'aération conseillée et suivie')}
+   ${gain!=null?tile(`${fr(gain,0)} %`,'d’humidité en moyenne après une aération'):nothing}
+   ${sum('evaluated')?tile(`${sum('held')} sur ${sum('evaluated')}`,'prévisions tenues'):nothing}
+   ${best?tile(best.title,'la pièce qui gagne le plus à être aérée'):nothing}
+   ${sum('ignored')?tile(String(sum('ignored')),sum('ignored')>1?'conseils laissés sans suite':'conseil laissé sans suite'):nothing}</div>`;
  }
  private twinCard(title:string,t:Twin){
   const st=learnState(t),r=t.room,p=t.precision,lines:string[]=[];

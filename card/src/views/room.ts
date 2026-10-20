@@ -152,10 +152,11 @@ const slowWindow=(d:{gain:number}):TemplateResult=>{const g=Math.round(d.gain);
 function withLearning(v:View,out:Advice):Advice {
   const l=v.assessment.features?.learned;
   if(!l||!['ouvrir','ok'].includes(v.assessment.action))return out;
-  const unit=l.measure==='temperature'?' °C':l.measure==='co2'?' ppm':' %',fmt=(x:number)=>l.measure==='temperature'?number(x):String(Math.round(x));
+  const unit=l.measure==='temperature'?' °C':l.measure==='co2'?' ppm':l.measure==='voc'?'':' %',fmt=(x:number)=>l.measure==='temperature'?number(x):number(Math.round(x));
+  const label=l.measure==='co2'?'CO₂ ':l.measure==='voc'?'COV ':'';
   // The learned duration replaces the general span: the title and the promise say the same minutes.
   const title=v.assessment.action==='ouvrir'&&/^(Aérez|Ouvrez) /.test(out.title)?`${out.title.split(' ')[0]} ${l.minutes} min`:out.title;
-  return {...out,title,line:html`${b(fmt(l.now)+' → '+fmt(l.after)+unit)} en ${l.minutes} min`,learned:`d’après ${l.openings} aérations`,pill:'Conseil optimisé'};
+  return {...out,title,line:html`${label}${b(fmt(l.now)+' → '+fmt(l.after)+unit)} en ${l.minutes} min`,learned:`d’après ${l.openings} aérations`,pill:'Conseil optimisé'};
 }
 /** Where the twin stands, when the advice is only estimated: said in « À savoir », never in the banner. */
 function learning(v:View):Fact|null {
@@ -187,6 +188,13 @@ export function facts(v:View):Fact[] {
   if(hum?.local)out.push({ic:'drop',title:'Vapeur',text:'plus humide ici qu’à côté : cuisson ou douche'});
   if(air?.purifier?.on===true)out.push({ic:'fan',title:'Purificateur',text:'en marche, il filtre l’air'});
   if(air?.ventilation?.on===true)out.push({ic:'vmc',title:'VMC',text:a.needs.includes('dry')?'en marche, elle aide à assécher':'en marche'});
+  // A confirmed habit names the cause of the humidity, only while it is going on.
+  if(v.habit&&(a.needs.includes('dry')||hum?.mould))out.unshift({ic:'drop',title:'Humidité',text:v.habit});
+  // The last airing followed: what it gave, against what was predicted.
+  const last=v.feedback?.last;
+  if(last){const f=(x:number)=>last.measure==='temperature'?number(x):number(Math.round(x)),u=last.measure==='temperature'?' °C':last.measure==='co2'?' ppm':last.measure==='voc'?'':' %';
+    const what=last.measure==='humidity'?'humidité ':last.measure==='temperature'?'température ':last.measure==='co2'?'CO₂ ':'COV ';
+    out.push({ic:'open',title:'Dernière aération',text:`${what}${f(last.before)} → ${f(last.after)}${u}${last.predicted!=null?` (prévu ${f(last.predicted)}${u})`:''}`});}
   const l=learning(v);if(l)out.push(l);
   return out.slice(0,4);
 }

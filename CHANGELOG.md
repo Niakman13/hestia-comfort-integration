@@ -1,3 +1,21 @@
+## 1.2.5-beta.7 — Préversion : l’air appris, la boucle de retour et les questions
+
+**En bref**
+- **Les conseils d’aération pour le CO₂ et les COV peuvent aussi être optimisés.**
+- **Chaque aération suivie est mesurée : la carte montre le résultat, le hub le bilan de la semaine.**
+- **Des questions simples pour affiner l’apprentissage : la cause d’une humidité qui revient, une fenêtre ouverte la nuit.**
+
+### Nouveautés
+- L’apprentissage de chaque pièce comprend maintenant l’air : la vitesse à laquelle le CO₂ et les COV redescendent, fenêtres fermées et ouvertes. Un conseil peut annoncer « CO₂ 1 180 → 890 ppm en 15 min ».
+- Après une aération conseillée et suivie, À savoir montre pendant 24 h son résultat : « Dernière aération · humidité 76 → 70 % (prévu 68 %) ».
+- Encart Apprentissage, « Cette semaine » : aérations suivies, gain moyen d’humidité, prévisions tenues, la pièce qui gagne le plus, conseils laissés sans suite.
+- Encart Apprentissage, « Pour affiner l’apprentissage » : quand l’humidité d’une pièce monte souvent à la même heure, ou qu’une fenêtre reste ouverte la nuit, une question Oui / Non / Je ne sais pas.
+
+### Améliorations
+- Les écarts entre prévision et résultat corrigent les prévisions suivantes de la pièce. Si elles ne tiennent plus, la pièce repasse en conseil estimé.
+- Une cause n’est jamais devinée : seul un « Oui » la nomme, et seulement à l’heure habituelle (« habituelle à cette heure : la douche, elle retombe d’elle-même »).
+- Une fenêtre ouverte la nuit volontairement n’est plus signalée comme un oubli ; la pluie et le vent la font toujours refermer.
+
 ## 1.2.5-beta.6 — Préversion : conseils optimisés et encart Apprentissage
 
 **En bref**

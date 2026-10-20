@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, LEARNING_REFRESH_SECONDS, OPEN_DEBOUNCE_SECONDS, SEASON_REFRESH_SECONDS, SOURCES, STARTUP_GRACE_SECONDS, VIEW_VERSION
 from .engine.assessment import Opening, Settings, Sun, assess
-from .engine import learning, twin
+from .engine import feedback, habits, learning, twin
 from .engine.volume import arbitrate
 from .engine.sources import normalize, Reading
 from .configuration import DATA_CONFIG
@@ -59,6 +59,14 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self._twin_store = Store(hass, 1, f"{DOMAIN}.twin.{entry.entry_id}")
         self.twin = None
         self._twin_failed = False
+        # The feedback loop (engine/feedback.py): airings followed and measured, advice left aside.
+        self._feedback_store = Store(hass, 1, f"{DOMAIN}.feedback.{entry.entry_id}")
+        self.feedback = []
+        self._experiment = None
+        self._advice_since = None
+        self._advice_followed = False
+        # Habits found in the twin's half hours (engine/habits.py), asked about in the hub.
+        self.habits = []
         # Rooms open onto this one (no wall between them): their openings are this room's too.
         self.partners = self._partners()
         self.windows = list(dict.fromkeys([*self.config.get("windows", []), *(e for p in self.partners for e in p["windows"])]))
@@ -114,6 +122,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
         # Linked to Niak Weather: recompute when its forecasts or alerts change.
         if weather_link.api(self.hass) and (place := self._weather_place()):
             self.config_entry.async_on_unload(weather_link.listen(self.hass, place, lambda: self.hass.async_create_task(self.async_request_refresh())))
+        stored = await self._feedback_store.async_load() or {}
+        self.feedback = feedback.keep(stored.get("records"), dt_util.utcnow())
         await self.async_config_entry_first_refresh()
 
     @callback
@@ -133,8 +143,14 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 self.followed.discard(entity_id)
             elif before == "off":
                 self.opened_since[entity_id] = now
-                if ((self.data or {}).get("assessment") or {}).get("action") == "ouvrir":
+                shown = (self.data or {}).get("assessment") or {}
+                if shown.get("action") == "ouvrir":
                     self.followed.add(entity_id)
+                    self._advice_followed = True
+                    # The advice followed becomes an experiment: the measure now, and what was predicted.
+                    if self._experiment is None:
+                        values = {k: (v or {}).get("value") for k, v in ((self.data or {}).get("observations") or {}).items()}
+                        self._experiment = feedback.start(shown, values, now)
             if before == "on" and after == "off":
                 # Learn from this opening once the room has had time to give its water back.
                 self._learning_due = now + learning.REBOUND_AFTER + timedelta(minutes=5)
@@ -172,6 +188,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
             start = starts.get(eid)
             return max(0, (now - start).total_seconds() / 60) if start else None
         return {**self.config.get("evolution", {}), "occupied": self._occupied(), "volume": self._volume_air(readings),
+                "intended_open": self._intended_open(now),
                 "heated": self.config.get("heated", True), "outdoor_mean_7d": self.season[1],
                 "indoor_day_range": self.day_range, "drying_model": self.drying_model,
                 "humidity_floor_3h": self.humidity_floor,
@@ -279,11 +296,14 @@ class ComfortCoordinator(DataUpdateCoordinator):
         current = {"ti": now_value("indoor_temperature"), "hi": now_value("indoor_humidity"), "te": now_value("outdoor_temperature"),
                    "he": now_value("outdoor_humidity"), "sun": self._sun_now(now_value("solar")),
                    "opened": 1.0 if any(r.usable and r.value is True for k, r in advice_readings.items() if k.startswith("window:")) else 0.0,
-                   "heated": 1.0 if readings.get("heating") and readings["heating"].value == "heating" else 0.0}
+                   "heated": 1.0 if readings.get("heating") and readings["heating"].value == "heating" else 0.0,
+                   "co2": now_value("co2"), "voc": now_value("voc")}
         own = self.previous.to_dict()
         # The room's own learning, once optimal, gives the advised gesture its predicted result.
-        own.setdefault("features", {})["learned"] = twin.learned_advice(own, self.twin, current, (self.drying_model or {}).get("openings", 0))
+        summary = feedback.summarize(self.feedback, now)
+        own.setdefault("features", {})["learned"] = twin.learned_advice(own, self.twin, current, (self.drying_model or {}).get("openings", 0), summary)
         assessment = self._settle(own)
+        self._track(assessment, current, now)
         learned = self.twin or {}
         precision = learned.get("precision") or {}
         twin_view = {"status": learned.get("status", "learning"), "days": learned.get("days", 0), "samples": learned.get("samples", 0),
@@ -295,6 +315,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 "computed_at": now.isoformat(), "assessment": assessment,
                 "volume": [{"entry_id": p["entry_id"], "title": p["title"]} for p in self.partners], "volume_name": self.volume_name,
                 "twin": twin_view,
+                "feedback": {"last": summary["last"], "week": summary["week"]},
+                "habit": habits.now_habit(self.habits, self._answers(), dt_util.as_local(now), self.config.get("name") or "", self.config.get("area_id")),
                 "observations": {k: asdict(v) for k, v in readings.items()},
                 "names": {e: (state.name if (state := self.hass.states.get(e)) else e) for e in self.windows},
                 "starting": (now - self.started).total_seconds() < STARTUP_GRACE_SECONDS}
@@ -476,19 +498,21 @@ class ComfortCoordinator(DataUpdateCoordinator):
     async def _learn_twin(self, now):
         """Add the last ten days to the twin's half-hour samples (thirty days kept) and refit it."""
         stored = await self._twin_store.async_load() or {}
-        # Samples kept before the sun was counted on the windows are rebuilt from the recorder's history.
-        rows = stored.get("samples") if isinstance(stored.get("samples"), list) and stored.get("sun") == "facades" else []
+        # Samples kept before the sun was counted on the windows and the air was learned are rebuilt from the history.
+        rows = stored.get("samples") if isinstance(stored.get("samples"), list) and stored.get("format") == 2 else []
         keys = ("indoor_temperature", "indoor_humidity", "outdoor_temperature", "outdoor_humidity")
         sources = {k: self._source_entity(k) for k in keys}
         if all(sources.values()) and "recorder" in self.hass.config.components:
             try:
                 from homeassistant.components.recorder import get_instance, history
                 solar, heating = self._source_entity("solar"), self.config.get("sources", {}).get("heating")
+                # The air as well: how CO₂ and VOC go down, windows shut and open.
+                air = {k: self.config.get("sources", {}).get(k) for k in ("co2", "voc")}
                 start = now - timedelta(days=10)
                 recorder = get_instance(self.hass)
                 states = await recorder.async_add_executor_job(
                     history.get_significant_states, self.hass, start, now,
-                    [*self.windows, *sources.values(), *([solar] if solar else [])], None, True, False, False, True)
+                    [*self.windows, *sources.values(), *([solar] if solar else []), *(e for e in air.values() if e)], None, True, False, False, True)
                 # The thermostat's running state is an attribute: its own query keeps them.
                 running = await recorder.async_add_executor_job(
                     history.get_significant_states, self.hass, start, now, [heating], None, True, False, False, False) if heating else {}
@@ -498,14 +522,16 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 fresh = await self.hass.async_add_executor_job(
                     partial(twin.samples, start, now, *(self._points(states, sources[k]) for k in keys),
                             self._points(states, solar) if solar else [], contacts, heat,
-                            facades=self._facades(), location=(self.hass.config.latitude, self.hass.config.longitude)))
+                            facades=self._facades(), location=(self.hass.config.latitude, self.hass.config.longitude),
+                            co2=self._points(states, air["co2"]) if air["co2"] else [], voc=self._points(states, air["voc"]) if air["voc"] else []))
                 rows = twin.merge(rows, fresh, now)
-                await self._twin_store.async_save({"samples": rows, "sun": "facades"})
+                await self._twin_store.async_save({"samples": rows, "format": 2})
             except Exception:  # the twin then keeps what it learned before
                 if not self._twin_failed:
                     self._twin_failed = True
                     self.logger.warning("The twin of %s could not read the history", self.config.get("name"), exc_info=True)
         self.twin = await self.hass.async_add_executor_job(twin.summary, rows, now)
+        self.habits = await self.hass.async_add_executor_job(habits.detect, rows, dt_util.get_default_time_zone())
 
     async def _humidity_floor(self, now):
         """Lowest indoor humidity of the last three full hours: above the threshold, the excess lasts."""
@@ -548,6 +574,40 @@ class ComfortCoordinator(DataUpdateCoordinator):
             return {}
         return {e: driven[m["cover_entity"]] for e, m in self.config.get("openings", {}).items()
                 if m.get("shutter") == "connected" and m.get("cover_entity") in driven}
+
+    def _answers(self):
+        """The person's answers to this room's questions (Oui / Non / Je ne sais pas), kept with the home settings."""
+        home = getattr(self.home_configuration, "home", None) or {}
+        return (home.get("answers") or {}).get(self.entry_id, {})
+
+    def questions(self):
+        return habits.questions(self.config.get("name") or self.config_entry.title, self.config.get("area_id"), self.habits, self._answers())
+
+    def _intended_open(self, now):
+        """At night, a window the person said is open on purpose is not an oversight."""
+        local = dt_util.as_local(now)
+        return self._answers().get("night_open") == "yes" and (local.hour >= 21 or local.hour < 8)
+
+    def _track(self, assessment, current, now):
+        """The feedback loop: close an airing followed, and note an advice left aside half an hour."""
+        opened = current.get("opened", 0.0) > 0
+        if self._experiment and not opened:
+            values = {"indoor_humidity": current.get("hi"), "indoor_temperature": current.get("ti"), "co2": current.get("co2"), "voc": current.get("voc")}
+            record = feedback.finish(self._experiment, values, now)
+            self._experiment = None
+            if record:
+                self._remember(record, now)
+        if assessment.get("action") == "ouvrir" and not opened:
+            self._advice_since = self._advice_since or now
+        else:
+            since, followed = self._advice_since, self._advice_followed
+            self._advice_since, self._advice_followed = None, False
+            if since and not followed and not opened and now - since >= feedback.IGNORED_AFTER:
+                self._remember(feedback.ignored(since, now), now)
+
+    def _remember(self, record, now):
+        self.feedback = feedback.keep([*self.feedback, record], now)
+        self._feedback_store.async_delay_save(lambda: {"records": self.feedback}, 5)
 
     def _facades(self):
         """The bearings the room's windows face: the exact angle when known, else the declared exposure."""

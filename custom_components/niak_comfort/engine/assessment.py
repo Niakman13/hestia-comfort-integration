@@ -418,6 +418,10 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     if (opened and optional_wet_exchange and not air and not hard and not soft
             and action != "fermer" and not rain_coming):
         action, reason, level = "fermer", "rehumidification_risk", "action"
+    # A window the person said is open on purpose at night: its comfort reasons to close are not an oversight.
+    if (context.get("intended_open") and opened and action == "fermer"
+            and reason in ("exchange_harmful", "rehumidification_risk", "heat_needed")):
+        action, reason, level = "ok", "open_neutral", "calm"
     # An open window that neither helps nor harms is neutral: the person may keep it or close it.
     if opened and reason in ("within_comfort", "drying_slow", "drying_unavailable", "drying_later", "humid_outdoor"):
         action, reason = "ok", "open_neutral"

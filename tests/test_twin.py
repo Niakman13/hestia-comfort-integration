@@ -114,5 +114,24 @@ class LearnedAdvice(unittest.TestCase):
         self.assertLess(learned["after"], 26)
 
 
+class AirLearned(unittest.TestCase):
+    def test_the_air_of_a_room_is_learned_and_promised(self):
+        t, out, co2 = START, [], 1200.0
+        while t < START + timedelta(days=6):
+            opened = 1.0 if t.hour == 19 and t.minute == 0 else 0.0
+            out.append([t.isoformat(), 21.0, 55.0, 12.0, 70.0, 0.0, opened, 0.0, round(co2), None])
+            co2 = 420 + (co2 - 420) * (1 - 0.05 - 0.6 * opened) + (60 if 7 <= t.hour < 23 else 0)
+            t += twin.STEP
+        model = twin.fit(out)
+        air = model["air"]["co2"]
+        self.assertAlmostEqual(air["a"] + air["b"], 0.65, delta=0.15)
+        self.assertIsNone(model["air"]["voc"])
+        ready = {"status": "ready", "days": 10, "precision": {"hours": 24, "temperature": 0.2, "humidity": 1.5}, "model": model}
+        advice = {"action": "ouvrir", "reason": "air_needed", "features": {"air": {"co2_status": "high"}, "ventilation": {"duration_minutes": {"min": 6, "max": 15}}}}
+        learned = twin.learned_advice(advice, ready, {"co2": 1180})
+        self.assertEqual((learned["measure"], learned["now"], learned["minutes"]), ("co2", 1180, 15))
+        self.assertLess(learned["after"], 1000)
+
+
 if __name__ == "__main__":
     unittest.main()

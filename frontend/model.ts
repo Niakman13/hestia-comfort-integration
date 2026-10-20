@@ -27,7 +27,9 @@ export type Target={kind:'room';entry_id:string;label:string}|{kind:'exterior';l
 export interface TwinRoom {inertia_hours:number;sun_degrees:number|null;heating_degrees:number|null;household_degrees:number;window_half_minutes:number|null;air_changes_per_hour:number;window_air_changes_per_hour:number|null;water_per_hour:number}
 export interface Twin {status:'learning'|'ready';samples:number;days:number;open_samples?:number;room?:TwinRoom|null;
  precision?:{hours:number;temperature:number;humidity:number;curve:{time:string;temperature:number;measured_temperature:number;humidity:number;measured_humidity:number}[]}|null;next_hour?:{temperature:number;humidity:number}|null}
-export interface Twins {version:1;rooms:{entry_id:string;title:string;twin:Twin}[]}
+export interface Week {followed:number;ignored:number;evaluated:number;held:number;gains:Record<string,number>}
+export interface Question {key:string;text:string;hint:string}
+export interface Twins {version:1;rooms:{entry_id:string;title:string;twin:Twin;week?:Week;questions?:Question[]}[]}
 export interface HealthLine {level:Level;text:string;why:string;target?:Target|null}
 export interface Health {level:'ok'|'action';summary:string;tips_summary:string;rooms_summary:string;todo:HealthLine[];tips:HealthLine[];
  sources:{label:string;level:Level;text:string}[];columns:string[];rooms:{entry_id:string;title:string;cells:{level:Level;text:string}[]}[];versions:HealthLine[]}

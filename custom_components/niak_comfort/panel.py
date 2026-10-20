@@ -8,6 +8,8 @@ from homeassistant.components import websocket_api
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import callback
 from . import health, weather_link
+from .engine import feedback
+from homeassistant.util import dt as dt_util
 from .configuration import get_configuration
 from .const import DOMAIN, VERSION
 from .socle import async_register_brick, async_register_card
@@ -26,6 +28,7 @@ async def async_setup_panel(hass):
         await async_register_card(hass, CARD_URL, VERSION)
         websocket_api.async_register_command(hass, ws_health)
         websocket_api.async_register_command(hass, ws_twins)
+        websocket_api.async_register_command(hass, ws_answer)
         hass.data[DOMAIN + "_panel_asset"] = True
     await async_register_brick(hass, {
         "domain": DOMAIN, "name": "Niak Confort", "slug": "confort", "version": VERSION,
@@ -105,6 +108,25 @@ def ws_twins(hass, connection, msg):
         if entry.data.get("home") or coordinator is None:
             continue
         learned = getattr(coordinator, "twin", None) or {"status": "learning", "samples": 0, "days": 0}
+        week = feedback.summarize(getattr(coordinator, "feedback", []), dt_util.utcnow())["week"]
         rooms.append({"entry_id": entry.entry_id, "title": entry.title,
-                      "twin": {k: v for k, v in learned.items() if k != "model"}})
+                      "twin": {k: v for k, v in learned.items() if k != "model"}, "week": week,
+                      "questions": coordinator.questions() if hasattr(coordinator, "questions") else []})
     connection.send_result(msg["id"], {"version": 1, "rooms": rooms})
+
+
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/answer", vol.Required("entry_id"): str,
+                                  vol.Required("key"): str, vol.Required("answer"): vol.In(("yes", "no", "unknown"))})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_answer(hass, connection, msg):
+    """An answer to a learning question: it names a cause, or stops a window being taken for an oversight."""
+    try:
+        await (await get_configuration(hass)).answer(msg["entry_id"], msg["key"], msg["answer"])
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid", str(err))
+        return
+    entry = hass.config_entries.async_get_entry(msg["entry_id"])
+    if (coordinator := getattr(entry, "runtime_data", None)) is not None:
+        await coordinator.async_request_refresh()
+    connection.send_result(msg["id"], {"saved": True})
