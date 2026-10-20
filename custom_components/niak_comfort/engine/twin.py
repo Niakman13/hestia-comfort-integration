@@ -80,7 +80,7 @@ def on_facades(solar, elevation, azimuth, facades):
 
 
 def samples(start, end, indoor_temperature, indoor_humidity, outdoor_temperature, outdoor_humidity,
-            solar=(), contacts=None, heating=(), facades=None, location=None):
+            solar=(), contacts=None, heating=(), facades=None, location=None, co2=(), voc=()):
     """Half-hour samples between `start` and `end` from raw (time, value) points.
 
     `facades`: the bearings of the room's windows and `location` (latitude, longitude): the sun is then counted on the
@@ -89,7 +89,7 @@ def samples(start, end, indoor_temperature, indoor_humidity, outdoor_temperature
     `contacts`: {entity: [(time, bool|None)]}; `heating`: [(time, bool)] running or not. A half hour with
     a contact that does not answer is left out: what a window did then is not known."""
     ti, hi, te, he = (_Series(p) for p in (indoor_temperature, indoor_humidity, outdoor_temperature, outdoor_humidity))
-    sun, heat = _Series(solar), _Series(heating)
+    sun, heat, carbon, organic = _Series(solar), _Series(heating), _Series(co2), _Series(voc)
     windows = [_Series(points, keep_none=True) for points in (contacts or {}).values()]
     rows = []
     when = start.replace(minute=0 if start.minute < 30 else 30, second=0, microsecond=0)
@@ -116,15 +116,18 @@ def samples(start, end, indoor_temperature, indoor_humidity, outdoor_temperature
             sunny += light
             steps, t = steps + 1, t + SUB
         if known and steps:
+            c, v = carbon.at(when), organic.at(when)
             rows.append([when.isoformat(), round(values[0], 2), round(values[1], 1), round(values[2], 2), round(values[3], 1),
-                         round(sunny / steps / 1000, 3), round(opened / steps, 2), round(heated / steps, 2)])
+                         round(sunny / steps / 1000, 3), round(opened / steps, 2), round(heated / steps, 2),
+                         None if c is None else round(c), None if v is None else round(v)])
         when += STEP
     return rows
 
 
 def merge(stored, fresh, now):
     """Stored samples plus the fresh ones (same time: the fresh one wins), the last thirty days only."""
-    by_time = {r[0]: r for r in stored or [] if isinstance(r, list) and len(r) == 8 and isinstance(r[0], str)}
+    # Samples from before the air was learned carry no CO₂ nor VOC: unknown, not zero.
+    by_time = {r[0]: (r + [None, None])[:10] for r in stored or [] if isinstance(r, list) and len(r) in (8, 10) and isinstance(r[0], str)}
     by_time.update({r[0]: r for r in fresh})
     limit = now - timedelta(days=KEEP_DAYS)
     return [by_time[k] for k in sorted(by_time, key=datetime.fromisoformat) if datetime.fromisoformat(k) >= limit]
@@ -162,12 +165,12 @@ def _pairs(rows):
 
 
 def _thermal_x(r):
-    _, ti, _, te, _, sun, opened, heated = r
+    _, ti, _, te, _, sun, opened, heated = r[:8]
     return [te - ti, sun, heated, opened * (te - ti), 1.0]
 
 
 def _water_x(r):
-    _, ti, hi, te, he, _, opened, _ = r
+    _, ti, hi, te, he, _, opened, _ = r[:8]
     gap = absolute(te, he) - absolute(ti, hi)
     return [gap, opened * gap, 1.0]
 
@@ -185,8 +188,34 @@ def fit(rows):
         for key in keys:
             coefficients[key] = max(0.0, coefficients[key])
     return {"thermal": {k: round(v, 5) for k, v in thermal.items()}, "water": {k: round(v, 5) for k, v in water.items()},
+            "air": {name: fit_air(pairs, index, base) for name, index, base in AIR},
             "samples": len(pairs), "open_samples": sum(1 for r, _ in pairs if r[6] > 0),
             "sunny_samples": sum(1 for r, _ in pairs if r[5] > 0.1), "heated_samples": sum(1 for r, _ in pairs if r[7] > 0)}
+
+
+# The air: CO₂ falls toward the outdoor level (about 420 ppm), a VOC index toward its usual level (100).
+AIR = (("co2", 8, 420.0), ("voc", 9, 100.0))
+PRIOR_AIR = {"a": 0.1, "b": 0.5, "g": 0.0}
+
+
+def fit_air(pairs, index, base):
+    """How the room's CO₂ or VOC goes back to its base, windows shut (`a`) and open (`a + b`), half an hour at a time.
+    None without measures; `open_samples` says how many open half hours it rests on."""
+    data = [(r, s) for r, s in pairs if len(r) > index and r[index] is not None and s[index] is not None]
+    if not data:
+        return None
+    coefficients = _solve([([base - r[index], r[6] * (base - r[index]), 1.0], s[index] - r[index]) for r, s in data], PRIOR_AIR, PRIOR_STRENGTH)
+    coefficients["a"] = min(0.9, max(0.0, coefficients["a"]))
+    coefficients["b"] = min(0.9 - coefficients["a"], max(0.0, coefficients["b"]))
+    return {**{k: round(v, 5) for k, v in coefficients.items()}, "base": base, "samples": len(data),
+            "open_samples": sum(1 for r, _ in data if r[6] > 0)}
+
+
+def air_after(air, value, minutes, opened=1.0):
+    """The CO₂ or VOC after `minutes` with the windows open (or shut), as the room has learned it."""
+    share = air["a"] + air["b"] * opened
+    steps = minutes / (HOURS * 60)
+    return air["base"] + (value - air["base"]) * (1 - share) ** steps + air["g"] * steps
 
 
 def step(model, ti, hi, te, he, sun=0.0, opened=0.0, heated=0.0):
@@ -264,7 +293,21 @@ def optimal(twin):
                 and precision.get("humidity") is not None and precision["humidity"] <= OPTIMAL_HUMIDITY)
 
 
-def learned_advice(assessment, twin, current=None, openings=0):
+def learned_advice(assessment, twin, current=None, openings=0, feedback=None):
+    """The result an advised airing will bring, corrected by how the last ones turned out; see `_learned`."""
+    learned = _learned(assessment, twin, current, openings)
+    if learned is None or (feedback and feedback.get("trusted") is False):
+        # Predictions that stopped holding take the room back to estimated advice.
+        return None
+    gap = ((feedback or {}).get("bias") or {}).get(learned["measure"])
+    if gap:
+        limit = {"humidity": 5, "temperature": 1, "co2": 150, "voc": 40}[learned["measure"]]
+        learned["after"] = round(learned["after"] + max(-limit, min(limit, gap)), 1 if learned["measure"] == "temperature" else 0)
+        learned["corrected"] = True
+    return learned
+
+
+def _learned(assessment, twin, current=None, openings=0):
     """The result an advised airing will bring, as this room has learned it; None unless its learning is optimal.
 
     Drying comes from the room's own past airings (engine/learning.py), cooling from its twin, half an hour open."""
@@ -277,6 +320,18 @@ def learned_advice(assessment, twin, current=None, openings=0):
         return {"now": drying["now"], "after": drying["after"], "minutes": drying["minutes"], "measure": "humidity",
                 "openings": drying["openings"], **basis}
     model = twin.get("model")
+    if reason in ("air_needed", "short_air_change") and model and current:
+        air = (features.get("air") or {})
+        name = "co2" if air.get("co2_status") == "high" else "voc" if air.get("voc_status") == "high" else None
+        learned_air = (model.get("air") or {}).get(name) if name else None
+        value = current.get(name) if name else None
+        span = (features.get("ventilation") or {}).get("duration_minutes") or {}
+        minutes = int(span.get("max") or (5 if reason == "short_air_change" else 10))
+        if learned_air and learned_air["open_samples"] >= 6 and learned_air["b"] > 0 and isinstance(value, (int, float)):
+            after = air_after(learned_air, value, minutes)
+            if after < value - (50 if name == "co2" else 10):
+                return {"now": round(value), "after": round(after), "minutes": minutes, "measure": name, "openings": openings, **basis}
+        return None
     if (reason == "cooling_possible" and model and model.get("open_samples", 0) >= 6 and current
             and None not in (current.get(k) for k in ("ti", "hi", "te", "he"))):
         after, _ = step(model, current["ti"], current["hi"], current["te"], current["he"], current.get("sun", 0.0), 1.0, 0.0)

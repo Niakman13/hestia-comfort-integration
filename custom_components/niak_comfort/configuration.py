@@ -35,7 +35,9 @@ class Configuration:
 
     def revision(self):
         values = [(e.entry_id, dict(e.data), dict(e.options)) for e in self.entries()]
-        return hashlib.sha256(json.dumps([self.home, values], sort_keys=True, default=str).encode()).hexdigest()
+        # The answers to the learning questions are not settings: answering never blocks a room being edited.
+        home = {k: v for k, v in self.home.items() if k != "answers"}
+        return hashlib.sha256(json.dumps([home, values], sort_keys=True, default=str).encode()).hexdigest()
 
     def home_sources(self):
         if self.home.get("configured"):
@@ -281,7 +283,8 @@ class Configuration:
             cleaned, warnings = self.validate(payload, home=home)
             remembered = self.ensure_acknowledged(warnings, acknowledged or [])
             if home:
-                updated = {**cleaned, "acknowledged": remembered, "configured": True, "revision": self.home["revision"] + 1}
+                updated = {**cleaned, "acknowledged": remembered, "configured": True, "revision": self.home["revision"] + 1,
+                           "answers": self.home.get("answers", {})}
                 await self.store.async_save(updated)
                 self.home = updated
                 for entry in self.entries():
@@ -324,6 +327,18 @@ class Configuration:
             await self.hass.config_entries.async_remove(entry_id)
             await self._reload_rooms(partners)
             return self.snapshot()
+
+    async def answer(self, entry_id, key, value):
+        """Keeps the person's answer to a learning question (« yes », « no », « unknown »)."""
+        if value not in ("yes", "no", "unknown") or not isinstance(key, str) or not key:
+            raise ValueError("Réponse invalide.")
+        if not any(e.entry_id == entry_id for e in self.entries()):
+            raise ValueError("Cette pièce Niak Confort n’existe plus.")
+        async with self.lock:
+            answers = {**(self.home.get("answers") or {})}
+            answers[entry_id] = {**answers.get(entry_id, {}), key: value}
+            self.home = {**self.home, "answers": answers}
+            await self.store.async_save(self.home)
 
     def volume(self, entry_id):
         """The other rooms sharing this room's air: « open onto » is mutual and passes from room to room."""
