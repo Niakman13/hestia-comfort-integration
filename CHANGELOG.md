@@ -1,3 +1,8 @@
+## 1.2.5-beta.3 — Préversion : le conseil suivi se voit tout de suite
+
+### Corrections
+- Vous ouvrez la fenêtre que Niak vient de conseiller : « Aération en cours » s’affiche aussitôt, au lieu d’attendre 30 secondes. Une fenêtre ouverte sans conseil garde ce court délai, pour ne pas crier « Refermez » au moindre courant d’air.
+
 ## 1.2.5-beta.2 — Préversion : le bandeau pour les gestes, « À savoir » pour le reste
 
 **En bref**

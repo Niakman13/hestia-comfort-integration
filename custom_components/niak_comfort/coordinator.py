@@ -38,6 +38,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.entry_id = entry.entry_id
         self.stop_listeners = set()
         self.opened_since = {}
+        # Windows opened while the advice said « open »: the gesture was followed, no bounce delay to wait for.
+        self.followed = set()
         self.started = dt_util.utcnow()
         self.absent_since = {}
         self.history_reports = {}
@@ -117,8 +119,11 @@ class ComfortCoordinator(DataUpdateCoordinator):
         if entity_id in self.windows:
             if after != "on" or before not in ("on", "off"):
                 self.opened_since.pop(entity_id, None)
+                self.followed.discard(entity_id)
             elif before == "off":
                 self.opened_since[entity_id] = now
+                if ((self.data or {}).get("assessment") or {}).get("action") == "ouvrir":
+                    self.followed.add(entity_id)
             if before == "on" and after == "off":
                 # Learn from this opening once the room has had time to give its water back.
                 self._learning_due = now + learning.REBOUND_AFTER + timedelta(minutes=5)
@@ -497,7 +502,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
 
     def _bouncing(self, entity_id, reading, now):
         since = self.opened_since.get(entity_id)
-        return reading.value is True and since is not None and (now - since).total_seconds() < OPEN_DEBOUNCE_SECONDS
+        return (reading.value is True and since is not None and entity_id not in self.followed
+                and (now - since).total_seconds() < OPEN_DEBOUNCE_SECONDS)
 
     def _heard(self, entity_id, state):
         """When the device last spoke: an unchanged humidity is current if its thermometer just reported."""
