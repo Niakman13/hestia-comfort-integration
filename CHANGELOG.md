@@ -1,3 +1,18 @@
+## 1.2.5-beta.9 — Préversion : l’accueil Confort
+
+**En bref**
+- **Un vrai accueil pour Confort dans le hub Niak : l’état technique du logement en un coup d’œil.**
+
+### Nouveautés
+- L’onglet Confort s’ouvre sur son accueil : « Tout fonctionne » et les versions, puis quatre compteurs (capteurs qui répondent, pièces en apprentissage optimal, points à régler, sources en place).
+- « À régler » en premier quand il y a quelque chose ; sinon une seule ligne rassurante.
+- L’apprentissage en tableau : l’état et les jours de chaque pièce, la précision de ses prévisions, l’air appris (CO₂, COV) et la courbe des dernières 24 heures, puis les questions et le bilan de la semaine.
+- « Pièces et capteurs » : ce qui équipe chaque pièce, son « même air », et un bouton Configurer.
+- Sources partagées, versions et liens, et comment ajouter les cartes, sur le côté.
+
+### Améliorations
+- La liste des pièces devient « Réglages des pièces », à un clic de l’accueil, avec un retour à l’accueil.
+
 ## 1.2.5-beta.8 — Préversion : le panneau et les cartes à jour
 
 **En bref**

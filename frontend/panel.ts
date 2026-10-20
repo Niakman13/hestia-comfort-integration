@@ -5,6 +5,11 @@ import styles from './styles.css';
 import {frame,hubStyles,modernStyles,hubIcon,helpTip,defaultValue} from './socle/ui';
 import {labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,stages,intros,outdoorGroups,changedAdvanced,advancedDefaults,airSource,airChoices,exteriorChoices,airReferenceDefaults,vocPreset,thresholdSources,type Choice,type Area,type Candidate,type Discovery,type Health,type HealthLine,type Target,type Snapshot,type Hass,type Room,type RoomConfig,type Spec,type Twins,type Twin} from './model';
 /** Where a room's learning stands: optimal after a week, the last day replayed within ±0.5 °C and ±3 % (engine/twin.py). */
+/** « Intégration 1.2.5 » → Intégration · 1.2.5 ; « Relié à Niak Weather · Gardanne » → Niak Weather · relié, Gardanne. */
+function versionLine(text:string):[string,string]{
+  const weather=text.match(/Niak Weather(.*)$/);if(weather)return ['Niak Weather',(text.startsWith('Relié')?'relié':'')+weather[1].replace(/^\s*·\s*/,' · ').trim()];
+  const m=text.match(/^(\D+?)\s+(\d.*)$/);return m?[m[1],m[2]]:[text,''];
+}
 const fr=(v:number,d=1)=>v.toLocaleString('fr-FR',{maximumFractionDigits:d,minimumFractionDigits:0});
 const days=(d:number)=>{const n=Math.max(1,Math.floor(d));return `${n} jour${n>1?'s':''}`;};
 function learnState(t:Twin):{label:string;cls:string;text:string;rank:number}{
@@ -55,7 +60,7 @@ export class ComfortSetup extends LitElement {
  @state() private healthError='';
  private healthGeneration=0;
  // The tab opens on the home's technical state; « Modifier » leads to the rooms.
- @state() private page:'health'|'rooms'='rooms';
+ @state() private page:'health'|'rooms'='health';
  @state() private overview?:{area_id:string;name:string;suggestions:Record<string,string|string[]>;temperatures:number}[];
  @state() private picked:string[]=[];
  @state() private weatherEntry:string|null=null;
@@ -103,9 +108,9 @@ export class ComfortSetup extends LitElement {
  }
  private healthScreen(){
   if(this.health)return html`${this.healthError?html`<p class="notice error" role="alert">Le bilan n’a pas pu être actualisé. <button @click=${()=>void this.loadHealth()}>Réessayer</button></p>`:nothing}${this.healthPage()}`;
-  return html`<h1>Mon logement</h1>${this.healthError?html`<p class="notice error" role="alert">Le bilan du logement n’a pas pu être chargé. ${this.healthError}</p>
-   <div class="actions"><button @click=${()=>void this.loadHealth()}>Réessayer</button><button @click=${()=>this.page='rooms'}>Ouvrir les réglages</button></div>`
-   :html`<p class="loading" role="status">Chargement du bilan de votre logement…</p>`}`;
+  return html`<div class="ac-top"><h1>Confort</h1><div class="ac-actions"><button @click=${()=>this.path('pieces')}>Réglages des pièces</button></div></div>${this.healthError?html`<p class="notice error" role="alert">Le bilan technique n’a pas pu être chargé. ${this.healthError}</p>
+   <div class="actions"><button @click=${()=>void this.loadHealth()}>Réessayer</button></div>`
+   :html`<p class="loading" role="status">Chargement du bilan technique…</p>`}`;
  }
  private async goTo(t:Target){
   if(t.kind==='exterior')return this.editExterior();
@@ -116,28 +121,52 @@ export class ComfortSetup extends LitElement {
   return html`<li class=${l.level}><span class="hl-dot"></span><div><strong>${l.text}</strong>${l.why?html`<span class="hl-why">${l.why}</span>`:nothing}</div>
    ${l.target?html`<button class="link hl-go" ?disabled=${this.busy} @click=${()=>void this.goTo(l.target!)}>${l.target.label}</button>`:nothing}</li>`;
  }
- private healthPage(details=false){const h=this.health!;
-  return html`<div class="hl-head"><div><h1>Mon logement</h1>
-    <p class="hl-state ${h.level==='ok'?'ok':'bad'}"><span class="hl-dot"></span>${h.summary}<span class="muted"> · ${h.rooms_summary}${h.tips_summary?` · ${h.tips_summary}`:''}</span></p></div>
-   </div>
-  <p class="hl-legend"><span class="ok"><span class="hl-dot"></span>fonctionne</span><span class="bad"><span class="hl-dot"></span>à régler</span><span class="tip"><span class="hl-dot"></span>à améliorer</span><span class="none"><span class="hl-dot"></span>non utilisé</span></p>
-  ${this.learningBox()}
-  <div class="hl-grid">
-   ${!details&&h.todo.length?html`${frame('À régler',html`<ul class="hl-lines">${h.todo.map(l=>this.hline(l))}</ul>`,{className:'wide todo'})}`:nothing}
-   ${!details&&h.tips.length?html`${frame('À améliorer',html`<ul class="hl-lines">${h.tips.map(l=>this.hline(l))}</ul>`,{className:'wide'})}`:nothing}
-   ${frame('Sources',html`<ul class="hl-lines">${h.sources.map(s=>html`<li class=${s.level}><span class="hl-dot"></span><div><strong>${s.label}</strong><span class="hl-why">${s.text}</span></div></li>`)}</ul>`,{className:'nk-plain'})}
-   ${frame('Versions et liens',html`<ul class="hl-lines">${h.versions.map(l=>this.hline(l))}</ul>`,{collapsible:true,open:false})}
-   ${frame('Capteurs par pièce',html`<div class="hl-table" tabindex="0" role="region" aria-label="Capteurs par pièce, tableau défilant"><table><thead><tr><th scope="col">Pièce</th>${h.columns.map(c=>html`<th scope="col">${c}</th>`)}</tr></thead>
-    <tbody>${h.rooms.map(r=>html`<tr><th scope="row"><button class="link" @click=${()=>void this.goTo({kind:'room',entry_id:r.entry_id,label:r.title})}>${r.title}</button></th>
-     ${r.cells.map(c=>html`<td class=${c.level}><span class="hl-dot"></span>${c.text}</td>`)}</tr>`)}</tbody></table></div>`,{className:'wide',collapsible:true})}
-  </div>`;}
- /** « Apprentissage »: what each room's twin learned, the plain words first, the figures for whoever wants them. */
+ /** The technical home of Confort: is everything working, what to set, where learning stands, how rooms are equipped. */
+ private healthPage(details=false){const h=this.health!,t=this.twins?.rooms??[];
+  const cells=h.rooms.flatMap(r=>r.cells),configured=cells.filter(c=>c.level!=='none').length,answering=cells.filter(c=>c.level==='ok').length;
+  const known=t.filter(r=>learnState(r.twin).cls==='ok').length,todo=h.todo.length+h.tips.length,sources=h.sources.filter(x=>x.level==='ok').length;
+  const kpi=(value:string,label:string,cls='')=>html`<div class=${'ac-kpi '+cls}><b>${value}</b><span>${label}</span></div>`;
+  const versions=h.versions.map(l=>l.text).join(' · ');
+  if(details)return this.roomsTable();
+  return html`<div class="ac-top"><div><h1>Confort</h1>
+    <p class="ac-state"><span class=${'hl-dot '+(h.level==='ok'?'ok':'bad')}></span><b>${h.level==='ok'?'Tout fonctionne':h.summary}</b><span class="muted"> · ${versions} · ${h.rooms_summary}</span></p></div>
+   <div class="ac-actions"><button class="primary" @click=${()=>this.path('pieces')}>Ajouter une pièce</button><button @click=${()=>void this.goTo({kind:'exterior',label:'Extérieur'})}>Extérieur et météo</button><button @click=${()=>this.path('pieces')}>Réglages des pièces</button></div></div>
+  <div class="ac-kpis">${kpi(`${answering} / ${configured}`,'capteurs qui répondent',answering===configured?'ok':'bad')}${kpi(`${known} / ${t.length||h.rooms.length}`,'pièces en apprentissage optimal')}
+   ${kpi(String(todo),todo>1?'points à régler ou améliorer':'point à régler ou améliorer',todo?'bad':'ok')}${kpi(`${sources} / ${h.sources.length}`,'sources partagées en place',sources===h.sources.length?'ok':'bad')}</div>
+  <div class="ac-cols"><div>
+   ${frame('À régler',todo?html`${h.todo.length?html`<ul class="hl-lines">${h.todo.map(l=>this.hline(l))}</ul>`:nothing}${h.tips.length?html`<h4 class="ac-h4">À améliorer</h4><ul class="hl-lines">${h.tips.map(l=>this.hline(l))}</ul>`:nothing}`
+     :html`<p class="ac-ok"><span class="hl-dot ok"></span>Aucun capteur muet, aucune source manquante, aucune pièce incomplète.</p>`,{className:todo?'todo':''})}
+   ${this.learningBox()}
+   ${frame('Pièces et capteurs',this.roomsTable())}
+  </div><div>
+   ${frame('Sources partagées',html`${h.sources.map(x=>html`<div class="ac-row"><b>${x.label}</b><span class=${x.level==='ok'?'':'bad'}>${x.text}</span></div>`)}`)}
+   ${frame('Versions et liens',html`${h.versions.map(l=>{const [label,rest]=versionLine(l.text);return html`<div class="ac-row"><b>${label}</b><span class=${l.level==='ok'?'':'bad'}>${rest}</span></div>`;})}<div class="ac-row"><b>Interface Maison</b><span>niak_comfort_api v1</span></div>`)}
+   ${frame('Les cartes',html`<p class="hint">Dans un tableau de bord : <strong>Ajouter une carte</strong>, puis <strong>Niak Confort</strong> pour une pièce (les pièces au même air n’en font qu’une), ou <strong>Niak Confort · logement</strong> pour la synthèse.</p>`)}
+  </div></div>`;}
+ /** Each room and what equips it, with its shared air and a way to configure it. */
+ private roomsTable(){const h=this.health!;
+  return html`<div class="hl-table" tabindex="0" role="region" aria-label="Pièces et capteurs, tableau défilant"><table><thead><tr><th scope="col">Pièce</th>${h.columns.map(c=>html`<th scope="col">${c}</th>`)}<th scope="col">Même air</th><th scope="col"><span class="sr">Réglages</span></th></tr></thead>
+   <tbody>${h.rooms.map(r=>html`<tr><th scope="row">${r.title}</th>${r.cells.map(c=>html`<td class=${c.level}><span class="hl-dot"></span>${c.text}</td>`)}
+    <td class=${this.volumeName(r.entry_id)?'':'none'}>${this.volumeName(r.entry_id)??'—'}</td>
+    <td><button class="ac-small" @click=${()=>void this.goTo({kind:'room',entry_id:r.entry_id,label:r.title})}>Configurer</button></td></tr>`)}</tbody></table></div>`;}
+ /** « Salon · Cuisine » for a room open onto others, from the rooms' « Même air » settings. */
+ private volumeName(entry_id:string):string|null{
+  const rooms=this.snapshot?.rooms??[],links=new Map(rooms.map(r=>[r.entry_id,new Set(r.config.open_to??[])]));
+  const group=new Set([entry_id]),todo=[entry_id];
+  while(todo.length){const id=todo.pop()!;for(const r of rooms)if(!group.has(r.entry_id)&&(links.get(id)?.has(r.entry_id)||links.get(r.entry_id)?.has(id))){group.add(r.entry_id);todo.push(r.entry_id);}}
+  if(group.size<2)return null;
+  return rooms.filter(r=>group.has(r.entry_id)).sort((a,b)=>Object.keys(b.config.sources??{}).length-Object.keys(a.config.sources??{}).length||a.title.localeCompare(b.title,'fr')).map(r=>r.title).join(' · ');
+ }
+ /** « Apprentissage »: each room's twin, as a table: state, precision replayed over 24 hours, air learned, curve. */
  private learningBox(){
   const rooms=this.twins?.rooms??[];if(!rooms.length)return nothing;
-  const ok=rooms.filter(r=>learnState(r.twin).cls==='ok').length;
-  const sorted=[...rooms].sort((a,b)=>learnState(a.twin).rank-learnState(b.twin).rank||a.title.localeCompare(b.title,'fr'));
-  return frame('Apprentissage',html`<p class="tw-sum">Apprentissage optimal pour ${ok} pièce${ok>1?'s':''} sur ${rooms.length} : leurs conseils sont optimisés. Les autres restent estimés pour l’instant.</p>
-   <div class="tw-grid">${sorted.map(r=>this.twinCard(r.title,r.twin))}</div>${this.learningQuestions()}${this.learningWeek()}`,{className:'wide'});
+  return frame('Apprentissage',html`<p class="hint">Prévisions rejouées sur les dernières 24 heures. Optimal : 7 jours de mesures, ±0,5 °C et ±3 %.</p>
+   <div class="hl-table" tabindex="0" role="region" aria-label="Apprentissage par pièce, tableau défilant"><table><thead><tr><th scope="col">Pièce</th><th scope="col">État</th><th scope="col">Température</th><th scope="col">Humidité</th><th scope="col">Air appris</th><th scope="col">24 h</th></tr></thead>
+   <tbody>${rooms.map(r=>{const st=learnState(r.twin),p=r.twin.precision,air=(r.air??[]).map(a=>a==='co2'?'CO₂':'COV').join(' · ');
+    return html`<tr><th scope="row">${r.title}</th><td><span class=${'tw-pill '+st.cls}>${st.label} · ${days(r.twin.days)}</span></td>
+     <td>${p?`±${fr(p.temperature,p.temperature<1?2:1)} °C`:'—'}</td><td>${p?`±${fr(p.humidity,0)} %`:'—'}</td><td class=${air?'':'none'}>${air||'—'}</td><td>${p?.curve?this.twinCurve(p.curve,false):nothing}</td></tr>`;})}</tbody></table></div>
+   <p class="tw-legend"><span class="measured">mesurée</span><span class="replayed">rejouée</span></p>
+   ${this.learningQuestions()}${this.learningWeek()}`,{className:'wide'});
  }
  /** Questions on the habits found: a « yes » names a cause; nothing is ever guessed without it. */
  private learningQuestions(){
@@ -164,24 +193,13 @@ export class ComfortSetup extends LitElement {
    ${best?tile(best.title,'la pièce qui gagne le plus à être aérée'):nothing}
    ${sum('ignored')?tile(String(sum('ignored')),sum('ignored')>1?'conseils laissés sans suite':'conseil laissé sans suite'):nothing}</div>`;
  }
- private twinCard(title:string,t:Twin){
-  const st=learnState(t),r=t.room,p=t.precision,lines:string[]=[];
-  // What the twin learned, on a scale of everyday words: never hours, degrees or air changes.
-  if(r){const h=r.inertia_hours,sun=r.sun_degrees,air=r.air_changes_per_hour;
-   lines.push(h<24?'se refroidit vite':h<72?'garde bien sa température':'garde très longtemps sa température');
-   if(sun!=null)lines.push(sun<0.5?'le soleil la réchauffe peu':sun<1.5?'le soleil la réchauffe un peu':'le soleil la réchauffe beaucoup');
-   if(air>0)lines.push(1/air<4?'fenêtres fermées, son air se renouvelle bien':'fenêtres fermées, son air se renouvelle lentement');}
-  return html`<div class="tw-card"><div class="tw-head"><h3>${title}</h3><span class=${'tw-pill '+st.cls}>${st.label} · ${days(t.days)}</span></div>
-   <p class="tw-state">${st.text}</p>${lines.length?html`<ul>${lines.map(l=>html`<li>${l}</li>`)}</ul>`:nothing}
-   ${p?.curve?this.twinCurve(p.curve):nothing}</div>`;
- }
  /** Measured (solid) and replayed (dashed) temperature over the last 24 hours. */
- private twinCurve(curve:{temperature:number;measured_temperature:number}[]){
+ private twinCurve(curve:{temperature:number;measured_temperature:number}[],legend=true){
   if(curve.length<2)return nothing;
   const all=curve.flatMap(c=>[c.temperature,c.measured_temperature]),lo=Math.min(...all)-0.2,hi=Math.max(...all)+0.2,w=240,h=48;
   const line=(k:'temperature'|'measured_temperature')=>curve.map((c,i)=>`${(i/(curve.length-1)*w).toFixed(1)},${(h-(c[k]-lo)/(hi-lo)*h).toFixed(1)}`).join(' ');
   return html`<svg class="tw-curve" viewBox="0 0 240 48" preserveAspectRatio="none" role="img" aria-label="Température mesurée et rejouée sur 24 heures"><polyline points=${line('measured_temperature')} class="measured"/><polyline points=${line('temperature')} class="replayed"/></svg>
-   <p class="tw-legend"><span class="measured">mesurée</span><span class="replayed">rejouée par le jumeau</span></p>`;
+   ${legend?html`<p class="tw-legend"><span class="measured">mesurée</span><span class="replayed">rejouée par le jumeau</span></p>`:nothing}`;
  }
  private message(e:unknown){return typeof e==='object'&&e&&'message' in e?String(e.message):'La connexion est indisponible. Réessayez sans quitter votre brouillon.';}
  private path(path:string){if(!this.isConnected)return;const full='/'+path.replace(/^\//,'');this.routeHandled=full==='/'?'':full;history.pushState(null,'','/niak/confort'+(path?'/'+path:''));window.dispatchEvent(new CustomEvent('location-changed'));}
@@ -189,7 +207,9 @@ export class ComfortSetup extends LitElement {
  private async followRoute(){
   const path=this.route?.path??'';if(this.routeHandled===path)return;this.routeHandled=path;const generation=++this.workspaceGeneration;this.remember();
   const [id,section]=path.split('/').filter(Boolean);const key=id??'';
-  this.workspaceKey=key;this.draft=undefined;this.exteriorDraft=undefined;this.discovery=undefined;this.entryId=undefined;this.preview=undefined;this.error='';this.saved='';this.confirmDiscard=false;this.confirmRemove=false;this.page='rooms';
+  this.workspaceKey=key;this.draft=undefined;this.exteriorDraft=undefined;this.discovery=undefined;this.entryId=undefined;this.preview=undefined;this.error='';this.saved='';this.confirmDiscard=false;this.confirmRemove=false;
+  // The tab opens on its technical home; « pieces » is the list of rooms to set.
+  this.page=key==='pieces'?'rooms':'health';if(key==='pieces')return;
   const cached=this.drafts.get(key);
   if(cached){Object.assign(this,cached);this.stage=roomSections.find(x=>x.path===section)?.stage??(section==='recapitulatif'?5:cached.stage);return;}
   if(id==='apercu'&&this.snapshot?.rooms.some(r=>r.entry_id===section)){this.preview=section;this.previewEdited=true;return;}
@@ -498,16 +518,16 @@ export class ComfortSetup extends LitElement {
    ${this.errorBlock()}<button class="primary" ?disabled=${this.busy||!n} @click=${()=>this.createAll()}>${n?`Créer ${n>1?'les '+n+' pièces':'la pièce'}`:'Cochez une pièce'}</button></section>`;}
  private home(){const s=this.snapshot!;const used=new Set(s.rooms.map(r=>r.config.area_id).filter((a):a is string=>!!a));const living=livingArea(s.areas,used);const areas=s.areas.filter(a=>!a.outdoor&&!used.has(a.area_id)&&(s.rooms.length||a!==living));
   return html`
-  <h1>Pièces du logement</h1><p class="muted">Vos pièces et les mesures qui expliquent leur confort. Aucun équipement n’est commandé.</p>
+  <h1>Réglages des pièces</h1><p class="muted">Vos pièces et les mesures qui expliquent leur confort. Aucun équipement n’est commandé.</p>
   ${!s.rooms.length&&this.overview?.some(a=>typeof a.suggestions.indoor_temperature==='string')?this.foundRooms():!s.rooms.length?html`<section class="start"><h2>Commençons par le Salon</h2>${living?html`<p>La pièce « ${living.name} » existe dans Home Assistant. Il vous proposera ses capteurs ; vous gardez, retirez ou complétez.</p><button class="primary" @click=${()=>this.start(living)}>Configurer le Salon</button>`:html`<p>Aucune pièce « Salon » dans Home Assistant : une pièce libre est créée et vous choisissez ses capteurs.</p><button class="primary" @click=${()=>this.start(null,'Salon')}>Créer le Salon</button>`}</section>`:html`<div class="room-list">${s.rooms.map(room=>html`<section class="room"><div><h3>${room.title}</h3><p class="hint">${coverage(room.config)}${room.config.area_id?'':' · pièce libre'}</p>${!room.loaded?html`<p class="warning hint">Le calcul de cette pièce n’est pas chargé. Vérifiez ses capteurs et les journaux de l’intégration.</p>`:nothing}</div><button ?disabled=${this.busy} @click=${()=>this.editRoom(room)}>Configurer</button></section>`)}</div>`}
   ${frame(s.rooms.length?'Ajouter une pièce':this.overview?'Une pièce sans pièce Home Assistant ?':'Ou commencer par une autre pièce',html`${areas.length&&!(this.overview&&!s.rooms.length)?html`<p class="hint">Vos pièces Home Assistant : leurs capteurs vous seront proposés.</p><div class="area-buttons">${areas.map(a=>html`<button @click=${()=>this.start(a)}>${a.name}</button>`)}</div>`:nothing}
    <form class="free" @submit=${(e:Event)=>{e.preventDefault();void this.start(null,this.freeName);}}><label>Pièce libre, sans pièce Home Assistant<input type="text" maxlength="100" placeholder="Par exemple : Étage" .value=${this.freeName} @input=${(e:Event)=>this.freeName=(e.target as HTMLInputElement).value}></label><button type="submit">Créer</button></form>`)}
-  ${s.rooms.length?html`${frame('Les cartes',html`<p>Dans un tableau de bord : <strong>Ajouter une carte</strong>, puis <strong>Niak Confort</strong> pour une pièce, ou <strong>Niak Confort · logement</strong> pour la synthèse de toutes les pièces.</p>`)}`:nothing}${this.health?html`${this.health.todo.length?frame('À régler',html`<ul class="hl-lines">${this.health.todo.map(l=>this.hline(l))}</ul>`,{className:'todo'}):nothing}${this.health.tips.length?frame('À améliorer',html`<ul class="hl-lines">${this.health.tips.map(l=>this.hline(l))}</ul>`):nothing}<details class="health-details"><summary>Sources, conseils et état du logement</summary>${this.healthPage(true)}</details>`:this.healthError?html`<p class="notice" role="alert">Le bilan technique n’a pas pu être chargé. <button @click=${()=>void this.loadHealth()}>Réessayer</button></p>`:html`<p class="muted" role="status">Actualisation du bilan…</p>`}`;}
+  ${s.rooms.length?html`${frame('Les cartes',html`<p>Dans un tableau de bord : <strong>Ajouter une carte</strong>, puis <strong>Niak Confort</strong> pour une pièce, ou <strong>Niak Confort · logement</strong> pour la synthèse de toutes les pièces.</p>`)}`:nothing}${this.health?html`${this.health.todo.length?frame('À régler',html`<ul class="hl-lines">${this.health.todo.map(l=>this.hline(l))}</ul>`,{className:'todo'}):nothing}${this.health.tips.length?frame('À améliorer',html`<ul class="hl-lines">${this.health.tips.map(l=>this.hline(l))}</ul>`):nothing}<p><button @click=${()=>this.path('')}>Retour à l’accueil Confort</button></p>`:this.healthError?html`<p class="notice" role="alert">Le bilan technique n’a pas pu être chargé. <button @click=${()=>void this.loadHealth()}>Réessayer</button></p>`:html`<p class="muted" role="status">Actualisation du bilan…</p>`}`;}
  protected render(){if(this.hass?.user?.is_admin===false)return html`<main><h1>Niak Confort</h1><p>La configuration du logement est réservée aux administrateurs Home Assistant.</p></main>`;
   const editing=!!(this.draft||this.exteriorDraft);
   // Inside the shared « Niak » panel, its header and tabs replace this one.
   const header=this.hasAttribute('embedded')?nothing:html`<header><button aria-label="Ouvrir le menu Home Assistant" @click=${()=>this.menu()}><span class="menu-icon"></span></button><strong>Niak Confort</strong></header>`;
-  return html`${header}<main>${this.confirmDiscard?html`<section class="notice" role="alertdialog" aria-label="Abandonner le brouillon"><h2>Quitter sans enregistrer ?</h2><p>Vos choix de cette page seront perdus.</p><div class="actions"><button @click=${()=>this.confirmDiscard=false}>Continuer la configuration</button><button @click=${()=>this.discard()}>Quitter sans enregistrer</button></div></section>`:nothing}
+  return html`${header}<main class=${this.page==='health'&&!editing&&!this.preview&&this.snapshot?.rooms.length?'wide':''}>${this.confirmDiscard?html`<section class="notice" role="alertdialog" aria-label="Abandonner le brouillon"><h2>Quitter sans enregistrer ?</h2><p>Vos choix de cette page seront perdus.</p><div class="actions"><button @click=${()=>this.confirmDiscard=false}>Continuer la configuration</button><button @click=${()=>this.discard()}>Quitter sans enregistrer</button></div></section>`:nothing}
    ${!editing?html`${this.errorBlock()}${this.error&&!this.snapshot?html`<button @click=${()=>this.load()}>Réessayer</button>`:nothing}`:nothing}${this.saved?html`<p class="notice success" role="status">${this.saved}</p>`:nothing}${this.busy&&!this.snapshot?html`<p class="loading" role="status">Chargement de votre logement…</p>`:nothing}
    ${this.snapshot?(this.exteriorDraft?this.exterior():this.draft?this.wizard():this.preview?this.previewScreen():this.page==='health'&&this.snapshot.rooms.length?this.healthScreen():this.home()):nothing}${this.busy&&this.snapshot?html`<p class="busy" role="status">Un instant…</p>`:nothing}</main>`;
  }
