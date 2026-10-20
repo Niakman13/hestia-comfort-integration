@@ -1,3 +1,30 @@
+## 1.2.5-beta.1 — Préversion : des conseils vérifiés dans toutes les situations, et le jumeau de chaque pièce
+
+**En bref**
+- **Les pièces au même air disent enfin la même chose** : le salon et la cuisine sont jugés ensemble.
+- **Chaque conseil a été vérifié dans 32 400 situations** (hiver, été, pluie, rafales, chauffage, présence…), et cette vérification tourne désormais à chaque mise à jour.
+- **Chaque pièce a son jumeau** : quelques chiffres appris sur ses mesures. Il observe seulement, aucun conseil ne change.
+
+### Nouveautés
+- Une pièce froide dit pourquoi : « le chauffage est coupé » en orange quand quelqu’un est là, « Maison vide : pas besoin de chauffer » quand Alarmo est en absence ou que personne n’est à la maison, « le chauffage s’en charge » quand il tourne.
+- Murs humides : quand l’air touche les murs froids au-delà de 80 %, la carte le dit, avec le geste qui aide (VMC, un peu de chauffage, aérer quand le temps le permettra).
+- Fenêtre ouverte qui n’aide ni ne gêne : « Fenêtre ouverte · sans effet sur le confort », en bleu.
+- Panneau Niak, rubrique « Ce que Niak a appris » : pour chaque pièce, son inertie, ce que lui apportent le soleil et la vie de la maison, l’effet d’une fenêtre ouverte, le renouvellement d’air, et sa précision sur les dernières 24 heures.
+- Deux capteurs de diagnostic par pièce, désactivés au départ : « Température prévue dans 1 h » et « Humidité prévue dans 1 h ».
+
+### Améliorations
+- Pièces au même air : l’humidité est jugée sur l’air commun ; la pièce dont le conseil compte le plus parle pour toutes (« Même air : Salon »).
+- Une fenêtre déjà ouverte est toujours rejugée : utile, on laisse ; sans effet, c’est neutre ; nuisible, « Refermez ».
+- Chauffage en marche : une pièce humide de l’intérieur peut quand même être aérée 5 minutes.
+- La pluie, l’orage ou l’air extérieur ne disent « gardez fermé » que si ouvrir aurait servi.
+
+### Corrections
+- « Refermez » s’affichait « Rien à faire » quand l’air extérieur était mauvais.
+- « Aération en cours » alors que l’aération n’asséchait plus rien (« environ 80 % après », déjà à 80 %).
+- En été, une fenêtre ouverte sur un dehors plus chaud passait pour une aération utile.
+- Une pièce froide ou des murs humides affichaient « Rien à faire ».
+- Le capteur Raison ne connaissait pas « Air du dehors plus humide » : il restait vide dans ce cas.
+
 ## 1.2.0-beta.1 — Préversion : des conseils qui ne se contredisent plus
 
 **En bref**

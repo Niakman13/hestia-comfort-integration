@@ -88,7 +88,9 @@
           "precool_possible": "Pre-cool at night",
           "precool_later": "Pre-cool later",
           "shared_volume": "Shared air with a neighbouring room",
-          "humid_outdoor": "Outdoor humidity"
+          "humid_outdoor": "Outdoor humidity",
+          "open_neutral": "Open window, no effect",
+          "rehumidification_risk": "Outdoor air more humid"
         }
       },
       "heating_action": {
@@ -108,6 +110,12 @@
           "partial": "Partial assessment",
           "configured_sources_available": "Configured sources available"
         }
+      },
+      "twin_temperature": {
+        "name": "Temperature expected in 1 h"
+      },
+      "twin_humidity": {
+        "name": "Humidity expected in 1 h"
       }
     }
   }

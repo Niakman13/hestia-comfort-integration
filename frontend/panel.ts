@@ -3,7 +3,7 @@ import {customElement,property,state} from 'lit/decorators.js';
 import {live} from 'lit/directives/live.js';
 import styles from './styles.css';
 import {frame,hubStyles,modernStyles,hubIcon,helpTip,defaultValue} from './socle/ui';
-import {labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,stages,intros,outdoorGroups,changedAdvanced,advancedDefaults,airSource,airChoices,exteriorChoices,airReferenceDefaults,vocPreset,thresholdSources,type Choice,type Area,type Candidate,type Discovery,type Health,type HealthLine,type Target,type Snapshot,type Hass,type Room,type RoomConfig,type Spec} from './model';
+import {labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,stages,intros,outdoorGroups,changedAdvanced,advancedDefaults,airSource,airChoices,exteriorChoices,airReferenceDefaults,vocPreset,thresholdSources,type Choice,type Area,type Candidate,type Discovery,type Health,type HealthLine,type Target,type Snapshot,type Hass,type Room,type RoomConfig,type Spec,type Twins,type Twin} from './model';
 const roomSections=[{stage:0,path:'temperature',label:'Température',title:'Température et humidité',icon:'temperature'},{stage:1,path:'ouvertures',label:'Ouvertures',title:'Fenêtres et portes',icon:'openings'},{stage:2,path:'air',label:'Air intérieur',title:'Qualité de l’air',icon:'air'},{stage:6,path:'presence',label:'Présence',title:'Présence',icon:'presence'},{stage:3,path:'chauffage',label:'Chauffage',title:'Chauffage',icon:'heating'},{stage:4,path:'piece',label:'La pièce',title:'La pièce et ses réglages',icon:'room'}];
 const roomOrder=[0,1,2,6,3,4,5];
 const help:Record<string,string>={indoor_temperature:'La mesure de l’air de cette pièce. Seule information obligatoire. La température d’un appareil ou du sol d’une plante peut être différente.',indoor_humidity:'Permet de repérer un air trop humide et de savoir si aérer l’assèche vraiment.',illuminance:'La lumière mesurée en lux aide à interpréter le soleil. Elle ne mesure pas la position d’un volet.',pm25:'Mesure les particules fines. Le seuil d’action est votre réglage de confort.',voc:'Les repères ci-dessous dépendent du capteur et de son unité ; un indice n’est pas une concentration.',purifier:'Observe son fonctionnement sans le commander. Un purificateur filtre les particules ; il ne retire pas le CO₂.',ventilation:'Une VMC ou une ventilation renouvelle l’air et aide à assécher. Niak observe si elle tourne, sans la commander ni présumer son débit.',ventilation_boost:'Seulement si votre VMC a deux vitesses : choisissez ici sa position rapide (Turbo). La VMC compte comme en marche si l’une des deux tourne.',presence:'Plusieurs capteurs peuvent suivre la pièce. L’absence adapte les conseils sans couper le suivi ni les alertes.',co2:'Permet de savoir quand renouveler l’air. Ce capteur ne mesure pas tous les polluants.',windows:'Les contacts des fenêtres et portes qui donnent sur l’extérieur. Pas les portes de meubles ou d’appareils.',heating:'Permet de savoir si le chauffage tourne vraiment, pour ne pas conseiller d’ouvrir à ce moment-là. Niak ne commande rien.',outdoor_temperature:'Permet de savoir si ouvrir rafraîchit ou réchauffe, et s’il gèle.',outdoor_humidity:'Avec les températures, permet de comparer l’eau contenue dans l’air dedans et dehors.',rain:'Une intensité en mm/h dit s’il pleut maintenant. Un cumul de la journée ne le dit pas.',wind_gust:'Au-delà de vos réglages (45 km/h par défaut), Niak conseille de ne rien laisser ouvert.',wind_bearing:'D’où vient le vent, en degrés. Avec l’exposition des ouvrants, Niak sait lesquels sont au vent, fait traverser l’air et repère la pluie poussée sous un avant-toit.',solar:'Un capteur d’ensoleillement en W/m² permet de calculer le soleil reçu par chaque façade.',pollution:'L’indice ATMO du jour (intégration Atmo France) sert de précaution régionale. Ce n’est pas une mesure à vos fenêtres.'};
@@ -41,6 +41,7 @@ export class ComfortSetup extends LitElement {
  @state() private confirmed=false;
  @state() private health?:Health;
  @state() private healthLoading=true;
+ @state() private twins?:Twins;
  @state() private healthError='';
  private healthGeneration=0;
  // The tab opens on the home's technical state; « Modifier » leads to the rooms.
@@ -84,6 +85,8 @@ export class ComfortSetup extends LitElement {
  }
  private async loadHealth(){
   const generation=++this.healthGeneration;this.healthLoading=true;this.healthError='';
+  // What the twins learned is a bonus: the health page never waits for it nor fails with it.
+  void this.hass!.callWS<Twins>({type:'niak_comfort/twins'}).then(t=>{if(generation===this.healthGeneration)this.twins=t;},()=>{});
   try{const value=await this.hass!.callWS<Health>({type:'niak_comfort/health'});if(generation===this.healthGeneration)this.health=value;}
   catch(e){if(generation===this.healthGeneration)this.healthError=this.message(e);}
   finally{if(generation===this.healthGeneration)this.healthLoading=false;}
@@ -112,11 +115,36 @@ export class ComfortSetup extends LitElement {
    ${!details&&h.todo.length?html`${frame('À régler',html`<ul class="hl-lines">${h.todo.map(l=>this.hline(l))}</ul>`,{className:'wide todo'})}`:nothing}
    ${!details&&h.tips.length?html`${frame('À améliorer',html`<ul class="hl-lines">${h.tips.map(l=>this.hline(l))}</ul>`,{className:'wide'})}`:nothing}
    ${frame('Sources',html`<ul class="hl-lines">${h.sources.map(s=>html`<li class=${s.level}><span class="hl-dot"></span><div><strong>${s.label}</strong><span class="hl-why">${s.text}</span></div></li>`)}</ul>`,{className:'nk-plain'})}
+   ${this.twins?.rooms.length?frame('Ce que Niak a appris',html`<p class="hint">Chaque pièce a son jumeau : quelques chiffres appris sur ses propres mesures. Il observe seulement, il ne change aucun conseil. Pour juger s’il voit juste, il rejoue les dernières 24 heures avec la vraie météo et vos fenêtres, sans regarder la pièce.</p>
+    <div class="tw-grid">${this.twins.rooms.map(r=>this.twinCard(r.title,r.twin))}</div>`,{className:'wide',collapsible:true,open:false}):nothing}
    ${frame('Versions et liens',html`<ul class="hl-lines">${h.versions.map(l=>this.hline(l))}</ul>`,{collapsible:true,open:false})}
    ${frame('Capteurs par pièce',html`<div class="hl-table" tabindex="0" role="region" aria-label="Capteurs par pièce, tableau défilant"><table><thead><tr><th scope="col">Pièce</th>${h.columns.map(c=>html`<th scope="col">${c}</th>`)}</tr></thead>
     <tbody>${h.rooms.map(r=>html`<tr><th scope="row"><button class="link" @click=${()=>void this.goTo({kind:'room',entry_id:r.entry_id,label:r.title})}>${r.title}</button></th>
      ${r.cells.map(c=>html`<td class=${c.level}><span class="hl-dot"></span>${c.text}</td>`)}</tr>`)}</tbody></table></div>`,{className:'wide',collapsible:true})}
   </div>`;}
+ private twinCard(title:string,t:Twin){
+  const n=(v:number,d=1)=>v.toLocaleString('fr-FR',{maximumFractionDigits:d,minimumFractionDigits:0});
+  if(t.status!=='ready'||!t.room)return html`<div class="tw-card"><h3>${title}</h3><p class="muted">En apprentissage : ${n(t.days)} jour${t.days>=2?'s':''} sur 3.</p></div>`;
+  const r=t.room,p=t.precision,lines:string[]=[];
+  lines.push(`Inertie : suit le dehors en ${n(r.inertia_hours,0)} h environ`);
+  if(r.sun_degrees!=null&&r.sun_degrees>=0.3)lines.push(`Soleil fort : +${n(r.sun_degrees)} °C`);
+  if(r.heating_degrees!=null&&r.heating_degrees>=0.3)lines.push(`Chauffage : +${n(r.heating_degrees)} °C`);
+  if(r.household_degrees>=0.3)lines.push(`Vie de la maison : +${n(r.household_degrees)} °C`);
+  if(r.window_half_minutes!=null)lines.push(`Fenêtre ouverte : l’écart avec le dehors divisé par 2 en ${r.window_half_minutes<120?n(r.window_half_minutes,0)+' min':n(r.window_half_minutes/60)+' h'}`);
+  if(r.air_changes_per_hour>0)lines.push(`Fenêtres fermées : air renouvelé en ${n(1/r.air_changes_per_hour,0)} h environ`);
+  if(r.water_per_hour>=0.1)lines.push(`Humidité produite : ${n(r.water_per_hour)} g/m³ par heure`);
+  return html`<div class="tw-card"><h3>${title}</h3><ul>${lines.map(l=>html`<li>${l}</li>`)}</ul>
+   ${p?html`<p class="tw-score">Précision sur 24 h : <strong>±${n(p.temperature)} °C</strong> et <strong>±${n(p.humidity,0)} %</strong> d’humidité</p>${this.twinCurve(p.curve)}`:nothing}
+   <p class="hint">Appris sur ${n(t.days)} jours${t.open_samples?`, dont ${n(t.open_samples/2,0)} h fenêtre ouverte`:''}.</p></div>`;
+ }
+ /** Measured (solid) and replayed (dashed) temperature over the last 24 hours. */
+ private twinCurve(curve:{temperature:number;measured_temperature:number}[]){
+  if(curve.length<2)return nothing;
+  const all=curve.flatMap(c=>[c.temperature,c.measured_temperature]),lo=Math.min(...all)-0.2,hi=Math.max(...all)+0.2,w=240,h=48;
+  const line=(k:'temperature'|'measured_temperature')=>curve.map((c,i)=>`${(i/(curve.length-1)*w).toFixed(1)},${(h-(c[k]-lo)/(hi-lo)*h).toFixed(1)}`).join(' ');
+  return html`<svg class="tw-curve" viewBox="0 0 240 48" preserveAspectRatio="none" role="img" aria-label="Température mesurée et rejouée sur 24 heures"><polyline points=${line('measured_temperature')} class="measured"/><polyline points=${line('temperature')} class="replayed"/></svg>
+   <p class="tw-legend"><span class="measured">mesurée</span><span class="replayed">rejouée par le jumeau</span></p>`;
+ }
  private message(e:unknown){return typeof e==='object'&&e&&'message' in e?String(e.message):'La connexion est indisponible. Réessayez sans quitter votre brouillon.';}
  private path(path:string){if(!this.isConnected)return;const full='/'+path.replace(/^\//,'');this.routeHandled=full==='/'?'':full;history.pushState(null,'','/niak/confort'+(path?'/'+path:''));window.dispatchEvent(new CustomEvent('location-changed'));}
  private remember(){if(this.workspaceKey&&(this.draft||this.exteriorDraft))this.drafts.set(this.workspaceKey,{draft:this.draft,exteriorDraft:this.exteriorDraft,discovery:this.discovery,entryId:this.entryId,stage:this.stage,revision:this.revision,acknowledged:this.acknowledged,proposed:this.proposed,search:this.search,weatherEntry:this.weatherEntry});}
