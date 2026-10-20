@@ -30,8 +30,13 @@ def loaded_entries(hass):
 @websocket_api.websocket_command({vol.Required("type"): "niak_comfort/entries"})
 @callback
 def ws_entries(hass, connection, msg):
-    connection.send_result(msg["id"], [{"entry_id": e.entry_id, "title": e.title,
-        "area_id": {**e.data, **e.options}.get("area_id")} for e in loaded_entries(hass)])
+    def volume(entry):
+        coordinator = getattr(entry, "runtime_data", None)
+        partners = getattr(coordinator, "partners", None) or []
+        return [p["entry_id"] for p in partners], getattr(coordinator, "volume_name", None) if partners else None
+    # Rooms sharing one air carry their volume, so that a card editor offers them as one choice.
+    connection.send_result(msg["id"], [{"entry_id": e.entry_id, "title": e.title, "area_id": {**e.data, **e.options}.get("area_id"),
+        "volume": volume(e)[0], "volume_name": volume(e)[1]} for e in loaded_entries(hass)])
 
 
 @websocket_api.websocket_command({vol.Required("type"): "niak_comfort/subscribe", vol.Optional("entry_id"): str})

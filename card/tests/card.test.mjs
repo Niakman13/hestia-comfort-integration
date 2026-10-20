@@ -6,11 +6,12 @@ import {join} from 'node:path';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 const root=new URL('../',import.meta.url),temp=await mkdtemp(join(tmpdir(),'niak-comfort-card-'));
-await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts','src/views/room.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
+await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts','src/views/room.ts','src/editor.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
   bundle:true,platform:'node',format:'esm',outExtension:{'.js':'.mjs'},logLevel:'silent'});
 const {cleanConfig,cleanHomeConfig,homeAction}=await import(pathToFileURL(join(temp,'types.mjs')));
 const {isView,numeric,summary,readingStatus,coverageText,windFrom,evolutionLines,co2Metric,solarMetric}=await import(pathToFileURL(join(temp,'view.mjs')));
 const {LiveView}=await import(pathToFileURL(join(temp,'live.mjs')));
+const {roomChoices}=await import(pathToFileURL(join(temp,'editor.mjs')));
 const {outsideGaps,advice,slides,roomCard,facts}=await import(pathToFileURL(join(temp,'views/room.mjs')));
 const fixtures=JSON.parse(await readFile(new URL('../preview/card-fixtures.json',import.meta.url),'utf8'));
 const fresh=()=>({...structuredClone(fixtures[0].view),computed_at:new Date().toISOString()});
@@ -320,4 +321,13 @@ test('a cover driven by Adaptive Cover Pro has its own tile, and asks nothing wh
   t=tiles(v,c).find(x=>x.label==='Volet');assert.deepEqual([t.note,t.out,t.level],['à fermer',true,'action']);
   v.assessment.features.shutters=[{...base,automatic:false,advice:'close',soon:true,sun_start:'2026-10-19T13:50:00+02:00'}];
   t=tiles(v,c).find(x=>x.label==='Volet');assert.match(t.note,/^à fermer avant \d\d h \d\d$/);
+});
+
+test('rooms sharing one air are one choice in the card editor, led by the best equipped room',()=>{
+  const entries=[{entry_id:'b',title:'Buanderie',area_id:null,volume:[],volume_name:null},
+    {entry_id:'c',title:'Cuisine',area_id:null,volume:['s'],volume_name:'Salon · Cuisine'},
+    {entry_id:'s',title:'Salon',area_id:null,volume:['c'],volume_name:'Salon · Cuisine'}];
+  assert.deepEqual(roomChoices(entries),[{value:'b',label:'Buanderie'},{value:'s',label:'Salon · Cuisine'}]);
+  // A card already set on the kitchen keeps its room: nothing moves on the dashboard.
+  assert.deepEqual(roomChoices(entries,'c').find(o=>o.label==='Salon · Cuisine'),{value:'c',label:'Salon · Cuisine'});
 });

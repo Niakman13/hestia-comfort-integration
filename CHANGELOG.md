@@ -1,3 +1,16 @@
+## 1.2.5-beta.4 — Préversion : une seule carte pour les pièces au même air
+
+**En bref**
+- **Salon et cuisine ouverts l’un sur l’autre : une seule carte « Salon · Cuisine ».**
+
+### Nouveautés
+- Dans les réglages de la carte, les pièces au même air ne sont proposées qu’une fois : « Salon · Cuisine », la pièce la mieux équipée en premier. Une carte déjà réglée sur l’une des deux continue de marcher et montre tout le volume.
+- La carte commune a un seul bandeau et un seul « À savoir » ; les mesures sont rangées sous le nom de chaque pièce, fenêtres et soleil une seule fois.
+- Mon logement : une seule tuile « Salon · Cuisine » dans la grille des pièces.
+
+### Améliorations
+- Quand il faut refermer, la carte dit quelle fenêtre : utile quand elle est dans l’autre pièce du volume.
+
 ## 1.2.5-beta.3 — Préversion : le conseil suivi se voit tout de suite
 
 ### Corrections

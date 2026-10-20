@@ -27,6 +27,9 @@ export class NiakComfortCard extends LitElement {
   @property({attribute:false}) hass?:HomeAssistant;
   @state() private config?:Config;
   @state() private view?:View;
+  /** The rooms sharing this room's air: one card shows them all. */
+  @state() private partnerViews:Record<string,View>={};
+  private partners=new Map<string,LiveView>();
   @state() private problem?:string;
   @state() private open:Record<string,boolean>={};
   @state() private dialogOpen=false;
@@ -35,10 +38,21 @@ export class NiakComfortCard extends LitElement {
   @property({type:Boolean}) editMode=false;
   private uid=`nc-${++instances}`;
   private openingControl?:HTMLElement;
-  private live=new LiveView(v=>{this.view=v;this.problem=undefined;},code=>{this.problem=code;},()=>{this.view=undefined;this.closeFull();});
+  private live=new LiveView(v=>{this.view=v;this.problem=undefined;this.follow(v);},code=>{this.problem=code;},()=>{this.view=undefined;this.closeFull();});
+  /** Listen to the rooms of this room's volume; a partner that fails only drops out of the card. */
+  private follow(v:View){
+    const want=new Set((v.volume??[]).map(p=>p.entry_id));
+    for(const [id,live] of this.partners)if(!want.has(id)){live.stop();this.partners.delete(id);const {[id]:_,...rest}=this.partnerViews;this.partnerViews=rest;}
+    if(!this.hass?.connection)return;
+    for(const id of want)if(!this.partners.has(id)){
+      const live=new LiveView(p=>{this.partnerViews={...this.partnerViews,[id]:p};},()=>{},()=>{const {[id]:_,...rest}=this.partnerViews;this.partnerViews=rest;});
+      this.partners.set(id,live);live.start(this.hass.connection,id);
+    }
+  }
+  private stopPartners(){for(const live of this.partners.values())live.stop();this.partners.clear();this.partnerViews={};}
   setConfig(input:Config) {
     const next=cleanConfig(input),old=this.config;
-    if(old?.entry_id!==next.entry_id){this.live.stop();this.view=undefined;this.problem=undefined;this.closeFull();this.open={};}
+    if(old?.entry_id!==next.entry_id){this.live.stop();this.stopPartners();this.view=undefined;this.problem=undefined;this.closeFull();this.open={};}
     this.config=next;
   }
   static getConfigElement(){return document.createElement('niak-comfort-card-editor');}
@@ -46,7 +60,7 @@ export class NiakComfortCard extends LitElement {
   getCardSize(){const f=this.config?.format;return f==='mini'?1:f==='alert'?2:f==='full'?10:f==='measures'?4:3;}
   getGridOptions(){return {columns:this.config?.format==='full'?'full':12,rows:'auto',min_columns:6};}
   connectedCallback(){super.connectedCallback();this.connect();}
-  disconnectedCallback(){super.disconnectedCallback();this.live.stop();this.closeFull();}
+  disconnectedCallback(){super.disconnectedCallback();this.live.stop();this.stopPartners();this.closeFull();}
   protected updated(changed:PropertyValues){
     if(changed.has('hass')||changed.has('config')) this.connect();
     const theme=this.config?.theme==='auto'||!this.config?.theme?(this.hass?.themes?.darkMode===false?'light':'dark'):this.config.theme;
@@ -97,7 +111,8 @@ export class NiakComfortCard extends LitElement {
   private swallow={handleEvent:(e:Event)=>{if(this.held){e.stopPropagation();e.preventDefault();this.held=false;}},capture:true};
   private panel(full:boolean,modal=false){
     const format=full?'full':this.config!.format??'tile';
-    const card=roomCard(this.view!,this.config!,this.state(modal),format);
+    const partners=(this.view!.volume??[]).map(p=>this.partnerViews[p.entry_id]).filter((p):p is View=>!!p);
+    const card=roomCard(this.view!,this.config!,this.state(modal),format,partners);
     // The alert format has nothing to say: hidden on the dashboard, a short note in the card editor's preview.
     if(card===null)return this.preview||this.editMode?html`<ha-card class="nc-c nc-alert-note" data-level="calm"><p>Alerte · ${this.view!.title} : rien à signaler. La carte n’apparaît que lorsqu’un geste est conseillé.</p></ha-card>`:nothing;
     if(format==='full')return card;
@@ -113,7 +128,7 @@ export class NiakComfortCard extends LitElement {
       return html`<ha-card class="nc-card problem" data-level="neutral" role="status"><h2>${title}</h2><p>${text}</p>${this.problem?html`<button @click=${()=>{this.live.stop();this.problem=undefined;this.connect();}}>Réessayer</button>${this.hass?.user?.is_admin?html`<button @click=${()=>this.configure()}>Ouvrir Niak Confort</button>`:nothing}`:nothing}</ha-card>`;}
     return html`${this.panel(this.config.format==='full')}
       <dialog aria-labelledby=${this.uid+'-dialog-title'} @cancel=${()=>{this.dialogOpen=false;}} @close=${()=>{this.dialogOpen=false;}}>
-        <div class="dialog-top"><span id=${this.uid+'-dialog-title'}>${this.view.title}</span><button class="icon-button" aria-label="Fermer la carte complète" @click=${()=>this.closeFull()}>${icon('close')}</button></div><div>${this.dialogOpen?this.panel(true,true):nothing}</div>
+        <div class="dialog-top"><span id=${this.uid+'-dialog-title'}>${this.view.volume_name??this.view.title}</span><button class="icon-button" aria-label="Fermer la carte complète" @click=${()=>this.closeFull()}>${icon('close')}</button></div><div>${this.dialogOpen?this.panel(true,true):nothing}</div>
       </dialog>`;
   }
 }

@@ -78,10 +78,20 @@ class ComfortCoordinator(DataUpdateCoordinator):
             declared = config.get("openings", {})
             # Only what the weather needs: the partner room keeps its covers to itself.
             found.append({"entry_id": entry_id, "title": config.get("name") or entry.title, "windows": list(config.get("windows", [])),
+                          "sources": len(config.get("sources", {})),
                           "openings": {e: Opening(**{"sheltered": sheltered, **{k: v for k, v in declared.get(e, {}).items()
                                                                                if k in ("exposure", "kind", "sheltered")}})
                                        for e in config.get("windows", [])}})
         return found
+
+    @property
+    def volume_name(self):
+        """« Salon · Cuisine »: the rooms sharing one air, the best equipped first; None for a room on its own."""
+        if not self.partners:
+            return None
+        rooms = [(len(self.config.get("sources", {})), self.config.get("name") or self.config_entry.title),
+                 *((p["sources"], p["title"]) for p in self.partners)]
+        return " · ".join(title for _, title in sorted(rooms, key=lambda r: (-r[0], r[1].casefold())))
 
     async def async_start(self):
         self.config_entry.async_on_unload(self.async_stopped)
@@ -277,7 +287,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 "area_id": self.config.get("area_id"), "title": self.config.get("name"),
                 "comfort_minimum": self.settings.minimum,
                 "computed_at": now.isoformat(), "assessment": assessment,
-                "volume": [{"entry_id": p["entry_id"], "title": p["title"]} for p in self.partners],
+                "volume": [{"entry_id": p["entry_id"], "title": p["title"]} for p in self.partners], "volume_name": self.volume_name,
                 "twin": twin_view,
                 "observations": {k: asdict(v) for k, v in readings.items()},
                 "names": {e: (state.name if (state := self.hass.states.get(e)) else e) for e in self.windows},

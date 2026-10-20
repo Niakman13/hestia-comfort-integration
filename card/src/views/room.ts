@@ -18,6 +18,15 @@ export interface Advice {title:string;line:TemplateResult|string;disk:string;cap
 const QUIET=['drying_unavailable','drying_slow','opening_blocked','cooling_unavailable','precool_later'];
 /** The banner: the gesture in a few words, then why in one line. The full explanation stays behind « i ». */
 export function advice(v:View):Advice {
+  const out=gesture(v);
+  // To close, say which window: in a shared air it may be in the other room.
+  if(v.assessment.action==='fermer'&&!out.cap){
+    const open=(v.assessment.openings??[]).filter(o=>o.open).map(o=>v.names?.[o.entity_id]??o.entity_id);
+    if(open.length)return {...out,cap:open.length>2?`${open.length} ouvertures`:open.join(' et ')};
+  }
+  return out;
+}
+function gesture(v:View):Advice {
   // One verdict per shared air: the room shows the leading room's advice, with that room's measures.
   const vol=v.assessment.features?.volume;
   if(v.assessment.reason==='shared_volume'&&vol?.assessment){
@@ -161,8 +170,9 @@ export function facts(v:View):Fact[] {
   return out.slice(0,4);
 }
 /** The « À savoir » box, under the advice; nothing when there is nothing to know. */
-export function factBox(v:View):TemplateResult|typeof nothing {
-  const list=facts(v);
+export function factBox(v:View,partners:View[]=[]):TemplateResult|typeof nothing {
+  // One card for one air: « Même air » goes without saying, and a line said by two rooms is said once.
+  const seen=new Set<string>(),list=[v,...partners].flatMap(r=>facts(r)).filter(f=>(!partners.length||f.title!=='Même air')&&!seen.has(f.title)&&!!seen.add(f.title)).slice(0,4);
   return list.length?html`<div class="nc-facts"><div class="nw-label">À savoir</div><ul>${list.map(f=>html`<li>${icon(f.ic)}<span><b>${f.title}</b> · ${f.text}</span></li>`)}</ul></div>`:nothing;
 }
 /** Why the room that leads a shared air asks for its gesture, after its name. */
@@ -249,6 +259,11 @@ export function scale(s:ScaleInput):TemplateResult {
 }
 
 /** `watch` (soft yellow): the measure leaves your range, without a gesture asked; orange stays for gestures. */
+/** A partner room's temperature, as a tile: the scale above shows only the chosen room. */
+function roomTemperature(p:View):Tile[] {
+  const t=numeric(p.observations.indoor_temperature),n=p.assessment.needs,out=n.includes('cool')||n.includes('heat');
+  return t===null?[]:[{ic:'temp',label:'Température',value:number(t),unit:'°C',note:n.includes('cool')?'trop chaud':n.includes('heat')?'trop frais':'dans votre plage',level:out?'watch':'calm',out,entity:p.observations.indoor_temperature?.source??undefined}];
+}
 export interface Tile {ic:string;label:string;value:string;unit?:string;note:string;level:Level|'watch';out:boolean;entity?:string;
   /** A device at work (purifier, ventilation): framed like a measure, never counted out of your range. */
   remedy?:boolean}
@@ -375,17 +390,21 @@ const chipRow=(list:ReturnType<typeof chipValues>)=>list.length?html`<div class=
 /** Is something asked of the person? The alert format shows only then. */
 export const asking=(v:View)=>['action','urgent'].includes(slides(v)[0]?.level??v.assessment.level);
 /** The room card in each format; null when the alert format has nothing to say. */
-export function roomCard(v:View,config:Config,st:CardState,format:Format='full'):TemplateResult|null {
+export function roomCard(v:View,config:Config,st:CardState,format:Format='full',partners:View[]=[]):TemplateResult|null {
   const a=v.assessment,f=a.features,ti=numeric(v.observations.indoor_temperature),te=numeric(v.observations.outdoor_temperature);
-  const list=tiles(v,config),outside=list.filter(t=>t.out&&!t.remedy),muted=list.filter(t=>tileClass(t).includes(' mute'));
+  // Rooms sharing one air are one card: the other rooms' own measures, without the windows and the sun they share.
+  const shared=new Set(['Fenêtres','Soleil']),others=partners.map(p=>({title:p.title,list:[...roomTemperature(p),...tiles(p,config).filter(t=>!shared.has(t.label)&&t.label!=='Température')]}));
+  const own=tiles(v,config),list=[...own,...others.flatMap(o=>o.list)],outside=list.filter(t=>t.out&&!t.remedy),muted=list.filter(t=>tileClass(t).includes(' mute'));
   const marks=config.scale_marks??(config.show_scale===false?[]:SCALE_MARKS);
   const band:[number,number]|null=f?.season&&marks.includes('band')?[f.season.minimum,f.season.maximum]:null;
   const sc=(config.modules??[]).includes('temperature')&&marks.length&&ti!==null
     ?scale({band,day:marks.includes('day')?f?.day_range??null:null,now:ti,out:marks.includes('out')?te:null,nowEntity:v.observations.indoor_temperature?.source??undefined,outEntity:v.observations.outdoor_temperature?.source??undefined}):null;
-  const all=slides(v,config.banner_blocks),top=all[0]?.level??a.level,name=config.title||v.title;
+  const all=slides(v,config.banner_blocks),top=all[0]?.level??a.level,name=config.title||(partners.length?v.volume_name:null)||v.title;
   const still=config.animations===false||config.rotate===false;
   const summary=tileSummary(list.length,outside.length,'mesure',muted.length,!!v.starting);
-  const grid=html`<div class="nc-tiles">${list.map(tile)}</div>`;
+  const grid=others.length?html`<div class="nw-label nc-room-label">${v.title}</div><div class="nc-tiles">${own.map(tile)}</div>${others.map(o=>o.list.length?html`<div class="nw-label nc-room-label">${o.title}</div><div class="nc-tiles">${o.list.map(tile)}</div>`:nothing)}`
+    :html`<div class="nc-tiles">${list.map(tile)}</div>`;
+  const box=factBox(v,partners);
   const detailList=html`<ul class="nc-list">${details(v,config)}</ul>${st.configure?html`<button class="nw-badge nc-configure" @click=${st.configure}>${icon('settings')}Configurer cette pièce</button>`:nothing}`;
   const scaleBox=sc?html`<div class="nc-sec nw-glass"><div class="nw-label">Température</div>${sc}</div>`:nothing;
   if(format==='mini'){
@@ -402,10 +421,10 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full')
   if(format==='tile'||format==='intermediate'){
     const blocks=config.tile_blocks??TILE_BLOCKS;
     const body=blocks.map(b=>b==='scale'?scaleBox:b==='measures'?(list.length?grid:nothing):html`<div class="nc-tile-details"><div class="nw-label">Détails</div>${detailList}</div>`);
-    const chips=st.tilesOpen?nothing:chipRow(chipValues(v,config.tile_chips??CHIPS));
+    const chips=st.tilesOpen?nothing:chipRow([...chipValues(v,config.tile_chips??CHIPS),...partners.flatMap(p=>chipValues(p,['temperature']).map(c=>({...c,text:p.title+' '+c.text})))]);
     return html`<ha-card class="nc-c" data-level=${top} ?data-starting=${!!v.starting}>
       ${hero({name,level:top,slides:all,scaleLabel:'',scale:html``,st,why:whyLines(v),compact:true,small:true,still,after:chips})}
-      ${factBox(v)}
+      ${box}
       ${blocks.length?html`<div class="nc-body nc-tile-body">${fold({label:'Mesures et détails',summary:list.length?summary:'',open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tile',body:html`<div class="nc-tile-blocks">${body}</div>`})}</div>`:nothing}
     </ha-card>`;
   }
@@ -413,7 +432,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full')
   const body=measures||config.show_details!==false;
   return html`<ha-card class="nc-c" data-level=${top} ?data-starting=${!!v.starting}>
     ${hero({name,level:top,slides:all,scaleLabel:'Température',scale:sc??html``,st,why:whyLines(v),compact:!sc,still})}
-    ${factBox(v)}
+    ${box}
     ${!body?nothing:html`<div class="nc-body">
       ${measures?fold({label:'Mesures',summary,open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tiles',body:grid,keep:list.filter(t=>(t.out&&!t.remedy)||tileClass(t).includes(' mute')).map(tile)}):nothing}
       ${config.show_details===false?nothing:fold({label:'Détails',summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:st.uid+'-details',body:detailList})}

@@ -78,7 +78,7 @@ export interface Opening {
 }
 export interface View {
   version:1; entry_id:string; area_id:string|null; title:string; computed_at:string;
-  assessment:Assessment; observations:Record<string,Reading>; names?:Record<string,string>; /** Rooms open onto this one: one air, shared openings. */ volume?:{entry_id:string;title:string}[]; /** Home Assistant (or the room) has just started: silent sensors are still loading. */ starting?:boolean;
+  assessment:Assessment; observations:Record<string,Reading>; names?:Record<string,string>; /** Rooms open onto this one: one air, shared openings. */ volume?:{entry_id:string;title:string}[]; /** « Salon · Cuisine », the best equipped first. */ volume_name?:string|null; /** Home Assistant (or the room) has just started: silent sensors are still loading. */ starting?:boolean;
 }
 export interface ViewEvent {version:1; view?:View; reload?:boolean; unavailable?:boolean}
 export type Unsubscribe = () => Promise<void>|void;
@@ -89,7 +89,7 @@ export interface HomeAssistant {
   connection:Connection; user?:{is_admin:boolean}; themes?:{darkMode?:boolean};
   callWS<T>(message:Record<string,unknown>):Promise<T>;
 }
-export interface Entry {entry_id:string; title:string; area_id:string|null}
+export interface Entry {entry_id:string; title:string; area_id:string|null; volume?:string[]; volume_name?:string|null}
 export function cleanConfig(input:Config):Config {
   if(!input || input.type!=='custom:niak-comfort-card') throw new Error('Type de carte Niak Comfort invalide.');
   if(input.format && !FORMATS.includes(input.format)) throw new Error('Format de carte inconnu.');
