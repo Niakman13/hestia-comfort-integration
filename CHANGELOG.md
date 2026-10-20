@@ -1,3 +1,17 @@
+## 1.2.5-beta.2 — Préversion : le bandeau pour les gestes, « À savoir » pour le reste
+
+**En bref**
+- **Le bandeau ne dit plus qu’une chose : le geste à faire**, ou « Rien à faire ».
+- **Nouvel encart « À savoir » juste dessous**, en mots simples : risque de moisissure, air humide dehors, fenêtre ouverte sans effet, maison vide, purificateur ou VMC en marche, même air qu’une autre pièce.
+
+### Améliorations
+- Une pièce froide quand quelqu’un est là et que le chauffage est coupé : « Rallumez le chauffage ».
+- « Risque de moisissure » dit d’où il vient : « à cause du temps humide dehors, il baissera quand le temps sera plus sec », ou « l’humidité vient de la pièce : douche, cuisine ou linge ».
+- Le purificateur et la VMC en marche ne défilent plus dans le bandeau : ils sont dans « À savoir ».
+
+### Corrections
+- « Murs humides » s’affichait comme un conseil, avec « Tout va bien » : ce n’était pas un geste.
+
 ## 1.2.5-beta.1 — Préversion : des conseils vérifiés dans toutes les situations, et le jumeau de chaque pièce
 
 **En bref**

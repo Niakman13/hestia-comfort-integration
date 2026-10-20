@@ -232,3 +232,9 @@ button.nc-row:hover { background:color-mix(in srgb, var(--nw-fg) 5%, transparent
 .nc-row span { font-size:var(--nw-fs-small); color:var(--nw-fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .nc-row em { font-style:normal; font-size:var(--nw-fs-title); font-weight:700; font-variant-numeric:tabular-nums; }
 .nc-row em small { font-size:var(--nw-fs-small); font-weight:400; color:var(--nw-fg2); }
+/* « À savoir »: information under the advice, never a gesture. */
+.nc-facts { padding:12px 20px 4px; }
+.nc-facts ul { margin:6px 0 0; padding:0; list-style:none; display:grid; gap:6px; font-size:var(--nw-fs-text); }
+.nc-facts li { display:flex; gap:8px; align-items:flex-start; color:var(--nw-fg2); }
+.nc-facts li svg { width:16px; height:16px; flex:none; margin-top:2px; opacity:.8; }
+.nc-facts li b { color:var(--nw-fg); font-weight:600; }

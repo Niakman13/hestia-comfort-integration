@@ -22,7 +22,8 @@ export function advice(v:View):Advice {
   const vol=v.assessment.features?.volume;
   if(v.assessment.reason==='shared_volume'&&vol?.assessment){
     const lead=advice({...v,observations:vol.observations??v.observations,assessment:{...v.assessment,...vol.assessment,features:{...v.assessment.features,...vol.assessment.features,volume:undefined}} as View['assessment']});
-    return {...lead,cap:`Même air : ${vol.lead}`};
+    // « Même air » is said in « À savoir », under the banner.
+    return lead;
   }
   const a=v.assessment,o=v.observations,ti=numeric(o.indoor_temperature);
   const opened=Object.entries(o).some(([k,r])=>k.startsWith('window:')&&r.quality==='valid'&&r.value===true);
@@ -72,15 +73,11 @@ export function advice(v:View):Advice {
   if(blind&&v.starting)return {title:'Mesures en chargement',line:html`Home Assistant ${b('vient de démarrer')}`,disk:'clock',pill:'Démarrage',level:'neutral'};
   if(blind){const one=count===1;
     return {title:'Mesures absentes',line:html`${b(`${count} capteur${one?'':'s'} ne répond${one?'':'ent'} pas`)} · détail dans Mesures`,disk:'mute',pill:'Capteurs muets',level:'neutral'};}
-  // Damp outer walls are never « nothing to do »: said plainly, with the gesture that helps when there is one.
-  const hum=a.features?.humidity;
-  if(hum?.mould&&a.action!=='fermer'&&(QUIET.includes(a.reason)||a.reason==='humid_outdoor'||a.reason==='heat_needed')){
-    const vmc=a.features?.air?.ventilation,warmth=a.features?.warmth;
-    const cap=vmc&&vmc.on===false?'Lancez la VMC':a.reason==='opening_blocked'?'Aérez quand le temps le permettra':warmth?.heating==='off'?'Un peu de chauffage aide':hum.source==='outside'?'Ça passera avec le sec':undefined;
-    return {title:'Murs humides',line:html`${b('environ '+hum.surface+' %')} contre les murs froids`,disk:vmc&&vmc.on===false?'vmc':'clock',cap};
-  }
   // « Do not open » to someone who was not opening brings nothing: the banner stays calm, the measure on its tile.
-  if(QUIET.includes(a.reason)&&(a.level==='calm'||a.level==='neutral')&&a.action!=='fermer')
+  // The banner only ever carries a gesture; what is merely worth knowing goes to « À savoir » below.
+  const quiet=(QUIET.includes(a.reason)&&(a.level==='calm'||a.level==='neutral'))||['humid_outdoor','open_neutral','drying_unavailable'].includes(a.reason)
+    ||(a.reason==='drying_slow'&&a.features?.air?.ventilation?.on!==false)||(a.reason==='heat_needed'&&a.action!=='fermer'&&a.level!=='action');
+  if(quiet&&a.action!=='fermer')
     return {title:'Rien à faire',line:html`Ouvrir ${b('n’apporterait rien')} pour l’instant`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
   switch(a.reason){
     case 'within_comfort': return {title:'Rien à faire',line:html`${deg(ti)}, ${b('dans votre plage')}`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
@@ -114,28 +111,14 @@ export function advice(v:View):Advice {
     case 'drying_slow': {
       const vmc=a.features?.air?.ventilation;
       const line=drying?slowWindow(drying):water;
-      return vmc&&vmc.on!==true?{title:'Lancez la VMC',line,disk:'vmc',cap:'Aérer assèche peu ici'}
-        :{title:vmc?'Humidité à surveiller':'Aérer assèche peu ici',line,disk:'clock'};
+      return {title:'Lancez la VMC',line,disk:'vmc',cap:'Aérer assèche peu ici'};
     }
     case 'ventilation_possible': return {title:'Lancez la VMC',line:html`${b(number(hi)+' %')} d’humidité, la fenêtre la baisse à peine`,disk:'vmc',cap:'Elle assèchera mieux'};
-    case 'humid_outdoor': {
-      // The weather's own humidity: no gesture can lower it, the banner only says so.
-      const hum=a.features?.humidity,best=hum?.reachable;
-      return {title:'Air humide dehors',line:best!=null?html`Aérer ${b('n’y changerait rien')} : ${best} % au mieux`:html`Aérer ${b('n’y changerait rien')}`,disk:'clock',cap:hum?.mould?'Murs froids humides':undefined};
-    }
-    case 'drying_unavailable': return {title:'Humidité à surveiller',line:incoming!=null?water:html`L’air du dehors ${b('n’est pas plus sec')}`,disk:'clock',cap:'Aérer n’aiderait pas'};
     case 'exchange_harmful': return {title:'Refermez',line:html`L’air du dehors ${b(a.temperature_delta!==null&&a.temperature_delta>0?'réchauffe la pièce':'refroidit la pièce')}`,disk:'shut'};
     case 'rehumidification_risk': return {title:'Refermez',line:incoming!=null?water:html`L’air du dehors ${b('est plus humide')}`,disk:'shut'};
-    case 'heat_needed': {
-      if(a.action==='fermer')return {title:'Refermez',line:html`Pièce fraîche : ${b(deg(ti))}`,disk:'shut'};
-      // A cold room points at something only when someone is home and the heating is off.
-      const w=a.features?.warmth;
-      if(w?.occupied===false)return {title:'Maison vide',line:html`${deg(ti)} : ${b('pas besoin de chauffer')}`,disk:'check'};
-      if(w?.heating==='on')return {title:'Pièce fraîche',line:html`${deg(ti)} : ${b('le chauffage s’en charge')}`,disk:'clock'};
-      if(w?.heating==='off')return {title:'Pièce fraîche',line:html`${deg(ti)} : ${b('le chauffage est coupé')}`,disk:'window',cap:w.occupied?'Vous êtes là':undefined};
-      return {title:'Pièce fraîche',line:html`${b(deg(ti))}, sous votre plage`,disk:'window'};
-    }
-    case 'open_neutral': return {title:'Fenêtre ouverte',line:html`${b('Sans effet')} sur le confort`,disk:'open',cap:'Libre de refermer'};
+    // A cold room asks for a gesture only when someone is home and the heating is off.
+    case 'heat_needed': return a.action==='fermer'?{title:'Refermez',line:html`Pièce fraîche : ${b(deg(ti))}`,disk:'shut'}
+      :{title:'Rallumez le chauffage',line:html`${b(deg(ti))}, sous votre plage`,disk:'heat',cap:'Le chauffage est coupé'};
     case 'sun_entering': return {title:'Fermez côté soleil',line:html`Le soleil ${b('chauffe la pièce')}`,disk:'shut'};
     case 'shutter_protection': return {title:'Adaptez les volets',line:html`Le soleil ${b('tape sur une façade')}`,disk:'window'};
     case 'optional_air_change': return {title:'Aérez si possible',line:html`CO₂ ${b(number(numeric(o.co2))+' ppm')}`,disk:'open'};
@@ -149,11 +132,39 @@ export function advice(v:View):Advice {
         :{title:'Bilan partiel',line:html`Les mesures connues sont ${b('dans votre plage')}`,disk:'check'};
     }
   }
-  return {title:pills[a.level],line:'',disk:a.action==='ouvrir'?'open':a.action==='fermer'?'shut':'window'};
+  // Any other combination still names a gesture, from the action, never the level's word.
+  return a.action==='fermer'?{title:'Refermez',line:'',disk:'shut'}:a.action==='ouvrir'?{title:'Aérez',line:'',disk:'open'}:{title:'Rien à faire',line:'',disk:'check'};
 }
 /** A window that renews little air: what it would really gain, never « 85 → 85 % ». */
 const slowWindow=(d:{gain:number}):TemplateResult=>{const g=Math.round(d.gain);
   return g<1?html`Aérer ${b('ne la baisserait presque pas')}`:html`Aérer ne la baisserait ${b(`que de ${g} point${g>1?'s':''}`)}`;};
+/** « À savoir »: what is worth knowing about the room, under the advice. Never a gesture, one idea per line. */
+export interface Fact {ic:string;title:string;text:TemplateResult|string}
+export function facts(v:View):Fact[] {
+  const a=v.assessment,o=v.observations,f=a.features,ti=numeric(o.indoor_temperature),out:Fact[]=[];
+  const hum=f?.humidity,w=f?.warmth,air=f?.air,vol=f?.volume;
+  if(a.reason==='shared_volume'&&vol)out.push({ic:'home',title:'Même air',text:`conseil commun avec : ${vol.lead}`});
+  if(a.reason==='open_neutral')out.push({ic:'open',title:'Fenêtre ouverte',text:'sans effet sur le confort, vous pouvez refermer'});
+  if(a.reason==='heat_needed'&&a.action!=='fermer'&&a.level!=='action')
+    out.push({ic:'temp',title:'Pièce fraîche',text:w?.occupied===false?'maison vide : pas besoin de chauffer'
+      :w?.heating==='on'?'le chauffage s’en charge':`${deg(ti)}, sous votre plage`});
+  // Words for everyone: the risk and where it comes from, never a percentage against a wall.
+  if(hum?.mould)out.push({ic:'drop',title:'Risque de moisissure',text:hum.source==='outside'?'à cause du temps humide dehors, il baissera quand le temps sera plus sec'
+    :hum.source==='inside'?'l’humidité vient de la pièce : douche, cuisine ou linge':'dans les coins des murs froids'});
+  // The mould line already says it comes from the weather: one line, not two.
+  if(hum?.source==='outside'&&!hum.mould)out.push({ic:'drop',title:'Air humide dehors',text:'aérer ne ferait pas baisser l’humidité'});
+  else if(a.reason==='drying_unavailable')out.push({ic:'drop',title:'Humidité',text:'l’air du dehors n’est pas plus sec : aérer n’aiderait pas'});
+  else if(a.reason==='drying_slow')out.push({ic:'drop',title:'Humidité',text:'aérer la ferait à peine baisser'});
+  if(hum?.local)out.push({ic:'drop',title:'Vapeur',text:'plus humide ici qu’à côté : cuisson ou douche'});
+  if(air?.purifier?.on===true)out.push({ic:'fan',title:'Purificateur',text:'en marche, il filtre l’air'});
+  if(air?.ventilation?.on===true)out.push({ic:'vmc',title:'VMC',text:a.needs.includes('dry')?'en marche, elle aide à assécher':'en marche'});
+  return out.slice(0,4);
+}
+/** The « À savoir » box, under the advice; nothing when there is nothing to know. */
+export function factBox(v:View):TemplateResult|typeof nothing {
+  const list=facts(v);
+  return list.length?html`<div class="nc-facts"><div class="nw-label">À savoir</div><ul>${list.map(f=>html`<li>${icon(f.ic)}<span><b>${f.title}</b> · ${f.text}</span></li>`)}</ul></div>`:nothing;
+}
 /** Why the room that leads a shared air asks for its gesture, after its name. */
 const SHARED:Record<string,string>={air_needed:'a besoin d’air',short_air_change:'a besoin d’air',cooling_possible:'se rafraîchit',
   drying_possible:'s’assèche',precool_possible:'stocke le frais',rain_soon:'attend la pluie',rain_open_windows:'prend la pluie',
@@ -186,12 +197,8 @@ function airWhy(v:View):TemplateResult {
 export interface Slide extends Advice {level:Level;pill:string}
 /** Every advice of the moment, the main one first: what to do, then the remedies already at work and what Niak cannot check. */
 export function slides(v:View,blocks:readonly BannerBlock[]=['remedies','later']):Slide[] {
-  const a=v.assessment,o=v.observations,air=a.features?.air,main=advice(v),out:Slide[]=[{...main,level:main.level??a.level,pill:main.pill??pills[a.level]}];
-  if(blocks.includes('remedies')&&air?.purifier?.on===true){const pm=numeric(o.pm25),speed=air.purifier.speed;
-    out.push({level:'calm',pill:'En cours',title:air.pm25_treated?'Le purificateur filtre':'Le purificateur tourne',
-      line:pm!==null?html`Particules ${b(number(pm)+' µg/m³')}${speed!=null?` · il tourne à ${number(speed)} %`:''}`:speed!=null?html`Il tourne à ${b(number(speed)+' %')}`:'Il filtre l’air de la pièce',disk:'fan',cap:v.names?.[o.purifier?.source??'']??undefined});}
-  if(blocks.includes('remedies')&&air?.ventilation?.on===true){const fast=air.ventilation.boost===true;
-    out.push({level:'calm',pill:'En cours',title:'La ventilation renouvelle l’air',line:a.needs.includes('dry')?html`Elle aide à ${b('assécher')}${fast?' · grande vitesse':''}`:fast?html`En ${b('grande vitesse')}`:'Renouvellement continu',disk:'vmc',cap:fast?'Grande vitesse':undefined});}
+  const a=v.assessment,main=advice(v),out:Slide[]=[{...main,level:main.level??a.level,pill:main.pill??pills[a.level]}];
+  // Remedies at work (purifier, ventilation) are information: they are in « À savoir », not in the banner.
   // What Niak cannot check is information, not advice: it stays in « Détails ».
   const later=a.features?.drying?.later;
   if(blocks.includes('later')&&later&&a.reason==='drying_possible')out.push({level:'benefit',pill:'Plus tard',title:`Encore mieux vers ${hour(later.time)}`,line:html`L’air sera plus sec : ${b('environ '+Math.round(later.after)+' %')}`,disk:'clock'});
@@ -398,6 +405,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full')
     const chips=st.tilesOpen?nothing:chipRow(chipValues(v,config.tile_chips??CHIPS));
     return html`<ha-card class="nc-c" data-level=${top} ?data-starting=${!!v.starting}>
       ${hero({name,level:top,slides:all,scaleLabel:'',scale:html``,st,why:whyLines(v),compact:true,small:true,still,after:chips})}
+      ${factBox(v)}
       ${blocks.length?html`<div class="nc-body nc-tile-body">${fold({label:'Mesures et détails',summary:list.length?summary:'',open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tile',body:html`<div class="nc-tile-blocks">${body}</div>`})}</div>`:nothing}
     </ha-card>`;
   }
@@ -405,6 +413,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full')
   const body=measures||config.show_details!==false;
   return html`<ha-card class="nc-c" data-level=${top} ?data-starting=${!!v.starting}>
     ${hero({name,level:top,slides:all,scaleLabel:'Température',scale:sc??html``,st,why:whyLines(v),compact:!sc,still})}
+    ${factBox(v)}
     ${!body?nothing:html`<div class="nc-body">
       ${measures?fold({label:'Mesures',summary,open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tiles',body:grid,keep:list.filter(t=>(t.out&&!t.remedy)||tileClass(t).includes(' mute')).map(tile)}):nothing}
       ${config.show_details===false?nothing:fold({label:'Détails',summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:st.uid+'-details',body:detailList})}

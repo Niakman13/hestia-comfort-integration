@@ -26,15 +26,19 @@ WINDOW = {"closed": (False, False), "open": (True, False), "open_sheltered": (Tr
 WEATHER = ("calm", "rain", "rain_imminent", "rain_later", "rain_hourly", "gusts", "storm_forecast", "bad_air")
 EQUIPMENT = ("none", "ventilation_off", "heating_off_home", "heating_off_away", "heating_on")
 WINDOW_MODEL = {"ordinary": None, "renews_little": {"tau": 170.0, "residual": 1.5, "rebound": 0.4, "openings": 10}}
-# What the card shows as « Rien à faire » (card/src/views/room.ts, advice()).
+# What the card shows as « Rien à faire » (card/src/views/room.ts, advice()): the banner only carries gestures,
+# the rest is said under it, in « À savoir ».
 CARD_QUIET = ("drying_unavailable", "drying_slow", "opening_blocked", "cooling_unavailable", "precool_later")
 
 
 def nothing_to_do(a):
-    mould = (a["features"].get("humidity") or {}).get("mould")
-    if mould and a["action"] != "fermer" and (a["reason"] in CARD_QUIET or a["reason"] in ("humid_outdoor", "heat_needed")):
+    if a["action"] == "fermer":
         return False
-    return a["reason"] == "within_comfort" or (a["reason"] in CARD_QUIET and a["level"] in ("calm", "neutral") and a["action"] != "fermer")
+    ventilation_off = ((a["features"].get("air") or {}).get("ventilation") or {}).get("on") is False
+    return (a["reason"] == "within_comfort" or (a["reason"] in CARD_QUIET and a["level"] in ("calm", "neutral"))
+            or a["reason"] in ("humid_outdoor", "open_neutral", "drying_unavailable")
+            or (a["reason"] == "drying_slow" and not ventilation_off)
+            or (a["reason"] == "heat_needed" and a["level"] != "action"))
 
 
 def situation(outside, room, source, co2, window, weather, equipment, model, volume=None):
@@ -84,9 +88,10 @@ class EveryCombination(unittest.TestCase):
             check("a hot room open to a hotter outside is closed", not (opened and room == "hot" and te > ti and co2 == "ok") or act == "fermer", case, a)
             check("a cold room open to a colder outside is closed", not (opened and room == "cold" and te < ti - 2 and co2 == "ok") or act == "fermer", case, a)
             check("an urgent CO₂ is never calm", not (co2 == "urgent" and level == "calm"), case, a)
-            check("a cold room is never « nothing to do »", not (room == "cold" and nothing_to_do(a)), case, a)
             check("a hot room is never « nothing to do »", not (room == "hot" and nothing_to_do(a)), case, a)
-            check("damp walls are never « nothing to do »", not ((a["features"].get("humidity") or {}).get("mould") and nothing_to_do(a)), case, a)
+            check("a cold room with the heating off and someone home always gets a gesture",
+                  not (room == "cold" and equipment == "heating_off_home" and window == "closed" and nothing_to_do(a)), case, a)
+            check("a gesture to make is never shown as « nothing to do »", not (level in ("action", "urgent") and nothing_to_do(a)), case, a)
             check("a cold room with the heating off and someone home is orange",
                   not (room == "cold" and equipment == "heating_off_home" and reason == "heat_needed" and act != "fermer") or level == "action", case, a)
             check("a cold room in an empty home stays blue",
