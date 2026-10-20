@@ -47,8 +47,9 @@ for(const s of data.scenes){views[s.salon.entry_id]=s.salon;views[s.cuisine.entr
 const fresh=v=>({...structuredClone(v),computed_at:new Date().toISOString()});
 const dark=()=>document.documentElement.dataset.theme==='dark';
 const hass=()=>({themes:{darkMode:dark()},connection:{async subscribeMessage(cb,m){
-    if(m.type==='niak_comfort/home_subscribe')cb({...data.home,rooms:data.home.rooms.map(fresh)});
-    else cb({version:1,view:fresh(views[m.entry_id])});return ()=>{};}},
+    // Like Home Assistant, a fresh view every 30 s: the card treats a silent link as stale after 75 s.
+    const send=()=>m.type==='niak_comfort/home_subscribe'?cb({...data.home,rooms:data.home.rooms.map(fresh)}):cb({version:1,view:fresh(views[m.entry_id])});
+    send();const t=setInterval(send,30000);return ()=>clearInterval(t);}},
   async callWS(){return data.entries;}});
 // The room picker, grouped as the card editor now groups it.
 const picker=document.getElementById('picker'),done=new Set();

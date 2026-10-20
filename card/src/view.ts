@@ -72,7 +72,7 @@ export function summary(v:View):[string,string] {
   if(a.reason==='incomplete_data'){
     // Name what is missing: a person can fix « Qualité de l’air dehors », not « certaines informations ».
     const failed=a.missing.filter(k=>!!v.observations[k]).map(k=>sourceLabel(v,k));
-    if(failed.length) return [failed.length>1?'Des mesures ne sont pas à jour':'Une mesure n’est pas à jour',`${failed.join(', ')} : ${failed.length>1?'ne répondent pas ou sont trop anciennes':'ne répond pas ou est trop ancienne'}. Niak attend son retour pour conseiller.`];
+    if(failed.length) return [failed.length>1?'Des mesures ne sont pas à jour':'Une mesure n’est pas à jour',`${failed.join(', ')} : ${failed.length>1?'ne répondent pas ou sont trop anciennes':'ne répond pas ou est trop ancienne'}. Le conseil reviendra avec la mesure.`];
   }
   if(a.action==='ok'&&a.needs.includes('air')) return ['L’aération est en cours','Les mesures de qualité de l’air restent à surveiller : une ouverture observée ne signifie pas que le besoin d’air est résolu.'];
   if(a.reason==='opening_blocked'){

@@ -45,7 +45,7 @@ await customElements.whenDefined('niak-comfort-card');
 const views={};for(const s of data.scenes){views[s.salon.entry_id]=s.salon;views[s.cuisine.entry_id]=s.cuisine;}
 const fresh=v=>({...structuredClone(v),computed_at:new Date().toISOString()});
 const dark=()=>document.documentElement.dataset.theme==='dark';
-const hass=()=>({themes:{darkMode:dark()},connection:{async subscribeMessage(cb,m){cb({version:1,view:fresh(views[m.entry_id])});return ()=>{};}},async callWS(){return data.entries;}});
+const hass=()=>({themes:{darkMode:dark()},connection:{async subscribeMessage(cb,m){const send=()=>cb({version:1,view:fresh(views[m.entry_id])});send();const t=setInterval(send,30000);return ()=>clearInterval(t);}},async callWS(){return data.entries;}});
 const cards=[];
 const make=(where,id,title,note,css)=>{const fig=document.createElement('figure');fig.innerHTML=`<figcaption><b>${title}</b><span>${note}</span></figcaption>`;
   const c=document.createElement('niak-comfort-card');c.setConfig({type:'custom:niak-comfort-card',entry_id:id,format:'full',measures_open:true});

@@ -215,6 +215,12 @@ class Configuration:
             if shutter not in ("none", "manual", "connected"):
                 raise ValueError("Type de volet invalide pour " + entity_id)
             item = {"exposure": exposure, "kind": kind, "sheltered": sheltered}
+            # A precise angle, when the person knows it: 0 north, 90 east, 180 south, 270 west.
+            azimuth = meta.get("azimuth")
+            if azimuth is not None:
+                if isinstance(azimuth, bool) or not isinstance(azimuth, (int, float)) or not math.isfinite(azimuth) or not 0 <= azimuth < 360:
+                    raise ValueError("Angle invalide pour " + entity_id + " : entre 0 et 359 degrés.")
+                item["azimuth"] = azimuth
             if "shutter" in meta:
                 item["shutter"] = shutter
             for field, role in (("cover_entity", "covers"), ("auto_entity", "shutter_auto"), ("override_entity", "shutter_override")):

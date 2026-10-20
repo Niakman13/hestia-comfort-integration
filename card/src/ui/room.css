@@ -246,3 +246,6 @@ button.nc-row:hover { background:color-mix(in srgb, var(--nw-fg) 5%, transparent
 /* One card for rooms sharing one air: each room's own measures under its name. */
 .nc-room-label { margin:12px 0 6px; }
 .nc-room-label:first-child { margin-top:4px; }
+/* Conseil optimisé : le jumeau de la pièce a fait ses preuves ; la pastille du haut le dit, avec un petit flacon. */
+.nc-learned { display:inline-flex; align-items:center; gap:5px; }
+.nc-learned .icon { width:12px; height:12px; }

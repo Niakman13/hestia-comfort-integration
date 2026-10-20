@@ -54,7 +54,7 @@ await customElements.whenDefined('niak-comfort-card');
 const views=Object.fromEntries(data.scenes.map(s=>[s.id,s.view]));
 const fresh=v=>({...structuredClone(v),computed_at:new Date().toISOString()});
 const dark=()=>document.documentElement.dataset.theme==='dark';
-const hass=()=>({themes:{darkMode:dark()},connection:{async subscribeMessage(cb,m){cb({version:1,view:fresh(views[m.entry_id])});return ()=>{};}},
+const hass=()=>({themes:{darkMode:dark()},connection:{async subscribeMessage(cb,m){const send=()=>cb({version:1,view:fresh(views[m.entry_id])});send();const t=setInterval(send,30000);return ()=>clearInterval(t);}},
   async callWS(){return data.scenes.map(s=>({entry_id:s.id,title:s.view.title,area_id:s.id}));}});
 const grid=document.getElementById('grid'),cards=[];
 for(const s of data.scenes){
