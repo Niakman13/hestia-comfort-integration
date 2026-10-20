@@ -89,7 +89,9 @@
           "precool_possible": "Pré-rafraîchir la nuit",
           "precool_later": "Pré-rafraîchir plus tard",
           "shared_volume": "Même air qu’une pièce voisine",
-          "humid_outdoor": "Humidité venue du dehors"
+          "humid_outdoor": "Humidité venue du dehors",
+          "open_neutral": "Fenêtre ouverte sans effet",
+          "rehumidification_risk": "Air du dehors plus humide"
         }
       },
       "heating_action": {
@@ -109,6 +111,12 @@
           "partial": "Bilan partiel",
           "configured_sources_available": "Sources configurées disponibles"
         }
+      },
+      "twin_temperature": {
+        "name": "Température prévue dans 1 h"
+      },
+      "twin_humidity": {
+        "name": "Humidité prévue dans 1 h"
       }
     }
   }

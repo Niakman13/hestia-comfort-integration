@@ -53,10 +53,11 @@ export interface Features {
  ventilation?:{opened_minutes:number|null;duration_minutes:{min:number;max:number}|null;message:string;capacity:number|null};
  humidity?:{dew_point:number|null;incoming_relative:number|null;glass_temperature:number|null;condensation_risk:boolean|null;message:string;
   /** Air against the coldest spot of the outer walls (%), mould risk, water above outdoors (g/m³), where it comes from, best reachable by airing (%). */
-  surface?:number|null;mould?:boolean;excess?:number|null;source?:'inside'|'outside'|null;reachable?:number|null};
+  surface?:number|null;mould?:boolean;excess?:number|null;local?:number|null;source?:'inside'|'outside'|null;reachable?:number|null};
  /** What airing would really bring, from the room's past openings: humidity now and after, lasting gain in points. */
  rain_ahead?:{minutes:number;precise:boolean}|null;
- volume?:{lead:string;reason:string;action:string};
+ volume?:{lead:string;reason:string;action:string;assessment?:Partial<Assessment>&{reason:string};observations?:Record<string,Reading>};
+ warmth?:{occupied:boolean|null;heating:'on'|'off'|null}|null;
  drying?:{minutes:number;now:number;after:number;gain:number;tau:number;openings:number;later:{minutes:number;now:number;after:number;gain:number;time:string}|null}|null;
  trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string};
  season?:{known:boolean;weight:number|null;outdoor_mean:number|null;minimum:number;maximum:number;heated:boolean};

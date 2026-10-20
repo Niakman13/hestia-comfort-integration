@@ -21,8 +21,10 @@ INDOOR_SOURCE = 0.5
 # indoors (EN ISO 13788's fRsi criterion); mould grows where the air touching it stays above 80 %.
 WALL_FACTOR = 0.7
 MOULD_RH, MOULD_FAST, MOULD_HYSTERESIS = 80.0, 85.0, 3.0
+# Humidity points an already open window must still take off to be worth keeping open.
+OPEN_GAIN = 1.0
 # Reasons that only say « do not open »: with nothing open, they bring nothing and stay off the banner.
-QUIET_REASONS = ("humid_outdoor", "drying_unavailable", "drying_slow", "opening_blocked", "heat_needed", "cooling_unavailable", "precool_later")
+QUIET_REASONS = ("open_neutral", "humid_outdoor", "drying_unavailable", "drying_slow", "opening_blocked", "heat_needed", "cooling_unavailable", "precool_later")
 LEVELS = ("calm", "benefit", "action", "urgent", "neutral")
 ACTIONS = ("ok", "ouvrir", "fermer", "attendre", "unknown")
 
@@ -229,13 +231,23 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     # clearly high, or when it has stayed above the threshold for the last three hours.
     lasting = context.get("humidity_floor_3h")
     lasting = isinstance(lasting, (int, float)) and not isinstance(lasting, bool) and lasting > settings.humidity_high
-    humid = hi is not None and (hi > settings.humidity_high - settings.humidity_hysteresis if "dry" in old
-                                else hi > settings.humidity_high + HUMIDITY_GRACE or (hi > settings.humidity_high and lasting))
-    ai, ae = absolute_humidity(ti, hi), absolute_humidity(te, he)
+    # Rooms open onto each other share one air: its humidity is judged on the mean water of the volume, at its
+    # mean temperature, so that the kitchen and the salon never tell two stories. A room clearly wetter than its
+    # volume has a local source (steam from cooking, a shower): said, but not a need of the whole air.
+    volume = context.get("volume") if isinstance(context.get("volume"), Mapping) else None
+    hti, hhi, local = ti, hi, None
+    if (volume and all(isinstance(volume.get(k), (int, float)) and not isinstance(volume.get(k), bool) for k in ("water", "temperature"))
+            and hi is not None and ti is not None):
+        hti = volume["temperature"]
+        hhi = min(100.0, volume["water"] / absolute_humidity(hti, 100) * 100)
+        local = round(absolute_humidity(ti, hi) - volume["water"], 1)
+    humid = hhi is not None and (hhi > settings.humidity_high - settings.humidity_hysteresis if "dry" in old
+                                 else hhi > settings.humidity_high + HUMIDITY_GRACE or (hhi > settings.humidity_high and lasting))
+    ai, ae = absolute_humidity(hti, hhi), absolute_humidity(te, he)
     # Mould: the relative humidity of the air against the coldest spot of the outer walls, not of the room.
     surface = None
-    if ai is not None and te is not None and te < ti:
-        surface = min(100.0, ai / absolute_humidity(te + WALL_FACTOR * (ti - te), 100) * 100)
+    if ai is not None and te is not None and te < hti:
+        surface = min(100.0, ai / absolute_humidity(te + WALL_FACTOR * (hti - te), 100) * 100)
     was_mould = bool(previous and (previous.features.get("humidity") or {}).get("mould"))
     mould = surface is not None and surface >= MOULD_RH - (MOULD_HYSTERESIS if was_mould else 0) and (lasting or surface >= MOULD_FAST)
     # Judged on what airing can gain: humidity that comes from inside (shower, cooking, sleep) calls for a gesture;
@@ -257,12 +269,12 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     # that), instead of a full replacement of its air by the outdoor one.
     drying = None
     if wet and dry and ti is not None:
-        model = context.get("drying_model")
+        model = (volume or {}).get("drying_model") or context.get("drying_model")
         model = model if isinstance(model, Mapping) and all(isinstance(model.get(k), (int, float)) for k in ("tau", "residual", "rebound")) else {**learning.DEFAULT, "openings": 0}
-        drying = {**learning.outcome(model, ti, ai, ae), "tau": model["tau"], "openings": model.get("openings", 0),
-                  "later": learning.best_moment(model, ti, ai, ae, outlook.get("hours"), now) if now and not opened else None}
-    # Once open, the airing runs its course; before, it must be worth it.
-    worth = drying is not None and (opened or drying["gain"] >= learning.MIN_GAIN)
+        drying = {**learning.outcome(model, hti, ai, ae), "tau": model["tau"], "openings": model.get("openings", 0),
+                  "later": learning.best_moment(model, hti, ai, ae, outlook.get("hours"), now) if now and not opened else None}
+    # Before opening, an airing must be worth it; once open, it must still bring something to stay open.
+    worth = drying is not None and drying["gain"] >= (OPEN_GAIN if opened else learning.MIN_GAIN)
     windy = gust is not None and gust > settings.gust_max
     frost = te is not None and te <= settings.frost
     heating_running = value("heating") == "heating"
@@ -322,7 +334,11 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     checked = (rain is False or ("rain" not in readings and rain is None)) and pollution is not True
     thermal_known = ti is not None and te is not None
     optional_wet_exchange = ai is not None and ae is not None and ae > ai + 1
-    useful = air or ((hot or precool) and cool and not optional_wet_exchange) or (wet and worth and not cold)
+    # Drying never justifies opening a cold room, nor a hot one to a hotter outside.
+    heat_in = hot and delta is not None and delta > 0
+    useful = air or ((hot or precool) and cool and not optional_wet_exchange) or (wet and worth and not cold and not heat_in)
+    # A constraint speaks only where opening would have helped: a cold room under the rain needs no « keep closed ».
+    wants_open = air or ((hot or precool) and cool) or (wet and dry and not cold and not heat_in)
     opportunities = tuple(k for k, active in (("cool", cool and not optional_wet_exchange), ("dry", dry),
         ("air", co2 is not None and co2 >= settings.co2_potential)) if active) if not hard and not soft else ()
     missing = tuple(sorted(k for k in ({k for k, r in readings.items() if r.source and not r.usable
@@ -342,24 +358,29 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         action, reason, level = "fermer", "opening_blocked", "urgent" if storm else "action"
     elif rain_coming:
         action, reason, level = "fermer", "rain_soon", "action"
-    elif hard:
+    elif hard and (opened or wants_open or not closed):
+        # Windows not known to be shut still hear the constraint: Niak cannot tell all is well.
         # Only outdoor air reaches every opening; rain spares sheltered ones, gusts are handled above.
         action, reason = ("fermer" if opened and pollution is True else "attendre"), "opening_blocked"
         if level in ("calm", "neutral"):
             # A constraint alone, with known closed windows and no need, is not an action need.
             level = "calm" if closed and not partial else "neutral"
-    elif soft and air:
+    elif opened and not air and delta is not None and ((hot and delta > 0.5) or (cold and delta < -0.5)):
+        # A room already out of its range and an open window that pushes it further: no drying justifies it.
+        action, reason, level = "fermer", "exchange_harmful", "action"
+    elif soft and (air or (wet and dry and not cold and not heat_in)):
+        # Heating on or frost outside: a short airing still clears stale air or the steam of a shower or a meal.
         action, reason = ("ok" if opened else "ouvrir"), "short_air_change"
     elif soft and opened:
         action, reason, level = "fermer", "opening_blocked", "action"
-    elif soft and (hot or wet or precool):
+    elif soft and wants_open and not cold:
         action, reason = "attendre", "opening_blocked"
     elif useful:
         if not checked or not thermal_known:
             action, reason = "unknown", "verify_exterior"
         else:
-            action, reason = ("ok" if opened else "ouvrir"), ("air_needed" if air else "cooling_possible" if hot
-                                                             else "precool_possible" if precool else "drying_possible")
+            action, reason = ("ok" if opened else "ouvrir"), ("air_needed" if air else "cooling_possible" if hot and cool
+                                                             else "precool_possible" if precool and cool else "drying_possible")
     elif opened and delta is not None and ((ti >= (settings.minimum + settings.maximum) / 2 and delta > 0.5)
                                           or (heated and ti <= settings.minimum + 1 and delta < -0.5)):
         action, reason = "fermer", "exchange_harmful"
@@ -387,6 +408,14 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     if (opened and optional_wet_exchange and not air and not hard and not soft
             and action != "fermer" and not rain_coming):
         action, reason, level = "fermer", "rehumidification_risk", "action"
+    # An open window that neither helps nor harms is neutral: the person may keep it or close it.
+    if opened and reason in ("within_comfort", "drying_slow", "drying_unavailable", "drying_later", "humid_outdoor"):
+        action, reason = "ok", "open_neutral"
+    # A cold room speaks only when it points at something: someone at home and the heating switched off.
+    occupied = context.get("occupied")
+    heating_state = value("heating") if "heating" in readings else None
+    warmth = {"occupied": occupied if isinstance(occupied, bool) else None,
+              "heating": None if "heating" not in readings else "off" if heating_state == "off" else "on" if heating_state in ("heating", "idle") else None}
     heating = (value("heating") or "unknown") if "heating" in readings else "not_configured"
     first = tuple(open_first(details)) if action == "ouvrir" else ()
     coming = next_slot(outlook.get("hours") or [], now, ti, hot=hot or precool, cool_now=cool, margin=settings.cooling_delta) if now else None
@@ -402,17 +431,22 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
           # Stale air or a hot room make people open by reflex: warning them off is still useful.
           and not (reason == "opening_blocked" and ("air" in needs or ("cool" in needs and cool)))):
         level = "neutral" if partial or level == "neutral" else "calm"
+    if reason == "heat_needed" and action != "fermer":
+        level = "action" if warmth["occupied"] is True and warmth["heating"] == "off" else "neutral" if partial else "calm"
     # Protections never configured: the advice stands, the card says what Niak does not watch.
     unverified = tuple(k for k in ("pollution", "rain") if k not in readings and not (k == "rain" and all_sheltered))
     extended = features(readings, settings, context, openings, sun, details,
                         needs, action, reason, now, ai, ae, air_detail)
     extended["season"] = {**season, "heated": heated}
     extended["drying"] = drying
+    extended["warmth"] = warmth if cold else None
     if isinstance(extended.get("humidity"), dict):
         saturated = absolute_humidity(ti, 100) if ti is not None else None
         extended["humidity"].update(
             surface=None if surface is None else round(surface), mould=mould,
             excess=None if excess is None else round(excess, 1), source="inside" if wet else "outside" if humid_outdoor else None,
+            # Water above the shared air of the volume (g/m³): a local source such as cooking steam.
+            local=local if local is not None and local >= 1.0 else None,
             # Where a full airing would bring the room at best: the outdoor water, warmed to the room's temperature.
             reachable=None if ae is None or not saturated else round(min(100.0, ae / saturated * 100)))
     if reason == "drying_possible" and drying:

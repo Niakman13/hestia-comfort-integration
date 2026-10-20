@@ -205,12 +205,34 @@ test('the weather’s own humidity, a shared air and a coming rain are said plai
 });
 test('a « keep closed » that brings nothing leaves the banner calm',()=>{
   const v=fresh();
-  for(const reason of ['drying_unavailable','drying_slow','opening_blocked','heat_needed','cooling_unavailable','precool_later']){
+  for(const reason of ['drying_unavailable','drying_slow','opening_blocked','cooling_unavailable','precool_later']){
     v.assessment={...v.assessment,reason,level:'calm',action:'attendre'};
     const a=advice(v);assert.equal(a.title,'Rien à faire',reason);assert.match(plain(a.line),/n’apporterait rien/);
   }
   v.assessment={...v.assessment,reason:'opening_blocked',level:'action',action:'attendre'};
   assert.notEqual(advice(v).title,'Rien à faire');
+});
+test('« Rien à faire » only when there is truly nothing: never to close, never cold, never damp walls',()=>{
+  const v=fresh();
+  // 20 Oct. audit: outdoor air bad and a window open, the engine said close and the card said nothing to do.
+  v.assessment={...v.assessment,reason:'opening_blocked',level:'neutral',action:'fermer',constraints:['pollution']};
+  assert.equal(advice(v).title,'Refermez');
+  const cold=w=>{v.assessment={...v.assessment,reason:'heat_needed',level:'calm',action:'ok',constraints:[],features:{...v.assessment.features,warmth:w}};return advice(v);};
+  assert.match(plain(cold({occupied:true,heating:'off'}).line),/le chauffage est coupé/);
+  assert.equal(cold({occupied:false,heating:'off'}).title,'Maison vide');
+  assert.match(plain(cold({occupied:true,heating:'on'}).line),/le chauffage s’en charge/);
+  assert.equal(cold(null).title,'Pièce fraîche');
+  v.assessment={...v.assessment,reason:'drying_slow',level:'calm',action:'attendre',features:{...v.assessment.features,warmth:null,humidity:{dew_point:null,incoming_relative:null,glass_temperature:null,condensation_risk:null,message:'',surface:88,mould:true,excess:1.6,source:'inside',reachable:75}}};
+  assert.equal(advice(v).title,'Murs humides');assert.match(plain(advice(v).line),/environ 88 % contre les murs froids/);
+  v.assessment={...v.assessment,reason:'open_neutral',level:'calm',action:'ok',features:{...v.assessment.features,humidity:undefined}};
+  assert.equal(advice(v).title,'Fenêtre ouverte');
+});
+test('rooms sharing one air show the same advice, with the leading room’s measures',()=>{
+  const v=fresh();
+  v.assessment={...v.assessment,reason:'shared_volume',action:'ok',level:'action',features:{...v.assessment.features,
+    volume:{lead:'Salon',reason:'air_needed',action:'ok',assessment:{reason:'air_needed',action:'ok',level:'action',features:{air:{co2_status:'high',pm25_status:'ok',voc_status:'ok',voc_unit:null,purifier:{on:null,speed:null},coverage:'',message:''}}},
+      observations:{...v.observations,co2:{value:1250,quality:'valid',source:'sensor.co2',received_at:null,detail:null,unit:'ppm'}}}}};
+  const a=advice(v);assert.equal(a.title,'Aération en cours');assert.equal(a.cap,'Même air : Salon');assert.match(plain(a.line),/CO₂ 1\s250 ppm/);
 });
 
 test('the home card keeps its display settings and refuses wrong ones',()=>{

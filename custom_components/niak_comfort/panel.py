@@ -6,6 +6,7 @@ from pathlib import Path
 import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.components.http import StaticPathConfig
+from homeassistant.core import callback
 from . import health, weather_link
 from .configuration import get_configuration
 from .const import DOMAIN, VERSION
@@ -24,6 +25,7 @@ async def async_setup_panel(hass):
         # The versioned dashboard resource, with a guarded extra module only as fallback.
         await async_register_card(hass, CARD_URL, VERSION)
         websocket_api.async_register_command(hass, ws_health)
+        websocket_api.async_register_command(hass, ws_twins)
         hass.data[DOMAIN + "_panel_asset"] = True
     await async_register_brick(hass, {
         "domain": DOMAIN, "name": "Niak Confort", "slug": "confort", "version": VERSION,
@@ -90,3 +92,19 @@ async def comfort_status(hass):
 async def ws_health(hass, connection, msg):
     """The home page of the « Confort » tab: what works, what to fix, what could be set better."""
     connection.send_result(msg["id"], health.report(await health.facts(hass, VERSION)))
+
+
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/twins"})
+@websocket_api.require_admin
+@callback
+def ws_twins(hass, connection, msg):
+    """« Ce que Niak a appris » : each room's twin, with its last 24 hours replayed against the measures."""
+    rooms = []
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        coordinator = getattr(entry, "runtime_data", None)
+        if entry.data.get("home") or coordinator is None:
+            continue
+        learned = getattr(coordinator, "twin", None) or {"status": "learning", "samples": 0, "days": 0}
+        rooms.append({"entry_id": entry.entry_id, "title": entry.title,
+                      "twin": {k: v for k, v in learned.items() if k != "model"}})
+    connection.send_result(msg["id"], {"version": 1, "rooms": rooms})

@@ -36,26 +36,27 @@ def _side(assessment: dict) -> str | None:
     return None
 
 
-def arbitrate(own: dict, partners: list[tuple[str, dict]]) -> dict:
-    """`own` and each partner's assessment as computed alone; returns `own`, followed when a partner outweighs it.
+SEVERITY = {"urgent": 4, "action": 3, "benefit": 2, "neutral": 1, "calm": 0}
 
-    Only opposite gestures are settled; two rooms asking the same thing both keep their words."""
-    mine = _side(own)
-    if mine is None:
-        return own
-    lead = None
-    for title, other in partners:
-        theirs = _side(other)
-        if theirs is None or theirs == mine or weight(other) <= weight(own):
-            continue
-        if lead is None or weight(other) > weight(lead[1]):
-            lead = (title, other)
-    if lead is None:
+
+def rank(assessment: dict) -> tuple:
+    """What makes a room speak for its volume: the weight of its reason, a gesture, then its level."""
+    return (weight(assessment), _side(assessment) is not None, SEVERITY.get(assessment.get("level"), 0))
+
+
+def arbitrate(own: dict, partners: list[tuple[str, dict]]) -> dict:
+    """`own` and each partner's assessment as computed alone; returns the volume's one verdict as this room shows it.
+
+    The room whose advice weighs most speaks for the whole volume; the others show the same advice and say
+    whose it is. On a tie, each room keeps its own words."""
+    lead = max(partners, key=lambda p: rank(p[1]), default=None)
+    if lead is None or rank(lead[1]) <= rank(own):
         return own
     title, other = lead
-    action = other["action"]
-    if action == "ouvrir" and any(o.get("open") for o in own.get("openings", ())):
-        action = "ok"  # the shared window is already open: keep it so
-    features = {**own.get("features", {}), "volume": {"lead": title, "reason": other["reason"], "action": other["action"]}}
-    return {**own, "action": action, "reason": "shared_volume", "level": other["level"], "features": features,
-            "open_first": tuple(other.get("open_first", ())) if action == "ouvrir" else ()}
+    # Each room keeps its own needs: its tiles show what its own sensors measure.
+    keep = ("action", "level", "constraints", "rain_soon_minutes", "temperature_delta", "slot", "open_first")
+    shared = {k: other[k] for k in keep if k in other}
+    picked = {k: other.get("features", {}).get(k) for k in ("drying", "ventilation", "rain_ahead", "humidity", "air", "warmth")}
+    features = {**own.get("features", {}), "volume": {"lead": title, "reason": other["reason"], "action": other["action"],
+                                                      "assessment": {**shared, "reason": other["reason"], "features": picked}}}
+    return {**own, **shared, "reason": "shared_volume", "features": features}

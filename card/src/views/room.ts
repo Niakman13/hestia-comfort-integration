@@ -15,9 +15,15 @@ const deg=(v:number|null)=>v===null?'—':number(v)+' °C';
 export interface Advice {title:string;line:TemplateResult|string;disk:string;cap?:string;
   /** A state that is not advice (sensors loading or silent) brings its own words and colour. */ pill?:string;level?:Level}
 /** Reasons that only say « keep closed »: the engine lowers them to calm when nothing is open and no reflex is at stake. */
-const QUIET=['drying_unavailable','drying_slow','opening_blocked','heat_needed','cooling_unavailable','precool_later'];
+const QUIET=['drying_unavailable','drying_slow','opening_blocked','cooling_unavailable','precool_later'];
 /** The banner: the gesture in a few words, then why in one line. The full explanation stays behind « i ». */
 export function advice(v:View):Advice {
+  // One verdict per shared air: the room shows the leading room's advice, with that room's measures.
+  const vol=v.assessment.features?.volume;
+  if(v.assessment.reason==='shared_volume'&&vol?.assessment){
+    const lead=advice({...v,observations:vol.observations??v.observations,assessment:{...v.assessment,...vol.assessment,features:{...v.assessment.features,...vol.assessment.features,volume:undefined}} as View['assessment']});
+    return {...lead,cap:`Même air : ${vol.lead}`};
+  }
   const a=v.assessment,o=v.observations,ti=numeric(o.indoor_temperature);
   const opened=Object.entries(o).some(([k,r])=>k.startsWith('window:')&&r.quality==='valid'&&r.value===true);
   const first=(a.open_first??[]).map(id=>v.names?.[id]??id)[0];
@@ -66,8 +72,15 @@ export function advice(v:View):Advice {
   if(blind&&v.starting)return {title:'Mesures en chargement',line:html`Home Assistant ${b('vient de démarrer')}`,disk:'clock',pill:'Démarrage',level:'neutral'};
   if(blind){const one=count===1;
     return {title:'Mesures absentes',line:html`${b(`${count} capteur${one?'':'s'} ne répond${one?'':'ent'} pas`)} · détail dans Mesures`,disk:'mute',pill:'Capteurs muets',level:'neutral'};}
+  // Damp outer walls are never « nothing to do »: said plainly, with the gesture that helps when there is one.
+  const hum=a.features?.humidity;
+  if(hum?.mould&&a.action!=='fermer'&&(QUIET.includes(a.reason)||a.reason==='humid_outdoor'||a.reason==='heat_needed')){
+    const vmc=a.features?.air?.ventilation,warmth=a.features?.warmth;
+    const cap=vmc&&vmc.on===false?'Lancez la VMC':a.reason==='opening_blocked'?'Aérez quand le temps le permettra':warmth?.heating==='off'?'Un peu de chauffage aide':hum.source==='outside'?'Ça passera avec le sec':undefined;
+    return {title:'Murs humides',line:html`${b('environ '+hum.surface+' %')} contre les murs froids`,disk:vmc&&vmc.on===false?'vmc':'clock',cap};
+  }
   // « Do not open » to someone who was not opening brings nothing: the banner stays calm, the measure on its tile.
-  if(QUIET.includes(a.reason)&&(a.level==='calm'||a.level==='neutral'))
+  if(QUIET.includes(a.reason)&&(a.level==='calm'||a.level==='neutral')&&a.action!=='fermer')
     return {title:'Rien à faire',line:html`Ouvrir ${b('n’apporterait rien')} pour l’instant`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
   switch(a.reason){
     case 'within_comfort': return {title:'Rien à faire',line:html`${deg(ti)}, ${b('dans votre plage')}`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
@@ -78,7 +91,7 @@ export function advice(v:View):Advice {
       const why=constraint==='rain_soon'?`Pluie ${rainWhen(a)}`:constraint?constraintLabels[constraint]??constraint:'Contrainte extérieure';
       return {title:a.action==='fermer'?'Refermez':'Gardez fermé',line:html`${b(why)}${a.needs.length?' : le besoin attendra':''}`,disk:a.action==='fermer'?'shut':'window'};
     }
-    case 'short_air_change': return {title:a.action==='ok'?'Aération en cours':'Aérez 5 minutes',line:html`Air à renouveler, ${b(shortWhy(a.constraints))}`,disk:'open',cap:a.action==='ok'?undefined:'Puis refermez'};
+    case 'short_air_change': return {title:a.action==='ok'?'Aération en cours':'Aérez 5 minutes',line:html`${a.needs.includes('air')?'Air à renouveler':'Humidité à évacuer'}, ${b(shortWhy(a.constraints))}`,disk:'open',cap:a.action==='ok'?undefined:'Puis refermez'};
     case 'air_needed': return airing('Aérez','Renouvelez l’air',airWhy(v));
     case 'cooling_possible': return airing('Ouvrez','Ouvrez pour rafraîchir',temps);
     case 'precool_possible': return {title:a.action==='ok'?'Laissez ouvert cette nuit':'Ouvrez pour la nuit',line:html`Demain sera chaud : ${b('stockez le frais')}`,disk:'moon',cap:first};
@@ -113,7 +126,16 @@ export function advice(v:View):Advice {
     case 'drying_unavailable': return {title:'Humidité à surveiller',line:incoming!=null?water:html`L’air du dehors ${b('n’est pas plus sec')}`,disk:'clock',cap:'Aérer n’aiderait pas'};
     case 'exchange_harmful': return {title:'Refermez',line:html`L’air du dehors ${b(a.temperature_delta!==null&&a.temperature_delta>0?'réchauffe la pièce':'refroidit la pièce')}`,disk:'shut'};
     case 'rehumidification_risk': return {title:'Refermez',line:incoming!=null?water:html`L’air du dehors ${b('est plus humide')}`,disk:'shut'};
-    case 'heat_needed': return {title:a.action==='fermer'?'Refermez':'Gardez fermé',line:html`Pièce fraîche : ${b(deg(ti))}`,disk:a.action==='fermer'?'shut':'window'};
+    case 'heat_needed': {
+      if(a.action==='fermer')return {title:'Refermez',line:html`Pièce fraîche : ${b(deg(ti))}`,disk:'shut'};
+      // A cold room points at something only when someone is home and the heating is off.
+      const w=a.features?.warmth;
+      if(w?.occupied===false)return {title:'Maison vide',line:html`${deg(ti)} : ${b('pas besoin de chauffer')}`,disk:'check'};
+      if(w?.heating==='on')return {title:'Pièce fraîche',line:html`${deg(ti)} : ${b('le chauffage s’en charge')}`,disk:'clock'};
+      if(w?.heating==='off')return {title:'Pièce fraîche',line:html`${deg(ti)} : ${b('le chauffage est coupé')}`,disk:'window',cap:w.occupied?'Vous êtes là':undefined};
+      return {title:'Pièce fraîche',line:html`${b(deg(ti))}, sous votre plage`,disk:'window'};
+    }
+    case 'open_neutral': return {title:'Fenêtre ouverte',line:html`${b('Sans effet')} sur le confort`,disk:'open',cap:'Libre de refermer'};
     case 'sun_entering': return {title:'Fermez côté soleil',line:html`Le soleil ${b('chauffe la pièce')}`,disk:'shut'};
     case 'shutter_protection': return {title:'Adaptez les volets',line:html`Le soleil ${b('tape sur une façade')}`,disk:'window'};
     case 'optional_air_change': return {title:'Aérez si possible',line:html`CO₂ ${b(number(numeric(o.co2))+' ppm')}`,disk:'open'};
@@ -242,7 +264,7 @@ const clock=(x?:string|null)=>{const d=x?new Date(x):null;return d&&!isNaN(+d)?d
 export function tiles(v:View,config:Config):Tile[] {
   const o=v.observations,a=v.assessment,mods=new Set(config.modules??[]),list:Tile[]=[],air=a.features?.air;
   if(mods.has('humidity')&&o.indoor_humidity){const h=numeric(o.indoor_humidity),wet=a.needs.includes('dry'),outside=a.features?.humidity?.source==='outside';
-    list.push({ic:'drop',label:'Humidité',value:number(h),unit:'%',note:h===null?gone(o.indoor_humidity):wet?'trop humide':outside?'humide dehors aussi':'dans votre plage',level:wet?'watch':'calm',out:wet});}
+    list.push({ic:'drop',label:'Humidité',value:number(h),unit:'%',note:h===null?gone(o.indoor_humidity):a.features?.humidity?.local?'vapeur locale':wet?'trop humide':outside?'humide dehors aussi':'dans votre plage',level:wet?'watch':'calm',out:wet});}
   if(mods.has('air')&&o.co2){const c=numeric(o.co2),high=air?.co2_status==='high';
     list.push({ic:'air',label:'CO₂',value:number(c),unit:'ppm',note:c===null?gone(o.co2):high?'à renouveler':'dans votre plage',level:high?(a.level==='urgent'?'urgent':'watch'):'calm',out:high});}
   if(mods.has('air'))for(const [key,ic,label,status] of [['pm25','pm','Particules',air?.pm25_status],['voc','flask','COV',air?.voc_status]] as const){

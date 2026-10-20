@@ -24,7 +24,9 @@ class SharedVolume(unittest.TestCase):
         self.assertEqual((kitchen["action"], salon["action"]), ("fermer", "ok"))
         settled = arbitrate(kitchen, [("Salon", salon)])
         self.assertEqual((settled["action"], settled["reason"]), ("ok", "shared_volume"))
-        self.assertEqual(settled["features"]["volume"], {"lead": "Salon", "reason": salon["reason"], "action": "ok"})
+        volume = settled["features"]["volume"]
+        self.assertEqual((volume["lead"], volume["reason"], volume["action"]), ("Salon", salon["reason"], "ok"))
+        self.assertEqual(volume["assessment"]["reason"], salon["reason"])
         # The salon keeps its own words: its reason outweighs the kitchen's.
         self.assertIs(arbitrate(salon, [("Cuisine", kitchen)]), salon)
 
@@ -37,12 +39,15 @@ class SharedVolume(unittest.TestCase):
         settled = arbitrate(salon, [("Cuisine", kitchen)])
         self.assertEqual((settled["action"], settled["reason"]), ("fermer", "shared_volume"))
 
-    def test_same_gestures_and_quiet_rooms_are_left_alone(self):
+    def test_same_gestures_stay_and_quiet_rooms_follow(self):
         a = assess(zone(co2=1300, **{"window:a": True})).to_dict()
         b = assess(zone(indoor_humidity=75, outdoor_humidity=50, outdoor_temperature=12, **{"window:a": True})).to_dict()
         calm = assess(zone()).to_dict()
         self.assertIs(arbitrate(a, [("B", b)]), a)
-        self.assertIs(arbitrate(calm, [("A", a)]), calm)
+        # One verdict per volume: a quiet room shows its partner's advice instead of its own « nothing to do ».
+        follows = arbitrate(calm, [("A", a)])
+        self.assertEqual((follows["action"], follows["reason"], follows["level"]), ("ok", "shared_volume", a["level"]))
+        self.assertIs(arbitrate(calm, [("B", calm)]), calm)
 
 
 if __name__ == "__main__":

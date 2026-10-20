@@ -9,11 +9,14 @@ from .configuration import get_configuration
 from .panel import CARD_URL, async_setup_panel
 from .socle import async_remove_card
 from .air_references import apply_air_references, apply_freshness
+from .api import API_KEY, NiakComfortApi
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass, config):
+    # What Niak Confort publishes for the other bricks (the rooms and what their twins learned).
+    hass.data.setdefault(API_KEY, NiakComfortApi(hass))
     async_setup_websocket(hass)
     await get_configuration(hass)
     await async_setup_panel(hass)

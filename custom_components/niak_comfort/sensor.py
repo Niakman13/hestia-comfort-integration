@@ -1,5 +1,6 @@
 """Small stable states for automations; rich observations stay out of Recorder."""
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorEntityDescription
+from homeassistant.const import PERCENTAGE, UnitOfTemperature
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -13,11 +14,18 @@ DESCRIPTIONS = (
                             options=["within_comfort", "rain_open_windows", "opening_blocked", "verify_exterior",
                                      "air_needed", "cooling_possible", "drying_possible", "exchange_harmful",
                                      "cooling_unavailable", "heat_needed", "drying_unavailable", "drying_later", "drying_slow", "ventilation_possible", "incomplete_data", "optional_air_change",
-                                     "gust_open_windows", "short_air_change", "sun_entering", "rain_soon", "precool_possible", "precool_later", "shared_volume", "humid_outdoor"]),
+                                     "gust_open_windows", "short_air_change", "sun_entering", "rain_soon", "precool_possible", "precool_later", "shared_volume", "humid_outdoor", "open_neutral", "rehumidification_risk"]),
     SensorEntityDescription(key="heating_action", translation_key="heating_action", device_class=SensorDeviceClass.ENUM,
                             options=["heating", "idle", "off", "cooling", "unknown", "not_configured"]),
     SensorEntityDescription(key="coverage", translation_key="coverage", entity_category=EntityCategory.DIAGNOSTIC,
                             device_class=SensorDeviceClass.ENUM, options=["partial", "configured_sources_available"]),
+    # The twin's view of the coming hour, to lay over the real sensors in the history: off until asked for.
+    SensorEntityDescription(key="twin_temperature", translation_key="twin_temperature", entity_category=EntityCategory.DIAGNOSTIC,
+                            device_class=SensorDeviceClass.TEMPERATURE, native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+                            suggested_display_precision=1, entity_registry_enabled_default=False),
+    SensorEntityDescription(key="twin_humidity", translation_key="twin_humidity", entity_category=EntityCategory.DIAGNOSTIC,
+                            device_class=SensorDeviceClass.HUMIDITY, native_unit_of_measurement=PERCENTAGE,
+                            entity_registry_enabled_default=False),
 )
 
 
@@ -39,6 +47,9 @@ class ComfortSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         assessment = self.coordinator.data["assessment"]
+        if self.entity_description.key.startswith("twin_"):
+            coming = (self.coordinator.data.get("twin") or {}).get("next_hour") or {}
+            return coming.get(self.entity_description.key[5:])
         if self.entity_description.key == "coverage":
             return "partial" if assessment["partial"] else "configured_sources_available"
         return assessment[self.entity_description.key]
