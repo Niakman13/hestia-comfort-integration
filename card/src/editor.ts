@@ -17,6 +17,20 @@ const hold=(action:string,full=false)=>group('Fonctionnalités','mdi:tune-varian
 const chipOptions:[string,string][]=[['temperature','Température'],['humidity','Humidité'],['co2','CO₂']];
 const markOptions:[string,string][]=[['band','Votre plage'],['day','Min–max 24 h'],['out','Dehors']];
 const bannerOptions:[string,string][]=[['remedies','Remèdes en cours (purificateur, VMC)'],['later','Plus tard (meilleur moment)']];
+/** One choice per air: rooms open onto each other are offered once, as « Salon · Cuisine ». A card already set on one of
+    them keeps its room as the value, so that nothing moves. */
+export function roomChoices(entries:Entry[],current?:string):{value:string;label:string}[] {
+  const out:{value:string;label:string}[]=[],done=new Set<string>();
+  for(const e of entries){
+    if(done.has(e.entry_id))continue;
+    const group=[e.entry_id,...(e.volume??[])];group.forEach(id=>done.add(id));
+    // The best equipped room leads, as in the volume's name (« Salon · Cuisine »).
+    const lead=entries.find(x=>group.includes(x.entry_id)&&x.title===e.volume_name?.split(' · ')[0])?.entry_id??e.entry_id;
+    const value=current&&group.includes(current)?current:lead;
+    out.push({value,label:e.volume?.length&&e.volume_name?e.volume_name:e.title});
+  }
+  return out.sort((a,b)=>a.label.localeCompare(b.label,'fr'));
+}
 const labels:Record<string,string>={entry_id:'Pièce',title:'Titre facultatif',format:'Format',animations:'Animations',glass_effect:'Effet verre dépoli',
   rotate:'Faire défiler les conseils',banner_blocks:'Contenu du bandeau',scale_marks:'Repères de l’échelle',modules:'Rubriques',measures_open:'Mesures dépliées au départ',
   show_details:'Section Détails',details_open:'Détails dépliés au départ',tile_chips:'Pastilles de la tuile repliée',tile_blocks:'Contenu de la tuile dépliée',
@@ -65,7 +79,7 @@ export class ComfortEditor extends LitElement {
   }
   private schema(){
     const c=this.config!,f=c.format??'tile',action=c.hold_action??(c.hold_path?'page':'popup');
-    const rooms=this.entries&&this.entries.length>1?[{name:'entry_id',selector:{select:{mode:'dropdown',options:this.entries.map(e=>({value:e.entry_id,label:e.title}))}}}]:[];
+    const rooms=this.entries&&this.entries.length>1?[{name:'entry_id',selector:{select:{mode:'dropdown',options:roomChoices(this.entries,c.entry_id)}}}]:[];
     const format={name:'format',selector:{select:{mode:'list',options:[
       {value:'full',label:'Complète : bandeau, échelle, mesures et détails'},{value:'tile',label:'Tuile : le conseil et ses pastilles, se déplie d’un appui'},
       {value:'intermediate',label:'Tuile dépliée : la même, ouverte au départ'},{value:'mini',label:'Mini : une ligne, le conseil et la température'},
@@ -108,7 +122,7 @@ export class ComfortEditor extends LitElement {
     const one=this.entries?.length===1?this.entries[0]:this.entries?.find(e=>e.entry_id===c.entry_id);
     return html`${this.entries===null?html`<p class="note warn">L’intégration Niak Confort ne répond pas : vérifiez qu’elle est installée et chargée.</p>`
       :this.entries?.length===0?html`<p class="note warn">Aucune pièce : ouvrez <a href="/niak/confort" @click=${follow}>Niak Confort</a> dans la barre latérale pour en ajouter une.</p>`
-      :html`<p class="note">${one?html`Pièce : <b>${one.title}</b>. `:nothing}Les capteurs et préférences se règlent dans <a href="/niak/confort" @click=${follow}>Niak Confort</a>.</p>`}
+      :html`<p class="note">${one?html`Pièce : <b>${one.volume?.length&&one.volume_name?one.volume_name:one.title}</b>. `:nothing}Les capteurs et préférences se règlent dans <a href="/niak/confort" @click=${follow}>Niak Confort</a>.</p>`}
       <ha-form .hass=${this.hass} .data=${data} .schema=${this.schema()} .computeLabel=${labelFor(c.format)} .computeHelper=${helperFor} @value-changed=${this.changed}></ha-form>`;
   }
 }

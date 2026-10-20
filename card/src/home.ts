@@ -78,6 +78,18 @@ export class NiakComfortHomeCard extends LitElement {
       if(used.has(s))s=r.title.slice(0,2);used.add(s);out.set(r.entry_id,s);}
     return out;
   }
+  /** Rooms sharing one air are one tile, under the volume's name, from the room that leads it. */
+  private collapse(rooms:View[]):View[]{
+    const hidden=new Set<string>(),out:View[]=[];
+    for(const r of rooms){
+      if(hidden.has(r.entry_id))continue;
+      const group=this.rooms.filter(x=>x.entry_id===r.entry_id||(r.volume??[]).some(p=>p.entry_id===x.entry_id));
+      const lead=group.find(x=>x.title===r.volume_name?.split(' · ')[0])??r;
+      group.forEach(x=>hidden.add(x.entry_id));
+      out.push(group.length>1?{...lead,title:lead.volume_name??lead.title}:r);
+    }
+    return out;
+  }
   private roomTile(r:View){
     const t=numeric(r.observations.indoor_temperature),a=r.assessment,lvl=a.level as Level,unheated=a.features?.season?.heated===false;
     const note=t===null?'mesure indisponible':['action','urgent'].includes(lvl)?advice(r).title.toLowerCase():a.needs.includes('cool')?'trop chaud':a.needs.includes('heat')?'trop frais':unheated?'non chauffée':'dans votre plage';
@@ -171,7 +183,7 @@ export class NiakComfortHomeCard extends LitElement {
     const rooms=this.rooms.flatMap(r=>{const t=numeric(r.observations.indoor_temperature);return t===null?[]:[{name:r.title,entity:r.observations.indoor_temperature?.source??undefined,short:shorts.get(r.entry_id)!,value:t,level:(r.assessment.features?.season?.heated===false&&!['action','urgent'].includes(r.assessment.level)?'neutral':r.assessment.level) as Level}];});
     const st=this.state(),floors=h.floors?.length?h.floors:[{floor_id:null,name:'Mon logement',level:null,room_ids:this.rooms.map(r=>r.entry_id),mean:null,measured:0,total:0,hottest:null}];
     const all=this.rooms.map(r=>this.roomTile(r)),outside=this.rooms.filter(r=>['action','urgent'].includes(r.assessment.level));
-    const body=h2`<div class="nc-tiles">${floors.map(f=>h2`${floors.length>1?h2`<div class="nc-floor"><span class="nw-label">${f.name}</span><b>${number(f.mean)} °C</b></div>`:nothing}${this.rooms.filter(r=>f.room_ids.includes(r.entry_id)).map(r=>this.roomTile(r))}`)}</div>`;
+    const body=h2`<div class="nc-tiles">${floors.map(f=>h2`${floors.length>1?h2`<div class="nc-floor"><span class="nw-label">${f.name}</span><b>${number(f.mean)} °C</b></div>`:nothing}${this.collapse(this.rooms.filter(r=>f.room_ids.includes(r.entry_id))).map(r=>this.roomTile(r))}`)}</div>`;
     const c=this.config,name=c.title||'Mon logement',still=c.animations===false||c.rotate===false;
     const top=homeSlides[0]?.level??h.level as Level;
     const temps=this.rooms.map(r=>numeric(r.observations.indoor_temperature)).filter((t):t is number=>t!==null);
