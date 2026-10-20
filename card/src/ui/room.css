@@ -82,6 +82,11 @@ niak-note-ticker { display:block; flex:1; min-width:0; }
 .nc-tile.out em::before { content:''; width:7px; height:7px; border-radius:50%; flex:none; background:var(--c);
   box-shadow:0 0 0 0 color-mix(in oklab, var(--c) 70%, transparent); animation:nc-ping 2.4s ease-out infinite; }
 .nc-tile.out .nc-ic { background:var(--c); color:color-mix(in oklab, var(--c) 30%, #1d2530); }
+/* Hors de votre plage sans geste à faire : pas de cadre orange (réservé aux gestes), seulement la pastille qui bat devant la note. */
+.nc-tile.out.soft { border-color:var(--nw-line); background:var(--nw-bg); }
+.nc-tile.out.soft::before { display:none; }
+.nc-tile.out.soft .nc-ic { background:color-mix(in oklab, var(--nw-fg) 10%, transparent); color:var(--nw-fg2); }
+.nc-tile.out.soft em { font-weight:500; color:var(--nw-fg2); }
 /* Capteur muet : contour en pointillés, valeur effacée ; juste après un démarrage, la tuile scintille comme un chargement. */
 .nc-tile.mute { border:1.5px dashed color-mix(in srgb, var(--nw-fg) 30%, transparent); }
 .nc-tile.mute b, .nc-tile.mute em { color:var(--nw-fg2); }

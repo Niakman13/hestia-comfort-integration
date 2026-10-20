@@ -226,7 +226,7 @@ test('the banner carries a gesture or « Rien à faire »; what is worth knowing
   v.assessment={...v.assessment,reason:'drying_slow',level:'calm',action:'attendre',features:{...v.assessment.features,warmth:null,humidity:{dew_point:null,incoming_relative:null,glass_temperature:null,condensation_risk:null,message:'',surface:88,mould:true,excess:0.2,source:'outside',reachable:75}}};
   assert.equal(advice(v).title,'Rien à faire');
   const lines=facts(v).map(f=>f.title+' · '+plain(f.text));
-  assert.equal(lines[0],'Risque de moisissure · à cause du temps humide dehors, il baissera quand le temps sera plus sec');
+  assert.equal(lines[0],'Humidité élevée · risque de moisissure');
   assert.ok(lines.every(l=>!/%|µg|murs froids|retour du sec/.test(l)),lines.join(' / '));
   v.assessment={...v.assessment,reason:'open_neutral',level:'calm',action:'ok',features:{...v.assessment.features,humidity:undefined}};
   assert.equal(advice(v).title,'Rien à faire');assert.equal(facts(v)[0].title,'Fenêtre ouverte');
@@ -330,4 +330,13 @@ test('rooms sharing one air are one choice in the card editor, led by the best e
   assert.deepEqual(roomChoices(entries),[{value:'b',label:'Buanderie'},{value:'s',label:'Salon · Cuisine'}]);
   // A card already set on the kitchen keeps its room: nothing moves on the dashboard.
   assert.deepEqual(roomChoices(entries,'c').find(o=>o.label==='Salon · Cuisine'),{value:'c',label:'Salon · Cuisine'});
+});
+
+test('high humidity is said without guessing its cause',()=>{
+  // 20 Oct.: two days of rain, a bedroom told « douche, cuisine ou linge », then « la respiration »: neither had happened.
+  const v=fresh(),hum={dew_point:null,incoming_relative:null,glass_temperature:null,condensation_risk:null,message:'',surface:88,mould:true,excess:1,source:'inside',reachable:75};
+  for(const title of ['Chambre P','Salle de bain','Cuisine','Salon']){
+    v.title=title;v.assessment={...v.assessment,reason:'drying_unavailable',level:'calm',action:'attendre',features:{...v.assessment.features,humidity:hum}};
+    assert.deepEqual(facts(v).map(f=>f.title+' · '+plain(f.text)),['Humidité élevée · risque de moisissure','Aération · n’aiderait pas, l’air du dehors n’est pas plus sec']);
+  }
 });

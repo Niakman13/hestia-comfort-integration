@@ -36,6 +36,28 @@ class HumiditySource(unittest.TestCase):
         self.assertFalse(mild.features["humidity"]["mould"])
         self.assertNotIn("dry", mild.needs)
 
+    def test_a_passing_peak_is_not_a_mould_risk(self):
+        # After a shower the walls are damp for a while: the risk is said only once it has lasted an hour.
+        from datetime import datetime, timedelta, timezone
+        start = datetime(2026, 10, 20, 21, tzinfo=timezone.utc)
+        peak = zone(indoor_temperature=20.6, indoor_humidity=88, **OUT)
+        first = assess(peak, now=start)
+        self.assertFalse(first.features["humidity"]["mould"])
+        self.assertEqual(first.features["humidity"]["damp_since"], start.isoformat())
+        later = assess(peak, previous=first, now=start + timedelta(minutes=30))
+        self.assertFalse(later.features["humidity"]["mould"])
+        hour = assess(peak, previous=later, now=start + timedelta(minutes=61))
+        self.assertTrue(hour.features["humidity"]["mould"])
+        # Three hours above the threshold already: no wait.
+        self.assertTrue(assess(peak, now=start, context={"humidity_floor_3h": 80}).features["humidity"]["mould"])
+
+    def test_a_stopped_ventilation_is_worth_starting_below_the_window_threshold(self):
+        # Chambre P, 20 Oct.: 86 %, 1.5 g/m³ above outside, no airing worth it, the room VMC stopped.
+        room = zone(indoor_temperature=20.5, indoor_humidity=86, outdoor_temperature=17.8, outdoor_humidity=91, ventilation=False)
+        self.assertEqual(assess(room).reason, "ventilation_possible")
+        without = zone(indoor_temperature=20.5, indoor_humidity=86, outdoor_temperature=17.8, outdoor_humidity=91)
+        self.assertNotEqual(assess(without).reason, "ventilation_possible")
+
     def test_without_the_outdoor_humidity_the_room_threshold_still_applies(self):
         blind = assess(zone(indoor_humidity=75, outdoor_humidity=None))
         self.assertIn("dry", blind.needs)
