@@ -7,7 +7,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "niak_comfort"))
 from engine.assessment import Opening, Settings, Sun, assess
 from engine.wind import crossing, open_first, side
-from engine.outlook import rain_soon, slot
+from engine.outlook import rain_timing, slot
 from test_engine import zone
 
 NOW = datetime(2026, 10, 14, 15, tzinfo=timezone.utc)
@@ -81,7 +81,7 @@ class WeatherSignals(unittest.TestCase):
                 blocked = assess(zone(**salon), room, outlook={**forecast, "station": missing})
                 self.assertEqual((blocked.action, blocked.reason), ("attendre", "opening_blocked"))
         # The station itself still decides: rain now, strong gusts, rain within the hour or a red vigilance block.
-        for changes, outlook in (({"rain": True}, {}), ({"wind_gust": 60}, {}), ({}, {"rain_in_hours": 0.5}),
+        for changes, outlook in (({"rain": True}, {}), ({"wind_gust": 60}, {}), ({}, {"rain": {"minutes": 10, "precision": "minute"}}),
                                  ({}, {"vigilance": 3}), ({"rain": None}, {})):
             with self.subTest(changes=changes, outlook=outlook):
                 blocked = assess(zone(**{**salon, **changes}), room, outlook={**forecast, **outlook})
@@ -94,13 +94,43 @@ class WeatherSignals(unittest.TestCase):
         self.assertEqual((warm.action, warm.reason), ("attendre", "opening_blocked"))
 
     def test_rain_coming_closes_exposed_openings_only(self):
-        soon = assess(zone(**{"window:a": True}), outlook={"rain_in_hours": 0.5})
-        self.assertEqual((soon.action, soon.reason, soon.rain_soon_minutes), ("fermer", "rain_soon", 30))
-        sheltered = assess(zone(**{"window:a": True}), openings={"a": Opening(sheltered=True)}, outlook={"rain_in_hours": 0.5})
+        radar = {"rain": {"minutes": 10, "precision": "minute"}}
+        soon = assess(zone(**{"window:a": True}), outlook=radar)
+        self.assertEqual((soon.action, soon.reason, soon.rain_soon_minutes), ("fermer", "rain_soon", 10))
+        sheltered = assess(zone(**{"window:a": True}), openings={"a": Opening(sheltered=True)}, outlook=radar)
         self.assertNotEqual(sheltered.reason, "rain_soon")
         far = assess(zone(**{"window:a": True}), outlook={"rain_in_hours": 3})
         self.assertIsNone(far.rain_soon_minutes)
-        self.assertEqual(rain_soon(0.25), 15)
+        self.assertEqual(rain_timing(None, 0.25), (15, False))
+        self.assertEqual(rain_timing({"minutes": 7, "precision": "minute"}), (7, True))
+
+    def test_one_rain_for_open_and_close(self):
+        # 20 Oct., 13 h 50: the hourly forecast put rain « in 0 h » while the station and the radar saw it dry.
+        # The kitchen was told to close before the rain and the open-plan salon to open: never both again.
+        stale = {"rain_in_hours": 0}
+        kitchen = assess(zone(**{"window:a": True}), outlook=stale)
+        self.assertNotEqual(kitchen.reason, "rain_soon")
+        salon = assess(zone(co2=1300), outlook=stale)
+        self.assertEqual(salon.action, "ouvrir")
+        # Without anything measuring the rain here, the hourly forecast still keeps the exposed windows shut…
+        blind = {k: v for k, v in zone(**{"window:a": True}).items() if k != "rain"}
+        self.assertEqual(assess(blind, outlook=stale).reason, "rain_soon")
+        # …and the same rain forbids to open them: closing and opening read the same verdict.
+        shut = assess({k: v for k, v in zone(co2=1300).items() if k != "rain"}, outlook=stale)
+        self.assertNotEqual(shut.action, "ouvrir")
+        self.assertIn("rain_soon", shut.constraints)
+        # A radar rain within twenty minutes: close what is open, do not open what is shut.
+        radar = {"rain": {"minutes": 15, "precision": "minute"}}
+        self.assertEqual(assess(zone(**{"window:a": True}), outlook=radar).reason, "rain_soon")
+        self.assertNotEqual(assess(zone(co2=1300), outlook=radar).action, "ouvrir")
+
+    def test_a_later_rain_only_bounds_the_airing(self):
+        later = assess(zone(indoor_humidity=75, outdoor_humidity=50, outdoor_temperature=12),
+                       outlook={"rain": {"minutes": 40, "precision": "minute"}})
+        self.assertEqual(later.action, "ouvrir")
+        self.assertEqual(later.features["rain_ahead"], {"minutes": 40, "precise": True})
+        span = later.features["ventilation"]["duration_minutes"]
+        self.assertLessEqual(span["max"], 35)
 
     def test_precool_at_night_before_a_hot_day(self):
         readings = zone(indoor_temperature=23, outdoor_temperature=17)

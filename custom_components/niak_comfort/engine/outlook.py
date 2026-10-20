@@ -24,8 +24,22 @@ def slot(hours: list[dict], now: datetime, indoor: float | None, *, hot: bool, c
     return None
 
 
-def rain_soon(hours_until: float | None, limit: float = 1.0) -> float | None:
-    """Minutes before the next rain when it is within `limit` hours, else None."""
-    if hours_until is None or hours_until < 0 or hours_until > limit:
-        return None
-    return round(hours_until * 60)
+# Minutes within which a rain known to the minute (Météo-France's radar) shuts the exposed openings.
+IMMINENT = 20
+# Beyond this, a coming rain changes nothing to the advice of now.
+HORIZON = 120
+
+
+def rain_timing(ahead, hours_until: float | None = None) -> tuple[int | None, bool]:
+    """Minutes before the next rain within the horizon, and whether they are known to the minute.
+
+    `ahead` is Niak Weather's `rain()` (2.6.1); before it, `hours_until` was the index of the first rainy hour."""
+    if isinstance(ahead, dict) and isinstance(ahead.get("minutes"), (int, float)) and not isinstance(ahead["minutes"], bool):
+        minutes, precise = ahead["minutes"], ahead.get("precision") == "minute"
+    elif isinstance(hours_until, (int, float)) and not isinstance(hours_until, bool):
+        minutes, precise = hours_until * 60, False
+    else:
+        return None, False
+    if minutes < 0 or minutes > HORIZON:
+        return None, False
+    return round(minutes), precise

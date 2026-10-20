@@ -9,13 +9,20 @@ from typing import Mapping
 
 from .sources import Reading
 from .wind import DRIVEN_RAIN_GUST, crossing as wind_crossing, open_first, side as wind_side
-from .outlook import rain_soon, slot as next_slot
+from .outlook import IMMINENT, rain_timing, slot as next_slot
 from . import learning
 
 # Points above the humidity threshold that call for a gesture at once; below, only a lasting excess does.
 HUMIDITY_GRACE = 5
+# Water (g/m³) the room must hold above the outdoor air for its humidity to come from inside: below it,
+# the humidity is the weather's, and no airing can lower it.
+INDOOR_SOURCE = 0.5
+# The coldest spot of an outer wall (a corner, a thermal bridge) sits at 70 % of the way from outdoors to
+# indoors (EN ISO 13788's fRsi criterion); mould grows where the air touching it stays above 80 %.
+WALL_FACTOR = 0.7
+MOULD_RH, MOULD_FAST, MOULD_HYSTERESIS = 80.0, 85.0, 3.0
 # Reasons that only say « do not open »: with nothing open, they bring nothing and stay off the banner.
-QUIET_REASONS = ("drying_unavailable", "drying_slow", "opening_blocked", "heat_needed", "cooling_unavailable", "precool_later")
+QUIET_REASONS = ("humid_outdoor", "drying_unavailable", "drying_slow", "opening_blocked", "heat_needed", "cooling_unavailable", "precool_later")
 LEVELS = ("calm", "benefit", "action", "urgent", "neutral")
 ACTIONS = ("ok", "ouvrir", "fermer", "attendre", "unknown")
 
@@ -222,15 +229,27 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     # clearly high, or when it has stayed above the threshold for the last three hours.
     lasting = context.get("humidity_floor_3h")
     lasting = isinstance(lasting, (int, float)) and not isinstance(lasting, bool) and lasting > settings.humidity_high
-    wet = hi is not None and (hi > settings.humidity_high - settings.humidity_hysteresis if "dry" in old
-                              else hi > settings.humidity_high + HUMIDITY_GRACE or (hi > settings.humidity_high and lasting))
+    humid = hi is not None and (hi > settings.humidity_high - settings.humidity_hysteresis if "dry" in old
+                                else hi > settings.humidity_high + HUMIDITY_GRACE or (hi > settings.humidity_high and lasting))
+    ai, ae = absolute_humidity(ti, hi), absolute_humidity(te, he)
+    # Mould: the relative humidity of the air against the coldest spot of the outer walls, not of the room.
+    surface = None
+    if ai is not None and te is not None and te < ti:
+        surface = min(100.0, ai / absolute_humidity(te + WALL_FACTOR * (ti - te), 100) * 100)
+    was_mould = bool(previous and (previous.features.get("humidity") or {}).get("mould"))
+    mould = surface is not None and surface >= MOULD_RH - (MOULD_HYSTERESIS if was_mould else 0) and (lasting or surface >= MOULD_FAST)
+    # Judged on what airing can gain: humidity that comes from inside (shower, cooking, sleep) calls for a gesture;
+    # the weather's own humidity does not, however high. Without the outdoor humidity, as before.
+    excess = ai - ae if ai is not None and ae is not None else None
+    from_inside = excess is None or excess >= INDOOR_SOURCE - (0.3 if "dry" in old else 0)
+    wet = (humid or mould) and from_inside
+    humid_outdoor = (humid or mould) and not from_inside
     # Pre-cooling (template « prérefroidir »): at night, when tomorrow is announced well above the comfort range.
     tomorrow_max = outlook.get("tomorrow_max")
     night = sun is not None and sun.elevation < 0
     precool = (not hot and not cold and not wet and night and ti is not None and isinstance(tomorrow_max, (int, float))
                and tomorrow_max >= settings.maximum + 3 and ti > settings.minimum + 2)
     needs = tuple(k for k, active in (("air", air), ("cool", hot), ("heat", cold), ("dry", wet), ("precool", precool)) if active)
-    ai, ae = absolute_humidity(ti, hi), absolute_humidity(te, he)
     delta = te - ti if te is not None and ti is not None else None
     cool = delta is not None and delta <= -settings.cooling_delta
     dry = ai is not None and ae is not None and ai - ae >= settings.drying_delta
@@ -277,18 +296,25 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     # heating only soften the advice: a confirmed air need still gets a short airing.
     storm = outlook.get("storm") is True
     vigilance = (outlook.get("vigilance") or 0) >= 2  # orange or red, from Niak Weather
-    soon = rain_soon(outlook.get("rain_in_hours")) if rain is not True else None
+    # One rain for the whole home, the same for « open » and for « close »: the station says whether it rains,
+    # the radar when it starts. Only a rain due shortly shuts the exposed openings and keeps them shut: within
+    # twenty minutes when known to the minute, within the hour when only the hourly forecast says it and nothing
+    # measures the rain here. A later rain only bounds the airing.
+    soon, precise = rain_timing(outlook.get("rain"), outlook.get("rain_in_hours")) if rain is not True else (None, False)
+    rain_measured = "rain" in readings and readings["rain"].usable
+    imminent = (soon is not None and not all_sheltered
+                and (soon <= IMMINENT if precise else not rain_measured and soon <= 60))
     # The storm and the orange vigilance are forecasts. When Niak Weather's own station measures the rain
     # and the gusts here, it has the last word: dry, calm and no rain within the hour, they only shorten
     # the airing. Without such a station, or with a red vigilance, the forecast still keeps everything shut.
     station = outlook.get("station") or ()
     measured = ("rain_rate" in station and "wind_gust" in station and value("rain") is False
-                and gust is not None and not windy and soon is None)
+                and gust is not None and not windy and not imminent)
     forecast_only = measured and (outlook.get("vigilance") or 0) < 3
-    constraints = tuple(k for k, active in (("rain", rain is True), ("storm", storm), ("vigilance", vigilance), ("gust", windy),
+    constraints = tuple(k for k, active in (("rain", rain is True), ("rain_soon", imminent), ("storm", storm), ("vigilance", vigilance), ("gust", windy),
                                             ("pollution", pollution is True), ("frost", frost), ("heating_running", heating_running)) if active)
-    hard = [c for c in constraints if c in ("rain", "gust", "pollution") or (c in ("storm", "vigilance") and not forecast_only)]
-    rain_coming = soon is not None and any(d["open"] and rained_on(d["entity_id"]) for d in details)
+    hard = [c for c in constraints if c in ("rain", "rain_soon", "gust", "pollution") or (c in ("storm", "vigilance") and not forecast_only)]
+    rain_coming = imminent and any(d["open"] and rained_on(d["entity_id"]) for d in details)
     soft = [c for c in constraints if c in ("frost", "heating_running") or (c in ("storm", "vigilance") and forecast_only)]
     # A configured protection that does not answer blocks the advice; one never configured does not.
     # Rain still guards an opening when its sensor stops answering. A daily outdoor-air index that is
@@ -350,6 +376,8 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         action, reason = "attendre", "drying_slow"
     elif wet:
         action, reason = "attendre", "drying_unavailable"
+    elif humid_outdoor:
+        action, reason = "ok", "humid_outdoor"
     elif precool:
         action, reason = "attendre", "precool_later"
     elif partial:
@@ -380,8 +408,21 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
                         needs, action, reason, now, ai, ae, air_detail)
     extended["season"] = {**season, "heated": heated}
     extended["drying"] = drying
+    if isinstance(extended.get("humidity"), dict):
+        saturated = absolute_humidity(ti, 100) if ti is not None else None
+        extended["humidity"].update(
+            surface=None if surface is None else round(surface), mould=mould,
+            excess=None if excess is None else round(excess, 1), source="inside" if wet else "outside" if humid_outdoor else None,
+            # Where a full airing would bring the room at best: the outdoor water, warmed to the room's temperature.
+            reachable=None if ae is None or not saturated else round(min(100.0, ae / saturated * 100)))
     if reason == "drying_possible" and drying:
         extended["ventilation"]["duration_minutes"] = {"min": max(5, 5 * round(drying["minutes"] * .75 / 5)), "max": drying["minutes"]}
+    # A later rain bounds the airing: the window is shut five minutes before it.
+    extended["rain_ahead"] = {"minutes": soon, "precise": precise} if soon is not None else None
+    if soon is not None and action == "ouvrir" and soon > IMMINENT:
+        span = extended["ventilation"].get("duration_minutes")
+        if isinstance(span, dict) and span.get("max", 0) > soon - 5:
+            extended["ventilation"]["duration_minutes"] = {"min": min(span["min"], soon - 5), "max": soon - 5}
     # The last 24 hours of the room, widened by the current reading (statistics stop at the last full hour).
     day = context.get("indoor_day_range")
     if (isinstance(day, Mapping) and all(isinstance(day.get(k), (int, float)) and not isinstance(day.get(k), bool) and math.isfinite(day[k]) for k in ("min", "max"))

@@ -87,7 +87,9 @@
           "sun_entering": "Sun coming in",
           "rain_soon": "Rain coming",
           "precool_possible": "Pre-cool at night",
-          "precool_later": "Pre-cool later"
+          "precool_later": "Pre-cool later",
+          "shared_volume": "Shared air with a neighbouring room",
+          "humid_outdoor": "Outdoor humidity"
         }
       },
       "heating_action": {

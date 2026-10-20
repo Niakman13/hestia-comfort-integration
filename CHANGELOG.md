@@ -1,3 +1,24 @@
+## 1.2.0-beta.1 — Préversion : des conseils qui ne se contredisent plus
+
+**En bref**
+- **Une seule pluie pour tout le logement** : plus de « Refermez avant la pluie » dans une pièce et « Aérez » dans la voisine.
+- **Les pièces ouvertes l’une sur l’autre partagent leur air** : un salon ouvert sur sa cuisine partage ses fenêtres et ses conseils.
+- **L’humidité est jugée sur ce qu’aérer peut gagner** : l’humidité du temps n’est plus une alerte, le risque de moisissure sur les murs froids en devient une.
+
+### Nouveautés
+- Réglage « Même air », page La pièce : cochez les pièces sans mur ni porte entre elles. Une fenêtre ouverte dans l’une aère l’autre.
+- Dans un même air, jamais deux gestes contraires : le plus important parle pour les deux pièces (« Laissez ouvert : Salon a besoin d’air »), et la carte logement n’en montre qu’un.
+- Risque de moisissure : Niak estime l’humidité contre le coin le plus froid des murs extérieurs. Au-delà de 80 % qui dure, il conseille d’assécher, même si la pièce semble dans votre plage.
+
+### Améliorations
+- La pluie vient de Niak Weather 2.6.1, à la minute avec la pluie dans l’heure de Météo-France. Une pluie dans les 20 minutes fait refermer et empêche d’ouvrir ; une pluie plus tardive raccourcit l’aération : « Refermez avant 15 h 20 ».
+- Avec une station qui mesure la pluie, la prévision heure par heure ne fait plus refermer : la station dira quand il pleut.
+- Air humide dehors : « Aérer n’y changerait rien : 72 % au mieux », au lieu de « trop humide ». La tuile dit « humide dehors aussi ».
+
+### Corrections
+- « Pluie dans 0 min » alors qu’il ne pleuvait pas.
+- « Lancez la VMC » n’affiche plus « 85 → 85 % seulement ».
+
 ## 1.1.4 — La station avant la prévision
 
 - Quand Niak Weather a une station qui mesure la pluie et les rafales, ce sont ses mesures qui comptent. Sec, vent calme et pas de pluie dans l’heure : malgré un orage prévu ou une vigilance orange, Confort propose « Aérez 5 minutes » si l’air en a besoin.

@@ -7,6 +7,8 @@ import {icon} from '../ui/icons';
 /** The level, said in two or three words: the colour is never the only signal. */
 export const pills:Record<Level,string>={calm:'Tout va bien',benefit:'À saisir',action:'Geste conseillé',urgent:'Attention',neutral:'À vérifier'};
 const hour=(iso:string)=>{const h=new Date(iso).getHours();return h===0?'minuit':h===12?'midi':h+' h';};
+/** « 15 h 20 », to the five minutes: when to shut before a coming rain. */
+const rainClock=(d:Date)=>{const m=Math.floor(d.getMinutes()/5)*5;return d.getHours()+' h'+(m?' '+String(m).padStart(2,'0'):'');};
 const b=(text:string)=>html`<b>${text}</b>`;
 const deg=(v:number|null)=>v===null?'—':number(v)+' °C';
 
@@ -52,7 +54,9 @@ export function advice(v:View):Advice {
           :{title:'Vous pouvez refermer',line,disk:'shut',cap:`ouvert depuis ${Math.round(opened_for)} min`};}
       return {title:'Aération en cours',line,disk:'open',cap:span?`${span} au total`:undefined};
     }
-    return {title:span?`${verb} ${span}`:fallback,line,disk:'open',cap:first};
+    // A later rain bounds the airing: the window is shut five minutes before it.
+    const rain=a.features?.rain_ahead,shut=rain&&rain.minutes<=(duration?.max??15)+15?rainClock(new Date(new Date(v.computed_at).getTime()+(rain.minutes-5)*60000)):null;
+    return {title:span?`${verb} ${span}`:fallback,line,disk:'open',cap:shut?`Refermez avant ${shut}`:first};
   };
   const constraint=a.constraints.find(c=>c!=='heating_running'&&c!=='frost')??a.constraints[0];
   // A silent sensor is not advice: the banner says what Niak cannot see, the tiles show which ones.
@@ -69,9 +73,9 @@ export function advice(v:View):Advice {
     case 'within_comfort': return {title:'Rien à faire',line:html`${deg(ti)}, ${b('dans votre plage')}`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
     case 'rain_open_windows': return {title:'Fermez, il pleut',line:html`La pluie ${b('entre par les ouvrants exposés')}`,disk:'rain'};
     case 'gust_open_windows': return {title:'Fermez, vent fort',line:html`Les rafales ${b('dépassent votre seuil')}`,disk:'shut'};
-    case 'rain_soon': return {title:'Refermez avant la pluie',line:html`Pluie ${b(a.rain_soon_minutes!=null&&a.rain_soon_minutes<60?`dans ${a.rain_soon_minutes} min`:'dans l’heure')}`,disk:'rain'};
+    case 'rain_soon': return {title:'Refermez avant la pluie',line:html`Pluie ${b(rainWhen(a))}`,disk:'rain'};
     case 'opening_blocked': {
-      const why=constraint?constraintLabels[constraint]??constraint:'Contrainte extérieure';
+      const why=constraint==='rain_soon'?`Pluie ${rainWhen(a)}`:constraint?constraintLabels[constraint]??constraint:'Contrainte extérieure';
       return {title:a.action==='fermer'?'Refermez':'Gardez fermé',line:html`${b(why)}${a.needs.length?' : le besoin attendra':''}`,disk:a.action==='fermer'?'shut':'window'};
     }
     case 'short_air_change': return {title:a.action==='ok'?'Aération en cours':'Aérez 5 minutes',line:html`Air à renouveler, ${b(shortWhy(a.constraints))}`,disk:'open',cap:a.action==='ok'?undefined:'Puis refermez'};
@@ -82,17 +86,30 @@ export function advice(v:View):Advice {
     case 'cooling_unavailable':
       return slot&&slot.kind==='open'?{title:`Ouvrez vers ${hour(slot.time)}`,line:html`Il fera ${b(number(slot.temperature)+' °C')} dehors`,disk:'moon',cap:slot.wind_bearing!=null?windFrom(slot.wind_bearing):undefined}
         :{title:'Gardez fermé',line:html`Il ne fait ${b('pas plus frais dehors')} pour l’instant`,disk:'clock'};
+    case 'shared_volume': {
+      // Rooms open onto each other share one air: this one follows the room whose reason weighs more.
+      const vol=a.features?.volume,lead=vol?.lead??'La pièce voisine',why=vol?SHARED[vol.reason]??'le demande':'le demande';
+      const line=html`${b(lead)} ${why}`;
+      return a.action==='fermer'?{title:'Refermez',line,disk:'shut',cap:'Même air'}
+        :a.action==='ok'?{title:'Laissez ouvert',line,disk:'open',cap:'Même air'}
+        :{title:'Aérez',line,disk:'open',cap:first??'Même air'};
+    }
     case 'drying_possible': return airing('Aérez','Aérez pour assécher',water);
     case 'drying_later': {const later=drying?.later;
       return later?{title:`Aérez vers ${hour(later.time)}`,line:html`L’air sera plus sec : ${b('environ '+Math.round(later.after)+' %')} après ${later.minutes} min`,disk:'clock'}
         :{title:'Aérez plus tard',line:water,disk:'clock'};}
     case 'drying_slow': {
       const vmc=a.features?.air?.ventilation;
-      const line=drying?html`Aérer ici : ${b(Math.round(drying.now)+' → '+Math.round(drying.after)+' %')} seulement`:water;
+      const line=drying?slowWindow(drying):water;
       return vmc&&vmc.on!==true?{title:'Lancez la VMC',line,disk:'vmc',cap:'Aérer assèche peu ici'}
         :{title:vmc?'Humidité à surveiller':'Aérer assèche peu ici',line,disk:'clock'};
     }
-    case 'ventilation_possible': return {title:'Lancez la VMC',line:drying?html`Aérer ici : ${b(Math.round(drying.now)+' → '+Math.round(drying.after)+' %')} seulement`:water,disk:'vmc',cap:'Elle assèchera mieux'};
+    case 'ventilation_possible': return {title:'Lancez la VMC',line:html`${b(number(hi)+' %')} d’humidité, la fenêtre la baisse à peine`,disk:'vmc',cap:'Elle assèchera mieux'};
+    case 'humid_outdoor': {
+      // The weather's own humidity: no gesture can lower it, the banner only says so.
+      const hum=a.features?.humidity,best=hum?.reachable;
+      return {title:'Air humide dehors',line:best!=null?html`Aérer ${b('n’y changerait rien')} : ${best} % au mieux`:html`Aérer ${b('n’y changerait rien')}`,disk:'clock',cap:hum?.mould?'Murs froids humides':undefined};
+    }
     case 'drying_unavailable': return {title:'Humidité à surveiller',line:incoming!=null?water:html`L’air du dehors ${b('n’est pas plus sec')}`,disk:'clock',cap:'Aérer n’aiderait pas'};
     case 'exchange_harmful': return {title:'Refermez',line:html`L’air du dehors ${b(a.temperature_delta!==null&&a.temperature_delta>0?'réchauffe la pièce':'refroidit la pièce')}`,disk:'shut'};
     case 'rehumidification_risk': return {title:'Refermez',line:incoming!=null?water:html`L’air du dehors ${b('est plus humide')}`,disk:'shut'};
@@ -111,6 +128,20 @@ export function advice(v:View):Advice {
     }
   }
   return {title:pills[a.level],line:'',disk:a.action==='ouvrir'?'open':a.action==='fermer'?'shut':'window'};
+}
+/** A window that renews little air: what it would really gain, never « 85 → 85 % ». */
+const slowWindow=(d:{gain:number}):TemplateResult=>{const g=Math.round(d.gain);
+  return g<1?html`Aérer ${b('ne la baisserait presque pas')}`:html`Aérer ne la baisserait ${b(`que de ${g} point${g>1?'s':''}`)}`;};
+/** Why the room that leads a shared air asks for its gesture, after its name. */
+const SHARED:Record<string,string>={air_needed:'a besoin d’air',short_air_change:'a besoin d’air',cooling_possible:'se rafraîchit',
+  drying_possible:'s’assèche',precool_possible:'stocke le frais',rain_soon:'attend la pluie',rain_open_windows:'prend la pluie',
+  gust_open_windows:'prend le vent',opening_blocked:'doit rester fermé',exchange_harmful:'se dérègle',rehumidification_risk:'reprend l’humidité',
+  heat_needed:'est trop fraîche',sun_entering:'prend le soleil'};
+/** When the rain starts: to the minute from the radar, only « within the hour » from the hourly forecast. */
+function rainWhen(a:View['assessment']):string {
+  const m=a.rain_soon_minutes,precise=a.features?.rain_ahead?.precise;
+  if(m==null||!precise)return 'annoncée dans l’heure';
+  return m<=2?'imminente':`dans ${m} min`;
 }
 /** Outdoor sources the advice could not check: never configured (« non suivi ») or configured but silent (« indisponible »). */
 const OUTSIDE:Record<string,[string,boolean]>={rain:['pluie',true],pollution:['air extérieur',false],outdoor_temperature:['température dehors',true],outdoor_humidity:['humidité dehors',true],wind_gust:['rafales',true]};
@@ -210,8 +241,8 @@ const gone=(r?:{quality:string})=>r?.quality==='stale'?'pas de nouvelle mesure':
 const clock=(x?:string|null)=>{const d=x?new Date(x):null;return d&&!isNaN(+d)?d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}).replace(':',' h '):null;};
 export function tiles(v:View,config:Config):Tile[] {
   const o=v.observations,a=v.assessment,mods=new Set(config.modules??[]),list:Tile[]=[],air=a.features?.air;
-  if(mods.has('humidity')&&o.indoor_humidity){const h=numeric(o.indoor_humidity),wet=a.needs.includes('dry');
-    list.push({ic:'drop',label:'Humidité',value:number(h),unit:'%',note:h===null?gone(o.indoor_humidity):wet?'trop humide':'dans votre plage',level:wet?'watch':'calm',out:wet});}
+  if(mods.has('humidity')&&o.indoor_humidity){const h=numeric(o.indoor_humidity),wet=a.needs.includes('dry'),outside=a.features?.humidity?.source==='outside';
+    list.push({ic:'drop',label:'Humidité',value:number(h),unit:'%',note:h===null?gone(o.indoor_humidity):wet?'trop humide':outside?'humide dehors aussi':'dans votre plage',level:wet?'watch':'calm',out:wet});}
   if(mods.has('air')&&o.co2){const c=numeric(o.co2),high=air?.co2_status==='high';
     list.push({ic:'air',label:'CO₂',value:number(c),unit:'ppm',note:c===null?gone(o.co2):high?'à renouveler':'dans votre plage',level:high?(a.level==='urgent'?'urgent':'watch'):'calm',out:high});}
   if(mods.has('air'))for(const [key,ic,label,status] of [['pm25','pm','Particules',air?.pm25_status],['voc','flask','COV',air?.voc_status]] as const){

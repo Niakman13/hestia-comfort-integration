@@ -51,8 +51,12 @@ export interface Features {
  presence?:{state:'occupied'|'empty'|'unknown'|'not_configured';message:string};
  air?:{co2_status?:'high'|'ok'|'unknown'|'not_configured';pm25_status:'high'|'ok'|'unknown'|'not_configured';voc_status:'high'|'ok'|'uninterpreted'|'unknown'|'not_configured';voc_unit:string|null;purifier:{on:boolean|null;speed:number|null};pm25_treated?:boolean;ventilation?:{on:boolean|null;boost?:boolean}|null;coverage:string;message:string};
  ventilation?:{opened_minutes:number|null;duration_minutes:{min:number;max:number}|null;message:string;capacity:number|null};
- humidity?:{dew_point:number|null;incoming_relative:number|null;glass_temperature:number|null;condensation_risk:boolean|null;message:string};
+ humidity?:{dew_point:number|null;incoming_relative:number|null;glass_temperature:number|null;condensation_risk:boolean|null;message:string;
+  /** Air against the coldest spot of the outer walls (%), mould risk, water above outdoors (g/m³), where it comes from, best reachable by airing (%). */
+  surface?:number|null;mould?:boolean;excess?:number|null;source?:'inside'|'outside'|null;reachable?:number|null};
  /** What airing would really bring, from the room's past openings: humidity now and after, lasting gain in points. */
+ rain_ahead?:{minutes:number;precise:boolean}|null;
+ volume?:{lead:string;reason:string;action:string};
  drying?:{minutes:number;now:number;after:number;gain:number;tau:number;openings:number;later:{minutes:number;now:number;after:number;gain:number;time:string}|null}|null;
  trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string};
  season?:{known:boolean;weight:number|null;outdoor_mean:number|null;minimum:number;maximum:number;heated:boolean};
@@ -73,7 +77,7 @@ export interface Opening {
 }
 export interface View {
   version:1; entry_id:string; area_id:string|null; title:string; computed_at:string;
-  assessment:Assessment; observations:Record<string,Reading>; names?:Record<string,string>; /** Home Assistant (or the room) has just started: silent sensors are still loading. */ starting?:boolean;
+  assessment:Assessment; observations:Record<string,Reading>; names?:Record<string,string>; /** Rooms open onto this one: one air, shared openings. */ volume?:{entry_id:string;title:string}[]; /** Home Assistant (or the room) has just started: silent sensors are still loading. */ starting?:boolean;
 }
 export interface ViewEvent {version:1; view?:View; reload?:boolean; unavailable?:boolean}
 export type Unsubscribe = () => Promise<void>|void;

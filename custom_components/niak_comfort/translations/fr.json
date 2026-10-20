@@ -87,7 +87,9 @@
           "sun_entering": "Soleil qui entre",
           "rain_soon": "Pluie imminente",
           "precool_possible": "Pré-rafraîchir la nuit",
-          "precool_later": "Pré-rafraîchir plus tard"
+          "precool_later": "Pré-rafraîchir plus tard",
+          "shared_volume": "Même air qu’une pièce voisine",
+          "humid_outdoor": "Humidité venue du dehors"
         }
       },
       "heating_action": {
