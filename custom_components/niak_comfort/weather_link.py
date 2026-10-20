@@ -93,6 +93,8 @@ def outlook(hass, entry_id):
     station = link.station(entry_id)
     return {"station": tuple(sorted(station["sensors"])) if station else (),"storm": {"on": True, "off": False}.get(storm.state) if storm else None,
             "vigilance": VIGILANCE.get(vigilance.state) if vigilance else None,
-            "rain_in_hours": _number(hass, entity(hass, entry_id, "next_rain")),
+            # Niak Weather 2.6.1 gives the next rain to the minute; before it, `next_rain` was an hourly slot index.
+            "rain": link.rain(entry_id) if hasattr(link, "rain") else None,
+            "rain_in_hours": None if hasattr(link, "rain") else _number(hass, entity(hass, entry_id, "next_rain")),
             "tomorrow_max": _number(hass, entity(hass, entry_id, "maximale_demain")),
             "hours": link.hourly(entry_id)}

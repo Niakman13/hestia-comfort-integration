@@ -98,13 +98,24 @@ export class NiakComfortHomeCard extends LitElement {
   /** Rooms that ask for something, the most urgent first. */
   private asking(levels=['urgent','action']):View[]{
     const rank:Record<string,number>={urgent:0,action:1,benefit:2};
-    return this.rooms.filter(r=>levels.includes(r.assessment.level)).sort((a,b)=>rank[a.assessment.level]-rank[b.assessment.level]);
+    // A room that only follows its shared air comes after the one it follows.
+    const follows=(r:View)=>r.assessment.reason==='shared_volume'?1:0;
+    return this.rooms.filter(r=>levels.includes(r.assessment.level)).sort((a,b)=>rank[a.assessment.level]-rank[b.assessment.level]||follows(a)-follows(b));
   }
   private slides(h:Home,calmAdvice:Advice):Slide[]{
     const blocks=this.config?.banner_blocks??['rooms','house'];
     const asking=blocks.includes('rooms')?this.asking(['urgent','action','benefit']):[];
-    const out:Slide[]=asking.map(r=>{const ad=advice(r),cool=r.assessment.needs.includes('cool')&&h.start_with===r.title;
-      return {...ad,level:r.assessment.level as Level,pill:r.title,line:cool&&h.start_floor?h2`${ad.line} · <b>${h.start_floor.name}</b> d’abord`:ad.line};});
+    // Rooms open onto each other share one air: one slide for them, named after all of them.
+    const out:Slide[]=[],shared=new Map<string,{slide:Slide;action:string}>();
+    for(const r of asking){
+      const key=r.volume?.length?[r.entry_id,...r.volume.map(p=>p.entry_id)].sort().join('|'):null,a=r.assessment;
+      const known=key?shared.get(key):undefined;
+      if(known&&(a.reason==='shared_volume'||a.action===known.action)){known.slide.pill+=' · '+r.title;continue;}
+      const ad=advice(r),cool=a.needs.includes('cool')&&h.start_with===r.title;
+      const slide:Slide={...ad,level:a.level as Level,pill:r.title,line:cool&&h.start_floor?h2`${ad.line} · <b>${h.start_floor.name}</b> d’abord`:ad.line};
+      out.push(slide);
+      if(key&&!known)shared.set(key,{slide,action:a.action});
+    }
     if(blocks.includes('house')&&h.ventilation&&!h.ventilation.engaged)out.push({level:'benefit',pill:'Logement',title:h.ventilation.kind==='cross'?'Faites traverser l’air':'Ouvrez en bas et en haut',
       line:h2`${h.ventilation.openings.map(o=>o.name).join(' + ')}`,disk:'open'});
     // A sensor that stops answering is a matter for the Niak panel, not an advice for the home.

@@ -15,6 +15,7 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN, LEARNING_REFRESH_SECONDS, OPEN_DEBOUNCE_SECONDS, SEASON_REFRESH_SECONDS, SOURCES, STARTUP_GRACE_SECONDS, VIEW_VERSION
 from .engine.assessment import Opening, Settings, Sun, assess
 from .engine import learning
+from .engine.volume import arbitrate
 from .engine.sources import normalize, Reading
 from .configuration import DATA_CONFIG
 from .exterior import exterior_reading
@@ -51,10 +52,34 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self._learning_due = None
         self._learning_failed = False
         self._learning_store = Store(hass, 1, f"{DOMAIN}.learning.{entry.entry_id}")
+        # Rooms open onto this one (no wall between them): their openings are this room's too.
+        self.partners = self._partners()
+        self.windows = list(dict.fromkeys([*self.config.get("windows", []), *(e for p in self.partners for e in p["windows"])]))
+        # This room's advice as computed alone, before the volume settles opposite gestures.
+        self.own = None
+        self._own_gesture = None
+
+    def _partners(self):
+        if not self.home_configuration or not hasattr(self.home_configuration, "volume"):
+            return []
+        found = []
+        for entry_id in self.home_configuration.volume(self.entry_id):
+            entry = self.hass.config_entries.async_get_entry(entry_id)
+            if entry is None:
+                continue
+            config = {**entry.data, **entry.options}
+            sheltered = config.get("rain_exposed") is False
+            declared = config.get("openings", {})
+            # Only what the weather needs: the partner room keeps its covers to itself.
+            found.append({"entry_id": entry_id, "title": config.get("name") or entry.title, "windows": list(config.get("windows", [])),
+                          "openings": {e: Opening(**{"sheltered": sheltered, **{k: v for k, v in declared.get(e, {}).items()
+                                                                               if k in ("exposure", "kind", "sheltered")}})
+                                       for e in config.get("windows", [])}})
+        return found
 
     async def async_start(self):
         self.config_entry.async_on_unload(self.async_stopped)
-        ids = set(self.config.get("sources", {}).values()) | set(self.config.get("windows", [])) | set(self.config.get("presence", []))
+        ids = set(self.config.get("sources", {}).values()) | set(self.windows) | set(self.config.get("presence", []))
         for meta in self.config.get("openings", {}).values():
             ids.update(meta[k] for k in ("cover_entity", "auto_entity", "override_entity") if meta.get(k))
         # Covers driven by Adaptive Cover Pro: its signals are read without being chosen by hand.
@@ -83,7 +108,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         old, new = event.data.get("old_state"), event.data.get("new_state")
         before, after = old.state if old else None, new.state if new else None
         now = dt_util.utcnow()
-        if entity_id in self.config.get("windows", []):
+        if entity_id in self.windows:
             if after != "on" or before not in ("on", "off"):
                 self.opened_since.pop(entity_id, None)
             elif before == "off":
@@ -128,7 +153,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 "heated": self.config.get("heated", True), "outdoor_mean_7d": self.season[1],
                 "indoor_day_range": self.day_range, "drying_model": self.drying_model,
                 "humidity_floor_3h": self.humidity_floor,
-                "opening_minutes": {e: minutes(e, self.opened_since, "on") for e in self.config.get("windows", [])},
+                "opening_minutes": {e: minutes(e, self.opened_since, "on") for e in self.windows},
                 "presence_off_minutes": {e: minutes(e, self.absent_since, "off") for e in self.config.get("presence", [])},
                 **{k: list(v) for k, v in self.histories.items()}}
 
@@ -149,7 +174,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
         declared = self.config.get("openings", {})
         # Older rooms declared rain shelter for the whole room instead of per opening.
         sheltered = self.config.get("rain_exposed") is False
-        openings = {e: Opening(**{"sheltered": sheltered, **declared.get(e, {})}) for e in windows}
+        openings = {e: o for p in self.partners for e, o in p["openings"].items()}
+        openings.update({e: Opening(**{"sheltered": sheltered, **declared.get(e, {})}) for e in windows})
         drivers = getattr(self, "drivers", None)
         if drivers is None:
             drivers = self.drivers = self._drivers()
@@ -163,7 +189,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
                                       height=o.height if o.height is not None else known["height"])
                 if known["reason"]:
                     readings[f"shutter_reason:{e}"] = Reading(known["reason"], "valid", roles.get("target"), now.isoformat())
-        for entity_id in windows:
+        for entity_id in self.windows:
             readings[f"window:{entity_id}"] = self._reading(entity_id, "window", now)
         for entity_id in self.config.get("presence", []):
             state = self.hass.states.get(entity_id)
@@ -223,13 +249,34 @@ class ComfortCoordinator(DataUpdateCoordinator):
         advice_readings = {k: (replace(r, value=False, detail="debounce") if k.startswith("window:") and self._bouncing(k[7:], r, now) else r)
                            for k, r in readings.items()}
         self.previous = assess(advice_readings, self.settings, self.previous, openings, self._sun(), outlook, now, context=self._context(now, readings))
+        assessment = self._settle(self.previous.to_dict())
         return {"version": VIEW_VERSION, "entry_id": self.entry_id,
                 "area_id": self.config.get("area_id"), "title": self.config.get("name"),
                 "comfort_minimum": self.settings.minimum,
-                "computed_at": now.isoformat(), "assessment": self.previous.to_dict(),
+                "computed_at": now.isoformat(), "assessment": assessment,
+                "volume": [{"entry_id": p["entry_id"], "title": p["title"]} for p in self.partners],
                 "observations": {k: asdict(v) for k, v in readings.items()},
-                "names": {e: (state.name if (state := self.hass.states.get(e)) else e) for e in windows},
+                "names": {e: (state.name if (state := self.hass.states.get(e)) else e) for e in self.windows},
                 "starting": (now - self.started).total_seconds() < STARTUP_GRACE_SECONDS}
+
+    def _settle(self, own):
+        """One gesture per shared air: this room follows a partner whose reason outweighs its own."""
+        self.own = own
+        gesture = (own.get("action"), own.get("reason"))
+        if gesture != self._own_gesture and self._own_gesture is not None:
+            # The partners settle against this room's new advice at once, not at their next refresh.
+            for partner in self.partners:
+                entry = self.hass.config_entries.async_get_entry(partner["entry_id"])
+                if (coordinator := getattr(entry, "runtime_data", None)) is not None:
+                    self.hass.async_create_task(coordinator.async_request_refresh())
+        self._own_gesture = gesture
+        others = []
+        for partner in self.partners:
+            entry = self.hass.config_entries.async_get_entry(partner["entry_id"])
+            coordinator = getattr(entry, "runtime_data", None)
+            if coordinator is not None and getattr(coordinator, "own", None):
+                others.append((partner["title"], coordinator.own))
+        return arbitrate(own, others)
 
     def _outdoor_entity(self):
         return self._source_entity("outdoor_temperature")
@@ -290,7 +337,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
         episodes = stored.get("episodes") if isinstance(stored.get("episodes"), list) else []
         keys = ("indoor_temperature", "indoor_humidity", "outdoor_temperature", "outdoor_humidity")
         sources = {k: self._source_entity(k) for k in keys}
-        windows = self.config.get("windows", [])
+        # The partner rooms' windows air this room too: their openings teach it as well.
+        windows = self.windows
         if windows and all(sources.values()) and "recorder" in self.hass.config.components:
             try:
                 from homeassistant.components.recorder import get_instance, history

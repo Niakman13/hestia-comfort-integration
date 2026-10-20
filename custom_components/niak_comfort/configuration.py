@@ -188,6 +188,13 @@ class Configuration:
         heated = payload.get("heated", True)
         if not isinstance(heated, bool):
             raise ValueError("« Pièce chauffée » doit être oui ou non.")
+        # Rooms with no wall between them (a salon open onto its kitchen) share one air.
+        open_to = payload.get("open_to", [])
+        known = {e.entry_id for e in self.entries()}
+        if not isinstance(open_to, list) or any(not isinstance(e, str) for e in open_to):
+            raise ValueError("Pièces ouvertes l’une sur l’autre invalides.")
+        # A room removed since is simply forgotten.
+        open_to = [e for e in open_to if e in known]
         legacy_sheltered = payload.get("rain_exposed") is False
         openings = payload.get("openings", {})
         if not isinstance(openings, dict):
@@ -248,7 +255,7 @@ class Configuration:
         cleaned = {"name": name.strip(), "area_id": area_id, "floor_id": floor_id, "sources": cleaned_sources,
                    "windows": list(dict.fromkeys(windows)), "openings": cleaned_openings, "settings": settings,
                    "presence": list(dict.fromkeys(presence)), "evolution": cleaned_evolution, "use_home": not legacy,
-                   "air_reference_version": AIR_REFERENCE_VERSION, "heated": heated}
+                   "air_reference_version": AIR_REFERENCE_VERSION, "heated": heated, "open_to": list(dict.fromkeys(open_to))}
         return cleaned, warnings
 
     @staticmethod
@@ -283,12 +290,16 @@ class Configuration:
                 entry = self.hass.config_entries.async_get_entry(entry_id)
                 if not entry or entry.domain != DOMAIN or entry.data.get("home"):
                     raise ValueError("Cette pièce Niak Confort n’existe plus.")
+                cleaned["open_to"] = [e for e in cleaned["open_to"] if e != entry_id]
+                before = set(self.volume(entry_id))
                 # Preserve unknown future settings only at the top level; explicit sources
                 # and windows replace their prior selections, including deliberate clears.
                 options = {**entry.data, **entry.options, **cleaned}
                 options.pop("rain_exposed", None)
                 self.hass.config_entries.async_update_entry(entry, title=cleaned["name"], options=options,
                                                             unique_id=unique_id or entry.unique_id)
+                # The rooms that join or leave this one's air are recomputed with it.
+                await self._reload_rooms((before | set(self.volume(entry_id))) - {entry_id})
             else:
                 result = await self.hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"}, data={"panel_config": cleaned, "acknowledged": acknowledged or []})
                 if result["type"] != "create_entry":
@@ -303,8 +314,28 @@ class Configuration:
             entry = self.hass.config_entries.async_get_entry(entry_id)
             if not entry or entry.domain != DOMAIN or entry.data.get("home"):
                 raise ValueError("Cette pièce Niak Confort n’existe plus.")
+            partners = set(self.volume(entry_id))
             await self.hass.config_entries.async_remove(entry_id)
+            await self._reload_rooms(partners)
             return self.snapshot()
+
+    def volume(self, entry_id):
+        """The other rooms sharing this room's air: « open onto » is mutual and passes from room to room."""
+        links = {e.entry_id: set({**e.data, **e.options}.get("open_to", [])) for e in self.entries()}
+        group, frontier = {entry_id}, [entry_id]
+        while frontier:
+            current = frontier.pop()
+            for other in links.get(current, set()) | {k for k, v in links.items() if current in v}:
+                if other in links and other not in group:
+                    group.add(other)
+                    frontier.append(other)
+        return sorted(group - {entry_id})
+
+    async def _reload_rooms(self, entry_ids):
+        for entry_id in sorted(entry_ids):
+            entry = self.hass.config_entries.async_get_entry(entry_id)
+            if entry and entry.state.value == "loaded":
+                await self.hass.config_entries.async_reload(entry_id)
 
     def uses_home(self, config):
         if self.home.get("configured") or config.get("use_home") is True:

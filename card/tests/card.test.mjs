@@ -189,7 +189,19 @@ test('the drying advice speaks of what this room really gains, how long, and whe
   v.assessment={...v.assessment,reason:'drying_later',action:'attendre'};
   a=advice(v);assert.match(a.title,/^Aérez vers /);assert.match(plain(a.line),/environ 62 % après 35 min/);
   v.assessment={...v.assessment,reason:'ventilation_possible',level:'action',features:{...v.assessment.features,drying:{...drying,after:74,gain:2},air:{...(v.assessment.features?.air??{}),ventilation:{on:false,boost:false}}}};
-  a=advice(v);assert.equal(a.title,'Lancez la VMC');assert.match(plain(a.line),/76 → 74 %/);
+  // Never the losing remedy's numbers under « Lancez la VMC » (20 Oct.: « 85 → 85 % seulement »).
+  a=advice(v);assert.equal(a.title,'Lancez la VMC');assert.match(plain(a.line),/la fenêtre la baisse à peine/);assert.doesNotMatch(plain(a.line),/→/);
+});
+test('the weather’s own humidity, a shared air and a coming rain are said plainly',()=>{
+  const v=fresh();
+  v.assessment={...v.assessment,reason:'humid_outdoor',action:'ok',level:'calm',features:{...v.assessment.features,humidity:{dew_point:null,incoming_relative:null,glass_temperature:null,condensation_risk:null,message:'',surface:78,mould:false,excess:0.1,source:'outside',reachable:72}}};
+  let a=advice(v);assert.equal(a.title,'Air humide dehors');assert.match(plain(a.line),/n’y changerait rien : 72 % au mieux/);
+  v.assessment={...v.assessment,reason:'shared_volume',action:'ok',level:'action',features:{...v.assessment.features,volume:{lead:'Salon',reason:'air_needed',action:'ok'}}};
+  a=advice(v);assert.equal(a.title,'Laissez ouvert');assert.match(plain(a.line),/Salon a besoin d’air/);
+  v.assessment={...v.assessment,reason:'rain_soon',action:'fermer',rain_soon_minutes:12,features:{...v.assessment.features,rain_ahead:{minutes:12,precise:true}}};
+  assert.match(plain(advice(v).line),/Pluie dans 12 min/);
+  v.assessment.features.rain_ahead={minutes:0,precise:false};v.assessment.rain_soon_minutes=0;
+  assert.match(plain(advice(v).line),/Pluie annoncée dans l’heure/);assert.doesNotMatch(plain(advice(v).line),/0 min/);
 });
 test('a « keep closed » that brings nothing leaves the banner calm',()=>{
   const v=fresh();
