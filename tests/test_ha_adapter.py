@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from datetime import timedelta
 from homeassistant.util import dt as dt_util
 
@@ -85,6 +85,24 @@ class AdapterTests(AdapterFixture):
         coordinator.opened_since["binary_sensor.window"] = dt_util.utcnow() - timedelta(seconds=45)
         data = await coordinator._async_update_data()
         self.assertTrue(data["assessment"]["openings"][0]["open"])
+
+    async def test_an_opening_that_follows_the_advice_counts_at_once(self):
+        # 20 Oct.: « Aérez 4 à 11 min », the salon door opened, and the banner waited 30 s before « Aération en cours ».
+        from types import SimpleNamespace
+        coordinator = ComfortCoordinator(self.hass, self.entry)
+        coordinator.data = {"assessment": {"action": "ouvrir"}}
+        self.hass.states.async_set("binary_sensor.window", "on")
+        event = SimpleNamespace(data={"entity_id": "binary_sensor.window", "old_state": SimpleNamespace(state="off"),
+                                      "new_state": SimpleNamespace(state="on", attributes={})})
+        with patch.object(coordinator, "async_request_refresh", AsyncMock()):
+            await coordinator._changed(event)
+        data = await coordinator._async_update_data()
+        self.assertTrue(data["assessment"]["openings"][0]["open"])
+        # Closed again, the next opening without advice waits for the bounce delay as before.
+        event.data.update(old_state=SimpleNamespace(state="on"), new_state=SimpleNamespace(state="off", attributes={}))
+        with patch.object(coordinator, "async_request_refresh", AsyncMock()), patch("custom_components.niak_comfort.coordinator.async_call_later", lambda *a: (lambda: None)):
+            await coordinator._changed(event)
+        self.assertNotIn("binary_sensor.window", coordinator.followed)
 
     async def test_past_openings_are_learned_and_remembered(self):
         from homeassistant.core import State
