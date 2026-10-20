@@ -1,3 +1,11 @@
+## 1.2.5-beta.8 — Préversion : le panneau et les cartes à jour
+
+**En bref**
+- **Le panneau Niak et les cartes s’affichent enfin dans leur dernière version.**
+
+### Corrections
+- Depuis la 1.2.0-beta.1, le panneau et les cartes gardaient le numéro 1.1.4 : le navigateur et l’application mobile continuaient d’afficher leur ancienne version en mémoire. Le numéro suit maintenant chaque mise à jour.
+
 ## 1.2.5-beta.7 — Préversion : l’air appris, la boucle de retour et les questions
 
 **En bref**

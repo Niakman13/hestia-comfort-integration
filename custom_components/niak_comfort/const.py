@@ -1,6 +1,11 @@
 """Stable keys for the first observation-only alpha."""
+import json
+from pathlib import Path
+
 DOMAIN = "niak_comfort"
-VERSION = "1.1.4"
+# Read from the manifest: the panel and the card are cached by their version, so a forgotten number would keep
+# serving the old ones (stuck at 1.1.4 from 1.2.0-beta.1 to 1.2.5-beta.7).
+VERSION = json.loads((Path(__file__).parent / "manifest.json").read_text(encoding="utf-8"))["version"]
 VIEW_VERSION = 1
 # A contact open for less than this is a bounce: shown at once, but advice waits for a real opening.
 OPEN_DEBOUNCE_SECONDS = 30

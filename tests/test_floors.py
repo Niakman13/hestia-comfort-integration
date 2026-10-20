@@ -122,3 +122,4 @@ class FloorRegistryTests(AdapterFixture):
             await service.save({**payload, 'floor_id': None}, service.revision(), self.entry.entry_id)
             self.assertIsNone(self.entry.options['floor_id'])
             self.assertIsNone(room_floor(self.hass, dict(self.entry.options)))
+
