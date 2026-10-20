@@ -21,6 +21,11 @@ INDOOR_SOURCE = 0.5
 # indoors (EN ISO 13788's fRsi criterion); mould grows where the air touching it stays above 80 %.
 WALL_FACTOR = 0.7
 MOULD_RH, MOULD_FAST, MOULD_HYSTERESIS = 80.0, 85.0, 3.0
+# A peak after a shower or a meal falls by itself: damp walls are said only once it has lasted this long.
+MOULD_MINUTES = 60
+# Water (g/m³) above the outdoor air from which a stopped ventilation is worth starting: it renews the air
+# without a window, so it helps where opening would bring too little to be asked.
+VENTILATION_DELTA = 0.8
 # Humidity points an already open window must still take off to be worth keeping open.
 OPEN_GAIN = 1.0
 # Reasons that only say « do not open »: with nothing open, they bring nothing and stay off the banner.
@@ -248,8 +253,13 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     surface = None
     if ai is not None and te is not None and te < hti:
         surface = min(100.0, ai / absolute_humidity(te + WALL_FACTOR * (hti - te), 100) * 100)
-    was_mould = bool(previous and (previous.features.get("humidity") or {}).get("mould"))
-    mould = surface is not None and surface >= MOULD_RH - (MOULD_HYSTERESIS if was_mould else 0) and (lasting or surface >= MOULD_FAST)
+    previous_humidity = (previous.features.get("humidity") or {}) if previous else {}
+    damp = (surface is not None and surface >= MOULD_RH - (MOULD_HYSTERESIS if previous_humidity.get("damp_since") else 0)
+            and (lasting or surface >= MOULD_FAST))
+    damp_since = (previous_humidity.get("damp_since") or (now.isoformat() if now else None)) if damp else None
+    # Already lasting for three hours, or damp for an hour now: a passing peak is not a mould risk.
+    mould = damp and (now is None or lasting or (damp_since is not None
+                                                  and (now - datetime.fromisoformat(damp_since)).total_seconds() >= MOULD_MINUTES * 60))
     # Judged on what airing can gain: humidity that comes from inside (shower, cooking, sleep) calls for a gesture;
     # the weather's own humidity does not, however high. Without the outdoor humidity, as before.
     excess = ai - ae if ai is not None and ae is not None else None
@@ -422,7 +432,8 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     # A banner speaks only when it brings something: a gesture now, a gesture to undo, a likely wrong reflex
     # (opening when it is hotter outside), a precise later time, or another remedy such as the ventilation.
     # The ventilation brings outdoor air too: it helps where the outdoor air is drier but the window renews little.
-    if reason == "drying_slow" and (air_detail.get("ventilation") or {}).get("on") is False:
+    ventilation_off = (air_detail.get("ventilation") or {}).get("on") is False
+    if (reason == "drying_slow" or (reason == "drying_unavailable" and excess is not None and excess >= VENTILATION_DELTA)) and ventilation_off:
         reason = "ventilation_possible"
     elif reason == "drying_later" or (reason in ("cooling_unavailable", "precool_later") and coming and coming["kind"] == "open"):
         level = "benefit"
@@ -446,7 +457,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
             surface=None if surface is None else round(surface), mould=mould,
             excess=None if excess is None else round(excess, 1), source="inside" if wet else "outside" if humid_outdoor else None,
             # Water above the shared air of the volume (g/m³): a local source such as cooking steam.
-            local=local if local is not None and local >= 1.0 else None,
+            local=local if local is not None and local >= 1.0 else None, damp_since=damp_since,
             # Where a full airing would bring the room at best: the outdoor water, warmed to the room's temperature.
             reachable=None if ae is None or not saturated else round(min(100.0, ae / saturated * 100)))
     if reason == "drying_possible" and drying:

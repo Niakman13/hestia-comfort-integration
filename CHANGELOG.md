@@ -1,3 +1,12 @@
+## 1.2.5-beta.5 — Préversion : des messages plus justes
+
+### Améliorations
+- « Humidité élevée · risque de moisissure » : un seul message, sans deviner la cause. Après plusieurs jours de pluie, la maison elle-même rend de l’humidité, sans douche ni cuisson.
+- Le risque de moisissure n’apparaît que s’il dure au moins une heure : le pic d’une douche, qui retombe seul, ne le déclenche plus.
+- « Lancez la VMC » revient plus tôt : une VMC arrêtée aide même quand l’air de la pièce n’est qu’un peu plus humide que dehors.
+- Une mesure hors de votre plage garde son cadre orange seulement quand un geste est conseillé. Sinon, la tuile reste neutre, avec la pastille orange qui bat devant la note.
+- « Aération » remplace « Humidité » pour dire qu’aérer n’aiderait pas.
+
 ## 1.2.5-beta.4 — Préversion : une seule carte pour les pièces au même air
 
 **En bref**

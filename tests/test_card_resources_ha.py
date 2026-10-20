@@ -1,4 +1,6 @@
 """Card resources with real HA collections: migration, loading modes and fallback."""
+from pathlib import Path
+import sys
 import tempfile
 import unittest
 from types import SimpleNamespace
@@ -11,6 +13,8 @@ try:
 except ImportError:
     raise unittest.SkipTest('Home Assistant is not installed')
 
+# Run from the tests folder too, like the other tests.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from custom_components.niak_comfort import socle
 
 

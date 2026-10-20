@@ -158,12 +158,12 @@ export function facts(v:View):Fact[] {
     out.push({ic:'temp',title:'Pièce fraîche',text:w?.occupied===false?'maison vide : pas besoin de chauffer'
       :w?.heating==='on'?'le chauffage s’en charge':`${deg(ti)}, sous votre plage`});
   // Words for everyone: the risk and where it comes from, never a percentage against a wall.
-  if(hum?.mould)out.push({ic:'drop',title:'Risque de moisissure',text:hum.source==='outside'?'à cause du temps humide dehors, il baissera quand le temps sera plus sec'
-    :hum.source==='inside'?'l’humidité vient de la pièce : douche, cuisine ou linge':'dans les coins des murs froids'});
+  // The cause is not guessed: after days of rain, walls and fabrics give back water without a shower or a meal.
+  if(hum?.mould)out.push({ic:'drop',title:'Humidité élevée',text:'risque de moisissure'});
   // The mould line already says it comes from the weather: one line, not two.
   if(hum?.source==='outside'&&!hum.mould)out.push({ic:'drop',title:'Air humide dehors',text:'aérer ne ferait pas baisser l’humidité'});
-  else if(a.reason==='drying_unavailable')out.push({ic:'drop',title:'Humidité',text:'l’air du dehors n’est pas plus sec : aérer n’aiderait pas'});
-  else if(a.reason==='drying_slow')out.push({ic:'drop',title:'Humidité',text:'aérer la ferait à peine baisser'});
+  else if(a.reason==='drying_unavailable')out.push({ic:'open',title:'Aération',text:'n’aiderait pas, l’air du dehors n’est pas plus sec'});
+  else if(a.reason==='drying_slow')out.push({ic:'open',title:'Aération',text:'ferait à peine baisser l’humidité'});
   if(hum?.local)out.push({ic:'drop',title:'Vapeur',text:'plus humide ici qu’à côté : cuisson ou douche'});
   if(air?.purifier?.on===true)out.push({ic:'fan',title:'Purificateur',text:'en marche, il filtre l’air'});
   if(air?.ventilation?.on===true)out.push({ic:'vmc',title:'VMC',text:a.needs.includes('dry')?'en marche, elle aide à assécher':'en marche'});
@@ -319,8 +319,9 @@ export function tiles(v:View,config:Config):Tile[] {
   return v.starting?list.map(t=>t.note==='indisponible'||t.note==='pas de nouvelle mesure'?{...t,note:'en attente'}:t):list;
 }
 // Only a sensor that stopped answering is drawn muted, not a measure that was never configured (« non mesuré »).
-const tileClass=(t:Tile)=>'nc-tile'+(t.out?' out':'')+(['indisponible','pas de nouvelle mesure','en attente'].includes(t.note)?' mute':'');
-export const tile=(t:Tile)=>t.entity?html`<button type="button" class=${tileClass(t)} data-level=${t.level} title=${'Détails : '+t.label} @click=${(e:Event)=>moreInfo(e,t.entity!)}>${tileBody(t)}</button>`:html`<div class=${tileClass(t)} data-level=${t.level}>${tileBody(t)}</div>`;
+// Out of range with a gesture to make: the orange frame; without one, a discreet mark (« soft »).
+const tileClass=(t:Tile,soft=false)=>'nc-tile'+(t.out?(soft?' out soft':' out'):'')+(['indisponible','pas de nouvelle mesure','en attente'].includes(t.note)?' mute':'');
+export const tile=(t:Tile,soft=false)=>t.entity?html`<button type="button" class=${tileClass(t,soft)} data-level=${t.level} title=${'Détails : '+t.label} @click=${(e:Event)=>moreInfo(e,t.entity!)}>${tileBody(t)}</button>`:html`<div class=${tileClass(t,soft)} data-level=${t.level}>${tileBody(t)}</div>`;
 const tileBody=(t:Tile)=>html`<div class="nc-tile-h"><span class="nc-ic">${icon(t.ic)}</span><span class="nw-label">${t.label}</span></div><b>${t.value}${t.unit&&t.value!=='—'?html`<small>${t.unit}</small>`:nothing}</b><em>${t.note}</em>`;
 
 const row=(t:string,x:string)=>html`<li><b>${t}</b><span> · ${x}</span></li>`;
@@ -401,9 +402,11 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
     ?scale({band,day:marks.includes('day')?f?.day_range??null:null,now:ti,out:marks.includes('out')?te:null,nowEntity:v.observations.indoor_temperature?.source??undefined,outEntity:v.observations.outdoor_temperature?.source??undefined}):null;
   const all=slides(v,config.banner_blocks),top=all[0]?.level??a.level,name=config.title||(partners.length?v.volume_name:null)||v.title;
   const still=config.animations===false||config.rotate===false;
+  // A measure out of range is framed in orange only when the room asks for a gesture.
+  const soft=!['action','urgent'].includes(top);
   const summary=tileSummary(list.length,outside.length,'mesure',muted.length,!!v.starting);
-  const grid=others.length?html`<div class="nw-label nc-room-label">${v.title}</div><div class="nc-tiles">${own.map(tile)}</div>${others.map(o=>o.list.length?html`<div class="nw-label nc-room-label">${o.title}</div><div class="nc-tiles">${o.list.map(tile)}</div>`:nothing)}`
-    :html`<div class="nc-tiles">${list.map(tile)}</div>`;
+  const grid=others.length?html`<div class="nw-label nc-room-label">${v.title}</div><div class="nc-tiles">${own.map(t=>tile(t,soft))}</div>${others.map(o=>o.list.length?html`<div class="nw-label nc-room-label">${o.title}</div><div class="nc-tiles">${o.list.map(t=>tile(t,soft))}</div>`:nothing)}`
+    :html`<div class="nc-tiles">${list.map(t=>tile(t,soft))}</div>`;
   const box=factBox(v,partners);
   const detailList=html`<ul class="nc-list">${details(v,config)}</ul>${st.configure?html`<button class="nw-badge nc-configure" @click=${st.configure}>${icon('settings')}Configurer cette pièce</button>`:nothing}`;
   const scaleBox=sc?html`<div class="nc-sec nw-glass"><div class="nw-label">Température</div>${sc}</div>`:nothing;
@@ -434,7 +437,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
     ${hero({name,level:top,slides:all,scaleLabel:'Température',scale:sc??html``,st,why:whyLines(v),compact:!sc,still})}
     ${box}
     ${!body?nothing:html`<div class="nc-body">
-      ${measures?fold({label:'Mesures',summary,open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tiles',body:grid,keep:list.filter(t=>(t.out&&!t.remedy)||tileClass(t).includes(' mute')).map(tile)}):nothing}
+      ${measures?fold({label:'Mesures',summary,open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tiles',body:grid,keep:list.filter(t=>(t.out&&!t.remedy)||tileClass(t).includes(' mute')).map(t=>tile(t,soft))}):nothing}
       ${config.show_details===false?nothing:fold({label:'Détails',summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:st.uid+'-details',body:detailList})}
     </div>`}
   </ha-card>`;
