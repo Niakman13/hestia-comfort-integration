@@ -47,9 +47,44 @@ class _Series:
         return self.values[i - 1] if i else None
 
 
+def sun_position(when, latitude, longitude):
+    """Elevation and azimuth of the sun in degrees (NOAA's simplified formulas, within a degree)."""
+    day = when.timetuple().tm_yday
+    hour = when.hour + when.minute / 60 + when.second / 3600 - (when.utcoffset().total_seconds() / 3600 if when.utcoffset() else 0)
+    gamma = 2 * math.pi / 365 * (day - 1 + (hour - 12) / 24)
+    equation = 229.18 * (0.000075 + 0.001868 * math.cos(gamma) - 0.032077 * math.sin(gamma) - 0.014615 * math.cos(2 * gamma) - 0.040849 * math.sin(2 * gamma))
+    declination = (0.006918 - 0.399912 * math.cos(gamma) + 0.070257 * math.sin(gamma) - 0.006758 * math.cos(2 * gamma)
+                   + 0.000907 * math.sin(2 * gamma) - 0.002697 * math.cos(3 * gamma) + 0.00148 * math.sin(3 * gamma))
+    angle = math.radians((hour * 60 + equation + 4 * longitude) / 4 - 180)
+    lat = math.radians(latitude)
+    cos_zenith = math.sin(lat) * math.sin(declination) + math.cos(lat) * math.cos(declination) * math.cos(angle)
+    zenith = math.acos(max(-1.0, min(1.0, cos_zenith)))
+    azimuth = math.degrees(math.atan2(math.sin(angle), math.cos(angle) * math.sin(lat) - math.tan(declination) * math.cos(lat))) + 180
+    return 90 - math.degrees(zenith), azimuth % 360
+
+
+def on_facades(solar, elevation, azimuth, facades):
+    """W/m² on the room's windows from the horizontal irradiance of the station: the direct sun each facade faces, or the
+    diffuse light; the mean over its windows. Without known facades, the station's own measure."""
+    if not facades:
+        return solar
+    if solar <= 0:
+        return 0.0
+    out = []
+    for facing in facades:
+        gap = ((azimuth - facing + 540) % 360) - 180
+        share = max(math.cos(math.radians(elevation)) * math.cos(math.radians(gap)), 0.0) if elevation > 0 else 0.0
+        direct = min(solar / max(math.sin(math.radians(elevation)), 0.09) * share, 850) if elevation > 5 and solar > 40 else 0.0
+        out.append(max(direct, solar * 0.15))
+    return sum(out) / len(out)
+
+
 def samples(start, end, indoor_temperature, indoor_humidity, outdoor_temperature, outdoor_humidity,
-            solar=(), contacts=None, heating=()):
+            solar=(), contacts=None, heating=(), facades=None, location=None):
     """Half-hour samples between `start` and `end` from raw (time, value) points.
+
+    `facades`: the bearings of the room's windows and `location` (latitude, longitude): the sun is then counted on the
+    windows, half hour by half hour, instead of on the station's horizontal sensor.
 
     `contacts`: {entity: [(time, bool|None)]}; `heating`: [(time, bool)] running or not. A half hour with
     a contact that does not answer is left out: what a window did then is not known."""
@@ -74,7 +109,11 @@ def samples(start, end, indoor_temperature, indoor_humidity, outdoor_temperature
                 break
             opened += any(states)
             heated += bool(heat.at(t))
-            sunny += max(0.0, float(sun.at(t) or 0.0))
+            light = max(0.0, float(sun.at(t) or 0.0))
+            if facades and location:
+                elevation, azimuth = sun_position(t, *location)
+                light = on_facades(light, elevation, azimuth, facades)
+            sunny += light
             steps, t = steps + 1, t + SUB
         if known and steps:
             rows.append([when.isoformat(), round(values[0], 2), round(values[1], 1), round(values[2], 2), round(values[3], 1),
@@ -208,6 +247,43 @@ def summary(rows, now, current=None):
               "precision": replay(model, rows) if ready else None, "next_hour": None, "computed_at": now.isoformat()}
     result["next_hour"] = next_hour(result, current)
     return result
+
+
+# Learning is optimal after a week of measures, when the twin replays the last day this closely.
+OPTIMAL_DAYS = 7
+OPTIMAL_TEMPERATURE, OPTIMAL_HUMIDITY = 0.5, 3.0
+# Airings learned at least, before a drying result is promised.
+MIN_OPENINGS = 5
+
+
+def optimal(twin):
+    """Has this room's twin proved itself: a week of measures and the last day replayed closely?"""
+    precision = (twin or {}).get("precision")
+    return bool(twin and twin.get("status") == "ready" and twin.get("days", 0) >= OPTIMAL_DAYS and precision
+                and precision.get("temperature") is not None and precision["temperature"] <= OPTIMAL_TEMPERATURE
+                and precision.get("humidity") is not None and precision["humidity"] <= OPTIMAL_HUMIDITY)
+
+
+def learned_advice(assessment, twin, current=None, openings=0):
+    """The result an advised airing will bring, as this room has learned it; None unless its learning is optimal.
+
+    Drying comes from the room's own past airings (engine/learning.py), cooling from its twin, half an hour open."""
+    if not optimal(twin) or assessment.get("action") not in ("ouvrir", "ok"):
+        return None
+    basis = {"days": twin["days"], "precision": {k: twin["precision"][k] for k in ("temperature", "humidity")}}
+    reason, features = assessment.get("reason"), assessment.get("features") or {}
+    drying = features.get("drying") or {}
+    if reason == "drying_possible" and drying.get("openings", 0) >= MIN_OPENINGS and drying.get("after") is not None:
+        return {"now": drying["now"], "after": drying["after"], "minutes": drying["minutes"], "measure": "humidity",
+                "openings": drying["openings"], **basis}
+    model = twin.get("model")
+    if (reason == "cooling_possible" and model and model.get("open_samples", 0) >= 6 and current
+            and None not in (current.get(k) for k in ("ti", "hi", "te", "he"))):
+        after, _ = step(model, current["ti"], current["hi"], current["te"], current["he"], current.get("sun", 0.0), 1.0, 0.0)
+        if after < current["ti"] - 0.2:
+            return {"now": round(current["ti"], 1), "after": round(after, 1), "minutes": int(HOURS * 60), "measure": "temperature",
+                    "openings": openings, **basis}
+    return None
 
 
 def next_hour(twin, current):

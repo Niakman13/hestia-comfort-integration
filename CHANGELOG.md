@@ -1,3 +1,20 @@
+## 1.2.5-beta.6 — Préversion : conseils optimisés et encart Apprentissage
+
+**En bref**
+- **Conseils optimisés : quand l’apprentissage d’une pièce est optimal, son conseil annonce le résultat (« Aérez 15 min · 76 → 68 % en 15 min »).**
+- **Nouvel encart Apprentissage en tête de l’accueil Confort du hub Niak.**
+
+### Nouveautés
+- « Conseil optimisé » en haut à droite de la carte, à la place de « Geste conseillé », quand le conseil vient de l’apprentissage de la pièce : au moins 7 jours de mesures, des prévisions justes à ±0,5 °C et ±3 %, et au moins 5 aérations apprises. Sinon, le conseil reste estimé.
+- « Action à faire » au-dessus de chaque geste ; « Conseil » reste pour « Rien à faire ».
+- Quand le conseil est estimé, À savoir dit où en est l’apprentissage : « en cours : 5 jours sur 7 », « vérification en attente ».
+- Encart Apprentissage : pour chaque pièce, son état (Connue, À affiner, En cours, À vérifier) avec le nombre de jours, la précision de ses prévisions, et ce qu’elle a appris en mots simples (« garde bien sa température », « le soleil la réchauffe un peu »).
+- Angle précis facultatif pour chaque ouvrant (0 à 359°), en plus de l’exposition.
+
+### Améliorations
+- Le soleil est compté fenêtre par fenêtre, selon son orientation et la position du soleil à chaque demi-heure, au lieu de la mesure à plat de la station.
+- Des phrases plus naturelles dans le panneau : Niak n’est plus le sujet des phrases.
+
 ## 1.2.5-beta.5 — Préversion : des messages plus justes
 
 ### Améliorations

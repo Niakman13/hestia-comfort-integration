@@ -13,12 +13,13 @@ const b=(text:string)=>html`<b>${text}</b>`;
 const deg=(v:number|null)=>v===null?'—':number(v)+' °C';
 
 export interface Advice {title:string;line:TemplateResult|string;disk:string;cap?:string;
+  /** Learned on this room by its twin: the basis, said under the gesture (« d'après 31 aérations »). */ learned?:string;
   /** A state that is not advice (sensors loading or silent) brings its own words and colour. */ pill?:string;level?:Level}
 /** Reasons that only say « keep closed »: the engine lowers them to calm when nothing is open and no reflex is at stake. */
 const QUIET=['drying_unavailable','drying_slow','opening_blocked','cooling_unavailable','precool_later'];
 /** The banner: the gesture in a few words, then why in one line. The full explanation stays behind « i ». */
 export function advice(v:View):Advice {
-  const out=gesture(v);
+  const out=withLearning(v,gesture(v));
   // To close, say which window: in a shared air it may be in the other room.
   if(v.assessment.action==='fermer'&&!out.cap){
     const open=(v.assessment.openings??[]).filter(o=>o.open).map(o=>v.names?.[o.entity_id]??o.entity_id);
@@ -147,6 +148,25 @@ function gesture(v:View):Advice {
 /** A window that renews little air: what it would really gain, never « 85 → 85 % ». */
 const slowWindow=(d:{gain:number}):TemplateResult=>{const g=Math.round(d.gain);
   return g<1?html`Aérer ${b('ne la baisserait presque pas')}`:html`Aérer ne la baisserait ${b(`que de ${g} point${g>1?'s':''}`)}`;};
+/** A gesture the twin has learned in this room: the predicted result replaces the general explanation. */
+function withLearning(v:View,out:Advice):Advice {
+  const l=v.assessment.features?.learned;
+  if(!l||!['ouvrir','ok'].includes(v.assessment.action))return out;
+  const unit=l.measure==='temperature'?' °C':l.measure==='co2'?' ppm':' %',fmt=(x:number)=>l.measure==='temperature'?number(x):String(Math.round(x));
+  // The learned duration replaces the general span: the title and the promise say the same minutes.
+  const title=v.assessment.action==='ouvrir'&&/^(Aérez|Ouvrez) /.test(out.title)?`${out.title.split(' ')[0]} ${l.minutes} min`:out.title;
+  return {...out,title,line:html`${b(fmt(l.now)+' → '+fmt(l.after)+unit)} en ${l.minutes} min`,learned:`d’après ${l.openings} aérations`,pill:'Conseil optimisé'};
+}
+/** Where the twin stands, when the advice is only estimated: said in « À savoir », never in the banner. */
+function learning(v:View):Fact|null {
+  const t=v.twin,gestureNow=['action','urgent','benefit'].includes(v.assessment.level);
+  if(!t||!gestureNow||v.assessment.features?.learned)return null;
+  // A room is learned after a week of measures at least, then only if its twin replays the last day well.
+  if(t.status!=='ready'||t.days<7)return {ic:'clock',title:'Apprentissage',text:`en cours : ${Math.max(1,Math.floor(t.days))} jour${Math.floor(t.days)>1?'s':''} sur 7`};
+  if(!t.precision)return {ic:'clock',title:'Apprentissage',text:'vérification en attente : il manque une journée de mesures complète'};
+  if(t.precision.temperature>0.5||t.precision.humidity>3)return {ic:'clock',title:'Apprentissage',text:'en cours : prévisions pas encore assez justes, conseil estimé'};
+  return null;
+}
 /** « À savoir »: what is worth knowing about the room, under the advice. Never a gesture, one idea per line. */
 export interface Fact {ic:string;title:string;text:TemplateResult|string}
 export function facts(v:View):Fact[] {
@@ -167,6 +187,7 @@ export function facts(v:View):Fact[] {
   if(hum?.local)out.push({ic:'drop',title:'Vapeur',text:'plus humide ici qu’à côté : cuisson ou douche'});
   if(air?.purifier?.on===true)out.push({ic:'fan',title:'Purificateur',text:'en marche, il filtre l’air'});
   if(air?.ventilation?.on===true)out.push({ic:'vmc',title:'VMC',text:a.needs.includes('dry')?'en marche, elle aide à assécher':'en marche'});
+  const l=learning(v);if(l)out.push(l);
   return out.slice(0,4);
 }
 /** The « À savoir » box, under the advice; nothing when there is nothing to know. */
@@ -361,7 +382,7 @@ export function whyLines(v:View):TemplateResult {
 export function hero(o:{name:string;level:Level;slides:Slide[];scaleLabel:string;scale:TemplateResult;st:CardState;why:TemplateResult;compact?:boolean;still?:boolean;small?:boolean;after?:TemplateResult|typeof nothing}):TemplateResult {
   const many=o.slides.length>1;
   return html`<div class=${'nc-hero'+(o.small?' nc-compact':'')}>
-    <div class="nc-top"><h2>${o.name}</h2><button class="nw-info" aria-label="Pourquoi ce conseil ?" aria-expanded=${o.st.why} aria-controls=${o.st.uid+'-why'} @click=${()=>o.st.toggle('why')}>${icon('info')}</button><span class="nw-chip nc-level">${many?`${o.slides.length} conseils`:o.slides[0]?.pill??pills[o.level]}</span></div>
+    <div class="nc-top"><h2>${o.name}</h2><button class="nw-info" aria-label="Pourquoi ce conseil ?" aria-expanded=${o.st.why} aria-controls=${o.st.uid+'-why'} @click=${()=>o.st.toggle('why')}>${icon('info')}</button><span class="nw-chip nc-level">${many?`${o.slides.length} conseils`:o.slides[0]?.learned?html`<span class="nc-learned">${icon('flask')}${o.slides[0].pill}</span>`:o.slides[0]?.pill??pills[o.level]}</span></div>
     <niak-advice-ticker .slides=${o.slides} .still=${!!o.still}></niak-advice-ticker>
     <div class="nc-why" id=${o.st.uid+'-why'} ?hidden=${!o.st.why}>${o.why}</div>
     ${o.compact?nothing:html`<div class="nc-sec nw-glass"><div class="nw-label">${o.scaleLabel}</div>${o.scale}</div>`}
@@ -476,12 +497,12 @@ export class NiakAdviceTicker extends LitElement {
     return html`<div class="nc-grid" @mouseenter=${()=>this.hold(true)} @mouseleave=${()=>this.hold(false)} @focusin=${()=>this.hold(true)} @focusout=${()=>this.hold(false)}
         @click=${(e:Event)=>{if(many&&!(e.target as HTMLElement).closest('.nc-bars'))this.go(i+1);}} style=${many?'cursor:pointer':''}>
       <div class="nc-copy">
-        <div class="nc-tk-head"><span class="nw-label">${many?'Conseils':list[0]?.pill&&list[0].level==='neutral'?'État':'Conseil'}</span>${many?html`<span class="nc-tk-count">${i+1} sur ${list.length}</span>
+        <div class="nc-tk-head"><span class="nw-label">${many?'Conseils':list[0]?.pill&&list[0].level==='neutral'?'État':['action','urgent'].includes(list[0]?.level)?'Action à faire':'Conseil'}</span>${many?html`<span class="nc-tk-count">${i+1} sur ${list.length}</span>
           <span class="nc-bars">${list.map((s,k)=>html`<button type="button" aria-label=${`Conseil ${k+1} : ${s.title}`} aria-current=${k===i?'true':'false'} data-level=${s.level} class=${k<i?'done':k===i?(this.paused||this.calm?'done':'on'):''} @click=${()=>this.go(k)}><i></i></button>`)}</span>`:nothing}</div>
         <div class="nc-stack" aria-live=${this.paused?'polite':'off'}>${list.map((s,k)=>html`<div class=${'nc-slide'+(k===i?' on':k===this.previous?' out':'')} aria-hidden=${k===i?'false':'true'}>
           ${many?html`<span class="nw-chip nc-slide-pill" data-level=${s.level}>${s.pill}</span>`:nothing}<p class="nc-advice">${s.title}</p>${s.line?html`<p class="nc-line">${s.line}</p>`:nothing}</div>`)}</div>
       </div>
-      <div class="nc-diskwrap nc-stack" aria-hidden="true">${list.map((s,k)=>html`<div class=${'nc-slide nc-diskslide'+(k===i?' on':k===this.previous?' out':'')} data-level=${s.level}><div class="nc-disk" data-disk=${s.disk}>${icon(s.disk)}</div>${s.cap?html`<div class="nc-cap">${s.cap}</div>`:nothing}</div>`)}</div>
+      <div class="nc-diskwrap nc-stack" aria-hidden="true">${list.map((s,k)=>html`<div class=${'nc-slide nc-diskslide'+(k===i?' on':k===this.previous?' out':'')} data-level=${s.level} ?data-learned=${!!s.learned}><div class="nc-disk" data-disk=${s.disk}>${icon(s.disk)}</div>${s.cap?html`<div class="nc-cap">${s.cap}</div>`:nothing}</div>`)}</div>
     </div>`;
   }
 }

@@ -1,0 +1,148 @@
+{
+ "rooms": [
+  {
+   "title": "Salon",
+   "days": 10,
+   "room": {
+    "inertia_hours": 92.4,
+    "sun_degrees": 0.8,
+    "heating_degrees": null,
+    "household_degrees": 7.3,
+    "window_half_minutes": 510,
+    "air_changes_per_hour": 0.08,
+    "window_air_changes_per_hour": 0.89,
+    "water_per_hour": 0.18
+   },
+   "precision": {
+    "temperature": 0.19,
+    "humidity": 1.9
+   }
+  },
+  {
+   "title": "Chambre P",
+   "days": 10.1,
+   "room": {
+    "inertia_hours": 57.8,
+    "sun_degrees": 0,
+    "heating_degrees": null,
+    "household_degrees": 3.9,
+    "window_half_minutes": 202,
+    "air_changes_per_hour": 0.08,
+    "window_air_changes_per_hour": 0.26,
+    "water_per_hour": 0.22
+   },
+   "precision": {
+    "temperature": null,
+    "humidity": null
+   }
+  },
+  {
+   "title": "Chambre A",
+   "days": 10.1,
+   "room": {
+    "inertia_hours": 44.6,
+    "sun_degrees": 0.3,
+    "heating_degrees": null,
+    "household_degrees": 4.3,
+    "window_half_minutes": null,
+    "air_changes_per_hour": 0.07,
+    "window_air_changes_per_hour": null,
+    "water_per_hour": 0.11
+   },
+   "precision": {
+    "temperature": 0.08,
+    "humidity": 1.7
+   }
+  },
+  {
+   "title": "Chambre AL",
+   "days": 10,
+   "room": {
+    "inertia_hours": 41.5,
+    "sun_degrees": 0,
+    "heating_degrees": null,
+    "household_degrees": 5.1,
+    "window_half_minutes": 365,
+    "air_changes_per_hour": 0.05,
+    "window_air_changes_per_hour": 0.27,
+    "water_per_hour": 0.07
+   },
+   "precision": {
+    "temperature": 1.14,
+    "humidity": 4.7
+   }
+  },
+  {
+   "title": "Chambre M",
+   "days": 10.1,
+   "room": {
+    "inertia_hours": 24.6,
+    "sun_degrees": 1.4,
+    "heating_degrees": null,
+    "household_degrees": 4.8,
+    "window_half_minutes": null,
+    "air_changes_per_hour": 0.07,
+    "window_air_changes_per_hour": null,
+    "water_per_hour": 0.09
+   },
+   "precision": {
+    "temperature": 0.35,
+    "humidity": 0.7
+   }
+  },
+  {
+   "title": "Buanderie",
+   "days": 10.1,
+   "room": {
+    "inertia_hours": 42.6,
+    "sun_degrees": 1,
+    "heating_degrees": null,
+    "household_degrees": 4.6,
+    "window_half_minutes": 77,
+    "air_changes_per_hour": 0.06,
+    "window_air_changes_per_hour": 0.66,
+    "water_per_hour": 0.02
+   },
+   "precision": {
+    "temperature": 0.54,
+    "humidity": 1
+   }
+  },
+  {
+   "title": "Salle de bain",
+   "days": 10,
+   "room": {
+    "inertia_hours": 42.4,
+    "sun_degrees": 0.3,
+    "heating_degrees": null,
+    "household_degrees": 5.1,
+    "window_half_minutes": 668,
+    "air_changes_per_hour": 0.13,
+    "window_air_changes_per_hour": 0.43,
+    "water_per_hour": 0.33
+   },
+   "precision": {
+    "temperature": null,
+    "humidity": null
+   }
+  },
+  {
+   "title": "Cuisine",
+   "days": 10,
+   "room": {
+    "inertia_hours": 135.1,
+    "sun_degrees": 0.6,
+    "heating_degrees": null,
+    "household_degrees": 7.8,
+    "window_half_minutes": 759,
+    "air_changes_per_hour": 0.1,
+    "window_air_changes_per_hour": 0.5,
+    "water_per_hour": 0.32
+   },
+   "precision": {
+    "temperature": 0.24,
+    "humidity": 1.5
+   }
+  }
+ ]
+}

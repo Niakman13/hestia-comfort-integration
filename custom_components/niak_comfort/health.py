@@ -20,7 +20,7 @@ SUBJECTS = {"indoor_temperature": "la température", "indoor_humidity": "l’hum
             "outdoor_temperature": "la température", "outdoor_humidity": "l’humidité", "rain": "la pluie", "wind_gust": "les rafales",
             "wind_bearing": "la direction du vent", "solar": "l’ensoleillement", "pollution": "la pollution"}
 LOSS = {"indoor_temperature": "Le confort de la pièce n’est plus évalué.", "indoor_humidity": "L’humidité de la pièce est inconnue.",
-        "co2": "Le conseil d’aération est en pause.", "windows": "Niak ne sait plus s’il est ouvert.", "heating": "Niak ne sait plus si le chauffage tourne."}
+        "co2": "Le conseil d’aération est en pause.", "windows": "On ne sait plus s’il est ouvert.", "heating": "On ne sait plus si le chauffage tourne."}
 LOSS.update({"illuminance": "La lumière intérieure est inconnue.", "pm25": "Les particules intérieures ne sont plus mesurées.", "voc": "Les COV ne sont plus mesurés.", "purifier": "Le fonctionnement du purificateur est inconnu.", "ventilation": "Le fonctionnement de la ventilation est inconnu.", "ventilation_boost": "La grande vitesse de la ventilation est inconnue.", "presence": "La présence reste inconnue.", "covers": "La position du volet est inconnue.", "shutter_auto": "L’automatisation est inconnue.", "shutter_override": "La dérogation est inconnue."})
 GAINS = {"indoor_humidity": "repérer un air trop humide et savoir si aérer l’assèche",
          "co2": "savoir quand renouveler l’air", "heating": "ne pas conseiller d’ouvrir pendant que le chauffage tourne"}
@@ -103,15 +103,15 @@ def report(f):
         if "windows" not in chosen:
             found = room.available.get("windows")
             tips.append(_line("tip", f"{room.title} : ouvrants non mesurés", (f"« {found} » est disponible. " if found else "")
-                              + "Un contact sur la fenêtre dirait si elle est ouverte : Niak ne conseillera pas d’ouvrir une fenêtre déjà ouverte.", target))
+                              + "Un contact sur la fenêtre dirait si elle est ouverte : le conseil d’ouvrir ne viserait plus une fenêtre déjà ouverte.", target))
     exterior_target = {"kind": "exterior", "label": "Extérieur"}
     if not f.configured:
-        todo.append(_line("bad", "Extérieur à configurer", "Sans l’extérieur, Niak ne peut pas dire s’il vaut mieux ouvrir ou fermer.", exterior_target))
+        todo.append(_line("bad", "Extérieur à configurer", "Sans l’extérieur, impossible de dire s’il vaut mieux ouvrir ou fermer.", exterior_target))
     for s in f.exterior:
         if s.status != "ok":
             todo.append(_line("bad", f"Extérieur : {SUBJECTS[s.key]} {_broken(s)}", f"{_since(s.age)}{s.name} · toutes les pièces sont concernées.", exterior_target))
     for area_id, name in f.free_areas:
-        tips.append(_line("tip", f"{name} pas encore suivie", "Pièce Home Assistant avec un thermomètre : Niak peut la suivre.",
+        tips.append(_line("tip", f"{name} pas encore suivie", "Pièce Home Assistant avec un thermomètre : elle peut être suivie.",
                           {"kind": "area", "area_id": area_id, "label": "Ajouter"}))
     if f.weather_installed and not f.weather:
         tips.append(_line("tip", "Reprendre l’extérieur de Niak Weather", "Sa station, ses alertes et ses prévisions, sans rien choisir à nouveau.", exterior_target))

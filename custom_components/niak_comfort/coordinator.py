@@ -1,5 +1,6 @@
 """Event-driven inputs plus a clock tick for freshness, per configured zone."""
 from collections import deque
+from functools import partial
 from dataclasses import asdict, replace
 from datetime import timedelta
 import logging
@@ -203,8 +204,10 @@ class ComfortCoordinator(DataUpdateCoordinator):
         for e, roles in drivers.items():
             if e in openings:
                 o, known = openings[e], cover_link.facts(self.hass, roles)
+                # An angle typed by the person wins over the one Adaptive Cover Pro was given.
                 openings[e] = replace(o, driver="adaptive_cover_pro", auto_entity=o.auto_entity or roles.get("auto"),
-                                      override_entity=o.override_entity or roles.get("override"), azimuth=known["azimuth"],
+                                      override_entity=o.override_entity or roles.get("override"),
+                                      azimuth=o.azimuth if o.azimuth is not None else known["azimuth"],
                                       exposure=o.exposure or cover_link.exposure(known["azimuth"]),
                                       width=o.width if o.width is not None else known["width"],
                                       height=o.height if o.height is not None else known["height"])
@@ -270,14 +273,17 @@ class ComfortCoordinator(DataUpdateCoordinator):
         advice_readings = {k: (replace(r, value=False, detail="debounce") if k.startswith("window:") and self._bouncing(k[7:], r, now) else r)
                            for k, r in readings.items()}
         self.previous = assess(advice_readings, self.settings, self.previous, openings, self._sun(), outlook, now, context=self._context(now, readings))
-        assessment = self._settle(self.previous.to_dict())
         def now_value(key):
             reading = readings.get(key)
             return reading.value if reading and reading.usable and isinstance(reading.value, (int, float)) and not isinstance(reading.value, bool) else None
         current = {"ti": now_value("indoor_temperature"), "hi": now_value("indoor_humidity"), "te": now_value("outdoor_temperature"),
-                   "he": now_value("outdoor_humidity"), "sun": (now_value("solar") or 0.0) / 1000,
+                   "he": now_value("outdoor_humidity"), "sun": self._sun_now(now_value("solar")),
                    "opened": 1.0 if any(r.usable and r.value is True for k, r in advice_readings.items() if k.startswith("window:")) else 0.0,
                    "heated": 1.0 if readings.get("heating") and readings["heating"].value == "heating" else 0.0}
+        own = self.previous.to_dict()
+        # The room's own learning, once optimal, gives the advised gesture its predicted result.
+        own.setdefault("features", {})["learned"] = twin.learned_advice(own, self.twin, current, (self.drying_model or {}).get("openings", 0))
+        assessment = self._settle(own)
         learned = self.twin or {}
         precision = learned.get("precision") or {}
         twin_view = {"status": learned.get("status", "learning"), "days": learned.get("days", 0), "samples": learned.get("samples", 0),
@@ -470,7 +476,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
     async def _learn_twin(self, now):
         """Add the last ten days to the twin's half-hour samples (thirty days kept) and refit it."""
         stored = await self._twin_store.async_load() or {}
-        rows = stored.get("samples") if isinstance(stored.get("samples"), list) else []
+        # Samples kept before the sun was counted on the windows are rebuilt from the recorder's history.
+        rows = stored.get("samples") if isinstance(stored.get("samples"), list) and stored.get("sun") == "facades" else []
         keys = ("indoor_temperature", "indoor_humidity", "outdoor_temperature", "outdoor_humidity")
         sources = {k: self._source_entity(k) for k in keys}
         if all(sources.values()) and "recorder" in self.hass.config.components:
@@ -489,10 +496,11 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 heat = [(row.last_updated, row.attributes.get("hvac_action") == "heating") for row in running.get(heating, [])
                         if hasattr(row, "attributes")]
                 fresh = await self.hass.async_add_executor_job(
-                    twin.samples, start, now, *(self._points(states, sources[k]) for k in keys),
-                    self._points(states, solar) if solar else [], contacts, heat)
+                    partial(twin.samples, start, now, *(self._points(states, sources[k]) for k in keys),
+                            self._points(states, solar) if solar else [], contacts, heat,
+                            facades=self._facades(), location=(self.hass.config.latitude, self.hass.config.longitude)))
                 rows = twin.merge(rows, fresh, now)
-                await self._twin_store.async_save({"samples": rows})
+                await self._twin_store.async_save({"samples": rows, "sun": "facades"})
             except Exception:  # the twin then keeps what it learned before
                 if not self._twin_failed:
                     self._twin_failed = True
@@ -540,6 +548,29 @@ class ComfortCoordinator(DataUpdateCoordinator):
             return {}
         return {e: driven[m["cover_entity"]] for e, m in self.config.get("openings", {}).items()
                 if m.get("shutter") == "connected" and m.get("cover_entity") in driven}
+
+    def _facades(self):
+        """The bearings the room's windows face: the exact angle when known, else the declared exposure."""
+        from .engine.assessment import EXPOSURES
+        declared = {**{e: o for p in self.partners for e, o in p["openings"].items()}}
+        out = []
+        for entity_id in self.windows:
+            meta = self.config.get("openings", {}).get(entity_id)
+            opening = declared.get(entity_id)
+            azimuth = (meta or {}).get("azimuth") if meta else getattr(opening, "azimuth", None)
+            exposure = (meta or {}).get("exposure") if meta else getattr(opening, "exposure", None)
+            if azimuth is None and getattr(self, "drivers", None) and entity_id in self.drivers:
+                azimuth = cover_link.facts(self.hass, self.drivers[entity_id]).get("azimuth")
+            bearing = azimuth if isinstance(azimuth, (int, float)) else EXPOSURES.get(exposure)
+            if bearing is not None:
+                out.append(float(bearing))
+        return out
+
+    def _sun_now(self, solar):
+        """The sun on the room's windows now, in kW/m², counted as the twin learned it."""
+        sun = self._sun()
+        light = solar or 0.0
+        return (twin.on_facades(light, sun.elevation, sun.azimuth, self._facades()) if sun else light) / 1000
 
     def _sun(self):
         state = self.hass.states.get("sun.sun")

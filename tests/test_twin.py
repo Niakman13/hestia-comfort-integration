@@ -68,5 +68,51 @@ class Twin(unittest.TestCase):
         self.assertGreaterEqual(twin.fit(flipped)["thermal"]["b"], 0)
 
 
+class SunOnFacades(unittest.TestCase):
+    def test_the_sun_position_at_home(self):
+        # Gardanne, 21 June at solar noon (11 h 38 UTC): high in the south.
+        elevation, azimuth = twin.sun_position(datetime(2026, 6, 21, 11, 38, tzinfo=timezone.utc), 43.45, 5.47)
+        self.assertAlmostEqual(elevation, 70, delta=1)
+        self.assertAlmostEqual(azimuth, 180, delta=3)
+        # 20 October, 16 h UTC: low in the south-west.
+        elevation, azimuth = twin.sun_position(datetime(2026, 10, 20, 16, tzinfo=timezone.utc), 43.45, 5.47)
+        self.assertTrue(5 < elevation < 20 and 225 < azimuth < 260, (elevation, azimuth))
+
+    def test_a_south_window_gets_the_noon_sun_a_north_one_only_light(self):
+        south = twin.on_facades(600, 40, 180, [180])
+        north = twin.on_facades(600, 40, 180, [0])
+        self.assertGreater(south, 500)
+        self.assertAlmostEqual(north, 90)  # diffuse light only
+        self.assertEqual(twin.on_facades(600, 40, 180, []), 600)  # unknown facades: the station's own measure
+
+
+class LearnedAdvice(unittest.TestCase):
+    def ready(self, days=10, temperature=0.2, humidity=1.5):
+        rows, end = known_room()
+        summary = twin.summary(rows, end)
+        return {**summary, "days": days, "precision": {"hours": 24, "temperature": temperature, "humidity": humidity}}
+
+    def test_a_drying_airing_is_promised_only_when_learning_is_optimal(self):
+        advice = {"action": "ouvrir", "reason": "drying_possible", "features": {"drying": {"now": 76, "after": 68, "minutes": 15, "openings": 31}}}
+        learned = twin.learned_advice(advice, self.ready())
+        self.assertEqual((learned["now"], learned["after"], learned["minutes"], learned["measure"], learned["openings"]), (76, 68, 15, "humidity", 31))
+        # A week at least, the last day replayed within ±0.5 °C and ±3 %, five airings learned.
+        self.assertIsNone(twin.learned_advice(advice, self.ready(days=5)))
+        self.assertIsNone(twin.learned_advice(advice, self.ready(temperature=1.1)))
+        self.assertIsNone(twin.learned_advice(advice, self.ready(humidity=4.7)))
+        self.assertIsNone(twin.learned_advice(advice, {**self.ready(), "precision": None}))
+        few = {**advice, "features": {"drying": {**advice["features"]["drying"], "openings": 3}}}
+        self.assertIsNone(twin.learned_advice(few, self.ready()))
+        # Air for CO₂ or a closing: nothing learned to promise.
+        self.assertIsNone(twin.learned_advice({**advice, "reason": "air_needed"}, self.ready()))
+        self.assertIsNone(twin.learned_advice({**advice, "action": "fermer"}, self.ready()))
+
+    def test_a_cooling_airing_gets_its_learned_temperature(self):
+        advice = {"action": "ouvrir", "reason": "cooling_possible", "features": {}}
+        learned = twin.learned_advice(advice, self.ready(), {"ti": 26, "hi": 50, "te": 18, "he": 60}, openings=12)
+        self.assertEqual((learned["measure"], learned["minutes"], learned["now"]), ("temperature", 30, 26))
+        self.assertLess(learned["after"], 26)
+
+
 if __name__ == "__main__":
     unittest.main()

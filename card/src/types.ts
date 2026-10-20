@@ -56,6 +56,8 @@ export interface Features {
   surface?:number|null;mould?:boolean;excess?:number|null;local?:number|null;source?:'inside'|'outside'|null;reachable?:number|null};
  /** What airing would really bring, from the room's past openings: humidity now and after, lasting gain in points. */
  rain_ahead?:{minutes:number;precise:boolean}|null;
+ /** A gesture whose result the room's twin predicts, once it has proved itself in this room. */
+ learned?:{now:number;after:number;minutes:number;measure:'humidity'|'temperature'|'co2';openings:number;days:number;precision:{temperature:number;humidity:number}}|null;
  volume?:{lead:string;reason:string;action:string;assessment?:Partial<Assessment>&{reason:string};observations?:Record<string,Reading>};
  warmth?:{occupied:boolean|null;heating:'on'|'off'|null}|null;
  drying?:{minutes:number;now:number;after:number;gain:number;tau:number;openings:number;later:{minutes:number;now:number;after:number;gain:number;time:string}|null}|null;
@@ -78,7 +80,8 @@ export interface Opening {
 }
 export interface View {
   version:1; entry_id:string; area_id:string|null; title:string; computed_at:string;
-  assessment:Assessment; observations:Record<string,Reading>; names?:Record<string,string>; /** Rooms open onto this one: one air, shared openings. */ volume?:{entry_id:string;title:string}[]; /** « Salon · Cuisine », the best equipped first. */ volume_name?:string|null; /** Home Assistant (or the room) has just started: silent sensors are still loading. */ starting?:boolean;
+  assessment:Assessment; observations:Record<string,Reading>; names?:Record<string,string>; /** Rooms open onto this one: one air, shared openings. */ volume?:{entry_id:string;title:string}[]; /** « Salon · Cuisine », the best equipped first. */ volume_name?:string|null;
+  /** What the room's twin has learned so far (engine/twin.py). */ twin?:{status:'learning'|'ready';days:number;samples:number;next_hour:{temperature:number;humidity:number}|null;precision:{hours:number;temperature:number;humidity:number}|null}; /** Home Assistant (or the room) has just started: silent sensors are still loading. */ starting?:boolean;
 }
 export interface ViewEvent {version:1; view?:View; reload?:boolean; unavailable?:boolean}
 export type Unsubscribe = () => Promise<void>|void;

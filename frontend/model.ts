@@ -11,7 +11,7 @@ export interface Candidate {
  voc_reference?:{id:'sensirion_index';value:number;unit:string}|null;
 }
 export interface Spec {entity_id:string;adapter:string;block_from?:number}
-export interface OpeningMeta {exposure:string|null;kind:string;sheltered:boolean;shutter?:'none'|'manual'|'connected';cover_entity?:string;auto_entity?:string;override_entity?:string;width?:number;height?:number;overhang_depth?:number;overhang_gap?:number}
+export interface OpeningMeta {exposure:string|null;azimuth?:number|null;kind:string;sheltered:boolean;shutter?:'none'|'manual'|'connected';cover_entity?:string;auto_entity?:string;override_entity?:string;width?:number;height?:number;overhang_depth?:number;overhang_gap?:number}
 export interface EvolutionConfig {voc_threshold?:{value:number;unit:string};glazing_factor?:number;presence_delay_minutes?:number}
 export interface RoomConfig {presence?:string[];evolution?:EvolutionConfig;floor_id?:string|null;area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean;heated?:boolean;open_to?:string[]}
 export interface Room {entry_id:string;title:string;loaded:boolean;config:RoomConfig}
@@ -37,7 +37,7 @@ export const warningText:Record<string,string>={
  other_area:'La mesure ou sa source est rattachée à une autre pièce. Confirmez qu’elle représente bien celle-ci.',
  contact_role:'Ce contact peut être une porte d’appareil, de meuble ou une porte intérieure. Gardez-le seulement s’il donne sur l’extérieur.',
  derived:'Il s’agit d’une donnée calculée ou regroupée. Vérifiez ce qu’elle mesure réellement.',
- no_hvac_action:'Cet équipement ne dit pas s’il chauffe réellement. Niak pourra seulement afficher son état comme inconnu.',
+ no_hvac_action:'Cet équipement ne dit pas s’il chauffe réellement. Son état sera seulement affiché comme inconnu.',
  binary_meaning:'Signal avancé : « actif » doit signifier pluie ou aération déconseillée. Un diagnostic de panne ne convient pas.',
  outdoor_role:'Ce capteur n’est pas rattaché à une pièce extérieure. Vérifiez qu’il mesure bien l’air du dehors.',
  used_indoor:'Ce capteur sert déjà de mesure intérieure pour une de vos pièces : il ne mesure sans doute pas l’air du dehors.',
@@ -92,14 +92,14 @@ export const stages=['Température et humidité','Fenêtres et portes','Qualité
 export const intros:Record<string,string[]>={
  0:['La température de la pièce : la seule mesure obligatoire.',
   'L’humidité est facultative : elle repère un air trop humide.',
-  'Niak propose les capteurs de la pièce ; vous les gardez, les changez ou les retirez.'],
+  'Les capteurs de la pièce sont proposés ; vous les gardez, les changez ou les retirez.'],
  1:['Les contacts des fenêtres et portes qui donnent dehors.',
-  'Niak sait ce qui est ouvert ; l’exposition dit quand le soleil entre.',
+  'Les contacts disent ce qui est ouvert ; l’exposition dit quand le soleil entre.',
   'Facultatif : sans contact, les conseils ne savent pas ce qui est ouvert.'],
  2:['Le CO₂, les particules et les COV suivent chacun une partie de la qualité de l’air.',
   'Tout est facultatif. Un purificateur ne retire pas le CO₂.'],
  3:['Le thermostat ou la vanne de la pièce, pour savoir si le chauffage tourne.',
-  'Niak évite alors de conseiller d’ouvrir pendant qu’il chauffe. Il ne commande rien.',
+  'Le conseil évite alors d’ouvrir pendant qu’il chauffe. Il ne commande rien.',
   'Facultatif.'],
  4:['Le nom de la pièce et sa pièce Home Assistant.',
   'Les précautions et les autres paramètres de fonctionnement, facultatifs.',
