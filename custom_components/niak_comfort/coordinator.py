@@ -345,6 +345,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 "comfort_minimum": self.settings.minimum,
                 "computed_at": now.isoformat(), "assessment": assessment,
                 "volume": [{"entry_id": p["entry_id"], "title": p["title"]} for p in self.partners], "volume_name": self.volume_name,
+                # Measures read from the room sharing this air: the card shows them once, under the room that has them.
+                "inherited": self.inherited(),
                 "twin": twin_view,
                 "feedback": {"last": summary["last"], "week": summary["week"]},
                 "habit": habits.now_habit(self.habits, self._answers(), dt_util.as_local(now), self.config.get("name") or "", self.config.get("area_id")),

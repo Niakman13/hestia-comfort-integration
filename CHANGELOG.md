@@ -1,3 +1,21 @@
+## 1.2.10 — Des cartes qui ne se contredisent plus
+
+**En bref**
+
+- **Des cartes qui ne se contredisent plus.** Vérifiées sur 10 jours réels d’une maison : 7 296 situations, plus aucune contradiction entre le bandeau, la pastille, « À savoir » et les mesures.
+
+### Corrections
+
+- Une fenêtre ouverte qui ne change rien : « Ouverte ou fermée, cela ne change rien », au lieu de « Ouvrir n’apporterait rien ».
+- Salon et cuisine sur une seule carte : chaque mesure s’affiche une fois, sous la pièce qui l’a.
+- Une pièce humide ou fraîche sans geste n’affiche plus « Tout va bien » : la pastille dit « Hors plage ».
+- « Refermez » dans une pièce humide dit pourquoi : « l’aération ne la baisserait que d’un point à peine ».
+- Pluie ou rafales : « Aérer n’est pas possible pour l’instant », et « À savoir » dit pourquoi. Une fenêtre abritée ouverte n’est plus priée de rester fermée.
+- Une pièce humide en « Rien à faire » dit toujours pourquoi l’humidité reste.
+- L’humidité du bandeau est celle de la pièce, comme sur sa tuile.
+- « Mesures absentes » n’affiche plus de lignes de conseil dessous.
+- La ligne Apprentissage n’apparaît que si un résultat est annoncé.
+
 ## 1.2.9 — Les pièces au même air apprises ensemble
 
 **En bref**

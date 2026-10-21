@@ -80,7 +80,7 @@ export interface Opening {
 }
 export interface View {
   version:1; entry_id:string; area_id:string|null; title:string; computed_at:string;
-  assessment:Assessment; observations:Record<string,Reading>; names?:Record<string,string>; /** Rooms open onto this one: one air, shared openings. */ volume?:{entry_id:string;title:string}[]; /** « Salon · Cuisine », the best equipped first. */ volume_name?:string|null;
+  assessment:Assessment; observations:Record<string,Reading>; names?:Record<string,string>; /** Rooms open onto this one: one air, shared openings. */ volume?:{entry_id:string;title:string}[]; /** Sources read from the room sharing this air, by key: {heating:'Salon'}. */ inherited?:Record<string,string>; /** « Salon · Cuisine », the best equipped first. */ volume_name?:string|null;
   /** The feedback loop: the last airing followed (within a day) and the week (engine/feedback.py). */
   feedback?:{last:{measure:'humidity'|'temperature'|'co2'|'voc';before:number;after:number;predicted:number|null;minutes:number}|null;week:{followed:number;ignored:number;evaluated:number;held:number;gains:Record<string,number>}};
   /** A humidity habit the person confirmed, going on now: the words for « À savoir ». */ habit?:string|null;

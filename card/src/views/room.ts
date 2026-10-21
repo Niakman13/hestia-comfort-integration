@@ -18,6 +18,9 @@ export interface Advice {title:string;line:TemplateResult|string;disk:string;cap
 /** Reasons that only say « keep closed »: the engine lowers them to calm when nothing is open and no reflex is at stake. */
 const QUIET=['drying_unavailable','drying_slow','opening_blocked','cooling_unavailable','precool_later'];
 /** The banner: the gesture in a few words, then why in one line. The full explanation stays behind « i ». */
+/** The room cannot be read: its temperature or three sensors silent. The banner then says so, and nothing that
+ * supposes an advice (a result, an airing) is said under it. One or two late secondary sensors leave the advice. */
+const unreadable=(v:View)=>{const failed=v.assessment.missing.filter(k=>!!v.observations[k]&&k!=='pollution');return failed.includes('indoor_temperature')||failed.length>=3;};
 export function advice(v:View):Advice {
   const out=withLearning(v,gesture(v));
   // To close, say which window: in a shared air it may be in the other room.
@@ -47,7 +50,8 @@ function gesture(v:View):Advice {
   // Once learned, the room's own past airings say where the humidity would really go.
   const drying=a.features?.drying??null;
   const water=(()=>{
-    if(drying){const now=Math.round(drying.now),after=Math.round(drying.after),outside=numeric(o.outdoor_humidity);
+    // The room's own measure, as on its tile; the drop is the one learned for its air.
+    if(drying){const now=Math.round(hi??drying.now),after=Math.round((hi??drying.now)-drying.gain),outside=numeric(o.outdoor_humidity);
       return outside!==null&&Math.round(outside)>=now
         ?html`Dehors ${Math.round(outside)} %, mais l’air froid contient peu d’eau : ${b('environ '+after+' %')} après l’aération`
         :html`${now} % d’humidité, ${b('environ '+after+' %')} après l’aération`;}
@@ -78,8 +82,7 @@ function gesture(v:View):Advice {
   const constraint=a.constraints.find(c=>c!=='heating_running'&&c!=='frost')??a.constraints[0];
   // A silent sensor is not advice: the banner says what Niak cannot see, the tiles show which ones.
   const failed=a.missing.filter(k=>!!o[k]&&k!=='pollution'),count=failed.length;
-  // Only when the room cannot be read: one or two secondary sensors late after a start leave the advice as it is.
-  const blind=failed.includes('indoor_temperature')||count>=3;
+  const blind=unreadable(v);
   if(blind&&v.starting)return {title:'Mesures en chargement',line:html`Home Assistant ${b('vient de démarrer')}`,disk:'clock',pill:'Démarrage',level:'neutral'};
   if(blind){const one=count===1;
     return {title:'Mesures absentes',line:html`${b(`${count} capteur${one?'':'s'} ne répond${one?'':'ent'} pas`)} · détail dans Mesures`,disk:'mute',pill:'Capteurs muets',level:'neutral'};}
@@ -88,7 +91,11 @@ function gesture(v:View):Advice {
   const quiet=(QUIET.includes(a.reason)&&(a.level==='calm'||a.level==='neutral'))||['humid_outdoor','open_neutral','drying_unavailable'].includes(a.reason)
     ||(a.reason==='drying_slow'&&a.features?.air?.ventilation?.on!==false)||(a.reason==='heat_needed'&&a.action!=='fermer'&&a.level!=='action');
   if(quiet&&a.action!=='fermer')
-    return {title:'Rien à faire',line:html`Ouvrir ${b('n’apporterait rien')} pour l’instant`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
+    // Already open, « opening would bring nothing » reads as a contradiction: open or shut makes no difference.
+    // A measure out of range with nothing to do about it: not « Tout va bien », only nothing better to do.
+    // Opening is held back (rain, gusts, outdoor air): not that it would bring nothing; « À savoir » says why.
+    return {title:'Rien à faire',line:opened?html`Ouverte ou fermée, ${b('cela ne change rien')}`:a.reason==='opening_blocked'?html`Aérer ${b('n’est pas possible')} pour l’instant`:html`Ouvrir ${b('n’apporterait rien')} pour l’instant`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined,
+      ...(a.needs.length?{pill:'Hors plage',level:'neutral' as Level}:{})};
   switch(a.reason){
     case 'within_comfort': return {title:'Rien à faire',line:html`${deg(ti)}, ${b('dans votre plage')}`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
     case 'rain_open_windows': return {title:'Fermez, il pleut',line:html`La pluie ${b('entre par les ouvrants exposés')}`,disk:'rain'};
@@ -161,7 +168,8 @@ function withLearning(v:View,out:Advice):Advice {
 /** Where the twin stands, when the advice is only estimated: said in « À savoir », never in the banner. */
 function learning(v:View):Fact|null {
   const t=v.twin,gestureNow=['action','urgent','benefit'].includes(v.assessment.level);
-  if(!t||!gestureNow||v.assessment.features?.learned)return null;
+  // Only a gesture that announces a result (open, keep open) can have it estimated: « Refermez » promises none.
+  if(!t||!gestureNow||v.assessment.features?.learned||!['ouvrir','ok'].includes(v.assessment.action)||unreadable(v))return null;
   // How much of the room is learned, and what the advised gesture still lacks: its result is then estimated.
   const g=t.progress;
   if(g){if(g.complete)return null;
@@ -180,9 +188,19 @@ function learning(v:View):Fact|null {
 export interface Fact {ic:string;title:string;text:TemplateResult|string}
 export function facts(v:View):Fact[] {
   const a=v.assessment,o=v.observations,f=a.features,ti=numeric(o.indoor_temperature),out:Fact[]=[];
+  // A room that cannot be read has no advice to explain: the banner sends to « Mesures ».
+  if(unreadable(v))return out;
   const hum=f?.humidity,w=f?.warmth,air=f?.air,vol=f?.volume;
   if(a.reason==='shared_volume'&&vol)out.push({ic:'home',title:'Même air',text:`conseil commun avec : ${vol.lead}`});
-  if(a.reason==='open_neutral')out.push({ic:'open',title:'Fenêtre ouverte',text:'sans effet sur le confort, vous pouvez refermer'});
+  if(a.reason==='open_neutral')out.push({ic:'open',title:'Fenêtre ouverte',text:a.needs.includes('dry')?'elle ne fait presque pas baisser l’humidité, vous pouvez refermer':'sans effet sur le confort, vous pouvez refermer'});
+  // Opening held back: what holds it, in words.
+  // Only under « Rien à faire »: a « Gardez fermé » banner already names it. An open sheltered window may stay open.
+  if(a.reason==='opening_blocked'&&a.action!=='fermer'&&['calm','neutral'].includes(a.level)){const c=a.constraints[0],open=Object.entries(o).some(([k,r])=>k.startsWith('window:')&&r.quality==='valid'&&r.value===true);
+    out.push({ic:'shut',title:open?'Autres fenêtres':'Fenêtres',text:`à garder fermées : ${c==='rain_soon'?'pluie imminente':c?(constraintLabels[c]??c).toLowerCase():'contrainte extérieure'}`});}
+  // « Refermez » in a damp room: why the airing is not kept for the humidity.
+  const gain=f?.drying?.gain;
+  if(a.reason==='exchange_harmful'&&a.needs.includes('dry'))
+    out.push({ic:'drop',title:'Humidité',text:gain!=null&&gain<4?`l’aération ne la baisserait que ${gain<1.5?'d’un point à peine':`de ${Math.round(gain)} points`}`:'l’aération ne la ferait pas assez baisser'});
   if(a.reason==='heat_needed'&&a.action!=='fermer'&&a.level!=='action')
     out.push({ic:'temp',title:'Pièce fraîche',text:w?.occupied===false?'maison vide : pas besoin de chauffer'
       :w?.heating==='on'?'le chauffage s’en charge':`${deg(ti)}, sous votre plage`});
@@ -190,7 +208,8 @@ export function facts(v:View):Fact[] {
   // The cause is not guessed: after days of rain, walls and fabrics give back water without a shower or a meal.
   if(hum?.mould)out.push({ic:'drop',title:'Humidité élevée',text:'risque de moisissure'});
   // The mould line already says it comes from the weather: one line, not two.
-  if(hum?.source==='outside'&&!hum.mould)out.push({ic:'drop',title:'Air humide dehors',text:'aérer ne ferait pas baisser l’humidité'});
+  // Asked to open for the air, « airing would not lower the humidity » would read as a contradiction.
+  if(hum?.source==='outside'&&!hum.mould)out.push({ic:'drop',title:'Air humide dehors',text:['ouvrir','ok'].includes(a.action)&&['action','urgent','benefit'].includes(a.level)?'l’humidité restera la même':'aérer ne ferait pas baisser l’humidité'});
   else if(a.reason==='drying_unavailable')out.push({ic:'open',title:'Aération',text:'n’aiderait pas, l’air du dehors n’est pas plus sec'});
   else if(a.reason==='drying_slow')out.push({ic:'open',title:'Aération',text:'ferait à peine baisser l’humidité'});
   if(hum?.local)out.push({ic:'drop',title:'Vapeur',text:'plus humide ici qu’à côté : cuisson ou douche'});
@@ -198,6 +217,16 @@ export function facts(v:View):Fact[] {
   if(air?.ventilation?.on===true)out.push({ic:'vmc',title:'VMC',text:a.needs.includes('dry')?'en marche, elle aide à assécher':'en marche'});
   // A confirmed habit names the cause of the humidity, only while it is going on.
   if(v.habit&&(a.needs.includes('dry')||hum?.mould))out.unshift({ic:'drop',title:'Humidité',text:v.habit});
+  // A damp room with no gesture for it always says why the humidity stays.
+  const said=out.some(x=>/umidit|Aération|Vapeur|VMC|Même air/.test(x.title+x.text));
+  // « Gardez fermé … le besoin attendra » already says it.
+  const waiting=a.reason==='opening_blocked'&&!['calm','neutral'].includes(a.level);
+  if(a.needs.includes('dry')&&!said&&!waiting&&!['drying_possible','ventilation_possible','short_air_change'].includes(a.reason))
+    out.push({ic:'drop',title:'Humidité',text:a.reason==='heat_needed'||a.needs.includes('heat')?'aérer refroidirait une pièce déjà fraîche'
+      :a.reason==='opening_blocked'?'elle attendra que l’on puisse aérer'
+      // Asked to open for the air: the same words as the gesture, not a denial of it.
+      :['ouvrir','ok'].includes(a.action)&&['action','urgent','benefit'].includes(a.level)?'l’aération la baissera peu'
+      :gain!=null&&gain<4?`l’aération ne la baisserait que ${gain<1.5?'d’un point à peine':`de ${Math.round(gain)} points`}`:'l’aération ne la ferait pas assez baisser'});
   // The last airing followed: what it gave, against what was predicted.
   const last=v.feedback?.last;
   if(last){const f=(x:number)=>last.measure==='temperature'?number(x):number(Math.round(x)),u=last.measure==='temperature'?' °C':last.measure==='co2'?' ppm':last.measure==='voc'?'':' %';
@@ -209,6 +238,8 @@ export function facts(v:View):Fact[] {
 /** The « À savoir » box, under the advice; nothing when there is nothing to know. */
 export function factBox(v:View,partners:View[]=[]):TemplateResult|typeof nothing {
   // One card for one air: « Même air » goes without saying, and a line said by two rooms is said once.
+  // The card's room cannot be read: its banner sends to « Mesures », the other rooms' lines would explain no advice.
+  if(unreadable(v))return nothing;
   const seen=new Set<string>(),list=[v,...partners].flatMap(r=>facts(r)).filter(f=>(!partners.length||f.title!=='Même air')&&!seen.has(f.title)&&!!seen.add(f.title)).slice(0,4);
   return list.length?html`<div class="nc-facts"><div class="nw-label">À savoir</div><ul>${list.map(f=>html`<li>${icon(f.ic)}<span><b>${f.title}</b> · ${f.text}</span></li>`)}</ul></div>`:nothing;
 }
@@ -320,6 +351,10 @@ const modeLabels:Record<string,string>={frost:'hors gel',eco:'éco',comfort:'con
 const gone=(r?:{quality:string})=>r?.quality==='stale'?'pas de nouvelle mesure':'indisponible';
 /** « 13 h 50 », in the person's own clock. */
 const clock=(x?:string|null)=>{const d=x?new Date(x):null;return d&&!isNaN(+d)?d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}).replace(':',' h '):null;};
+/** The source behind a tile, to know whether it is read from the room sharing this air. */
+const tileKeys:Record<string,string>={'CO₂':'co2',Particules:'pm25',COV:'voc',Purificateur:'purifier',Ventilation:'ventilation',Chauffage:'heating'};
+/** A room's tiles without those it reads from another room: on a card shared by both, each measure shows once. */
+const ownTiles=(v:View,list:Tile[])=>list.filter(t=>!v.inherited?.[tileKeys[t.label]??'']);
 export function tiles(v:View,config:Config):Tile[] {
   const o=v.observations,a=v.assessment,mods=new Set(config.modules??[]),list:Tile[]=[],air=a.features?.air;
   if(mods.has('humidity')&&o.indoor_humidity){const h=numeric(o.indoor_humidity),wet=a.needs.includes('dry'),outside=a.features?.humidity?.source==='outside';
@@ -352,6 +387,8 @@ export function tiles(v:View,config:Config):Tile[] {
     const raw=o.heating_mode?.quality==='valid'&&typeof o.heating_mode.value==='string'?o.heating_mode.value:null,mode=raw?modeLabels[raw]??raw:null;
     list.push({ic:'heat',label:'Chauffage',value:running?'Chauffe':label,note:mode?`mode ${mode}`:running?'chauffe la pièce':'observé, jamais commandé',level:'neutral',out:false});}
   for(const t of list)t.entity??=tileEntity(v,t.label);
+  // A measure read from the room sharing this air says where it is measured.
+  for(const t of list){const from=v.inherited?.[tileKeys[t.label]??''];if(from)t.note=`${t.note} · ${from}`;}
   // Right after a start, a silent sensor is still on its way, not broken.
   return v.starting?list.map(t=>t.note==='indisponible'||t.note==='pas de nouvelle mesure'?{...t,note:'en attente'}:t):list;
 }
@@ -431,8 +468,9 @@ export const asking=(v:View)=>['action','urgent'].includes(slides(v)[0]?.level??
 export function roomCard(v:View,config:Config,st:CardState,format:Format='full',partners:View[]=[]):TemplateResult|null {
   const a=v.assessment,f=a.features,ti=numeric(v.observations.indoor_temperature),te=numeric(v.observations.outdoor_temperature);
   // Rooms sharing one air are one card: the other rooms' own measures, without the windows and the sun they share.
-  const shared=new Set(['Fenêtres','Soleil']),others=partners.map(p=>({title:p.title,list:[...roomTemperature(p),...tiles(p,config).filter(t=>!shared.has(t.label)&&t.label!=='Température')]}));
-  const own=tiles(v,config),list=[...own,...others.flatMap(o=>o.list)],outside=list.filter(t=>t.out&&!t.remedy),muted=list.filter(t=>tileClass(t).includes(' mute'));
+  const shared=new Set(['Fenêtres','Soleil']),others=partners.map(p=>({title:p.title,list:[...roomTemperature(p),...ownTiles(p,tiles(p,config)).filter(t=>!shared.has(t.label)&&t.label!=='Température')]}));
+  // On a card shared by several rooms, the scale shows the first room's temperature: its own tile says so too.
+  const own=partners.length?[...roomTemperature(v),...ownTiles(v,tiles(v,config))]:tiles(v,config),list=[...own,...others.flatMap(o=>o.list)],outside=list.filter(t=>t.out&&!t.remedy),muted=list.filter(t=>tileClass(t).includes(' mute'));
   const marks=config.scale_marks??(config.show_scale===false?[]:SCALE_MARKS);
   const band:[number,number]|null=f?.season&&marks.includes('band')?[f.season.minimum,f.season.maximum]:null;
   const sc=(config.modules??[]).includes('temperature')&&marks.length&&ti!==null

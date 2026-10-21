@@ -207,7 +207,7 @@ test('a « keep closed » that brings nothing leaves the banner calm',()=>{
   const v=fresh();
   for(const reason of ['drying_unavailable','drying_slow','opening_blocked','cooling_unavailable','precool_later']){
     v.assessment={...v.assessment,reason,level:'calm',action:'attendre'};
-    const a=advice(v);assert.equal(a.title,'Rien à faire',reason);assert.match(plain(a.line),/n’apporterait rien/);
+    const a=advice(v);assert.equal(a.title,'Rien à faire',reason);assert.match(plain(a.line),reason==='opening_blocked'?/n’est pas possible/:/n’apporterait rien/);
   }
   v.assessment={...v.assessment,reason:'opening_blocked',level:'action',action:'attendre'};
   assert.notEqual(advice(v).title,'Rien à faire');
@@ -339,4 +339,64 @@ test('high humidity is said without guessing its cause',()=>{
     v.title=title;v.assessment={...v.assessment,reason:'drying_unavailable',level:'calm',action:'attendre',features:{...v.assessment.features,humidity:hum}};
     assert.deepEqual(facts(v).map(f=>f.title+' · '+plain(f.text)),['Humidité élevée · risque de moisissure','Aération · n’aiderait pas, l’air du dehors n’est pas plus sec']);
   }
+});
+test('rooms sharing one air show each measure once, under the room that has it',()=>{
+  const r=(value,source,unit=null)=>({value,quality:'valid',source,unit});
+  const calm=v=>{v.assessment={...v.assessment,level:'calm',reason:'within_comfort',needs:[],features:{...v.assessment.features,air:{...(v.assessment.features?.air??{}),co2_status:'ok',voc_status:'ok'}}};return v;};
+  // Salon, 21 October: its CO₂ sensor, the kitchen's VOC sensor and purifier; the kitchen reads the living room's CO₂.
+  const salon=calm(fresh());salon.title='Salon';salon.volume=[{entry_id:'c',title:'Cuisine'}];salon.volume_name='Salon · Cuisine';
+  salon.observations={...salon.observations,indoor_temperature:r(20.2,'sensor.st','°C'),co2:r(441,'sensor.co2','ppm'),voc:r(29,'sensor.voc'),purifier:r(false,'fan.p')};
+  salon.inherited={voc:'Cuisine',purifier:'Cuisine'};
+  const cuisine=calm(fresh());cuisine.title='Cuisine';
+  cuisine.observations={...cuisine.observations,indoor_temperature:r(20.1,'sensor.ct','°C'),co2:r(441,'sensor.co2','ppm'),voc:r(29,'sensor.voc'),purifier:r(false,'fan.p')};
+  cuisine.inherited={co2:'Salon'};
+  const st={why:false,tilesOpen:true,detailsOpen:false,uid:'t',toggle(){}};
+  const text=plain(roomCard(salon,cleanConfig({type:'custom:niak-comfort-card',format:'measures',modules:['air','temperature'],scale_marks:[]}),st,'measures',[cuisine]));
+  assert.equal((text.match(/CO₂/g)??[]).length,1);
+  assert.equal((text.match(/COV/g)??[]).length,1);
+  assert.equal((text.match(/Purificateur/g)??[]).length,1);
+  // Both temperatures, each under its room.
+  assert.match(text,/20,2/);assert.match(text,/20,1/);
+  // A room shown alone says where a borrowed measure comes from.
+  assert.match(plain(roomCard(cuisine,cleanConfig({type:'custom:niak-comfort-card',format:'measures',modules:['air']}),st,'measures')),/· Salon/);
+});
+test('an open window that changes nothing is not told that opening would bring nothing',()=>{
+  const v=fresh();v.assessment={...v.assessment,reason:'open_neutral',action:'ok',level:'calm',needs:[]};
+  v.observations={...v.observations,'window:w':{value:true,quality:'valid',source:'w'}};
+  const a=advice(v);
+  assert.equal(a.title,'Rien à faire');assert.doesNotMatch(plain(a.line),/Ouvrir/);
+});
+test('a damp room with nothing to do is not « Tout va bien », and a « Refermez » says why the humidity stays',async()=>{
+  const {facts}=await import(pathToFileURL(join(temp,'views/room.mjs')));
+  // Chambre A, 21 October: 68.9 %, airing would barely help.
+  const a=fresh();a.assessment={...a.assessment,reason:'drying_slow',action:'attendre',level:'calm',needs:['dry']};
+  assert.equal(advice(a).pill,'Hors plage');
+  const ok=fresh();ok.assessment={...ok.assessment,reason:'within_comfort',action:'ok',level:'calm',needs:[]};
+  assert.notEqual(advice(ok).pill,'Hors plage');
+  // Chambre P: 73 %, the open window cools it for one point of humidity.
+  const p=fresh();p.twin={status:'ready',days:10,samples:400,next_hour:null,precision:{hours:24,temperature:0.2,humidity:2},progress:{percent:89,complete:false,parts:{heating:0},seen:{days:10,airings:7}}};
+  p.assessment={...p.assessment,reason:'exchange_harmful',action:'fermer',level:'action',needs:['dry'],features:{...p.assessment.features,drying:{minutes:60,now:73,after:72,gain:1.1,tau:170,openings:7,later:null}}};
+  const lines=facts(p).map(x=>`${x.title} · ${x.text}`);
+  assert.ok(lines.includes('Humidité · l’aération ne la baisserait que d’un point à peine'),lines.join(' | '));
+  assert.ok(!lines.some(l=>l.startsWith('Apprentissage')),lines.join(' | '));
+});
+test('the replay of 10 days at home, 21 October: what is held back, unread or already said is never said wrong',()=>{
+  const lines=v=>facts(v).map(x=>`${x.title} · ${plain(x.text)}`);
+  // Rain on the exposed windows, a sheltered one open: the others stay shut, the banner does not say opening brings nothing.
+  const blocked=fresh();blocked.assessment={...blocked.assessment,reason:'opening_blocked',action:'attendre',level:'calm',needs:['dry'],constraints:['rain']};
+  assert.match(plain(advice(blocked).line),/n’est pas possible/);
+  assert.ok(lines(blocked).includes('Fenêtres · à garder fermées : pluie sur les ouvrants exposés'),lines(blocked).join(' | '));
+  assert.ok(lines(blocked).includes('Humidité · elle attendra que l’on puisse aérer'),lines(blocked).join(' | '));
+  blocked.observations={...blocked.observations,'window:w':{value:true,quality:'valid',source:'w'}};
+  assert.ok(lines(blocked).some(l=>l.startsWith('Autres fenêtres')),lines(blocked).join(' | '));
+  // « Gardez fermé … le besoin attendra »: not said again underneath.
+  const keep=fresh();keep.assessment={...keep.assessment,reason:'opening_blocked',action:'attendre',level:'action',needs:['dry'],constraints:['rain']};
+  assert.ok(!lines(keep).some(l=>/garder fermées|attendra/.test(l)),lines(keep).join(' | '));
+  // A room that cannot be read explains no advice.
+  const blind=fresh();blind.assessment={...blind.assessment,reason:'drying_slow',action:'attendre',level:'neutral',needs:['dry'],missing:['indoor_temperature']};
+  blind.observations={...blind.observations,indoor_temperature:{value:null,quality:'unknown',source:'sensor.t',detail:'unavailable'}};
+  assert.equal(advice(blind).title,'Mesures absentes');assert.deepEqual(facts(blind),[]);
+  // Asked to air for the steam: no « it will barely lower it » underneath.
+  const steam=fresh();steam.assessment={...steam.assessment,reason:'short_air_change',action:'ouvrir',level:'action',needs:['dry']};
+  assert.ok(!lines(steam).some(l=>/baissera peu|baisserait|pas assez baisser/.test(l)),lines(steam).join(' | '));
 });
