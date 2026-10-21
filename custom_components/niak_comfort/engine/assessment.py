@@ -27,7 +27,7 @@ MOULD_MINUTES = 60
 # without a window, so it helps where opening would bring too little to be asked.
 VENTILATION_DELTA = 0.8
 # Humidity points an already open window must still take off to be worth keeping open.
-OPEN_GAIN = 1.0
+OPEN_GAIN = 3.0
 # Reasons that only say « do not open »: with nothing open, they bring nothing and stay off the banner.
 QUIET_REASONS = ("open_neutral", "humid_outdoor", "drying_unavailable", "drying_slow", "opening_blocked", "heat_needed", "cooling_unavailable", "precool_later")
 LEVELS = ("calm", "benefit", "action", "urgent", "neutral")

@@ -1,3 +1,13 @@
+## 1.2.8 — Une fenêtre ouverte seulement quand ça vaut le coup
+
+**En bref**
+
+- **Une fenêtre ouverte n’est plus gardée pour un ou deux points d’humidité.** Il faut qu’elle en fasse encore gagner 3 au moins.
+
+### Corrections
+
+- La carte pouvait dire « Encore 56 min d’aération » pour un point d’humidité à peine, alors que la pièce se refroidissait. Elle propose maintenant de refermer.
+
 ## 1.2.7 — L’apprentissage de chaque pièce en pourcentage
 
 **En bref**
