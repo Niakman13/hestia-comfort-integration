@@ -104,7 +104,12 @@ class Configuration:
         for key, entity_id in found["proposals"].items():
             if c := candidate(self.hass, entity_id, key):
                 sources[key] = {"entity_id": entity_id, "adapter": c["adapter"], **({"block_from": 4} if c["adapter"] == "niak_index" else {})}
-        return {"entry_id": found["entry_id"], "title": found["title"], "sources": sources}
+        # Niak Weather 2.5.7 gives its air through api.air() (Atmo France or a WAQI station), without an entity of its own.
+        air = weather_link.air(self.hass, found["entry_id"])
+        if "pollution" not in sources and air:
+            sources["pollution"] = {"entity_id": air["entity_id"], "adapter": "niak_air", "block_from": 4}
+        shown = {"provider": air["provider"], "index": air.get("index"), "label": air.get("label")} if air else None
+        return {"entry_id": found["entry_id"], "title": found["title"], "sources": sources, "air": shown}
 
     def overview(self):
         used = {{**e.data, **e.options}.get("area_id") for e in self.entries()}
@@ -122,10 +127,19 @@ class Configuration:
             for key, spec in sources.items():
                 if not isinstance(spec, dict) or not isinstance(spec.get("entity_id"), str):
                     raise ValueError("Choisissez une source extérieure existante.")
+                threshold = spec.get("block_from", 4)
+                if spec.get("adapter") == "niak_air":
+                    # The air of the linked Niak Weather place, whatever its source; read again on every update.
+                    air = weather_link.air(self.hass, payload.get("weather"))
+                    if key != "pollution" or not air or air["entity_id"] != spec["entity_id"]:
+                        raise ValueError("La qualité de l’air de Niak Weather n’est plus disponible : rechargez la page.")
+                    if isinstance(threshold, bool) or not isinstance(threshold, int) or not 2 <= threshold <= 6:
+                        raise ValueError("Choisissez un niveau ATMO entre Moyen et Extrêmement mauvais.")
+                    cleaned["sources"][key] = {"entity_id": spec["entity_id"], "adapter": "niak_air", "block_from": threshold}
+                    continue
                 c = candidate(self.hass, spec["entity_id"], key, include_legacy=True)
                 if not c or spec.get("adapter") != c["adapter"]:
                     raise ValueError("Source extérieure incompatible : " + key)
-                threshold = spec.get("block_from", 4)
                 daily = c["adapter"] in ("atmo_daily", "niak_index")
                 if daily and (isinstance(threshold, bool) or not isinstance(threshold, int) or not 2 <= threshold <= 6):
                     raise ValueError("Choisissez un niveau ATMO entre Moyen et Extrêmement mauvais.")
@@ -370,7 +384,7 @@ class Configuration:
         if config is not None and not self.uses_home(config):
             return sources
         spec = sources.get("pollution")
-        if not spec or spec.get("adapter") not in ("atmo_daily", "niak_index"):
+        if not spec or spec.get("adapter") not in ("atmo_daily", "niak_index", "niak_air"):
             return sources
         found = weather_link.air(self.hass, self.home.get("weather")) if self.home.get("configured") else None
         if found:

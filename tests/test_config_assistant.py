@@ -217,6 +217,20 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         with self.assertRaises(ValueError):
             self.service.validate({'sources': {}, 'weather': 'gone'}, home=True)
 
+    async def test_niak_weather_air_without_an_entity_is_kept(self):
+        """Niak Weather 2.5.7 gives its air through api.air() (here a WAQI station): taking its station must keep it."""
+        self.register('sensor.gw_out', 'temperature', area='exterieur')
+        self.link_weather({'temperature': 'sensor.gw_out'})
+        api = self.hass.data['niak_weather_api']
+        type(api).air = lambda self, entry_id=None: {'entry_id': 'nw1', 'source': 'waqi', 'provider': 'WAQI', 'entity_id': 'sensor.waqi_marseille', 'index': 2, 'label': 'Moyen', 'at': None}
+        found = self.service.weather_proposal()
+        self.assertEqual(found['sources']['pollution'], {'entity_id': 'sensor.waqi_marseille', 'adapter': 'niak_air', 'block_from': 4})
+        self.assertEqual(found['air'], {'provider': 'WAQI', 'index': 2, 'label': 'Moyen'})
+        cleaned, _ = self.service.validate({'sources': {**found['sources'], 'pollution': {**found['sources']['pollution'], 'block_from': 3}}, 'weather': 'nw1'}, home=True)
+        self.assertEqual(cleaned['sources']['pollution'], {'entity_id': 'sensor.waqi_marseille', 'adapter': 'niak_air', 'block_from': 3})
+        with self.assertRaises(ValueError):
+            self.service.validate({'sources': {'pollution': {'entity_id': 'sensor.other', 'adapter': 'niak_air'}}, 'weather': 'nw1'}, home=True)
+
     async def test_niak_weather_knows_niak_comfort_listens(self):
         """Niak Weather 2.1+ is told who listens, so its settings show « Relié à Niak Confort »."""
         heard = []
