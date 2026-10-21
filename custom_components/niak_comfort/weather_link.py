@@ -75,6 +75,16 @@ def air(hass, entry_id):
     return link.air(entry_id)
 
 
+def season(hass, entry_id):
+    """Today's season as Niak Weather shows it (its Season sensor, else the date): « spring », « summer », « autumn »
+    or « winter »; None when not linked or before Niak Weather 2.6.2."""
+    link = api(hass)
+    if not link or not entry_id or not hasattr(link, "season"):
+        return None
+    found = link.season(entry_id)
+    return found.get("season") if found else None
+
+
 def _number(hass, entity_id):
     state = hass.states.get(entity_id) if entity_id else None
     try:

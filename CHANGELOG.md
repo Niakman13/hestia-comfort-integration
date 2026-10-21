@@ -1,3 +1,25 @@
+## 1.3.0 — Des conseils qui suivent la saison
+
+**En bref**
+
+- **Des conseils qui suivent la saison.** Été, hiver ou entre-saisons : les heures, la durée d’une aération, le soleil et la fenêtre ouverte la nuit ne se jugent plus de la même façon.
+- **La saison vient de Niak Weather** (2.6.2), ou d’un capteur Saison choisi dans « Extérieur ». Rien n’est deviné.
+- **Plus d’« Aérez vers 3 h »** : une heure d’aération n’est proposée qu’à des heures où l’on peut ouvrir.
+
+### Nouveautés
+
+- Heures d’aération selon la saison : de 7 h à 23 h en été (l’aération du soir jusqu’au coucher), de 8 h à 21 h au printemps et en automne, de 10 h à 18 h en hiver.
+- Hiver : une aération courte et franche (5 à 10 min), conseillée dès 3 points d’humidité à gagner. Une pièce trop chaude ne se rafraîchit pas en ouvrant : « baissez le chauffage plutôt que d’ouvrir ».
+- Soleil : toujours bienvenu en hiver ; en été, « baissez le volet » dès que la pièce approche du haut de sa plage.
+- Le haut de la plage de température suit la saison : votre valeur d’hiver, votre valeur d’été, entre les deux au printemps et en automne.
+- Nouvelle source « Saison » dans « Extérieur » quand Niak Weather n’est pas la source ; avec Niak Weather, sa saison est reprise et affichée.
+- Le flacon d’apprentissage s’affiche dans la pastille dès qu’un chiffre vient des aérations apprises de la pièce, aussi sur la carte logement.
+
+### Améliorations
+
+- Fenêtre ouverte la nuit, voulue : elle n’est tolérée que si elle rafraîchit la pièce. Dehors plus chaud, pièce trop fraîche ou plus humide : « Refermez ». La réponse vaut pour une saison et la question revient à la suivante ; en hiver, une fenêtre ouverte la nuit est toujours signalée.
+- Sous « Aérez vers … h », plus de ligne qui semblait contredire le conseil.
+
 ## 1.2.12 — Des conseils optimisés sans attendre 100 %
 
 **En bref**

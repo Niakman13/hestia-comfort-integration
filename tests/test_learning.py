@@ -117,6 +117,25 @@ class DryingAdviceTests(unittest.TestCase):
         self.assertEqual((result.action, result.reason), ("attendre", "drying_later"))
         self.assertEqual(datetime.fromisoformat(result.features["drying"]["later"]["time"]), now + timedelta(hours=5))
 
+    def test_no_airing_is_asked_for_in_the_night(self):
+        """Chambres P and M, 21 October: « Aérez vers 3 h », the driest hour, while everyone sleeps."""
+        from zoneinfo import ZoneInfo
+        paris = ZoneInfo("Europe/Paris")
+        now = datetime(2026, 10, 21, 20, 0, tzinfo=timezone.utc)  # 22 h in Paris
+        hours = [{"time": (now + timedelta(hours=h)).isoformat(), "temperature": 12.0 if h < 5 else 4.0,
+                  "humidity": 80.0, "precipitation": 0} for h in range(0, 12)]
+        model = {"tau": 60.0, "residual": 4.0, "rebound": 0.4, "openings": 6}
+        # The driest hours are in the night: the first hour of the season's day is proposed, never 3 h.
+        hour = lambda **k: datetime.fromisoformat(learning.best_moment(model, 20.0, 13.0, 8.5, hours, now, zone=paris, **k)["time"]).astimezone(paris).hour
+        self.assertEqual(hour(season="autumn"), 8)
+        self.assertEqual(hour(season="summer"), 7)
+        self.assertEqual(hour(), 8)  # no season known: the in-between hours, nothing guessed
+        self.assertIsNone(learning.best_moment(model, 20.0, 13.0, 8.5, hours, now, zone=paris, season="winter"))  # 10 h is beyond 12 hours
+        self.assertEqual(learning.awake("winter"), (10, 18))
+        for h in hours:
+            h["temperature"] = 12.0 if not 1 <= datetime.fromisoformat(h["time"]).astimezone(paris).hour < 6 else 4.0
+        self.assertIsNone(learning.best_moment(model, 20.0, 13.0, 8.5, hours, now, zone=paris))
+
     def test_a_forecast_far_from_the_station_announces_no_better_hour(self):
         now = datetime(2026, 10, 17, 14, 0, tzinfo=timezone.utc)
         # The forecast says 20 °C now while the station measures 12 °C.

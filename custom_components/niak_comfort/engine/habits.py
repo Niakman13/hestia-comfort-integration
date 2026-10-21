@@ -71,11 +71,26 @@ def cause(title, area=None):
     return None
 
 
-def questions(title, area, habits, answers):
-    """The questions still to ask for this room: one per habit not answered yet."""
+def season_group(name):
+    """« summer », « winter » or « between » (spring, autumn, or no season known): an answer holds for one of them."""
+    return name if name in ("summer", "winter") else "between"
+
+
+SEASON_WORDS = {"summer": "cet été", "winter": "cet hiver", "between": "en cette saison"}
+
+
+def night_key(season):
+    """The answer about a window open at night holds for the season it was given in: asked again in the next."""
+    return f"night_open:{season_group(season)}"
+
+
+def questions(title, area, habits, answers, season=None):
+    """The questions still to ask for this room: one per habit not answered yet (per season for a night window)."""
     out = []
     for habit in habits:
-        if habit["key"] in (answers or {}):
+        key = night_key(season) if habit["kind"] == "night_open" else habit["key"]
+        # In winter a window open at night is always said: asking whether it is on purpose would change nothing.
+        if key in (answers or {}) or key == "night_open:winter":
             continue
         if habit["kind"] == "humidity":
             when = {"weekdays": " en semaine", "weekend": " le week-end"}.get(habit["days"], "")
@@ -84,9 +99,10 @@ def questions(title, area, habits, answers):
                 f"Est-ce {guess} ?" if guess else "Est-ce une habitude de la maison ?")
             hint = "Votre réponse précise la cause ; sans elle, aucune cause n’est affichée."
         else:
-            text = f"Une fenêtre de la pièce « {title} » est souvent ouverte la nuit. Est-ce voulu ?"
-            hint = "Si oui, elle ne sera plus signalée comme un oubli la nuit."
-        out.append({"key": habit["key"], "text": text, "hint": hint})
+            text = f"Une fenêtre de la pièce « {title} » est souvent ouverte la nuit {SEASON_WORDS[season_group(season)]}. Est-ce voulu, pour l’air frais ?"
+            hint = ("Si oui, elle ne sera plus signalée comme un oubli tant qu’elle rafraîchit la pièce. Si l’air du dehors "
+                    "la réchauffe, la refroidit trop ou l’humidifie, Confort conseillera toujours de fermer. Question reposée à chaque saison.")
+        out.append({"key": key, "text": text, "hint": hint})
     return out
 
 

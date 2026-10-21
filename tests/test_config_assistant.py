@@ -231,6 +231,28 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         with self.assertRaises(ValueError):
             self.service.validate({'sources': {'pollution': {'entity_id': 'sensor.other', 'adapter': 'niak_air'}}, 'weather': 'nw1'}, home=True)
 
+    async def test_a_season_sensor_is_an_exterior_source(self):
+        """Without Niak Weather, the Season integration's sensor gives the hours an airing can be asked for."""
+        from custom_components.niak_comfort.discovery import candidate
+        from custom_components.niak_comfort.exterior import exterior_reading
+        from homeassistant.util import dt as dt_util
+        self.register('sensor.season', 'enum', area='exterieur', value='autumn', unit=None, platform='season')
+        self.register('sensor.saison_maison', None, area='exterieur', value='Été', unit=None)
+        self.register('sensor.gw_out', 'temperature', area='exterieur')
+        self.assertEqual(candidate(self.hass, 'sensor.season', 'season')['adapter'], 'season')
+        self.assertEqual(candidate(self.hass, 'sensor.saison_maison', 'season')['adapter'], 'season')
+        self.assertIsNone(candidate(self.hass, 'sensor.gw_out', 'season'))
+        spec = {'entity_id': 'sensor.saison_maison', 'adapter': 'season'}
+        reading = exterior_reading(self.hass.states.get('sensor.saison_maison'), 'season', spec, now=dt_util.utcnow(), max_age=1800)
+        self.assertEqual((reading.value, reading.quality), ('summer', 'valid'))
+
+    async def test_niak_weather_gives_its_season(self):
+        self.register('sensor.gw_out', 'temperature', area='exterieur')
+        self.link_weather({'temperature': 'sensor.gw_out'})
+        api = self.hass.data['niak_weather_api']
+        type(api).season = lambda self, entry_id=None: {'entry_id': 'nw1', 'season': 'autumn', 'label': 'Automne'}
+        self.assertEqual(self.service.weather_proposal()['season'], 'autumn')
+
     async def test_niak_weather_knows_niak_comfort_listens(self):
         """Niak Weather 2.1+ is told who listens, so its settings show « Relié à Niak Confort »."""
         heard = []

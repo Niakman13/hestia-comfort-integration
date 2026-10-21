@@ -85,12 +85,30 @@ class Settings:
 SEASON_FROM, SEASON_TO = 12.0, 20.0
 
 
-def seasonal(settings: "Settings", outdoor_mean: float | None) -> tuple["Settings", dict]:
-    """Comfort range for the season: the upper limit follows the recent outdoor mean, smoothly.
+# The upper limit by season, when the home's season is known (Niak Weather's, or a season sensor): winter's value,
+# summer's, and half-way in spring and autumn.
+SEASON_WEIGHTS = {"winter": 0.0, "between": 0.5, "summer": 1.0}
 
-    Without a known mean the saved range is kept untouched; nothing is guessed from the calendar.
+
+def season_group(name):
+    """« summer », « winter », « between » (spring, autumn) or None when the home's season is not known."""
+    return None if name is None else name if name in ("summer", "winter") else "between" if name in ("spring", "autumn") else None
+
+
+def seasonal(settings: "Settings", outdoor_mean: float | None, name: str | None = None) -> tuple["Settings", dict]:
+    """Comfort range for the season: the upper limit follows the home's season when it is known, else the recent
+    outdoor mean, smoothly.
+
+    Without either, the saved range is kept untouched; nothing is guessed from the calendar.
     """
     summer = max(settings.summer_maximum, settings.maximum)
+    group = season_group(name)
+    if group:
+        weight = SEASON_WEIGHTS[group]
+        maximum = round(settings.maximum + weight * (summer - settings.maximum), 1)
+        mean = round(outdoor_mean, 1) if outdoor_mean is not None and math.isfinite(outdoor_mean) else None
+        return replace(settings, maximum=maximum), {"known": True, "weight": weight, "outdoor_mean": mean, "name": name, "group": group,
+                                                    "minimum": settings.minimum, "maximum": maximum}
     if outdoor_mean is None or not math.isfinite(outdoor_mean):
         return settings, {"known": False, "weight": None, "outdoor_mean": None,
                           "minimum": settings.minimum, "maximum": settings.maximum}
@@ -188,7 +206,11 @@ def facade_irradiance(share: float, sun: Sun | None, solar: float | None) -> flo
     return round(max(direct, diffuse))
 
 
-def _benefits(details, openings, settings, ti, hot, cold, heated, te):
+# Minutes of a winter airing: short and brisk; and the humidity points it must take off to be asked for.
+WINTER_AIRING, WINTER_GAIN = 10, 3.0
+
+
+def _benefits(details, openings, settings, ti, hot, cold, heated, te, group=None):
     """What the sun on the windows does for the room now, worth knowing without being a gesture of its own.
 
     - sun_warms: a heated room in the lower half of its range, the sun on a window: shutters and curtains open;
@@ -199,14 +221,16 @@ def _benefits(details, openings, settings, ti, hot, cold, heated, te):
     sunny = [d for d in details if d.get("sun_wm2") is not None and d["sun_wm2"] >= settings.sun_facade]
     middle = (settings.minimum + settings.maximum) / 2
     found = []
-    if sunny and heated and not hot and (cold or ti < middle):
+    # By season: in winter the sun is always welcome, in summer never sought, in between when the room is cool.
+    welcome = group == "winter" or (group != "summer" and (cold or ti < middle))
+    if sunny and heated and not hot and welcome:
         found.append({"kind": "sun_warms", "openings": [d["entity_id"] for d in sunny], "watts": max(d["sun_wm2"] for d in sunny),
                       # Colder outside: the window stays shut, the glass lets the warmth in.
                       "keep_shut": te is not None and te < ti})
     # In-between seasons, a sunny afternoon at 24 °C stores warmth for the night: only too hot, or nearly with a warmer outside.
-    near_top = hot or (ti >= settings.maximum - 1 and te is not None and te >= ti)
+    near_top = group != "winter" and (hot or (ti >= settings.maximum - 1 and (group == "summer" or (te is not None and te >= ti))))
     free = [d for d in sunny if d.get("open") is not True and not getattr(openings.get(d["entity_id"]), "driver", None)]
-    if near_top and free and not cold:
+    if near_top and free and not cold:  # in summer, as soon as the room nears the top of its range
         found.append({"kind": "sun_heats", "openings": [d["entity_id"] for d in free], "watts": max(d["sun_wm2"] for d in free)})
     return found
 
@@ -222,7 +246,8 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     outlook = outlook or {}
     context = context or {}
     # The upper comfort limit follows the season; a room declared unheated never calls for warmth.
-    settings, season = seasonal(settings, context.get("outdoor_mean_7d"))
+    settings, season = seasonal(settings, context.get("outdoor_mean_7d"), context.get("season_name"))
+    group = season.get("group")
     heated = context.get("heated", True) is not False
     ti, te = value("indoor_temperature"), value("outdoor_temperature")
     hi, he, co2 = value("indoor_humidity"), value("outdoor_humidity"), value("co2")
@@ -292,6 +317,11 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     # Pre-cooling (template « prérefroidir »): at night, when tomorrow is announced well above the comfort range.
     tomorrow_max = outlook.get("tomorrow_max")
     night = sun is not None and sun.elevation < 0
+    # The summer evening airing that stores coolness: only until bedtime, never in the middle of the night.
+    if night and now is not None:
+        start, until = learning.awake(context.get("season_name"))
+        clock = now.astimezone(context["zone"]) if context.get("zone") else now
+        night = start <= clock.hour < until
     precool = (not hot and not cold and not wet and night and ti is not None and isinstance(tomorrow_max, (int, float))
                and tomorrow_max >= settings.maximum + 3 and ti > settings.minimum + 2)
     needs = tuple(k for k, active in (("air", air), ("cool", hot), ("heat", cold), ("dry", wet), ("precool", precool)) if active)
@@ -304,10 +334,14 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     if wet and dry and ti is not None:
         model = (volume or {}).get("drying_model") or context.get("drying_model")
         model = model if isinstance(model, Mapping) and all(isinstance(model.get(k), (int, float)) for k in ("tau", "residual", "rebound")) else {**learning.DEFAULT, "openings": 0}
-        drying = {**learning.outcome(model, hti, ai, ae), "tau": model["tau"], "openings": model.get("openings", 0),
-                  "later": learning.best_moment(model, hti, ai, ae, outlook.get("hours"), now) if now and not opened else None}
+        # In winter a short, brisk airing dries without chilling the walls: what ten minutes would bring.
+        short = WINTER_AIRING if group == "winter" else None
+        drying = {**learning.outcome(model, hti, ai, ae, short), "tau": model["tau"], "openings": model.get("openings", 0),
+                  "later": learning.best_moment(model, hti, ai, ae, outlook.get("hours"), now, zone=context.get("zone"), season=context.get("season_name"),
+                                                duration=short) if now and not opened else None}
     # Before opening, an airing must be worth it; once open, it must still bring something to stay open.
-    worth = drying is not None and drying["gain"] >= (OPEN_GAIN if opened else learning.MIN_GAIN)
+    # In winter ten minutes bring less, and are worth repeating: three points are enough to ask for it.
+    worth = drying is not None and drying["gain"] >= (OPEN_GAIN if opened else WINTER_GAIN if group == "winter" else learning.MIN_GAIN)
     windy = gust is not None and gust > settings.gust_max
     frost = te is not None and te <= settings.frost
     heating_running = value("heating") == "heating"
@@ -369,7 +403,8 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     optional_wet_exchange = ai is not None and ae is not None and ae > ai + 1
     # Drying never justifies opening a cold room, nor a hot one to a hotter outside.
     heat_in = hot and delta is not None and delta > 0
-    useful = air or ((hot or precool) and cool and not optional_wet_exchange) or (wet and worth and not cold and not heat_in)
+    # In winter a room is not cooled by opening: a hot room says to turn the heating down (card, « À savoir »).
+    useful = air or ((hot or precool) and cool and group != "winter" and not optional_wet_exchange) or (wet and worth and not cold and not heat_in)
     # A constraint speaks only where opening would have helped: a cold room under the rain needs no « keep closed ».
     wants_open = air or ((hot or precool) and cool) or (wet and dry and not cold and not heat_in)
     opportunities = tuple(k for k, active in (("cool", cool and not optional_wet_exchange), ("dry", dry),
@@ -412,7 +447,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         if not checked or not thermal_known:
             action, reason = "unknown", "verify_exterior"
         else:
-            action, reason = ("ok" if opened else "ouvrir"), ("air_needed" if air else "cooling_possible" if hot and cool
+            action, reason = ("ok" if opened else "ouvrir"), ("air_needed" if air else "cooling_possible" if hot and cool and group != "winter"
                                                              else "precool_possible" if precool and cool else "drying_possible")
     elif opened and delta is not None and ((ti >= (settings.minimum + settings.maximum) / 2 and delta > 0.5)
                                           or (heated and ti <= settings.minimum + 1 and delta < -0.5)):
@@ -441,9 +476,11 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     if (opened and optional_wet_exchange and not air and not hard and not soft
             and action != "fermer" and not rain_coming):
         action, reason, level = "fermer", "rehumidification_risk", "action"
-    # A window the person said is open on purpose at night: its comfort reasons to close are not an oversight.
-    if (context.get("intended_open") and opened and action == "fermer"
-            and reason in ("exchange_harmful", "rehumidification_risk", "heat_needed")):
+    # A window the person said is open on purpose at night, to let the cool air in: while it does just that (cooler
+    # outside, the room not below its range), it is no oversight. A warmer outside, a room getting too cold or damp
+    # still get their « Refermez »: on purpose does not mean right.
+    if (context.get("intended_open") and opened and action == "fermer" and reason == "exchange_harmful"
+            and delta is not None and delta < 0 and not cold):
         action, reason, level = "ok", "open_neutral", "calm"
     # An open window that neither helps nor harms is neutral: the person may keep it or close it.
     if opened and reason in ("within_comfort", "drying_slow", "drying_unavailable", "drying_later", "humid_outdoor"):
@@ -477,7 +514,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
                         needs, action, reason, now, ai, ae, air_detail)
     extended["season"] = {**season, "heated": heated}
     extended["drying"] = drying
-    extended["benefits"] = _benefits(details, openings, settings, ti, hot, cold, heated, te)
+    extended["benefits"] = _benefits(details, openings, settings, ti, hot, cold, heated, te, group)
     extended["warmth"] = warmth if cold else None
     if isinstance(extended.get("humidity"), dict):
         saturated = absolute_humidity(ti, 100) if ti is not None else None
@@ -489,7 +526,8 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
             # Where a full airing would bring the room at best: the outdoor water, warmed to the room's temperature.
             reachable=None if ae is None or not saturated else round(min(100.0, ae / saturated * 100)))
     if reason == "drying_possible" and drying:
-        extended["ventilation"]["duration_minutes"] = {"min": max(5, 5 * round(drying["minutes"] * .75 / 5)), "max": drying["minutes"]}
+        extended["ventilation"]["duration_minutes"] = ({"min": 5, "max": WINTER_AIRING} if group == "winter" else
+                                                       {"min": max(5, 5 * round(drying["minutes"] * .75 / 5)), "max": drying["minutes"]})
     # A later rain bounds the airing: the window is shut five minutes before it.
     extended["rain_ahead"] = {"minutes": soon, "precise": precise} if soon is not None else None
     if soon is not None and action == "ouvrir" and soon > IMMINENT:

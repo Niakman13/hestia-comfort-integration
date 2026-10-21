@@ -25,6 +25,7 @@ const unreadable=(v:View)=>{const failed=v.assessment.missing.filter(k=>!!v.obse
 const NEED_PILLS:Record<string,string>={dry:'Trop humide',heat:'Trop frais',cool:'Trop chaud',air:'Air à renouveler'};
 /** …and its disk shows the measure's own pictogram: the tick is kept for « nothing to report ». */
 const NEED_DISKS:Record<string,string>={dry:'drop',heat:'temp',cool:'temp',air:'air'};
+const SEASON_NAMES:Record<string,string>={spring:'printemps',summer:'été',autumn:'automne',winter:'hiver'};
 export function advice(v:View):Advice {
   const out=withLearning(v,gesture(v));
   // To close, say which window: in a shared air it may be in the other room.
@@ -94,13 +95,16 @@ function gesture(v:View):Advice {
   // The banner only ever carries a gesture; what is merely worth knowing goes to « À savoir » below.
   const quiet=(QUIET.includes(a.reason)&&(a.level==='calm'||a.level==='neutral'))||['humid_outdoor','open_neutral','drying_unavailable'].includes(a.reason)
     ||(a.reason==='drying_slow'&&a.features?.air?.ventilation?.on!==false)||(a.reason==='heat_needed'&&a.action!=='fermer'&&a.level!=='action');
-  if(quiet&&a.action!=='fermer')
+  if(quiet&&a.action!=='fermer'){
     // Already open, « opening would bring nothing » reads as a contradiction: open or shut makes no difference.
     // A measure out of range with nothing to do about it: not « Tout va bien », only nothing better to do.
     // Opening is held back (rain, gusts, outdoor air): not that it would bring nothing; « À savoir » says why.
-    return {title:'Rien à faire',line:opened?html`Ouverte ou fermée, ${b('cela ne change rien')}`:a.reason==='opening_blocked'?html`Aérer ${b('n’est pas possible')} pour l’instant`:html`Ouvrir ${b('n’apporterait rien')} pour l’instant`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined,
+    // A warm room in winter: opening would cool it, but too fast; the season, not the physics, says no.
+    const winterWarm=a.features?.season?.group==='winter'&&a.needs.includes('cool');
+    return {title:'Rien à faire',line:opened?html`Ouverte ou fermée, ${b('cela ne change rien')}`:a.reason==='opening_blocked'?html`Aérer ${b('n’est pas possible')} pour l’instant`
+      :winterWarm?html`Ouvrir la ${b('refroidirait trop vite')} en hiver`:html`Ouvrir ${b('n’apporterait rien')} pour l’instant`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined,
       // The pill names what is out, never « plage »: that word is the temperature's range alone.
-      ...(a.needs.length?{pill:NEED_PILLS[a.needs[0]]??'À surveiller',level:'neutral' as Level,...(opened?{}:{disk:NEED_DISKS[a.needs[0]]??'info'})}:{})};
+      ...(a.needs.length?{pill:NEED_PILLS[a.needs[0]]??'À surveiller',level:'neutral' as Level,...(opened?{}:{disk:NEED_DISKS[a.needs[0]]??'info'})}:{})};}
   switch(a.reason){
     case 'within_comfort': return {title:'Rien à faire',line:html`${deg(ti)}, ${b('dans votre plage')}`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
     case 'rain_open_windows': return {title:'Fermez, il pleut',line:html`La pluie ${b('entre par les ouvrants exposés')}`,disk:'rain'};
@@ -126,9 +130,12 @@ function gesture(v:View):Advice {
         :a.action==='ok'?{title:'Laissez ouvert',line,disk:'open',cap:'Même air'}
         :{title:'Aérez',line,disk:'open',cap:first??'Même air'};
     }
-    case 'drying_possible': return airing('Aérez','Aérez pour assécher',water);
+    case 'drying_possible': {const out=airing('Aérez','Aérez pour assécher',water);
+      // « Environ 66 % après l’aération » from this room's own airings: its flask, even before « Conseil optimisé ».
+      return (drying?.openings??0)>=5&&!out.learned?{...out,learned:`d’après ${drying!.openings} aérations`}:out;}
     case 'drying_later': {const later=drying?.later;
-      return later?{title:`Aérez vers ${hour(later.time)}`,line:html`L’air sera plus sec : ${b('environ '+Math.round(later.after)+' %')} après ${later.minutes} min`,disk:'clock'}
+      // The figure comes from this room's own airings once five are learned: the pill says it with its flask.
+      return later?{title:`Aérez vers ${hour(later.time)}`,line:html`L’air sera plus sec : ${b('environ '+Math.round(later.after)+' %')} après ${later.minutes} min`,disk:'clock',...((drying?.openings??0)>=5?{learned:`d’après ${drying!.openings} aérations`}:{})}
         :{title:'Aérez plus tard',line:water,disk:'clock'};}
     case 'drying_slow': {
       const vmc=a.features?.air?.ventilation;
@@ -227,6 +234,12 @@ export function facts(v:View):Fact[] {
   if(hum?.local)out.push({ic:'drop',title:'Vapeur',text:'plus humide ici qu’à côté : cuisson ou douche'});
   if(air?.purifier?.on===true)out.push({ic:'fan',title:'Purificateur',text:'en marche, il filtre l’air'});
   if(air?.ventilation?.on===true)out.push({ic:'vmc',title:'VMC',text:a.needs.includes('dry')?'en marche, elle aide à assécher':'en marche'});
+  // The season's rules, said where they change the advice.
+  const winter=f?.season?.group==='winter';
+  if(winter&&a.needs.includes('cool')&&!['ouvrir','ok'].includes(a.action)&&o.heating)
+    out.push({ic:'temp',title:'Pièce chaude',text:'baissez le chauffage plutôt que d’ouvrir'});
+  if(winter&&a.reason==='drying_possible'&&a.action==='ouvrir')
+    out.push({ic:'open',title:'Aération d’hiver',text:'courte et franche, à refaire dans la journée : les murs restent chauds'});
   // What the sun does for the room now. Asked to open, « keep the window shut » would contradict the gesture.
   const opening=['ouvrir','ok'].includes(a.action)&&['action','urgent','benefit'].includes(a.level);
   for(const x of f?.benefits??[]){
@@ -238,7 +251,7 @@ export function facts(v:View):Fact[] {
   const said=out.some(x=>/umidit|Aération|Vapeur|VMC|Même air/.test(x.title+x.text));
   // « Gardez fermé … le besoin attendra » already says it.
   const waiting=a.reason==='opening_blocked'&&!['calm','neutral'].includes(a.level);
-  if(a.needs.includes('dry')&&!said&&!waiting&&!['drying_possible','ventilation_possible','short_air_change'].includes(a.reason))
+  if(a.needs.includes('dry')&&!said&&!waiting&&!['drying_possible','drying_later','ventilation_possible','short_air_change'].includes(a.reason))
     out.push({ic:'drop',title:'Humidité',text:a.reason==='heat_needed'||a.needs.includes('heat')?'aérer refroidirait une pièce déjà fraîche'
       :a.reason==='opening_blocked'?'elle attendra que l’on puisse aérer'
       // Asked to open for the air: the same words as the gesture, not a denial of it.
@@ -420,7 +433,7 @@ const row=(t:string,x:string)=>html`<li><b>${t}</b><span> · ${x}</span></li>`;
 export function details(v:View,config:Config):TemplateResult[] {
   const a=v.assessment,f=a.features,mods=new Set(config.modules??[]),out:TemplateResult[]=[];
   const season=f?.season;
-  if(season)out.push(row('Votre plage de température',`${number(season.minimum)} à ${number(season.maximum)} °C${!season.heated?' · pièce non chauffée':''}${season.known?(season.weight===0?' · hiver':season.weight===1?' · été':' · entre-saisons'):' · saison non calculée'}`));
+  if(season)out.push(row('Votre plage de température',`${number(season.minimum)} à ${number(season.maximum)} °C${!season.heated?' · pièce non chauffée':''}${season.name?' · '+(SEASON_NAMES[season.name]??season.name):season.known?(season.weight===0?' · hiver':season.weight===1?' · été':' · entre-saisons'):' · saison non calculée'}`));
   if(a.action==='ouvrir'&&a.open_first?.length)out.push(row('Ouvrez d’abord',a.open_first.map(id=>v.names?.[id]??id).join(' et ')));
   if(a.slot)out.push(row(a.slot.kind==='open'?'Ouverture possible':'Fermeture conseillée',`${hour(a.slot.time)} · ${number(a.slot.temperature)} °C${a.slot.wind_bearing!=null?' · '+windFrom(a.slot.wind_bearing):''}`));
   const silent=a.missing.filter(k=>!!v.observations[k]);
@@ -571,7 +584,7 @@ export class NiakAdviceTicker extends LitElement {
         <div class="nc-tk-head"><span class="nw-label">${many?'Conseils':list[0]?.pill&&list[0].level==='neutral'?'État':['action','urgent'].includes(list[0]?.level)?'Action à faire':'Conseil'}</span>${many?html`<span class="nc-tk-count">${i+1} sur ${list.length}</span>
           <span class="nc-bars">${list.map((s,k)=>html`<button type="button" aria-label=${`Conseil ${k+1} : ${s.title}`} aria-current=${k===i?'true':'false'} data-level=${s.level} class=${k<i?'done':k===i?(this.paused||this.calm?'done':'on'):''} @click=${()=>this.go(k)}><i></i></button>`)}</span>`:nothing}</div>
         <div class="nc-stack" aria-live=${this.paused?'polite':'off'}>${list.map((s,k)=>html`<div class=${'nc-slide'+(k===i?' on':k===this.previous?' out':'')} aria-hidden=${k===i?'false':'true'}>
-          ${many?html`<span class="nw-chip nc-slide-pill" data-level=${s.level}>${s.pill}</span>`:nothing}<p class="nc-advice">${s.title}</p>${s.line?html`<p class="nc-line">${s.line}</p>`:nothing}</div>`)}</div>
+          ${many?html`<span class="nw-chip nc-slide-pill" data-level=${s.level}>${s.learned?html`<span class="nc-learned">${icon('flask')}${s.pill}</span>`:s.pill}</span>`:nothing}<p class="nc-advice">${s.title}</p>${s.line?html`<p class="nc-line">${s.line}</p>`:nothing}</div>`)}</div>
       </div>
       <div class="nc-diskwrap nc-stack" aria-hidden="true">${list.map((s,k)=>html`<div class=${'nc-slide nc-diskslide'+(k===i?' on':k===this.previous?' out':'')} data-level=${s.level} ?data-learned=${!!s.learned}><div class="nc-disk" data-disk=${s.disk}>${icon(s.disk)}</div>${s.cap?html`<div class="nc-cap">${s.cap}</div>`:nothing}</div>`)}</div>
     </div>`;

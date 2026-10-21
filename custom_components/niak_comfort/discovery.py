@@ -7,7 +7,10 @@ from .const import OUTDOOR_AREAS, SOURCES
 
 INDOOR = ("indoor_temperature", "indoor_humidity", "co2", "windows", "heating", "illuminance", "pm25", "voc", "purifier", "ventilation", "ventilation_boost", "presence")
 OPENING_SOURCES = ("covers", "shutter_auto", "shutter_override")
-OUTDOOR = ("outdoor_temperature", "outdoor_humidity", "rain", "wind_gust", "wind_bearing", "solar", "pollution")
+OUTDOOR = ("outdoor_temperature", "outdoor_humidity", "rain", "wind_gust", "wind_bearing", "solar", "pollution", "season")
+# A season sensor (the Season integration, or a template): its state, in English or in French.
+SEASONS = {"spring": "spring", "printemps": "spring", "summer": "summer", "ete": "summer", "été": "summer",
+           "autumn": "autumn", "fall": "autumn", "automne": "autumn", "winter": "winter", "hiver": "winter"}
 CLASSES = {"temperature": "temperature", "humidity": "humidity", "co2": "carbon_dioxide",
            "wind": "wind_speed", "irradiance": "irradiance", "bearing": "wind_direction"}
 UNITS = {"temperature": ("°C", "°F", "K"), "humidity": ("%",), "co2": ("ppm",),
@@ -155,6 +158,10 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
             adapter = "binary"
         else:
             return None
+    elif key == "season":
+        if domain != "sensor" or (entry.platform != "season" and str(state.state).casefold().strip() not in SEASONS):
+            return None
+        adapter = "season"
     elif key == "pollution":
         if atmo_daily(hass, entry, state):
             adapter = "atmo_daily"

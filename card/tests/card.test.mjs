@@ -420,3 +420,24 @@ test('the sun that helps is said, and each learned measure gets its optimised ad
   m.assessment={...m.assessment,reason:'drying_possible',action:'ouvrir',level:'action',needs:['dry']};
   assert.ok(lines(m).includes('Apprentissage · humidité : 0 aération sur 5, résultat estimé'),lines(m).join(' | '));
 });
+test('an airing later says its source and is not denied underneath',()=>{
+  // Chambre P, 21 October: « Aérez vers … h », from its 7 learned airings.
+  const p=fresh();p.assessment={...p.assessment,reason:'drying_later',action:'attendre',level:'benefit',needs:['dry'],
+    features:{...p.assessment.features,drying:{minutes:60,now:73,after:72,gain:1.1,tau:170,openings:7,later:{minutes:60,now:73,after:68,gain:5,time:'2026-10-22T08:00:00+02:00'}}}};
+  const ad=advice(p);assert.match(ad.title,/^Aérez vers /);assert.equal(ad.learned,'d’après 7 aérations');
+  assert.ok(!facts(p).some(f=>/baisserait|pas assez baisser/.test(plain(f.text))),facts(p).map(f=>plain(f.text)).join(' | '));
+  // Fewer than five airings: the figure is the ordinary room's, no flask.
+  p.assessment.features.drying={...p.assessment.features.drying,openings:2};
+  assert.equal(advice(p).learned,undefined);
+});
+test('the season changes what the card says',()=>{
+  const lines=v=>facts(v).map(x=>`${x.title} · ${plain(x.text)}`);
+  // Winter: a warm room is not cooled by opening; the heating is turned down.
+  const w=fresh();w.observations={...w.observations,heating:{value:'off',quality:'valid',source:'climate.t'}};
+  w.assessment={...w.assessment,reason:'cooling_unavailable',action:'attendre',level:'calm',needs:['cool'],features:{...w.assessment.features,season:{known:true,weight:0,outdoor_mean:6,minimum:19,maximum:24,heated:true,name:'winter',group:'winter'}}};
+  assert.match(plain(advice(w).line),/refroidirait trop vite/);
+  assert.ok(lines(w).includes('Pièce chaude · baissez le chauffage plutôt que d’ouvrir'),lines(w).join(' | '));
+  // Winter: a short, brisk airing, said why.
+  w.assessment={...w.assessment,reason:'drying_possible',action:'ouvrir',level:'action',needs:['dry']};
+  assert.ok(lines(w).some(l=>l.startsWith('Aération d’hiver')),lines(w).join(' | '));
+});
