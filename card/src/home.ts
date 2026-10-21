@@ -92,9 +92,10 @@ export class NiakComfortHomeCard extends LitElement {
   }
   private roomTile(r:View){
     const t=numeric(r.observations.indoor_temperature),a=r.assessment,lvl=a.level as Level,unheated=a.features?.season?.heated===false;
-    const note=t===null?'mesure indisponible':['action','urgent'].includes(lvl)?advice(r).title.toLowerCase():a.needs.includes('cool')?'trop chaud':a.needs.includes('heat')?'trop frais':unheated?'non chauffée':'dans votre plage';
-    const out=['action','urgent'].includes(lvl),need=out?needs(r):[];
-    return h2`<button class=${'nc-tile'+(out?' out':'')} data-level=${unheated&&!out?'neutral':lvl} @click=${(e:Event)=>{const id=r.observations.indoor_temperature?.source;if(id)moreInfo(e,id);else this.open(r);}} title=${'Détails : '+r.title}><div class="nc-tile-h"><span class="nw-label">${r.title}</span></div><b>${number(t)}<small>°C</small></b><em>${need.length?h2`<niak-note-ticker .notes=${need} .still=${this.config?.animations===false||this.config?.rotate===false}></niak-note-ticker>`:note}</em></button>`;
+    const note=t===null?'mesure indisponible':['action','urgent'].includes(lvl)?advice(r).title.toLowerCase():unheated?'non chauffée':'dans votre plage';
+    // Like the room card: what is out of range is always said; the orange frame only with a gesture to make.
+    const out=['action','urgent'].includes(lvl),need=t===null?[]:needs(r);
+    return h2`<button class=${'nc-tile'+(out?' out':need.length?' out soft':'')} data-level=${unheated&&!out?'neutral':lvl} @click=${(e:Event)=>{const id=r.observations.indoor_temperature?.source;if(id)moreInfo(e,id);else this.open(r);}} title=${'Détails : '+r.title}><div class="nc-tile-h"><span class="nw-label">${r.title}</span></div><b>${number(t)}<small>°C</small></b><em>${need.length?h2`<niak-note-ticker .notes=${need} .still=${this.config?.animations===false||this.config?.rotate===false}></niak-note-ticker>`:note}</em></button>`;
   }
   private details(h:Home){
     const row=(t:string,x:string)=>h2`<li><b>${t}</b><span> · ${x}</span></li>`,out=[];
@@ -132,7 +133,7 @@ export class NiakComfortHomeCard extends LitElement {
       line:h2`${h.ventilation.openings.map(o=>o.name).join(' + ')}`,disk:'open'});
     // A sensor that stops answering is a matter for the Niak panel, not an advice for the home.
     const calm=(h.level==='neutral'?'calm':h.level) as Level;
-    return out.length?out:[{...calmAdvice,level:calm,pill:pills[calm]}];
+    return out.length?out:[{level:calm,pill:pills[calm],...calmAdvice}];
   }
   protected render(){
     if(!this.config)return nothing;
@@ -177,12 +178,16 @@ export class NiakComfortHomeCard extends LitElement {
   private homeCard(h:Home,muteAdvice:(Advice&{pill:string;level:Level})|undefined,format:HomeFormat){
     if(!this.config)return nothing;
     const focus=this.rooms.find(r=>r.entry_id===h.focus);
-    const calmAdvice={title:'Rien à faire',line:h2`Toutes les pièces sont <b>dans votre plage</b>`,disk:h.open_rooms.length?'open':'check',cap:h.open_rooms.length?undefined:'Tout est fermé'};
+    // No gesture, but rooms out of range: the home says how many, like each room card, never a tick and « Tout va bien ».
+    const watched=this.rooms.filter(r=>needs(r).length>0);
+    const calmAdvice={title:'Rien à faire',line:h2`Aucune pièce <b>ne demande de geste</b>`,disk:h.open_rooms.length?'open':watched.length?'info':'check',cap:h.open_rooms.length?undefined:'Tout est fermé',
+      ...(watched.length?{pill:`${watched.length} à surveiller`,level:'neutral' as Level}:{})};
     const homeSlides=muteAdvice?[{...muteAdvice}]:this.slides(h,calmAdvice);
     const shorts=this.shorts(this.rooms),season=(focus??this.rooms[0])?.assessment.features?.season;
     const rooms=this.rooms.flatMap(r=>{const t=numeric(r.observations.indoor_temperature);return t===null?[]:[{name:r.title,entity:r.observations.indoor_temperature?.source??undefined,short:shorts.get(r.entry_id)!,value:t,level:(r.assessment.features?.season?.heated===false&&!['action','urgent'].includes(r.assessment.level)?'neutral':r.assessment.level) as Level}];});
     const st=this.state(),floors=h.floors?.length?h.floors:[{floor_id:null,name:'Mon logement',level:null,room_ids:this.rooms.map(r=>r.entry_id),mean:null,measured:0,total:0,hottest:null}];
-    const all=this.rooms.map(r=>this.roomTile(r)),outside=this.rooms.filter(r=>['action','urgent'].includes(r.assessment.level));
+    // « À surveiller » counts what the room cards call so: a gesture to make, or a measure out of range.
+    const all=this.rooms.map(r=>this.roomTile(r)),outside=this.rooms.filter(r=>['action','urgent'].includes(r.assessment.level)||needs(r).length>0);
     const body=h2`<div class="nc-tiles">${floors.map(f=>h2`${floors.length>1?h2`<div class="nc-floor"><span class="nw-label">${f.name}</span><b>${number(f.mean)} °C</b></div>`:nothing}${this.collapse(this.rooms.filter(r=>f.room_ids.includes(r.entry_id))).map(r=>this.roomTile(r))}`)}</div>`;
     const c=this.config,name=c.title||'Mon logement',still=c.animations===false||c.rotate===false;
     const top=homeSlides[0]?.level??h.level as Level;

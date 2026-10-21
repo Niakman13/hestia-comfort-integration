@@ -16,7 +16,7 @@
       }
     },
     "error": {
-      "invalid_settings": "Vérifiez la plage de confort, l’ordre des seuils et les marges d’hystérésis.",
+      "invalid_settings": "Vérifiez la plage de température, l’ordre des seuils et les marges d’hystérésis.",
       "invalid_source": "Choisissez une entité compatible existante.",
       "required_source": "Choisissez la température intérieure pour suivre cette pièce.",
       "invalid_area": "Choisissez une pièce Home Assistant existante."
@@ -35,7 +35,7 @@
       }
     },
     "error": {
-      "invalid_settings": "Vérifiez la plage de confort, l’ordre des seuils et les marges d’hystérésis.",
+      "invalid_settings": "Vérifiez la plage de température, l’ordre des seuils et les marges d’hystérésis.",
       "invalid_source": "Choisissez une entité compatible existante.",
       "required_source": "Choisissez la température intérieure pour suivre cette pièce.",
       "invalid_area": "Choisissez une pièce Home Assistant existante."
@@ -66,7 +66,7 @@
       "reason": {
         "name": "Raison",
         "state": {
-          "within_comfort": "Dans la plage de confort",
+          "within_comfort": "Rien à signaler",
           "rain_open_windows": "Pluie et ouvrants ouverts",
           "opening_blocked": "Contrainte extérieure",
           "verify_exterior": "Vérifier les conditions extérieures",
