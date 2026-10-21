@@ -228,16 +228,27 @@ def step(model, ti, hi, te, he, sun=0.0, opened=0.0, heated=0.0):
     return nti, min(100.0, nw / absolute(nti, 100) * 100)
 
 
+# Share of the day's half hours the replay needs: one left out (a contact silent a second at a restart) must not stop it.
+MIN_REPLAYED = 0.8
+
+
 def replay(model, rows, hours=24):
-    """The last `hours` simulated from their first measure with the real weather and windows, against what was measured."""
+    """The last `hours` simulated from their first measure with the real weather and windows, against what was measured.
+
+    A half hour left out does not stop the check: the simulation starts again from the next measure."""
     count = int(hours / HOURS)
-    recent = rows[-(count + 1):] if len(rows) > count else []
-    if len(recent) < count + 1 or any(datetime.fromisoformat(b[0]) - datetime.fromisoformat(a[0]) != STEP
-                                      for a, b in zip(recent, recent[1:])):
+    if not rows:
+        return None
+    last = datetime.fromisoformat(rows[-1][0])
+    recent = [r for r in rows if last - datetime.fromisoformat(r[0]) <= timedelta(hours=hours)]
+    if len(recent) < MIN_REPLAYED * (count + 1):
         return None
     ti, hi = recent[0][1], recent[0][2]
     curve, errors_t, errors_h = [], [], []
     for row, nxt in zip(recent, recent[1:]):
+        if datetime.fromisoformat(nxt[0]) - datetime.fromisoformat(row[0]) != STEP:
+            ti, hi = nxt[1], nxt[2]
+            continue
         ti, hi = step(model, ti, hi, row[3], row[4], row[5], row[6], row[7])
         curve.append({"time": nxt[0], "temperature": round(ti, 1), "measured_temperature": nxt[1],
                       "humidity": round(hi), "measured_humidity": round(nxt[2])})
@@ -291,6 +302,41 @@ def optimal(twin):
     return bool(twin and twin.get("status") == "ready" and twin.get("days", 0) >= OPTIMAL_DAYS and precision
                 and precision.get("temperature") is not None and precision["temperature"] <= OPTIMAL_TEMPERATURE
                 and precision.get("humidity") is not None and precision["humidity"] <= OPTIMAL_HUMIDITY)
+
+
+# What a room must have seen before its learning is complete: half hours with sun, with a window open, with the
+# heating running, with its air renewed; airings learned for drying (engine/learning.py).
+SEEN = {"sun": 12, "open": 6, "heated": 12, "air": 6, "airings": MIN_OPENINGS}
+# How much each part weighs in the percentage: the measures and the replayed day first.
+WEIGHTS = {"days": 30, "precision": 25, "sun": 10, "windows": 20, "heating": 10, "air": 5}
+
+
+def progress(twin, airings=0, windows=False, heating=False, air=()):
+    """How much of its room the twin has learned: 100 % only once it has seen everything the room has.
+
+    `windows`, `heating`, `air` say what the room has (a contact, a thermostat, CO₂ or VOC sensors): what it does not
+    have is not asked. Each part is 0 to 1; the percentage stays under 100 while one part is missing."""
+    twin = twin or {}
+    model = twin.get("model") or {}
+    precision = twin.get("precision")
+    share = lambda value, need: max(0.0, min(1.0, value / need))
+    parts = {"days": share(twin.get("days", 0), OPTIMAL_DAYS),
+             "precision": min(1.0, OPTIMAL_TEMPERATURE / max(precision["temperature"], 1e-6), OPTIMAL_HUMIDITY / max(precision["humidity"], 1e-6))
+             if precision and twin.get("status") == "ready" else 0.0,
+             "sun": share(model.get("sunny_samples", 0), SEEN["sun"])}
+    if windows:
+        parts["windows"] = (share(model.get("open_samples", 0), SEEN["open"]) + share(airings, SEEN["airings"])) / 2
+    if heating:
+        parts["heating"] = share(model.get("heated_samples", 0), SEEN["heated"])
+    learned_air = [(model.get("air") or {}).get(name) or {} for name in air]
+    if learned_air:
+        parts["air"] = sum(share(m.get("open_samples", 0), SEEN["air"]) for m in learned_air) / len(learned_air)
+    complete = all(v >= 1 for v in parts.values())
+    percent = round(100 * sum(WEIGHTS[k] * v for k, v in parts.items()) / sum(WEIGHTS[k] for k in parts))
+    return {"percent": 100 if complete else min(99, percent), "complete": complete,
+            "parts": {k: round(v, 2) for k, v in parts.items()},
+            "seen": {"days": twin.get("days", 0), "airings": airings, "open": model.get("open_samples", 0),
+                     "sun": model.get("sunny_samples", 0), "heated": model.get("heated_samples", 0)}}
 
 
 def learned_advice(assessment, twin, current=None, openings=0, feedback=None):

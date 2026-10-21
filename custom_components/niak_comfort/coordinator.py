@@ -2,7 +2,7 @@
 from collections import deque
 from functools import partial
 from dataclasses import asdict, replace
-from datetime import timedelta
+from datetime import datetime, timedelta
 import logging
 
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
@@ -308,7 +308,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
         precision = learned.get("precision") or {}
         twin_view = {"status": learned.get("status", "learning"), "days": learned.get("days", 0), "samples": learned.get("samples", 0),
                      "next_hour": twin.next_hour(learned, current),
-                     "precision": {k: precision[k] for k in ("hours", "temperature", "humidity")} if precision else None}
+                     "precision": {k: precision[k] for k in ("hours", "temperature", "humidity")} if precision else None,
+                     "progress": self.learning_progress()}
         return {"version": VIEW_VERSION, "entry_id": self.entry_id,
                 "area_id": self.config.get("area_id"), "title": self.config.get("name"),
                 "comfort_minimum": self.settings.minimum,
@@ -580,6 +581,12 @@ class ComfortCoordinator(DataUpdateCoordinator):
         home = getattr(self.home_configuration, "home", None) or {}
         return (home.get("answers") or {}).get(self.entry_id, {})
 
+    def learning_progress(self):
+        """How much of the room is learned: only what it has (a window, a heating, CO₂ or VOC sensors) is asked."""
+        sources = self.config.get("sources", {})
+        return twin.progress(self.twin, (self.drying_model or {}).get("openings", 0), windows=bool(self.windows),
+                             heating=bool(sources.get("heating")), air=tuple(k for k in ("co2", "voc") if sources.get(k)))
+
     def questions(self):
         return habits.questions(self.config.get("name") or self.config_entry.title, self.config.get("area_id"), self.habits, self._answers())
 
@@ -591,12 +598,18 @@ class ComfortCoordinator(DataUpdateCoordinator):
     def _track(self, assessment, current, now):
         """The feedback loop: close an airing followed, and note an advice left aside half an hour."""
         opened = current.get("opened", 0.0) > 0
-        if self._experiment and not opened:
-            values = {"indoor_humidity": current.get("hi"), "indoor_temperature": current.get("ti"), "co2": current.get("co2"), "voc": current.get("voc")}
-            record = feedback.finish(self._experiment, values, now)
-            self._experiment = None
-            if record:
-                self._remember(record, now)
+        if self._experiment and opened:
+            # Opened again before the result was read: the same airing goes on.
+            self._experiment.pop("closed", None)
+        elif self._experiment:
+            # The result is read a few minutes after closing: a slow sensor has spoken again by then.
+            closed = datetime.fromisoformat(self._experiment.setdefault("closed", now.isoformat()))
+            if now - closed >= feedback.SETTLE:
+                values = {"indoor_humidity": current.get("hi"), "indoor_temperature": current.get("ti"), "co2": current.get("co2"), "voc": current.get("voc")}
+                record = feedback.finish(self._experiment, values, now)
+                self._experiment = None
+                if record:
+                    self._remember(record, now)
         if assessment.get("action") == "ouvrir" and not opened:
             self._advice_since = self._advice_since or now
         else:

@@ -112,6 +112,7 @@ def ws_twins(hass, connection, msg):
         air = (learned.get("model") or {}).get("air") or {}
         rooms.append({"entry_id": entry.entry_id, "title": entry.title,
                       "twin": {k: v for k, v in learned.items() if k != "model"}, "week": week,
+                      "progress": coordinator.learning_progress() if hasattr(coordinator, "learning_progress") else None,
                       # The air it has learned: CO₂ and VOC with enough open half hours to promise a result.
                       "air": [name for name, model in air.items() if model and model.get("open_samples", 0) >= 6],
                       "questions": coordinator.questions() if hasattr(coordinator, "questions") else []})

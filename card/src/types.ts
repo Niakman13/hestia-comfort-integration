@@ -84,7 +84,8 @@ export interface View {
   /** The feedback loop: the last airing followed (within a day) and the week (engine/feedback.py). */
   feedback?:{last:{measure:'humidity'|'temperature'|'co2'|'voc';before:number;after:number;predicted:number|null;minutes:number}|null;week:{followed:number;ignored:number;evaluated:number;held:number;gains:Record<string,number>}};
   /** A humidity habit the person confirmed, going on now: the words for « À savoir ». */ habit?:string|null;
-  /** What the room's twin has learned so far (engine/twin.py). */ twin?:{status:'learning'|'ready';days:number;samples:number;next_hour:{temperature:number;humidity:number}|null;precision:{hours:number;temperature:number;humidity:number}|null}; /** Home Assistant (or the room) has just started: silent sensors are still loading. */ starting?:boolean;
+  /** What the room's twin has learned so far (engine/twin.py). */ twin?:{status:'learning'|'ready';days:number;samples:number;next_hour:{temperature:number;humidity:number}|null;precision:{hours:number;temperature:number;humidity:number}|null;
+    /** How much of the room is learned: 100 % once everything it has is seen. */ progress?:{percent:number;complete:boolean;parts:Partial<Record<'days'|'precision'|'sun'|'windows'|'heating'|'air',number>>;seen:{days:number;airings:number}}}; /** Home Assistant (or the room) has just started: silent sensors are still loading. */ starting?:boolean;
 }
 export interface ViewEvent {version:1; view?:View; reload?:boolean; unavailable?:boolean}
 export type Unsubscribe = () => Promise<void>|void;

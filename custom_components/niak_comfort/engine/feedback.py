@@ -13,6 +13,10 @@ TOLERANCE = {"humidity": 3.0, "temperature": 0.5, "co2": 100.0, "voc": 30.0}
 IGNORED_AFTER = timedelta(minutes=30)
 # An airing longer than this is not an experiment any more, only a window left open.
 LONGEST = timedelta(hours=3)
+# Shorter than this, an opening is someone going through a door, not an airing: it is neither followed nor measured.
+SHORTEST = timedelta(minutes=5)
+# The result is read this long after closing: a VOC or CO₂ sensor speaks every minute or two.
+SETTLE = timedelta(minutes=4)
 KEEP_DAYS = 60
 SENSORS = {"humidity": "indoor_humidity", "temperature": "indoor_temperature", "co2": "co2", "voc": "voc"}
 
@@ -59,10 +63,12 @@ def start(assessment, values, now):
 def finish(experiment, values, now):
     """The experiment once the room is shut again; None when it lasted too long or the measure is gone."""
     begun = datetime.fromisoformat(experiment["start"])
+    closed = datetime.fromisoformat(experiment.get("closed") or now.isoformat())
     after = values.get(SENSORS[experiment["measure"]])
-    if now - begun > LONGEST or not isinstance(after, (int, float)) or isinstance(after, bool):
+    if not SHORTEST <= closed - begun <= LONGEST or not isinstance(after, (int, float)) or isinstance(after, bool):
         return None
-    return {**experiment, "end": now.isoformat(), "minutes": round((now - begun).total_seconds() / 60), "after": round(after, 1)}
+    record = {k: v for k, v in experiment.items() if k != "closed"}
+    return {**record, "end": closed.isoformat(), "minutes": round((closed - begun).total_seconds() / 60), "after": round(after, 1)}
 
 
 def ignored(since, now):
@@ -71,7 +77,10 @@ def ignored(since, now):
 
 def keep(records, now):
     limit = now - timedelta(days=KEEP_DAYS)
-    return [r for r in records or [] if isinstance(r, dict) and isinstance(r.get("start"), str) and datetime.fromisoformat(r["start"]) >= limit]
+    # Openings too short to be airings, measured before 1.2.7, are dropped: they would bend the room's predictions.
+    return [r for r in records or [] if isinstance(r, dict) and isinstance(r.get("start"), str) and datetime.fromisoformat(r["start"]) >= limit
+            and not (isinstance(r.get("end"), str) and not r.get("ignored")
+                     and datetime.fromisoformat(r["end"]) - datetime.fromisoformat(r["start"]) < SHORTEST)]
 
 
 def held(record):

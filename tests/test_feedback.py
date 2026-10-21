@@ -31,6 +31,19 @@ class FeedbackLoop(unittest.TestCase):
         # A window left open three hours is not an experiment any more.
         self.assertIsNone(feedback.finish(record, {"indoor_humidity": 70}, T0 + timedelta(hours=4)))
 
+    def test_a_door_crossed_is_not_an_airing_and_the_result_is_read_after_closing(self):
+        """The Salon, 21 October: a French window opened 26 seconds, its VOC read before the sensor spoke again."""
+        voc = {"action": "ouvrir", "reason": "air_needed", "features": {"air": {"voc_status": "high"}}}
+        record = feedback.start(voc, {"voc": 283}, T0)
+        self.assertIsNone(feedback.finish({**record, "closed": (T0 + timedelta(seconds=26)).isoformat()}, {"voc": 288}, T0 + timedelta(minutes=5)))
+        # A real airing: closed after 20 minutes, read four minutes later, the minutes are those it stood open.
+        done = feedback.finish({**record, "closed": (T0 + timedelta(minutes=20)).isoformat()}, {"voc": 120}, T0 + timedelta(minutes=24))
+        self.assertEqual((done["minutes"], done["after"], done["end"], "closed" in done), (20, 120, (T0 + timedelta(minutes=20)).isoformat(), False))
+        # Such a record kept before is dropped: it would bend the next predictions.
+        flash = {**record, "end": (T0 + timedelta(seconds=26)).isoformat(), "minutes": 0, "after": 288}
+        self.assertEqual(feedback.keep([flash, done, feedback.ignored(T0, T0 + timedelta(minutes=1))], T0 + timedelta(hours=1)),
+                         [done, feedback.ignored(T0, T0 + timedelta(minutes=1))])
+
     def test_the_air_advice_is_measured_on_the_air(self):
         air = {"action": "ouvrir", "reason": "air_needed", "features": {"air": {"co2_status": "high"}}}
         self.assertEqual(feedback.measure(air), "co2")
