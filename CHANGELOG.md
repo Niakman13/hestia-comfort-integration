@@ -1,3 +1,21 @@
+## 1.2.11 — Des mots qui ne se contredisent plus
+
+**En bref**
+
+- **Des mots qui ne se contredisent plus.** « Votre plage » ne parle plus que de température. Une autre mesure qui dépasse est « à surveiller », et la pastille dit ce qui ne va pas : « Trop humide », « Trop frais »…
+
+### Améliorations
+
+- Pastille d’une pièce sans geste à faire : « Trop humide », « Trop frais », « Trop chaud » ou « Air à renouveler », au lieu de « Hors plage ».
+- Le rond du conseil montre le problème (une goutte pour l’humidité) ; la coche ne s’affiche que s’il n’y a rien à signaler.
+- Mesures : « 1 à surveiller » ou « rien à signaler ». Détails : « Votre plage de température ».
+- Carte logement : elle signale les pièces trop humides comme les cartes de pièce, et affiche « 2 à surveiller » au lieu de « Tout va bien ».
+
+### Corrections
+
+- Carte logement : la température ne s’affiche plus deux fois (« 18,8 °C 18,8 °C trop frais »).
+- Hub : un capteur repris de la pièce au même air n’est plus compté comme muet (« 30 / 32 capteurs qui répondent »).
+
 ## 1.2.10 — Des cartes qui ne se contredisent plus
 
 **En bref**

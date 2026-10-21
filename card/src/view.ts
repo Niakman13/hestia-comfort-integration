@@ -41,7 +41,7 @@ export const reasons:Record<string,[string,string]> = {
   air_needed:['Aérez quelques minutes','Les mesures de qualité de l’air appellent un renouvellement d’air. Surveillez les mesures pour décider de la suite ; aucune durée ne garantit le résultat.'],
   rehumidification_risk:['Refermez pour éviter de réhumidifier','L’air extérieur contient davantage d’eau. Rester ouvert ne permet plus d’assécher la pièce ; les besoins de renouvellement d’air restent évalués séparément.'],
   shutter_protection:['Adaptez la protection solaire','Un geste sur les volets peut aider. Consultez le conseil par ouvrant ; une position non mesurée reste inconnue.'],
-  cooling_possible:['Profitez de la fraîcheur','L’air extérieur est suffisamment plus frais pour aider cette pièce à retrouver votre plage de confort.'],
+  cooling_possible:['Profitez de la fraîcheur','L’air extérieur est suffisamment plus frais pour aider cette pièce à revenir dans votre plage de température.'],
   drying_possible:['Un aérage peut assécher','L’air extérieur contient moins d’eau. Le gain annoncé tient compte de ce que les aérations passées ont vraiment donné dans cette pièce.'],
   drying_later:['Aérez plus tard','L’air du dehors sera nettement plus sec dans quelques heures : l’aération gagnera bien plus que maintenant.'],
   ventilation_possible:['Lancez la VMC','Aérer assèche peu cette pièce, mais l’air du dehors est plus sec : la VMC le fera entrer mieux qu’une fenêtre.'],
@@ -119,7 +119,7 @@ export function readingStatus(r:Reading|undefined):string {
   if(r.detail==='user_declared' && r.quality==='valid') return 'Déclaré par vous';
   if(r.quality==='estimated') return 'Estimation';
   if(r.quality==='valid') return 'Disponible';
-  return r.detail==='incompatible_unit'?'Unité incompatible':r.detail==='out_of_range'?'Valeur hors plage':r.detail==='unknown_action'?'Action non fournie par le chauffage':'Temporairement indisponible';
+  return r.detail==='incompatible_unit'?'Unité incompatible':r.detail==='out_of_range'?'Valeur impossible':r.detail==='unknown_action'?'Action non fournie par le chauffage':'Temporairement indisponible';
 }
 
 /** Additive engine explanations, shared by all formats and never inferred from missing readings. */

@@ -21,6 +21,10 @@ const QUIET=['drying_unavailable','drying_slow','opening_blocked','cooling_unava
 /** The room cannot be read: its temperature or three sensors silent. The banner then says so, and nothing that
  * supposes an advice (a result, an airing) is said under it. One or two late secondary sensors leave the advice. */
 const unreadable=(v:View)=>{const failed=v.assessment.missing.filter(k=>!!v.observations[k]&&k!=='pollution');return failed.includes('indoor_temperature')||failed.length>=3;};
+/** A pill names what is out; « votre plage » is kept for the temperature's range. */
+const NEED_PILLS:Record<string,string>={dry:'Trop humide',heat:'Trop frais',cool:'Trop chaud',air:'Air à renouveler'};
+/** …and its disk shows the measure's own pictogram: the tick is kept for « nothing to report ». */
+const NEED_DISKS:Record<string,string>={dry:'drop',heat:'temp',cool:'temp',air:'air'};
 export function advice(v:View):Advice {
   const out=withLearning(v,gesture(v));
   // To close, say which window: in a shared air it may be in the other room.
@@ -95,7 +99,8 @@ function gesture(v:View):Advice {
     // A measure out of range with nothing to do about it: not « Tout va bien », only nothing better to do.
     // Opening is held back (rain, gusts, outdoor air): not that it would bring nothing; « À savoir » says why.
     return {title:'Rien à faire',line:opened?html`Ouverte ou fermée, ${b('cela ne change rien')}`:a.reason==='opening_blocked'?html`Aérer ${b('n’est pas possible')} pour l’instant`:html`Ouvrir ${b('n’apporterait rien')} pour l’instant`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined,
-      ...(a.needs.length?{pill:'Hors plage',level:'neutral' as Level}:{})};
+      // The pill names what is out, never « plage »: that word is the temperature's range alone.
+      ...(a.needs.length?{pill:NEED_PILLS[a.needs[0]]??'À surveiller',level:'neutral' as Level,...(opened?{}:{disk:NEED_DISKS[a.needs[0]]??'info'})}:{})};
   switch(a.reason){
     case 'within_comfort': return {title:'Rien à faire',line:html`${deg(ti)}, ${b('dans votre plage')}`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
     case 'rain_open_windows': return {title:'Fermez, il pleut',line:html`La pluie ${b('entre par les ouvrants exposés')}`,disk:'rain'};
@@ -146,7 +151,7 @@ function gesture(v:View):Advice {
     case 'incomplete_data': {
       // One or two secondary sensors silent, nothing else to say: a calm banner, the silent tile shows it.
       return failed.length?{title:'Rien à faire',line:html`${b(coverageText(v).replace(/^Mesures à vérifier : /,''))} ne répond pas`,disk:'check',pill:failed.length>1?'Capteurs muets':'Un capteur muet',level:'neutral'}
-        :{title:'Bilan partiel',line:html`Les mesures connues sont ${b('dans votre plage')}`,disk:'check'};
+        :{title:'Bilan partiel',line:html`${b('Rien à signaler')} dans les mesures connues`,disk:'check'};
     }
   }
   // Any other combination still names a gesture, from the action, never the level's word.
@@ -358,12 +363,12 @@ const ownTiles=(v:View,list:Tile[])=>list.filter(t=>!v.inherited?.[tileKeys[t.la
 export function tiles(v:View,config:Config):Tile[] {
   const o=v.observations,a=v.assessment,mods=new Set(config.modules??[]),list:Tile[]=[],air=a.features?.air;
   if(mods.has('humidity')&&o.indoor_humidity){const h=numeric(o.indoor_humidity),wet=a.needs.includes('dry'),outside=a.features?.humidity?.source==='outside';
-    list.push({ic:'drop',label:'Humidité',value:number(h),unit:'%',note:h===null?gone(o.indoor_humidity):a.features?.humidity?.local?'vapeur locale':wet?'trop humide':outside?'humide dehors aussi':'dans votre plage',level:wet?'watch':'calm',out:wet});}
+    list.push({ic:'drop',label:'Humidité',value:number(h),unit:'%',note:h===null?gone(o.indoor_humidity):a.features?.humidity?.local?'vapeur locale':wet?'trop humide':outside?'humide dehors aussi':'normale',level:wet?'watch':'calm',out:wet});}
   if(mods.has('air')&&o.co2){const c=numeric(o.co2),high=air?.co2_status==='high';
-    list.push({ic:'air',label:'CO₂',value:number(c),unit:'ppm',note:c===null?gone(o.co2):high?'à renouveler':'dans votre plage',level:high?(a.level==='urgent'?'urgent':'watch'):'calm',out:high});}
+    list.push({ic:'air',label:'CO₂',value:number(c),unit:'ppm',note:c===null?gone(o.co2):high?'à renouveler':'normal',level:high?(a.level==='urgent'?'urgent':'watch'):'calm',out:high});}
   if(mods.has('air'))for(const [key,ic,label,status] of [['pm25','pm','Particules',air?.pm25_status],['voc','flask','COV',air?.voc_status]] as const){
     if(!o[key])continue;const x=numeric(o[key]),high=status==='high',treated=key==='pm25'&&high&&air?.pm25_treated===true;
-    list.push({ic,label,value:number(x),unit:o[key].unit??'',note:x===null?gone(o[key]):treated?'filtrées':high?'élevés':status==='uninterpreted'?'sans seuil':'dans votre plage',level:treated?'calm':high?'watch':status==='ok'?'calm':'neutral',out:high});}
+    list.push({ic,label,value:number(x),unit:o[key].unit??'',note:x===null?gone(o[key]):treated?'filtrées':high?'élevés':status==='uninterpreted'?'sans seuil':key==='pm25'?'normales':'normaux',level:treated?'calm':high?'watch':status==='ok'?'calm':'neutral',out:high});}
   if(mods.has('windows')){const contacts=Object.entries(o).filter(([k])=>k.startsWith('window:')).map(([,r])=>r);
     if(contacts.length){const open=contacts.filter(r=>r.quality==='valid'&&r.value===true).length,flagged=(a.openings??[]).some(x=>x.flags.length>0&&x.open===true);
       list.push({ic:open?'open':'window',label:'Fenêtres',value:`${open}/${contacts.length}`,note:flagged?'à refermer':open?(open>1?`${open} ouvertes`:'1 ouverte'):'toutes fermées',level:flagged?'action':'neutral',out:flagged});}}
@@ -403,7 +408,7 @@ const row=(t:string,x:string)=>html`<li><b>${t}</b><span> · ${x}</span></li>`;
 export function details(v:View,config:Config):TemplateResult[] {
   const a=v.assessment,f=a.features,mods=new Set(config.modules??[]),out:TemplateResult[]=[];
   const season=f?.season;
-  if(season)out.push(row('Votre plage aujourd’hui',`${number(season.minimum)} à ${number(season.maximum)} °C${!season.heated?' · pièce non chauffée':''}${season.known?(season.weight===0?' · hiver':season.weight===1?' · été':' · entre-saisons'):' · saison non calculée'}`));
+  if(season)out.push(row('Votre plage de température',`${number(season.minimum)} à ${number(season.maximum)} °C${!season.heated?' · pièce non chauffée':''}${season.known?(season.weight===0?' · hiver':season.weight===1?' · été':' · entre-saisons'):' · saison non calculée'}`));
   if(a.action==='ouvrir'&&a.open_first?.length)out.push(row('Ouvrez d’abord',a.open_first.map(id=>v.names?.[id]??id).join(' et ')));
   if(a.slot)out.push(row(a.slot.kind==='open'?'Ouverture possible':'Fermeture conseillée',`${hour(a.slot.time)} · ${number(a.slot.temperature)} °C${a.slot.wind_bearing!=null?' · '+windFrom(a.slot.wind_bearing):''}`));
   const silent=a.missing.filter(k=>!!v.observations[k]);
@@ -447,8 +452,8 @@ export function fold(o:{label:string;summary:TemplateResult|string;open:boolean;
   return html`<div class=${'nc-fold'+(o.open?' open':'')}><button class="nw-fold-head" aria-expanded=${o.open} aria-controls=${o.id} @click=${o.onToggle}><span class="nw-label">${o.label}</span><span class="nw-sum">${o.summary}</span><span class="nw-chevron">${icon('chevron')}</span></button>
     <div id=${o.id}>${o.open?o.body:o.keep?.length?html`<div class="nc-tiles">${o.keep}</div>`:nothing}</div></div>`;
 }
-/** « 4 mesures · 1 hors de votre plage · 2 muettes »: a silent measure is never counted as in range. */
-export const tileSummary=(n:number,k:number,unit:string,mute=0,waiting=false)=>n?html`${n} ${unit}${n>1?'s':''}${k?html` · <b>${k} hors de votre plage</b>`:''}${mute?(waiting?` · ${mute} en attente`:` · ${mute} muette${mute>1?'s':''}`):''}${!k&&!mute?' · toutes dans votre plage':''}`:html`Aucune ${unit}`;
+/** « 4 mesures · 1 à surveiller · 2 muettes »: a silent measure is never counted as fine. */
+export const tileSummary=(n:number,k:number,unit:string,mute=0,waiting=false)=>n?html`${n} ${unit}${n>1?'s':''}${k?html` · <b>${k} à surveiller</b>`:''}${mute?(waiting?` · ${mute} en attente`:` · ${mute} muette${mute>1?'s':''}`):''}${!k&&!mute?' · rien à signaler':''}`:html`Aucune ${unit}`;
 /** The few values a tile or a mini line shows, out of range in amber. */
 function chipValues(v:View,which:readonly Chip[]):{ic:string;text:string;out:boolean;entity?:string}[]{
   const o=v.observations,a=v.assessment,out=[];
@@ -566,9 +571,10 @@ if(!customElements.get('niak-advice-ticker'))customElements.define('niak-advice-
     the room, since the advice itself is already in its banner. A device at work is not a need. */
 export function needs(v:View):string[] {
   const o=v.observations,a=v.assessment,air=a.features?.air,out:string[]=[],val=(k:string)=>numeric(o[k]);
-  const t=val('indoor_temperature'),h=val('indoor_humidity'),c=val('co2'),pm=val('pm25'),voc=val('voc');
-  if(a.needs.includes('cool'))out.push(t!==null?`${number(t)} °C trop chaud`:'trop chaud');
-  if(a.needs.includes('heat'))out.push(t!==null?`${number(t)} °C trop frais`:'trop frais');
+  const h=val('indoor_humidity'),c=val('co2'),pm=val('pm25'),voc=val('voc');
+  // The temperature is the tile's own figure, just above: the words alone.
+  if(a.needs.includes('cool'))out.push('trop chaud');
+  if(a.needs.includes('heat'))out.push('trop frais');
   if(a.needs.includes('dry'))out.push(h!==null?`${number(h)} % trop humide`:'trop humide');
   if(air?.co2_status==='high')out.push(c!==null?`${number(c)} ppm de CO₂`:'CO₂ élevé');
   if(air?.pm25_status==='high'&&air?.pm25_treated!==true)out.push(pm!==null?`${number(pm)} particules élevées`:'particules élevées');

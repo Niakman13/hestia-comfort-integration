@@ -302,7 +302,7 @@ test('a running ventilation or purifier is never counted out of your range',()=>
   v.observations={...v.observations,purifier:{value:true,quality:'valid',source:'fan.p'}};
   const st={why:false,tilesOpen:false,detailsOpen:false,uid:'t',toggle(){}};
   const text=plain(roomCard(v,cleanConfig({type:'custom:niak-comfort-card',format:'measures',modules:['air','humidity']}),st,'measures'));
-  assert.match(text,/En marche/);assert.doesNotMatch(text,/hors de votre plage/);
+  assert.match(text,/En marche/);assert.doesNotMatch(text,/à surveiller/);
 });
 test('the home card names what a room needs, as measured',async()=>{
   const {needs}=await import(pathToFileURL(join(temp,'views/room.mjs')));
@@ -370,9 +370,11 @@ test('a damp room with nothing to do is not « Tout va bien », and a « Referme
   const {facts}=await import(pathToFileURL(join(temp,'views/room.mjs')));
   // Chambre A, 21 October: 68.9 %, airing would barely help.
   const a=fresh();a.assessment={...a.assessment,reason:'drying_slow',action:'attendre',level:'calm',needs:['dry']};
-  assert.equal(advice(a).pill,'Hors plage');
+  assert.equal(advice(a).pill,'Trop humide');
+  assert.equal(advice(a).disk,'drop');
   const ok=fresh();ok.assessment={...ok.assessment,reason:'within_comfort',action:'ok',level:'calm',needs:[]};
-  assert.notEqual(advice(ok).pill,'Hors plage');
+  assert.equal(advice(ok).pill,undefined);
+  assert.equal(advice(ok).disk,'check');
   // Chambre P: 73 %, the open window cools it for one point of humidity.
   const p=fresh();p.twin={status:'ready',days:10,samples:400,next_hour:null,precision:{hours:24,temperature:0.2,humidity:2},progress:{percent:89,complete:false,parts:{heating:0},seen:{days:10,airings:7}}};
   p.assessment={...p.assessment,reason:'exchange_harmful',action:'fermer',level:'action',needs:['dry'],features:{...p.assessment.features,drying:{minutes:60,now:73,after:72,gain:1.1,tau:170,openings:7,later:null}}};

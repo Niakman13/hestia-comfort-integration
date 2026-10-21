@@ -42,8 +42,8 @@ const helpers:Record<string,string>={
   rotate:'Toutes les 4,5 s ; décoché, ils changent d’un appui.',
   banner_blocks:'Le conseil du moment reste toujours. Cochez ce qui défile après lui, dans l’ordre.',
   scale_marks:'Tout décocher retire l’échelle.',modules:'Tout décocher retire la section ; faites glisser pour l’ordre.',
-  measures_open:'Repliées, les mesures hors de votre plage restent visibles.',
-  tile_chips:'Sous le conseil ; une mesure hors plage passe en ambre.',tile_blocks:'Ce qui s’ouvre d’un appui, dans l’ordre.',
+  measures_open:'Repliées, les mesures à surveiller restent visibles.',
+  tile_chips:'Sous le conseil ; une mesure à surveiller passe en ambre.',tile_blocks:'Ce qui s’ouvre d’un appui, dans l’ordre.',
   mini_values:'À droite du conseil.',hold_action:'La carte complète par-dessus la page, une page de votre tableau de bord, ou rien.',
   hold_path:'Le chemin de la page, par exemple /confort ou /lovelace/confort.',rooms_open:'Repliées, les pièces qui demandent un geste restent visibles.'};
 const styles=css`.note{color:var(--secondary-text-color);font-size:13px;line-height:1.6;margin:0 0 16px}.note.warn{color:var(--primary-text-color)}a{color:var(--primary-color)}`;
