@@ -33,7 +33,8 @@ export interface Question {key:string;text:string;hint:string}
 /** How much of a room is learned (engine/twin.py progress): each part 0 to 1, 100 % only once everything it has is seen. */
 export interface Progress {percent:number;complete:boolean;parts:Partial<Record<'days'|'precision'|'sun'|'windows'|'heating'|'air',number>>;seen:{days:number;airings:number;open:number;sun:number;heated:number};
  /** What the advice can already promise, measure by measure, before the room is learned at 100 %. */ ready?:{humidity:boolean;temperature:boolean;air:string[]}}
-export interface Twins {version:1;rooms:{entry_id:string;title:string;twin:Twin;week?:Week;questions?:Question[];air?:string[];progress?:Progress|null}[]}
+export interface Twins {version:1;rooms:{entry_id:string;title:string;twin:Twin;week?:Week;questions?:Question[];air?:string[];progress?:Progress|null;
+ /** Where the station's sun sensor is shaded, learned (engine/sunlight.py): azimuths by 10°. */ sun_shade?:{scale:number;shaded:number[];sunny_days:number}|null}[]}
 export interface HealthLine {level:Level;text:string;why:string;target?:Target|null}
 export interface Health {level:'ok'|'action';summary:string;tips_summary:string;rooms_summary:string;todo:HealthLine[];tips:HealthLine[];
  sources:{label:string;level:Level;text:string}[];columns:string[];rooms:{entry_id:string;title:string;cells:{level:Level;text:string}[]}[];versions:HealthLine[]}
