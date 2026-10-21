@@ -4,11 +4,15 @@ Every half hour of the past is one sample: the indoor temperature and water cont
 the sun on the station, how long a window stood open and how long the heating ran. Two small models are
 fitted on them, pulled toward an ordinary room while little is known:
 
-- temperature: ΔTi = a·(Te−Ti) + b·sun + c·heating + d·open·(Te−Ti) + e
-- water:       ΔW  = n·(We−W) + m·open·(We−W) + g
+- temperature: ΔTi = a·(Te−Ti) + b·sun + c·heating + d·open·(Te−Ti) + f·far·(Te−Ti) + x·(Tb−Ti) + e
+- water:       ΔW  = n·(We−W) + m·open·(We−W) + k·far·(We−W) + y·(Wb−W) + g
 
 `a` gives the room's inertia, `b` what the sun brings, `d` what an open window adds, `e` the steady
 gains of the household, `n` the air that leaks in with every window shut, `g` the water the room makes.
+`far` is the share of the half hour when only the windows of a room sharing this air stood open (the living room's,
+for the kitchen): `f` and `k` say how much less, or more, they reach this room's sensor than its own windows.
+`Tb` and `Wb` are the temperature and water of that other room, as measured there: `x` and `y` say how fast the two
+airs mix. Each room keeps its own measures; what the other one weighs here is learned, never set by hand.
 The twin only observes: nothing here decides an advice.
 """
 from bisect import bisect_right
@@ -22,8 +26,8 @@ KEEP_DAYS = 30
 # Before the twin speaks: three days of samples.
 READY_SAMPLES = 144
 # An ordinary room, the prior every fit is pulled toward while samples are few.
-PRIOR_T = {"a": HOURS / 30, "b": 0.0, "c": 0.0, "d": 0.3, "e": 0.0}
-PRIOR_W = {"n": HOURS / 3, "m": 0.3, "g": 0.0}
+PRIOR_T = {"a": HOURS / 30, "b": 0.0, "c": 0.0, "d": 0.3, "e": 0.0, "f": 0.0, "x": 0.0}
+PRIOR_W = {"n": HOURS / 3, "m": 0.3, "g": 0.0, "k": 0.0, "y": 0.0}
 # Weight of the prior, in samples: one day of half hours.
 PRIOR_STRENGTH = 48
 
@@ -80,17 +84,21 @@ def on_facades(solar, elevation, azimuth, facades):
 
 
 def samples(start, end, indoor_temperature, indoor_humidity, outdoor_temperature, outdoor_humidity,
-            solar=(), contacts=None, heating=(), facades=None, location=None, co2=(), voc=()):
+            solar=(), contacts=None, heating=(), facades=None, location=None, co2=(), voc=(), near=None, beside=()):
     """Half-hour samples between `start` and `end` from raw (time, value) points.
 
     `facades`: the bearings of the room's windows and `location` (latitude, longitude): the sun is then counted on the
     windows, half hour by half hour, instead of on the station's horizontal sensor.
 
     `contacts`: {entity: [(time, bool|None)]}; `heating`: [(time, bool)] running or not. A half hour with
-    a contact that does not answer is left out: what a window did then is not known."""
+    a contact that does not answer is left out: what a window did then is not known. `near`: the room's own
+    contacts, when others belong to a room sharing its air; a time when only those others stand open is `far`.
+    `beside`: [(temperature points, humidity points)] of the rooms sharing its air, averaged half hour by half hour."""
     ti, hi, te, he = (_Series(p) for p in (indoor_temperature, indoor_humidity, outdoor_temperature, outdoor_humidity))
     sun, heat, carbon, organic = _Series(solar), _Series(heating), _Series(co2), _Series(voc)
     windows = [_Series(points, keep_none=True) for points in (contacts or {}).values()]
+    own = [near is None or entity in near for entity in (contacts or {})]
+    others = [(_Series(t), _Series(h)) for t, h in beside or ()]
     rows = []
     when = start.replace(minute=0 if start.minute < 30 else 30, second=0, microsecond=0)
     if when < start:
@@ -100,7 +108,7 @@ def samples(start, end, indoor_temperature, indoor_humidity, outdoor_temperature
         if None in values or not (0 < values[1] <= 100 and 0 < values[3] <= 100):
             when += STEP
             continue
-        opened = heated = sunny = 0.0
+        opened = far = heated = sunny = 0.0
         known, steps, t = True, 0, when
         while t < when + STEP:
             states = [w.at(t) for w in windows]
@@ -108,6 +116,7 @@ def samples(start, end, indoor_temperature, indoor_humidity, outdoor_temperature
                 known = False
                 break
             opened += any(states)
+            far += any(s for s, mine in zip(states, own) if not mine) and not any(s for s, mine in zip(states, own) if mine)
             heated += bool(heat.at(t))
             light = max(0.0, float(sun.at(t) or 0.0))
             if facades and location:
@@ -117,9 +126,13 @@ def samples(start, end, indoor_temperature, indoor_humidity, outdoor_temperature
             steps, t = steps + 1, t + SUB
         if known and steps:
             c, v = carbon.at(when), organic.at(when)
+            near_by = [(t.at(when), h.at(when)) for t, h in others]
+            near_by = [(t, h) for t, h in near_by if t is not None and h is not None and 0 < h <= 100]
+            tb = round(sum(t for t, _ in near_by) / len(near_by), 2) if near_by else None
+            hb = round(sum(h for _, h in near_by) / len(near_by), 1) if near_by else None
             rows.append([when.isoformat(), round(values[0], 2), round(values[1], 1), round(values[2], 2), round(values[3], 1),
                          round(sunny / steps / 1000, 3), round(opened / steps, 2), round(heated / steps, 2),
-                         None if c is None else round(c), None if v is None else round(v)])
+                         None if c is None else round(c), None if v is None else round(v), round(far / steps, 2), tb, hb])
         when += STEP
     return rows
 
@@ -127,7 +140,8 @@ def samples(start, end, indoor_temperature, indoor_humidity, outdoor_temperature
 def merge(stored, fresh, now):
     """Stored samples plus the fresh ones (same time: the fresh one wins), the last thirty days only."""
     # Samples from before the air was learned carry no CO₂ nor VOC: unknown, not zero.
-    by_time = {r[0]: (r + [None, None])[:10] for r in stored or [] if isinstance(r, list) and len(r) in (8, 10) and isinstance(r[0], str)}
+    by_time = {r[0]: (r + [None, None, 0.0, None, None][len(r) - 8:])[:13] for r in stored or []
+               if isinstance(r, list) and len(r) in (8, 10, 11, 13) and isinstance(r[0], str)}
     by_time.update({r[0]: r for r in fresh})
     limit = now - timedelta(days=KEEP_DAYS)
     return [by_time[k] for k in sorted(by_time, key=datetime.fromisoformat) if datetime.fromisoformat(k) >= limit]
@@ -164,15 +178,27 @@ def _pairs(rows):
             yield first, second
 
 
+def _far(r):
+    """The share of the half hour when only the windows of a room sharing this air stood open."""
+    return r[10] if len(r) > 10 and isinstance(r[10], (int, float)) else 0.0
+
+
+def _beside(r):
+    """The temperature and humidity measured in the room sharing this air, or None."""
+    return (r[11], r[12]) if len(r) > 12 and isinstance(r[11], (int, float)) and isinstance(r[12], (int, float)) else None
+
+
 def _thermal_x(r):
     _, ti, _, te, _, sun, opened, heated = r[:8]
-    return [te - ti, sun, heated, opened * (te - ti), 1.0]
+    b = _beside(r)
+    return [te - ti, sun, heated, opened * (te - ti), 1.0, _far(r) * (te - ti), b[0] - ti if b else 0.0]
 
 
 def _water_x(r):
     _, ti, hi, te, he, _, opened, _ = r[:8]
     gap = absolute(te, he) - absolute(ti, hi)
-    return [gap, opened * gap, 1.0]
+    b = _beside(r)
+    return [gap, opened * gap, 1.0, _far(r) * gap, absolute(*b) - absolute(ti, hi) if b else 0.0]
 
 
 def fit(rows):
@@ -187,10 +213,16 @@ def fit(rows):
     for coefficients, keys in ((thermal, ("b", "c", "d")), (water, ("m",))):
         for key in keys:
             coefficients[key] = max(0.0, coefficients[key])
+    # The other room's windows reach this sensor from nothing at all to twice as much as its own.
+    for coefficients, own, other in ((thermal, "d", "f"), (water, "m", "k")):
+        coefficients[other] = min(coefficients[own], max(-coefficients[own], coefficients[other]))
+    # Two airs mixing bring each other closer, never apart.
+    thermal["x"], water["y"] = min(1.0, max(0.0, thermal["x"])), min(1.0, max(0.0, water["y"]))
     return {"thermal": {k: round(v, 5) for k, v in thermal.items()}, "water": {k: round(v, 5) for k, v in water.items()},
             "air": {name: fit_air(pairs, index, base) for name, index, base in AIR},
             "samples": len(pairs), "open_samples": sum(1 for r, _ in pairs if r[6] > 0),
-            "sunny_samples": sum(1 for r, _ in pairs if r[5] > 0.1), "heated_samples": sum(1 for r, _ in pairs if r[7] > 0)}
+            "sunny_samples": sum(1 for r, _ in pairs if r[5] > 0.1), "heated_samples": sum(1 for r, _ in pairs if r[7] > 0),
+            "far_samples": sum(1 for r, _ in pairs if _far(r) > 0), "beside_samples": sum(1 for r, _ in pairs if _beside(r))}
 
 
 # The air: CO₂ falls toward the outdoor level (about 420 ppm), a VOC index toward its usual level (100).
@@ -218,13 +250,16 @@ def air_after(air, value, minutes, opened=1.0):
     return air["base"] + (value - air["base"]) * (1 - share) ** steps + air["g"] * steps
 
 
-def step(model, ti, hi, te, he, sun=0.0, opened=0.0, heated=0.0):
-    """The room half an hour later, from now and the coming inputs."""
+def step(model, ti, hi, te, he, sun=0.0, opened=0.0, heated=0.0, far=0.0, beside=None):
+    """The room half an hour later, from now and the coming inputs; `far`: only the other room's windows open;
+    `beside`: (temperature, humidity) measured in the room sharing its air."""
     t, w = model["thermal"], model["water"]
     gap = te - ti
-    nti = ti + t["a"] * gap + t["b"] * sun + t["c"] * heated + t["d"] * opened * gap + t["e"]
     water, outside = absolute(ti, hi), absolute(te, he)
-    nw = max(0.1, water + w["n"] * (outside - water) + w["m"] * opened * (outside - water) + w["g"])
+    mixing_t = t.get("x", 0.0) * (beside[0] - ti) if beside else 0.0
+    mixing_w = w.get("y", 0.0) * (absolute(*beside) - water) if beside else 0.0
+    nti = ti + t["a"] * gap + t["b"] * sun + t["c"] * heated + (t["d"] * opened + t.get("f", 0.0) * far) * gap + mixing_t + t["e"]
+    nw = max(0.1, water + (w["n"] + w["m"] * opened + w.get("k", 0.0) * far) * (outside - water) + mixing_w + w["g"])
     return nti, min(100.0, nw / absolute(nti, 100) * 100)
 
 
@@ -249,7 +284,7 @@ def replay(model, rows, hours=24):
         if datetime.fromisoformat(nxt[0]) - datetime.fromisoformat(row[0]) != STEP:
             ti, hi = nxt[1], nxt[2]
             continue
-        ti, hi = step(model, ti, hi, row[3], row[4], row[5], row[6], row[7])
+        ti, hi = step(model, ti, hi, row[3], row[4], row[5], row[6], row[7], _far(row), _beside(row))
         curve.append({"time": nxt[0], "temperature": round(ti, 1), "measured_temperature": nxt[1],
                       "humidity": round(hi), "measured_humidity": round(nxt[2])})
         errors_t.append(abs(ti - nxt[1]))
@@ -272,7 +307,12 @@ def describe(model):
             "window_half_minutes": round(math.log(2) * HOURS * 60 / window) if model["open_samples"] >= 6 and window > 0 else None,
             "air_changes_per_hour": round(w["n"] / HOURS, 2),
             "window_air_changes_per_hour": round((w["n"] + w["m"]) / HOURS, 2) if model["open_samples"] >= 6 else None,
-            "water_per_hour": round(w["g"] / HOURS, 2)}
+            "water_per_hour": round(w["g"] / HOURS, 2),
+            # How much the other room's windows count here, against this room's own: 40 % for the far side of a house.
+            "far_window_percent": round(100 * (t["d"] + t.get("f", 0.0)) / t["d"])
+            if model.get("far_samples", 0) >= 6 and t["d"] > 0 else None,
+            # How much of the gap with the room sharing its air closes in an hour: how mixed the two airs are.
+            "mixing_percent": round(100 * (1 - (1 - t.get("x", 0.0)) ** 2)) if model.get("beside_samples", 0) >= 48 else None}
 
 
 def summary(rows, now, current=None):
@@ -331,12 +371,28 @@ def progress(twin, airings=0, windows=False, heating=False, air=()):
     learned_air = [(model.get("air") or {}).get(name) or {} for name in air]
     if learned_air:
         parts["air"] = sum(share(m.get("open_samples", 0), SEEN["air"]) for m in learned_air) / len(learned_air)
+    return _scored(parts, {"days": twin.get("days", 0), "airings": airings, "open": model.get("open_samples", 0),
+                           "sun": model.get("sunny_samples", 0), "heated": model.get("heated_samples", 0)})
+
+
+def _scored(parts, seen):
     complete = all(v >= 1 for v in parts.values())
     percent = round(100 * sum(WEIGHTS[k] * v for k, v in parts.items()) / sum(WEIGHTS[k] for k in parts))
     return {"percent": 100 if complete else min(99, percent), "complete": complete,
-            "parts": {k: round(v, 2) for k, v in parts.items()},
-            "seen": {"days": twin.get("days", 0), "airings": airings, "open": model.get("open_samples", 0),
-                     "sun": model.get("sunny_samples", 0), "heated": model.get("heated_samples", 0)}}
+            "parts": {k: round(v, 2) for k, v in parts.items()}, "seen": seen}
+
+
+def together(progresses):
+    """One learning for rooms sharing one air: each part as far as the least learned room has got, complete once every
+    room is. The airings, learned for the whole air, are counted alike in every room."""
+    progresses = [p for p in progresses if p]
+    if len(progresses) < 2:
+        return progresses[0] if progresses else progress(None)
+    keys = dict.fromkeys(k for p in progresses for k in p["parts"])
+    parts = {k: min(p["parts"][k] for p in progresses if k in p["parts"]) for k in keys}
+    seen = {k: min(p["seen"].get(k, 0) for p in progresses) for k in ("days", "open", "sun", "heated")}
+    seen["airings"] = max(p["seen"].get("airings", 0) for p in progresses)
+    return {**_scored(parts, seen), "rooms": len(progresses)}
 
 
 def learned_advice(assessment, twin, current=None, openings=0, feedback=None):
@@ -380,7 +436,8 @@ def _learned(assessment, twin, current=None, openings=0):
         return None
     if (reason == "cooling_possible" and model and model.get("open_samples", 0) >= 6 and current
             and None not in (current.get(k) for k in ("ti", "hi", "te", "he"))):
-        after, _ = step(model, current["ti"], current["hi"], current["te"], current["he"], current.get("sun", 0.0), 1.0, 0.0)
+        after, _ = step(model, current["ti"], current["hi"], current["te"], current["he"], current.get("sun", 0.0), 1.0, 0.0,
+                        beside=current.get("beside"))
         if after < current["ti"] - 0.2:
             return {"now": round(current["ti"], 1), "after": round(after, 1), "minutes": int(HOURS * 60), "measure": "temperature",
                     "openings": openings, **basis}
@@ -393,5 +450,6 @@ def next_hour(twin, current):
         return None
     ti, hi = current["ti"], current["hi"]
     for _ in range(2):
-        ti, hi = step(twin["model"], ti, hi, current["te"], current["he"], current.get("sun", 0.0), current.get("opened", 0.0), current.get("heated", 0.0))
+        ti, hi = step(twin["model"], ti, hi, current["te"], current["he"], current.get("sun", 0.0), current.get("opened", 0.0),
+                      current.get("heated", 0.0), current.get("far", 0.0), current.get("beside"))
     return {"temperature": round(ti, 1), "humidity": round(hi)}

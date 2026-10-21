@@ -59,6 +59,8 @@
 .ac-rooms .hl-table td,.ac-rooms .hl-table th{padding:10px 8px}.ac-rooms tbody tr:hover>*{background:color-mix(in srgb,var(--nc-accent) 6%,transparent)}
 .ac-room small{display:block;font-weight:400;font-size:12px;color:var(--nc-muted)}
 .hl-table td.ac-wrap{white-space:normal;min-width:180px}.ac-meas{display:flex;flex-wrap:wrap;gap:4px 14px}.ac-meas>span{display:inline-flex;align-items:center;font-size:13px}.ac-meas>span.bad{color:var(--nc-todo)}.ac-meas .hl-dot{margin-right:6px;width:8px;height:8px}
+/* Read from the room sharing its air: a ring instead of a dot. */
+.ac-meas>span.shared{color:var(--nc-muted)}.ac-meas .shared .hl-dot{background:transparent;box-shadow:inset 0 0 0 1.5px currentColor}
 .ac-prec{display:block;font-size:12px;color:var(--nc-muted);margin-top:4px}
 .ac-left span{display:block;white-space:normal}.ac-left span::before{content:'· ';}
 .ac-go{text-align:right;position:sticky;right:0;background:var(--nc-frame,var(--nc-surface))}.ac-edit{min-height:36px;padding:6px 16px;font-size:14px;font-weight:600;color:var(--nc-accent);border-color:var(--nc-accent);background:transparent}

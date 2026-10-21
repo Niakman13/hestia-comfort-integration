@@ -68,3 +68,23 @@ class VolumeDeclaration(unittest.TestCase):
         self.assertEqual(service.volume("salon"), ["cuisine", "entree"])
         self.assertEqual(service.volume("cuisine"), ["entree", "salon"])
         self.assertEqual(service.volume("chambre"), [])
+
+
+class SharedSources(unittest.TestCase):
+    def test_the_kitchen_reads_the_heating_and_air_of_its_living_room(self):
+        """Cuisine, 21 October: no thermostat of its own, heated by the Salon's, breathing the air its CO₂ sensor measures."""
+        try:
+            from custom_components.niak_comfort.coordinator import ComfortCoordinator
+        except ImportError:  # the engine's own test run, without Home Assistant
+            self.skipTest("Home Assistant is not installed")
+        room = ComfortCoordinator.__new__(ComfortCoordinator)
+        room.config = {"sources": {"indoor_temperature": "sensor.cuisine_t", "indoor_humidity": "sensor.cuisine_h"}}
+        room.partners = [{"title": "Salon", "shared": {"heating": "climate.salon", "co2": "sensor.salon_co2"}}]
+        room.sources = room._sources()
+        self.assertEqual(room.sources, {"indoor_temperature": "sensor.cuisine_t", "indoor_humidity": "sensor.cuisine_h",
+                                        "heating": "climate.salon", "co2": "sensor.salon_co2"})
+        self.assertEqual(room.inherited(), {"heating": "Salon", "co2": "Salon"})
+        # Its own sensor wins; a room declared unheated takes no thermostat.
+        room.config = {"sources": {"co2": "sensor.cuisine_co2"}, "heated": False}
+        room.sources = room._sources()
+        self.assertEqual(room.sources, {"co2": "sensor.cuisine_co2"})

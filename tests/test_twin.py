@@ -92,6 +92,62 @@ class Twin(unittest.TestCase):
         self.assertNotIn("windows", twin.progress(learned)["parts"])
         self.assertEqual(twin.progress(None)["percent"], 0)
 
+    def test_rooms_sharing_one_air_are_learned_together(self):
+        """Salon and Cuisine, 21 October: the kitchen « Optimal », the living room at 90 %, for one and the same air."""
+        rows, end = known_room(days=8)
+        learned = twin.summary(rows, end)
+        salon = twin.progress(learned, airings=5, windows=True, heating=True)
+        cuisine = twin.progress(learned, airings=5, windows=True)
+        self.assertTrue(cuisine["complete"])
+        both = twin.together([salon, cuisine])
+        self.assertEqual((both["percent"], both["complete"], both["rooms"]), (salon["percent"], False, 2))
+        self.assertEqual(both["seen"]["airings"], 5)
+        self.assertEqual(twin.together([cuisine]), cuisine)
+
+    def test_the_other_rooms_windows_get_their_own_weight(self):
+        """The kitchen's sensor feels its own east window fully, the living room's west French window, across the house,
+        at 40 % only: the twin finds this back instead of counting both alike."""
+        a, d, t = twin.HOURS / 40, 0.25, START
+        ti, points = 20.0, {k: [] for k in ("ti", "hi", "te", "he", "own", "salon")}
+        while t < START + timedelta(days=10):
+            hour = t.hour + t.minute / 60
+            te = 14 + 5 * math.sin((hour - 9) / 24 * 2 * math.pi)
+            own, salon = 19 <= hour < 20, 8 <= hour < 10 or (t.day % 2 and 19 <= hour < 20)
+            for key, value in (("ti", ti), ("hi", 60.0), ("te", te), ("he", 80.0), ("own", own), ("salon", salon)):
+                points[key].append((t, value))
+            weight = 1.0 if own else 0.4 if salon else 0.0
+            ti += twin.SUB.total_seconds() / twin.STEP.total_seconds() * (a * (te - ti) + d * weight * (te - ti) + 0.08)
+            t += twin.SUB
+        rows = twin.samples(START, t, points["ti"], points["hi"], points["te"], points["he"],
+                            contacts={"cuisine": points["own"], "salon": points["salon"]}, near={"cuisine"})
+        learned = twin.describe(twin.fit(rows))
+        self.assertAlmostEqual(learned["far_window_percent"], 40, delta=10)
+        # A room on its own: every window is its own, nothing is far.
+        alone = twin.samples(START, t, points["ti"], points["hi"], points["te"], points["he"], contacts={"w": points["own"]})
+        self.assertTrue(all(r[10] == 0 for r in alone))
+        # Samples stored before keep working: no far column means none open.
+        self.assertEqual(twin.merge([rows[0][:10]], [], START + timedelta(days=1))[0][10], 0.0)
+
+    def test_the_air_of_the_room_beside_weighs_as_learned(self):
+        """The kitchen mixes its air with the living room's, heated by day: the twin learns how fast, and replays better."""
+        a, x, t = twin.HOURS / 40, 0.15, START
+        ti, points = 19.0, {k: [] for k in ("ti", "te", "tb")}
+        while t < START + timedelta(days=10):
+            hour = t.hour + t.minute / 60
+            te, tb = 14 + 5 * math.sin((hour - 9) / 24 * 2 * math.pi), 22.0 if 7 <= hour < 23 else 18.0
+            for key, value in (("ti", ti), ("te", te), ("tb", tb)):
+                points[key].append((t, value))
+            ti += twin.SUB.total_seconds() / twin.STEP.total_seconds() * (a * (te - ti) + x * (tb - ti) + 0.05)
+            t += twin.SUB
+        humid = [(t0, 60.0) for t0, _ in points["ti"]]
+        outside = [(t0, 80.0) for t0, _ in points["ti"]]
+        alone = twin.samples(START, t, points["ti"], humid, points["te"], outside)
+        mixed = twin.samples(START, t, points["ti"], humid, points["te"], outside, beside=[(points["tb"], humid)])
+        learned = twin.fit(mixed)
+        self.assertAlmostEqual(learned["thermal"]["x"], x, delta=0.03)
+        self.assertEqual(twin.describe(learned)["mixing_percent"], round(100 * (1 - (1 - learned["thermal"]["x"]) ** 2)))
+        self.assertLess(twin.replay(learned, mixed)["temperature"], twin.replay(twin.fit(alone), alone)["temperature"])
+
     def test_the_sun_never_cools_a_room(self):
         rows, end = known_room()
         flipped = [[r[0], r[1], r[2], r[3], r[4], 0.0 if r[5] else 0.5, r[6], r[7]] for r in rows]

@@ -21,10 +21,11 @@ export interface Discovery {version:1;revision:string;candidates:Record<string,C
 export interface DriverSignal {entity_id:string;name:string;on:boolean}
 export interface Driver {name:string;auto:string|null;override:string|null;signals?:Partial<Record<'enabled'|'auto'|'tracking'|'detection'|'override'|'sun'|'climate',DriverSignal|null>>;azimuth?:number|null;exposure?:string|null;width?:number|null;height?:number|null}
 // The technical state of the home (health.py): orange (bad) stops something, tip could be better, none is not used.
-export type Level='ok'|'bad'|'tip'|'none';
+export type Level='ok'|'bad'|'tip'|'none'|'shared';
 export type Target={kind:'room';entry_id:string;label:string}|{kind:'exterior';label:string}|{kind:'area';area_id:string;label:string};
 /** « Ce que Niak a appris » : what each room's twin learned, and how well it replays the last 24 hours. */
-export interface TwinRoom {inertia_hours:number;sun_degrees:number|null;heating_degrees:number|null;household_degrees:number;window_half_minutes:number|null;air_changes_per_hour:number;window_air_changes_per_hour:number|null;water_per_hour:number}
+export interface TwinRoom {inertia_hours:number;sun_degrees:number|null;heating_degrees:number|null;household_degrees:number;window_half_minutes:number|null;air_changes_per_hour:number;window_air_changes_per_hour:number|null;water_per_hour:number;
+ /** Rooms sharing one air: what the other room's windows and air weigh here, learned. */ far_window_percent?:number|null;mixing_percent?:number|null}
 export interface Twin {status:'learning'|'ready';samples:number;days:number;open_samples?:number;room?:TwinRoom|null;
  precision?:{hours:number;temperature:number;humidity:number;curve:{time:string;temperature:number;measured_temperature:number;humidity:number;measured_humidity:number}[]}|null;next_hour?:{temperature:number;humidity:number}|null}
 export interface Week {followed:number;ignored:number;evaluated:number;held:number;gains:Record<string,number>}

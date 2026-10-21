@@ -43,6 +43,8 @@ class Room:
     sensors: list = field(default_factory=list)
     available: dict = field(default_factory=dict)
     """Sensors Home Assistant has in this room for what is not chosen: key → name."""
+    shared: dict = field(default_factory=dict)
+    """Sources read from the room it shares its air with: key → that room's name."""
 
 
 @dataclass
@@ -98,7 +100,7 @@ def report(f):
                 todo.append(_line("bad", f"{room.title} : {SUBJECTS[s.key]} {_broken(s)}", f"{_since(s.age)}{s.name} · {LOSS[s.key]}", target))
         chosen = {s.key for s in room.sensors}
         for key in ("indoor_humidity", "co2", "heating"):
-            if key not in chosen and key in room.available:
+            if key not in chosen and key not in room.shared and key in room.available:
                 tips.append(_line("tip", f"{room.title} : ajouter {SUBJECTS[key]}", f"« {room.available[key]} » est disponible : {GAINS[key]}.", target))
         if "windows" not in chosen:
             found = room.available.get("windows")
@@ -141,7 +143,10 @@ def report(f):
         for key, _ in COLUMNS:
             mine = [s for s in room.sensors if s.key == key]
             broken = [s for s in mine if s.status != "ok"]
-            if not mine:
+            if not mine and key in room.shared:
+                # Heated by the living room it opens onto, breathing the air its sensor measures.
+                cells.append({"level": "shared", "text": room.shared[key]})
+            elif not mine:
                 cells.append({"level": "none", "text": "non mesurés" if key == "windows" else "—"})
             elif broken:
                 cells.append({"level": "bad", "text": f"{len(broken)} sur {len(mine)} ne répondent pas" if len(mine) > 1 else "ne répond pas"})
@@ -186,6 +191,8 @@ async def facts(hass, version):
         config = {**entry.data, **entry.options}
         sources, windows = config.get("sources", {}), config.get("windows", [])
         room = Room(entry.entry_id, entry.title, entry.state.value == "loaded")
+        coordinator = getattr(entry, "runtime_data", None)
+        room.shared = coordinator.inherited() if hasattr(coordinator, "inherited") else {}
         room.sensors = [_sensor(hass, key, sources[key], now) for key in ("indoor_temperature", "indoor_humidity", "co2", "heating", "illuminance", "pm25", "voc", "purifier", "ventilation", "ventilation_boost") if sources.get(key)]
         room.sensors += [_sensor(hass, "windows", w, now) for w in windows]
         room.sensors += [_sensor(hass, "presence", e, now) for e in config.get("presence", [])]
