@@ -1,3 +1,20 @@
+## 1.3.1 — Le soleil juste, même station à l’ombre
+
+**En bref**
+
+- **Le soleil est juste même quand la station est à l’ombre.** Confort apprend tout seul les heures où la maison cache le capteur, et y estime le soleil avec la couverture nuageuse de Niak Weather, corrigée par la mesure réelle.
+- **Le soleil est lissé sur 15 minutes** : un nuage qui passe ne fait plus apparaître et disparaître les conseils.
+
+### Nouveautés
+
+- Les directions du soleil où la station perd sa mesure chaque jour ensoleillé sont reconnues (par exemple une station côté est, à l’ombre de la maison l’après-midi). Rien n’est à régler ; une station bien dégagée ne change pas.
+- Station à l’ombre : soleil théorique × couverture nuageuse de Niak Weather (2.6.3), corrigée de l’écart mesuré juste avant ; sinon, la dernière mesure prise au soleil. La tuile Soleil indique « estimé, station à l’ombre ».
+- L’apprentissage des pièces se fait sur l’historique corrigé : l’effet du soleil sur les fenêtres ouest n’est plus sous-estimé.
+
+### Améliorations
+
+- Le réglage du soleil s’appelle « Soleil compté sur une fenêtre à partir de (W/m²) » et explique son effet (Modifier une pièce › Réglages avancés).
+
 ## 1.3.0 — Des conseils qui suivent la saison
 
 **En bref**
