@@ -1,3 +1,18 @@
+## 1.2.6 — La qualité de l’air de Niak Weather gardée
+
+**En bref**
+
+- **La qualité de l’air de Niak Weather est bien gardée dans les Réglages généraux.**
+
+### Corrections
+
+- Avec Niak Weather (air WAQI ou Atmo France), les Réglages généraux affichaient la pollution « non fournie », et l’enregistrer la retirait. Elle s’affiche maintenant avec sa source et son niveau (« Niak Weather · WAQI — Moyen »), et reste prise en compte.
+- Les valeurs longues ne sortent plus du cadre.
+
+### Améliorations
+
+- Un sous-titre plus simple au-dessus des mesures de Niak Weather.
+
 ## 1.2.5 — Des conseils qui ne se contredisent plus, et l’apprentissage de chaque pièce
 
 **En bref**

@@ -62,6 +62,7 @@ export class ComfortSetup extends LitElement {
  // The tab opens on the home's technical state; « Modifier » leads to the rooms.
  @state() private page:'health'|'rooms'='health';
  @state() private adding=false;
+ @state() private weatherAir:{provider:string;index:number|null;label:string|null}|null=null;
  @state() private overview?:{area_id:string;name:string;suggestions:Record<string,string|string[]>;temperatures:number}[];
  @state() private picked:string[]=[];
  @state() private weatherEntry:string|null=null;
@@ -113,7 +114,7 @@ export class ComfortSetup extends LitElement {
   return html`<div class="ac-top"><h1>Confort</h1></div>${this.healthError?html`<p class="notice error" role="alert">Le bilan technique n’a pas pu être chargé. ${this.healthError}</p>
    <div class="actions"><button @click=${()=>void this.loadHealth()}>Réessayer</button></div>`
    :html`<p class="muted" role="status">Chargement du bilan technique…</p>`}
-   ${frame('Vos pièces',html`${this.addBar()}<div class="ex-rows">${this.snapshot!.rooms.map(r=>html`<div class="ac-line"><b>${r.title}</b><span class="hint">${coverage(r.config)}</span>${this.editButton(r.entry_id,r.title)}</div>`)}</div>`)}`;
+   ${frame('Vos pièces',html`${this.addBar()}<div class="ac-lines">${this.snapshot!.rooms.map(r=>html`<div class="ac-line"><b>${r.title}</b><span class="hint">${coverage(r.config)}</span>${this.editButton(r.entry_id,r.title)}</div>`)}</div>`)}`;
  }
  private async goTo(t:Target){
   if(t.kind==='exterior')return this.editExterior();
@@ -276,12 +277,12 @@ export class ComfortSetup extends LitElement {
  // Takes Niak Weather's station and signals as the whole exterior; only the caution on the air stays the person's.
  private async useWeather(entry_id:string,quiet=false){
   if(!quiet)this.busy=true;this.error='';
-  try{const p=await this.hass!.callWS<{entry_id:string;title:string;sources:Record<string,Spec>}>({type:'niak_comfort/weather_proposal',entry_id});
+  try{const p=await this.hass!.callWS<{entry_id:string;title:string;sources:Record<string,Spec>;air?:{provider:string;index:number|null;label:string|null}|null}>({type:'niak_comfort/weather_proposal',entry_id});
    const caution=this.exteriorDraft?.pollution?.block_from,next={...p.sources};if(next.pollution&&caution)next.pollution={...next.pollution,block_from:caution};
-   this.exteriorDraft=next;this.weatherEntry=p.entry_id;if(!quiet)this.saved=`Les mesures de Niak Weather (${p.title}) sont reprises : enregistrez pour les garder.`;}
+   this.exteriorDraft=next;this.weatherEntry=p.entry_id;this.weatherAir=p.air??null;if(!quiet)this.saved=`Les mesures de Niak Weather (${p.title}) sont reprises : enregistrez pour les garder.`;}
   catch(e){if(quiet)this.weatherEntry=entry_id;this.error=this.message(e);}finally{if(!quiet)this.busy=false;}
  }
- private ownSensors(){this.weatherEntry=null;this.saved='';}
+ private ownSensors(){if(this.exteriorDraft?.pollution?.adapter==='niak_air')this.clear('pollution');this.weatherEntry=null;this.weatherAir=null;this.saved='';}
  // The exterior: its source first; with Niak Weather everything is read from it, with own sensors each one is chosen.
  private exteriorSource(){const s=this.snapshot!,nw=s.niak_weather,from=this.weatherEntry?'weather':'own';
   return frame('D’où viennent les mesures du dehors ?',html`<span id="l-from" class="sr-only">Source des mesures du dehors</span>
@@ -289,7 +290,12 @@ export class ComfortSetup extends LitElement {
    ${from==='weather'&&(nw?.places.length??0)>1?this.zone('Lieu Niak Weather',nw!.places.map(p=>({value:p.entry_id,label:p.title})),this.weatherEntry!,id=>void this.useWeather(id)):nothing}`);}
  /** One line per outdoor measure: its name, then its sensor (a choice only with own sensors), then its value now. */
  private exteriorRows(){const weather=!!this.weatherEntry,all=(key:string)=>this.discovery?.candidates[key]??[];
-  const keys=outdoorGroups.flatMap(([,k])=>k),air=all('pollution').find(x=>x.entity_id===this.exteriorDraft!.pollution?.entity_id),title=this.snapshot?.niak_weather?.places.find(p=>p.entry_id===this.weatherEntry)?.title;
+  const keys=outdoorGroups.flatMap(([,k])=>k),spec=this.exteriorDraft!.pollution,air=all('pollution').find(x=>x.entity_id===spec?.entity_id),wa=this.weatherAir;
+  // The air comes from Niak Weather's own choice (Atmo France or a WAQI station), or from its index entity.
+  const airName=spec?.adapter==='niak_air'&&wa?`Niak Weather · ${wa.provider}`:air?air.name:'—';
+  const airValue=spec?.adapter==='niak_air'?(wa?.index?html`<span>${wa.label??'indice '+wa.index}</span>`:html`<span class="bad">ne répond pas</span>`)
+   :air?html`<span class=${air.available?'':'bad'}>${air.atmo_label??measurement(air)}</span>`:html`<span class="muted">${spec?'—':'non fourni par Niak Weather'}</span>`;
+  const title=this.snapshot?.niak_weather?.places.find(p=>p.entry_id===this.weatherEntry)?.title;
   const value=(key:string)=>{const id=this.selected(key)[0],c=all(key).find(x=>x.entity_id===id);
    return !id?html`<span class="muted">${weather?'non fourni par Niak Weather':'—'}</span>`:c?html`<span class=${c.available?'':'bad'}>${key==='wind_bearing'&&c.available&&c.value!==''&&Number.isFinite(Number(c.value))?exposures[Math.round(Number(c.value)/45)%8][1]:measurement(c)}</span>`:weather?html`<span class="muted">—</span>`:html`<span class="bad">introuvable</span>`;};
   const sensor=(key:string)=>{const id=this.selected(key)[0]??'',c=all(key).find(x=>x.entity_id===id);
@@ -298,13 +304,13 @@ export class ComfortSetup extends LitElement {
    const changed=(v:unknown)=>{if(v===''||v==null){if(id)this.clear(key,id);}else this.pick(key,v);};
    return html`${this.pickerTag?this.selector(key,ids,id,labels[key],changed):html`<select aria-label=${labels[key]} @change=${(e:Event)=>changed((e.target as HTMLSelectElement).value)}><option value="" ?selected=${!id}>Aucun</option>${all(key).map(x=>html`<option value=${x.entity_id} ?selected=${x.entity_id===id}>${x.name} · ${this.where(x)}</option>`)}</select>`}${c?this.warnings(c,key,true):nothing}`;};
   return frame(weather?`Mesures de Niak Weather${title?' · '+title:''}`:'Vos capteurs',html`
-   ${weather?html`<p class="hint">Lues dans Niak Weather, sans choix ici : pour en changer, changez la station dans Niak Weather ou choisissez vos propres capteurs.</p>`:nothing}
+   ${weather?html`<p class="hint">Reprises telles quelles. Une autre station se choisit dans Niak Weather ; sinon, passez à vos propres capteurs.</p>`:nothing}
    <div class="ex-rows">${keys.map(k=>html`<div class=${'ex-row'+(weather?'':' own')}><b>${labels[k]}</b><div class="ex-sensor">${sensor(k)}</div><div class="ex-value">${value(k)}</div></div>`)}
-    ${weather?html`<div class="ex-row"><b>${labels.pollution}</b><div class="ex-sensor"><span class="ex-name">${air?air.name:'—'}</span></div><div class="ex-value">${air?html`<span class=${air.available?'':'bad'}>${air.atmo_label??measurement(air)}</span>`:html`<span class="muted">${this.exteriorDraft!.pollution?'—':'non fourni par Niak Weather'}</span>`}</div></div>`:nothing}</div>
+    ${weather?html`<div class="ex-row"><b>${labels.pollution}</b><div class="ex-sensor"><span class="ex-name">${airName}</span></div><div class="ex-value">${airValue}</div></div>`:nothing}</div>
    ${weather&&this.exteriorDraft!.pollution?this.airCaution():nothing}`);}
  /** The person's caution on a daily air index (Atmo France scale, also used by Niak Weather). */
  private airCaution(){const spec=this.exteriorDraft!.pollution;
-  return spec&&(spec.adapter==='atmo_daily'||spec.adapter==='niak_index')?html`<label class="ex-caution">Prudence à partir du niveau<select @change=${(e:Event)=>{this.exteriorDraft={...this.exteriorDraft!,pollution:{...spec!,block_from:Number((e.target as HTMLSelectElement).value)}};}}>${['Moyen','Dégradé','Mauvais','Très mauvais','Extrêmement mauvais'].map((label,i)=>html`<option value=${i+2} ?selected=${(spec!.block_from??4)===i+2}>${label}</option>`)}</select></label><p class="hint">Votre préférence de prudence, pas une consigne sanitaire.</p>`:nothing;}
+  return spec&&['atmo_daily','niak_index','niak_air'].includes(spec.adapter??'')?html`<label class="ex-caution">Prudence à partir du niveau<select @change=${(e:Event)=>{this.exteriorDraft={...this.exteriorDraft!,pollution:{...spec!,block_from:Number((e.target as HTMLSelectElement).value)}};}}>${['Moyen','Dégradé','Mauvais','Très mauvais','Extrêmement mauvais'].map((label,i)=>html`<option value=${i+2} ?selected=${(spec!.block_from??4)===i+2}>${label}</option>`)}</select></label><p class="hint">Votre préférence de prudence, pas une consigne sanitaire.</p>`:nothing;}
  // The outdoor air: with Niak Weather, its index of the day; otherwise an integration, then its zone or place.
  private airBlock(){const all=this.discovery?.candidates.pollution??[],spec=this.exteriorDraft!.pollution,current=airSource(spec);
   const pickSource=(v:string)=>{if(v===current)return;if(v==='none'){this.clear('pollution');return;}
