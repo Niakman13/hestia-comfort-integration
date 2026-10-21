@@ -108,9 +108,9 @@ export const intros:Record<string,string[]>={
   'Chaque seuil d’interprétation se règle avec son capteur, dans les étapes précédentes.'],
  5:['Tout ce que vous avez choisi, onglet par onglet.',
   'Rien ne change tant que vous n’avez pas enregistré ; un oubli, revenez à l’onglet voulu.'],
- exterior:['Les mesures du dehors : température, pluie, vent, soleil, qualité de l’air.',
-  'Choisies une fois, elles servent à toutes vos pièces.',
-  'Toutes sont facultatives ; chacune rend les conseils plus justes.'],
+ exterior:['Les mesures du dehors : température, humidité, pluie, vent, soleil et pollution.',
+  'Avec Niak Weather, elles sont reprises de sa station ; sinon, vous choisissez vos capteurs.',
+  'Réglées une fois, elles servent à toutes vos pièces.'],
 };
 // The exterior sensors, by frame: title and keys.
 export const outdoorGroups:[string,string[]][]=[['Température et humidité',['outdoor_temperature','outdoor_humidity']],['Pluie et vent',['rain','wind_gust','wind_bearing']],['Soleil',['solar']]];
