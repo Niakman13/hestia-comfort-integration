@@ -188,6 +188,29 @@ def facade_irradiance(share: float, sun: Sun | None, solar: float | None) -> flo
     return round(max(direct, diffuse))
 
 
+def _benefits(details, openings, settings, ti, hot, cold, heated, te):
+    """What the sun on the windows does for the room now, worth knowing without being a gesture of its own.
+
+    - sun_warms: a heated room in the lower half of its range, the sun on a window: shutters and curtains open;
+    - sun_heats: a room above its range, or near its top with a warmer outside, the sun on a shut window whose cover is not driven:
+      lowering the shutter or the blind keeps it out. An open window in the sun of a hot room is already a gesture."""
+    if ti is None:
+        return []
+    sunny = [d for d in details if d.get("sun_wm2") is not None and d["sun_wm2"] >= settings.sun_facade]
+    middle = (settings.minimum + settings.maximum) / 2
+    found = []
+    if sunny and heated and not hot and (cold or ti < middle):
+        found.append({"kind": "sun_warms", "openings": [d["entity_id"] for d in sunny], "watts": max(d["sun_wm2"] for d in sunny),
+                      # Colder outside: the window stays shut, the glass lets the warmth in.
+                      "keep_shut": te is not None and te < ti})
+    # In-between seasons, a sunny afternoon at 24 °C stores warmth for the night: only too hot, or nearly with a warmer outside.
+    near_top = hot or (ti >= settings.maximum - 1 and te is not None and te >= ti)
+    free = [d for d in sunny if d.get("open") is not True and not getattr(openings.get(d["entity_id"]), "driver", None)]
+    if near_top and free and not cold:
+        found.append({"kind": "sun_heats", "openings": [d["entity_id"] for d in free], "watts": max(d["sun_wm2"] for d in free)})
+    return found
+
+
 def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
            previous: Assessment | None = None, openings: Mapping[str, Opening] | None = None,
            sun: Sun | None = None, outlook: Mapping | None = None, now: datetime | None = None,
@@ -454,6 +477,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
                         needs, action, reason, now, ai, ae, air_detail)
     extended["season"] = {**season, "heated": heated}
     extended["drying"] = drying
+    extended["benefits"] = _benefits(details, openings, settings, ti, hot, cold, heated, te)
     extended["warmth"] = warmth if cold else None
     if isinstance(extended.get("humidity"), dict):
         saturated = absolute_humidity(ti, 100) if ti is not None else None

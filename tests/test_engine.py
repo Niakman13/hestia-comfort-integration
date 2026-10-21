@@ -157,3 +157,25 @@ class SourceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SunBenefits(unittest.TestCase):
+    """Chambre A, 21 October at 15 h: south window in the sun, 19.5 °C inside, 17.5 °C outside."""
+    def assess(self, ti, te, opened=False, solar=430):
+        from engine.assessment import Opening, Sun
+        readings = zone(indoor_temperature=ti, outdoor_temperature=te, indoor_humidity=55, outdoor_humidity=60, solar=solar, **{"window:a": opened})
+        return assess(readings, Settings(minimum=19, maximum=25), None, {"a": Opening(exposure="S")}, Sun(30.6, 210.7), None, NOW).to_dict()
+
+    def test_the_sun_that_warms_a_cool_room_is_said(self):
+        found = self.assess(19.5, 17.5)["features"]["benefits"]
+        self.assertEqual([(b["kind"], b["keep_shut"]) for b in found], [("sun_warms", True)])
+
+    def test_no_sun_no_shade_nothing_said(self):
+        self.assertEqual(self.assess(19.5, 17.5, solar=40)["features"]["benefits"], [])
+        self.assertEqual(self.assess(22.5, 17.5)["features"]["benefits"], [])
+
+    def test_lowering_the_shutter_only_when_the_heat_is_too_much(self):
+        # Mid-season, 24.2 °C, cooler outside: the warmth is kept for the night.
+        self.assertEqual(self.assess(24.2, 17.5)["features"]["benefits"], [])
+        self.assertEqual([b["kind"] for b in self.assess(24.2, 27.0)["features"]["benefits"]], ["sun_heats"])
+        self.assertEqual([b["kind"] for b in self.assess(26.0, 22.0)["features"]["benefits"]], ["sun_heats"])

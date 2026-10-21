@@ -31,7 +31,8 @@ export interface Twin {status:'learning'|'ready';samples:number;days:number;open
 export interface Week {followed:number;ignored:number;evaluated:number;held:number;gains:Record<string,number>}
 export interface Question {key:string;text:string;hint:string}
 /** How much of a room is learned (engine/twin.py progress): each part 0 to 1, 100 % only once everything it has is seen. */
-export interface Progress {percent:number;complete:boolean;parts:Partial<Record<'days'|'precision'|'sun'|'windows'|'heating'|'air',number>>;seen:{days:number;airings:number;open:number;sun:number;heated:number}}
+export interface Progress {percent:number;complete:boolean;parts:Partial<Record<'days'|'precision'|'sun'|'windows'|'heating'|'air',number>>;seen:{days:number;airings:number;open:number;sun:number;heated:number};
+ /** What the advice can already promise, measure by measure, before the room is learned at 100 %. */ ready?:{humidity:boolean;temperature:boolean;air:string[]}}
 export interface Twins {version:1;rooms:{entry_id:string;title:string;twin:Twin;week?:Week;questions?:Question[];air?:string[];progress?:Progress|null}[]}
 export interface HealthLine {level:Level;text:string;why:string;target?:Target|null}
 export interface Health {level:'ok'|'action';summary:string;tips_summary:string;rooms_summary:string;todo:HealthLine[];tips:HealthLine[];

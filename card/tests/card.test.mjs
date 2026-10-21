@@ -402,3 +402,21 @@ test('the replay of 10 days at home, 21 October: what is held back, unread or al
   const steam=fresh();steam.assessment={...steam.assessment,reason:'short_air_change',action:'ouvrir',level:'action',needs:['dry']};
   assert.ok(!lines(steam).some(l=>/baissera peu|baisserait|pas assez baisser/.test(l)),lines(steam).join(' | '));
 });
+test('the sun that helps is said, and each learned measure gets its optimised advice',()=>{
+  const lines=v=>facts(v).map(x=>`${x.title} · ${plain(x.text)}`);
+  // Chambre A, 21 October at 15 h: cool, the sun on its south window.
+  const a=fresh();a.assessment={...a.assessment,reason:'within_comfort',action:'ok',level:'calm',needs:[],features:{...a.assessment.features,benefits:[{kind:'sun_warms',openings:['w'],watts:430,keep_shut:true}]}};
+  assert.ok(lines(a).includes('Soleil · il réchauffe la pièce : volets et rideaux ouverts, fenêtre fermée'),lines(a).join(' | '));
+  // Asked to air, the window is not told to stay shut.
+  a.assessment={...a.assessment,reason:'air_needed',action:'ouvrir',level:'action'};
+  assert.ok(lines(a).includes('Soleil · il réchauffe la pièce : volets et rideaux ouverts'),lines(a).join(' | '));
+  // « Refermez », learned: the open window's cost in the banner, « Conseil optimisé » in the pill.
+  const p=fresh();p.assessment={...p.assessment,reason:'exchange_harmful',action:'fermer',level:'action',needs:['dry'],
+    features:{...p.assessment.features,learned:{now:18.3,after:17.6,minutes:30,measure:'temperature',openings:7,days:10,precision:{temperature:0.17,humidity:1.9},closing:true}}};
+  const ad=advice(p);assert.equal(ad.pill,'Conseil optimisé');assert.match(plain(ad.line),/18,3 → 17,6 °C en 30 min/);
+  // Not learned yet: the line names the measure that lacks, not the whole room.
+  const m=fresh();m.twin={status:'ready',days:10,samples:480,next_hour:null,precision:{hours:24,temperature:0.24,humidity:1.3},
+    progress:{percent:68,complete:false,parts:{windows:0},seen:{days:10,airings:0,open:0},ready:{humidity:false,temperature:false,air:[]}}};
+  m.assessment={...m.assessment,reason:'drying_possible',action:'ouvrir',level:'action',needs:['dry']};
+  assert.ok(lines(m).includes('Apprentissage · humidité : 0 aération sur 5, résultat estimé'),lines(m).join(' | '));
+});

@@ -163,6 +163,9 @@ const slowWindow=(d:{gain:number}):TemplateResult=>{const g=Math.round(d.gain);
 /** A gesture the twin has learned in this room: the predicted result replaces the general explanation. */
 function withLearning(v:View,out:Advice):Advice {
   const l=v.assessment.features?.learned;
+  // « Refermez », learned: what the open window takes from the room in half an hour.
+  if(l?.closing&&v.assessment.action==='fermer')
+    return {...out,line:html`Ouverte, ${b(number(l.now)+' → '+number(l.after)+' °C')} en ${l.minutes} min`,learned:'appris dans cette pièce',pill:'Conseil optimisé'};
   if(!l||!['ouvrir','ok'].includes(v.assessment.action))return out;
   const unit=l.measure==='temperature'?' °C':l.measure==='co2'?' ppm':l.measure==='voc'?'':' %',fmt=(x:number)=>l.measure==='temperature'?number(x):number(Math.round(x));
   const label=l.measure==='co2'?'CO₂ ':l.measure==='voc'?'COV ':'';
@@ -175,14 +178,18 @@ function learning(v:View):Fact|null {
   const t=v.twin,gestureNow=['action','urgent','benefit'].includes(v.assessment.level);
   // Only a gesture that announces a result (open, keep open) can have it estimated: « Refermez » promises none.
   if(!t||!gestureNow||v.assessment.features?.learned||!['ouvrir','ok'].includes(v.assessment.action)||unreadable(v))return null;
-  // How much of the room is learned, and what the advised gesture still lacks: its result is then estimated.
-  const g=t.progress;
-  if(g){if(g.complete)return null;
-    const p=g.parts,n=g.seen.airings;
-    const why=(p.windows??1)<1&&v.assessment.action==='ouvrir'?(n<5?`fenêtre : ${n} aération${n>1?'s':''} sur 5`:'fenêtre pas assez ouverte ce mois-ci')
-      :(p.days??1)<1?`${Math.max(1,Math.floor(g.seen.days))} jour${Math.floor(g.seen.days)>1?'s':''} de mesures sur 7`
-      :(p.precision??1)<1?'prévisions pas encore assez justes':null;
-    return {ic:'clock',title:'Apprentissage',text:`${g.percent} %${why?' · '+why:''}, résultat estimé`};}
+  // What the gesture is about, and what that measure still lacks: its result is then estimated.
+  const g=t.progress,a=v.assessment,ready=g?.ready;
+  if(g&&ready){
+    const kind=a.reason==='drying_possible'||a.reason==='ventilation_possible'?'humidity':['air_needed','short_air_change','optional_air_change'].includes(a.reason)?'air'
+      :['cooling_possible','precool_possible'].includes(a.reason)?'temperature':null;
+    if(!kind)return null;
+    const n=g.seen.airings,p=t.precision,week=t.status==='ready'&&t.days>=7;
+    const why=!week?`${Math.max(1,Math.floor(t.days))} jour${Math.floor(t.days)>1?'s':''} de mesures sur 7`
+      :kind==='humidity'?(n<5?`humidité : ${n} aération${n>1?'s':''} sur 5`:!p||p.humidity>3?'humidité : prévisions pas encore assez justes':null)
+      :kind==='temperature'?((g.seen.open??6)<6?'température : fenêtre pas assez ouverte ce mois-ci':!p||p.temperature>0.5?'température : prévisions pas encore assez justes':null)
+      :'air : pas encore vu fenêtre ouverte';
+    return why?{ic:'clock',title:'Apprentissage',text:`${why}, résultat estimé`}:null;}
   // A room is learned after a week of measures at least, then only if its twin replays the last day well.
   if(t.status!=='ready'||t.days<7)return {ic:'clock',title:'Apprentissage',text:`en cours : ${Math.max(1,Math.floor(t.days))} jour${Math.floor(t.days)>1?'s':''} sur 7`};
   if(!t.precision)return {ic:'clock',title:'Apprentissage',text:'vérification en attente : il manque une journée de mesures complète'};
@@ -220,6 +227,11 @@ export function facts(v:View):Fact[] {
   if(hum?.local)out.push({ic:'drop',title:'Vapeur',text:'plus humide ici qu’à côté : cuisson ou douche'});
   if(air?.purifier?.on===true)out.push({ic:'fan',title:'Purificateur',text:'en marche, il filtre l’air'});
   if(air?.ventilation?.on===true)out.push({ic:'vmc',title:'VMC',text:a.needs.includes('dry')?'en marche, elle aide à assécher':'en marche'});
+  // What the sun does for the room now. Asked to open, « keep the window shut » would contradict the gesture.
+  const opening=['ouvrir','ok'].includes(a.action)&&['action','urgent','benefit'].includes(a.level);
+  for(const x of f?.benefits??[]){
+    if(x.kind==='sun_warms')out.push({ic:'sun',title:'Soleil',text:x.keep_shut&&!opening?'il réchauffe la pièce : volets et rideaux ouverts, fenêtre fermée':'il réchauffe la pièce : volets et rideaux ouverts'});
+    if(x.kind==='sun_heats')out.push({ic:'sun',title:'Soleil',text:'il chauffe la pièce : baissez le volet ou le store'});}
   // A confirmed habit names the cause of the humidity, only while it is going on.
   if(v.habit&&(a.needs.includes('dry')||hum?.mould))out.unshift({ic:'drop',title:'Humidité',text:v.habit});
   // A damp room with no gesture for it always says why the humidity stays.
