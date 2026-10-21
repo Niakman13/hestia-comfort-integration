@@ -28,7 +28,7 @@ Niak Confort compare dedans et dehors, et répond aux questions de tous les jour
 - **L’air est lourd** : le CO₂ monte, c’est le moment d’aérer.
 - **Il pleut, le vent souffle** : quelle fenêtre refermer ?
 
-Chaque pièce apprend de ses aérations : les conseils s’ajustent à votre maison.
+Chaque pièce apprend de ses aérations : les conseils s’ajustent à votre maison. Quand l’apprentissage est optimal, le conseil annonce le résultat : « Aérez 15 min · 76 → 68 % ».
 
 Toute la famille lit la même carte. Elle ne parle que quand un geste aide vraiment.
 
@@ -53,8 +53,8 @@ La carte est fournie par l’intégration : rien d’autre à installer.
 ## Premiers pas
 
 1. **Vos pièces** : Niak reprend vos pièces Home Assistant et les capteurs qui y sont rangés. Décochez celles à ne pas suivre, puis créez-les d’un coup.
-2. **L’extérieur** : dans **Réglages généraux**, reprenez Niak Weather en un clic, ou choisissez vos capteurs. Il sert à toutes les pièces.
-3. **Chaque pièce** : **Configurer** ouvre ses réglages. Niak propose les capteurs de la pièce : vous gardez, changez ou retirez.
+2. **L’extérieur** : dans **Réglages généraux**, choisissez Niak Weather (ses mesures sont reprises telles quelles) ou vos capteurs. Il sert à toutes les pièces.
+3. **Chaque pièce** : sur l’accueil Confort, **Modifier** ouvre ses réglages. Niak propose les capteurs de la pièce : vous gardez, changez ou retirez.
 4. **La carte** : sur un tableau de bord, **Ajouter une carte → Niak Confort**.
 
 Rien n’est enregistré avant **Enregistrer**. [Le guide pas à pas](docs/guide.md).
@@ -67,6 +67,10 @@ Deux cartes à choisir dans **Ajouter une carte** :
 - **Niak Confort · logement** : toutes les pièces. Les conseils qui comptent, la température de chaque pièce, l’air qui traverse. Formats : complète, tuile, liste des pièces, mini, alerte.
 
 Comme pour Niak Weather, un appui long sur une tuile (un appui sur mini et alerte) ouvre la carte complète en fenêtre, une page de votre choix, ou rien. Sur la carte logement complète ou en liste, l’appui long peut ouvrir une page, par exemple votre page Maison.
+
+En haut, le bandeau ne porte qu’un geste, ou « Rien à faire ». Dessous, l’encart **À savoir** dit le reste en mots simples : risque de moisissure, air humide dehors, résultat de la dernière aération…
+
+Deux pièces sans mur entre elles (un salon ouvert sur sa cuisine) partagent leur air : une seule carte « Salon · Cuisine », jamais deux gestes contraires.
 
 La couleur dit s’il y a quelque chose à faire :
 
@@ -83,10 +87,10 @@ Un appui sur une mesure ouvre son historique dans Home Assistant. [Lire les cons
 
 Tout se règle dans le panneau **Niak** de la barre latérale, onglet **Confort**. Pas de YAML, pas de nom d’entité à connaître.
 
-![Le panneau Niak, onglet Confort : les pièces du logement](docs/images/niak-comfort-panneau.png)
+![Le panneau Niak, onglet Confort : l’accueil, avec chaque pièce, ses mesures et son apprentissage](docs/images/niak-comfort-panneau.png)
 
-- **Vue d’ensemble** : vos pièces, avec **Configurer**, et ce qui reste à régler.
-- **Réglages généraux** : l’extérieur, commun à toutes les pièces.
+- **Vue d’ensemble** : l’état du logement, ce qui reste à régler, puis **Vos pièces** : les mesures de chacune, son apprentissage et un bouton **Modifier**. **Ajouter une pièce** se fait sur place.
+- **Réglages généraux** : l’extérieur, commun à toutes les pièces. Avec Niak Weather, ses mesures sont seulement affichées.
 - Une pièce se règle en six onglets : Température, Ouvertures, Air intérieur, Présence, Chauffage, La pièce.
 
 Chaque réglage a son aide. Les seuils sont expliqués avec leurs sources ([les repères](docs/SEUILS.md)).
