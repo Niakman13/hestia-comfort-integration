@@ -57,7 +57,8 @@ export interface Features {
  /** What airing would really bring, from the room's past openings: humidity now and after, lasting gain in points. */
  rain_ahead?:{minutes:number;precise:boolean}|null;
  /** A gesture whose result the room's twin predicts, once it has proved itself in this room. */
- learned?:{now:number;after:number;minutes:number;measure:'humidity'|'temperature'|'co2'|'voc';openings:number;days:number;precision:{temperature:number;humidity:number}}|null;
+ learned?:{now:number;after:number;minutes:number;measure:'humidity'|'temperature'|'co2'|'voc';openings:number;days:number;precision:{temperature:number;humidity:number};closing?:boolean}|null;
+ /** What the sun on the windows does for the room now (engine/assessment.py, _benefits). */ benefits?:{kind:'sun_warms'|'sun_heats';openings:string[];watts:number;keep_shut?:boolean}[];
  volume?:{lead:string;reason:string;action:string;assessment?:Partial<Assessment>&{reason:string};observations?:Record<string,Reading>};
  warmth?:{occupied:boolean|null;heating:'on'|'off'|null}|null;
  drying?:{minutes:number;now:number;after:number;gain:number;tau:number;openings:number;later:{minutes:number;now:number;after:number;gain:number;time:string}|null}|null;
@@ -85,7 +86,8 @@ export interface View {
   feedback?:{last:{measure:'humidity'|'temperature'|'co2'|'voc';before:number;after:number;predicted:number|null;minutes:number}|null;week:{followed:number;ignored:number;evaluated:number;held:number;gains:Record<string,number>}};
   /** A humidity habit the person confirmed, going on now: the words for « À savoir ». */ habit?:string|null;
   /** What the room's twin has learned so far (engine/twin.py). */ twin?:{status:'learning'|'ready';days:number;samples:number;next_hour:{temperature:number;humidity:number}|null;precision:{hours:number;temperature:number;humidity:number}|null;
-    /** How much of the room is learned: 100 % once everything it has is seen. */ progress?:{percent:number;complete:boolean;parts:Partial<Record<'days'|'precision'|'sun'|'windows'|'heating'|'air',number>>;seen:{days:number;airings:number}}}; /** Home Assistant (or the room) has just started: silent sensors are still loading. */ starting?:boolean;
+    /** How much of the room is learned: 100 % once everything it has is seen. */ progress?:{percent:number;complete:boolean;parts:Partial<Record<'days'|'precision'|'sun'|'windows'|'heating'|'air',number>>;seen:{days:number;airings:number;open?:number};
+      /** What the advice can already promise, measure by measure. */ ready?:{humidity:boolean;temperature:boolean;air:string[]}}}; /** Home Assistant (or the room) has just started: silent sensors are still loading. */ starting?:boolean;
 }
 export interface ViewEvent {version:1; view?:View; reload?:boolean; unavailable?:boolean}
 export type Unsubscribe = () => Promise<void>|void;

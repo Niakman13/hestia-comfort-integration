@@ -1,3 +1,21 @@
+## 1.2.12 — Des conseils optimisés sans attendre 100 %
+
+**En bref**
+
+- **Des conseils optimisés sans attendre 100 %.** Humidité, température et air s’apprennent chacun de leur côté : dès qu’une pièce en a appris un, son conseil annonce le résultat (« Conseil optimisé »).
+- **Le soleil utile est signalé** : « Soleil · il réchauffe la pièce : volets et rideaux ouverts, fenêtre fermée ».
+
+### Nouveautés
+
+- « Refermez » appris : la carte dit ce que la fenêtre ouverte coûte, par exemple « Ouverte, 18,3 → 17,6 °C en 30 min ».
+- « À savoir » signale le soleil qui réchauffe une pièce fraîche, ou qui chauffe trop une pièce déjà chaude (« baissez le volet ou le store »).
+- Accueil Confort : sous chaque pièce, « Conseils appris : humidité · température · CO₂ ». Le pavé Apprentissage compte les pièces qui ont déjà des conseils optimisés.
+
+### Améliorations
+
+- Une prévision encore imprécise ne bloque plus les autres : une humidité à affiner laisse passer les conseils de température.
+- La ligne Apprentissage d’« À savoir » dit ce qui manque au geste conseillé, par exemple « humidité : 2 aérations sur 5 ».
+
 ## 1.2.11 — Des mots qui ne se contredisent plus
 
 **En bref**

@@ -184,7 +184,8 @@ class LearnedAdvice(unittest.TestCase):
         self.assertEqual((learned["now"], learned["after"], learned["minutes"], learned["measure"], learned["openings"]), (76, 68, 15, "humidity", 31))
         # A week at least, the last day replayed within ±0.5 °C and ±3 %, five airings learned.
         self.assertIsNone(twin.learned_advice(advice, self.ready(days=5)))
-        self.assertIsNone(twin.learned_advice(advice, self.ready(temperature=1.1)))
+        # Each measure on its own: a temperature still imprecise does not hold back the humidity (Chambre AL, 21 Oct.).
+        self.assertIsNotNone(twin.learned_advice(advice, self.ready(temperature=1.1)))
         self.assertIsNone(twin.learned_advice(advice, self.ready(humidity=4.7)))
         self.assertIsNone(twin.learned_advice(advice, {**self.ready(), "precision": None}))
         few = {**advice, "features": {"drying": {**advice["features"]["drying"], "openings": 3}}}
@@ -192,6 +193,27 @@ class LearnedAdvice(unittest.TestCase):
         # Air for CO₂ or a closing: nothing learned to promise.
         self.assertIsNone(twin.learned_advice({**advice, "reason": "air_needed"}, self.ready()))
         self.assertIsNone(twin.learned_advice({**advice, "action": "fermer"}, self.ready()))
+
+    def test_each_measure_is_promised_as_soon_as_it_is_learned(self):
+        """Not the whole room at 100 %: the humidity, the temperature and the air, each once learned."""
+        ready = twin.categories(self.ready(), airings=7, air=("co2",))
+        self.assertTrue(ready["humidity"]); self.assertTrue(ready["temperature"])
+        self.assertFalse(twin.categories(self.ready(), airings=2)["humidity"])
+        self.assertFalse(twin.categories(self.ready(humidity=4.2), airings=7)["humidity"])
+        self.assertTrue(twin.categories(self.ready(humidity=4.2), airings=7)["temperature"])
+        self.assertFalse(twin.categories(self.ready(days=5), airings=7)["temperature"])
+        # Chambre M, never opened: its temperature with a window open is not known.
+        shut = self.ready(); shut = {**shut, "model": {**shut["model"], "open_samples": 0}}
+        self.assertFalse(twin.categories(shut)["temperature"])
+
+    def test_a_closing_gets_what_the_open_window_takes(self):
+        """Chambre P, 21 October: « Refermez », and how much the open window would cool it in half an hour."""
+        advice = {"action": "fermer", "reason": "exchange_harmful", "features": {}}
+        current = {"ti": 19.5, "hi": 66, "te": 12.0, "he": 80, "sun": 0.0}
+        learned = twin.learned_advice(advice, self.ready(), current)
+        self.assertTrue(learned["closing"]); self.assertEqual(learned["measure"], "temperature")
+        self.assertLess(learned["after"], 19.5)
+        self.assertIsNone(twin.learned_advice(advice, self.ready(temperature=0.9), current))
 
     def test_a_cooling_airing_gets_its_learned_temperature(self):
         advice = {"action": "ouvrir", "reason": "cooling_possible", "features": {}}

@@ -636,8 +636,10 @@ class ComfortCoordinator(DataUpdateCoordinator):
         airings = max([(self.drying_model or {}).get("openings", 0)]
                       + [(getattr(getattr(self.hass.config_entries.async_get_entry(p["entry_id"]), "runtime_data", None), "drying_model", None)
                           or {}).get("openings", 0) for p in self.partners])
-        own = twin.progress(self.twin, airings, windows=bool(self.windows),
-                            heating=bool(self.sources.get("heating")), air=tuple(k for k in ("co2", "voc") if self.sources.get(k)))
+        air = tuple(k for k in ("co2", "voc") if self.sources.get(k))
+        own = twin.progress(self.twin, airings, windows=bool(self.windows), heating=bool(self.sources.get("heating")), air=air)
+        # What the advice can already promise, measure by measure, before the whole room is learned.
+        own["ready"] = twin.categories(self.twin, airings, air)
         if alone or not self.partners:
             return own
         others = []

@@ -392,7 +392,33 @@ def together(progresses):
     parts = {k: min(p["parts"][k] for p in progresses if k in p["parts"]) for k in keys}
     seen = {k: min(p["seen"].get(k, 0) for p in progresses) for k in ("days", "open", "sun", "heated")}
     seen["airings"] = max(p["seen"].get("airings", 0) for p in progresses)
-    return {**_scored(parts, seen), "rooms": len(progresses)}
+    # A shared air promises a measure only once every room of it has learned that measure.
+    ready = {k: all((p.get("ready") or {}).get(k) for p in progresses) for k in ("humidity", "temperature")}
+    ready["air"] = sorted(set.intersection(*(set((p.get("ready") or {}).get("air") or []) for p in progresses)))
+    return {**_scored(parts, seen), "rooms": len(progresses), "ready": ready}
+
+
+# Open half hours a room must have been seen with, before its temperature with a window open is promised.
+OPEN_SEEN = 6
+
+
+def categories(twin, airings=0, air=()):
+    """What this room's advice can already promise, measure by measure, without waiting for the whole learning.
+
+    - humidity: a week, the humidity replayed within ±3 %, five airings learned (engine/learning.py);
+    - temperature: a week, the temperature replayed within ±0.5 °C, three hours seen with a window open;
+    - air: a week, CO₂ or VOC seen falling with a window open."""
+    twin = twin or {}
+    model, precision = twin.get("model") or {}, twin.get("precision") or {}
+    week = twin.get("status") == "ready" and twin.get("days", 0) >= OPTIMAL_DAYS
+    found = {"humidity": bool(week and precision.get("humidity") is not None and precision["humidity"] <= OPTIMAL_HUMIDITY
+                              and airings >= MIN_OPENINGS),
+             "temperature": bool(week and precision.get("temperature") is not None and precision["temperature"] <= OPTIMAL_TEMPERATURE
+                                 and model.get("open_samples", 0) >= OPEN_SEEN)}
+    learned_air = [name for name in air if week and ((model.get("air") or {}).get(name) or {}).get("open_samples", 0) >= OPEN_SEEN
+                   and ((model.get("air") or {}).get(name) or {}).get("b", 0) > 0]
+    found["air"] = learned_air
+    return found
 
 
 def learned_advice(assessment, twin, current=None, openings=0, feedback=None):
@@ -410,18 +436,29 @@ def learned_advice(assessment, twin, current=None, openings=0, feedback=None):
 
 
 def _learned(assessment, twin, current=None, openings=0):
-    """The result an advised airing will bring, as this room has learned it; None unless its learning is optimal.
+    """The result an advised gesture will bring, as this room has learned it; None until that measure is learned.
 
-    Drying comes from the room's own past airings (engine/learning.py), cooling from its twin, half an hour open."""
-    if not optimal(twin) or assessment.get("action") not in ("ouvrir", "ok"):
+    Drying comes from the room's own past airings (engine/learning.py), cooling from its twin, half an hour open.
+    Each measure is promised as soon as it is learned (`categories`), not once the whole room is."""
+    reason, features = assessment.get("reason"), assessment.get("features") or {}
+    closing = assessment.get("action") == "fermer" and reason == "exchange_harmful"
+    if not twin or not twin.get("precision") or (assessment.get("action") not in ("ouvrir", "ok") and not closing):
         return None
     basis = {"days": twin["days"], "precision": {k: twin["precision"][k] for k in ("temperature", "humidity")}}
-    reason, features = assessment.get("reason"), assessment.get("features") or {}
     drying = features.get("drying") or {}
-    if reason == "drying_possible" and drying.get("openings", 0) >= MIN_OPENINGS and drying.get("after") is not None:
+    ready = categories(twin, drying.get("openings", 0), ("co2", "voc"))
+    if reason == "drying_possible" and ready["humidity"] and drying.get("after") is not None:
         return {"now": drying["now"], "after": drying["after"], "minutes": drying["minutes"], "measure": "humidity",
                 "openings": drying["openings"], **basis}
     model = twin.get("model")
+    # « Refermez »: what the open window takes from the room in half an hour, as this room has learned it.
+    if closing and ready["temperature"] and model and current and None not in (current.get(k) for k in ("ti", "hi", "te", "he")):
+        after, _ = step(model, current["ti"], current["hi"], current["te"], current["he"], current.get("sun", 0.0), 1.0,
+                        current.get("heated", 0.0), beside=current.get("beside"))
+        if abs(after - current["ti"]) >= 0.2:
+            return {"now": round(current["ti"], 1), "after": round(after, 1), "minutes": int(HOURS * 60), "measure": "temperature",
+                    "openings": openings, "closing": True, **basis}
+        return None
     if reason in ("air_needed", "short_air_change") and model and current:
         air = (features.get("air") or {})
         name = "co2" if air.get("co2_status") == "high" else "voc" if air.get("voc_status") == "high" else None
@@ -429,12 +466,12 @@ def _learned(assessment, twin, current=None, openings=0):
         value = current.get(name) if name else None
         span = (features.get("ventilation") or {}).get("duration_minutes") or {}
         minutes = int(span.get("max") or (5 if reason == "short_air_change" else 10))
-        if learned_air and learned_air["open_samples"] >= 6 and learned_air["b"] > 0 and isinstance(value, (int, float)):
+        if name in ready["air"] and isinstance(value, (int, float)):
             after = air_after(learned_air, value, minutes)
             if after < value - (50 if name == "co2" else 10):
                 return {"now": round(value), "after": round(after), "minutes": minutes, "measure": name, "openings": openings, **basis}
         return None
-    if (reason == "cooling_possible" and model and model.get("open_samples", 0) >= 6 and current
+    if (reason == "cooling_possible" and ready["temperature"] and model and current
             and None not in (current.get(k) for k in ("ti", "hi", "te", "he"))):
         after, _ = step(model, current["ti"], current["hi"], current["te"], current["he"], current.get("sun", 0.0), 1.0, 0.0,
                         beside=current.get("beside"))

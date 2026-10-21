@@ -160,9 +160,11 @@ export class ComfortSetup extends LitElement {
  private roomsBox(){const h=this.health!,twins=new Map((this.twins?.rooms??[]).map(r=>[r.entry_id,r]));
   const measures=(cells:{level:string;text:string}[])=>html`<span class="ac-meas">${cells.map((c,i)=>c.level==='none'?nothing:html`<span class=${c.level}><span class="hl-dot"></span>${h.columns[i]==='Ouvrants'?c.text:c.level==='ok'?h.columns[i]:c.level==='shared'?`${h.columns[i]} · ${c.text}`:`${h.columns[i]} : ${c.text}`}</span>`)}</span>`;
   const learning=(entry_id:string)=>{const r=twins.get(entry_id);if(!r)return html`<span class="muted">—</span>`;
-   const st=learnState(r.twin,r.progress),p=r.twin.precision;
+   const st=learnState(r.twin,r.progress),p=r.twin.precision,ready=r.progress?.ready;
+   // The advice it can already promise, measure by measure: « Conseil optimisé » on the card.
+   const learnt=ready?[ready.humidity?'humidité':'',ready.temperature?'température':'',...(ready.air??[]).map(a=>a==='co2'?'CO₂':'COV')].filter(Boolean):[];
    // What is left to see, in words; once everything is seen, how closely the room is forecast.
-   return html`<span class=${'tw-pill '+st.cls}>${st.label}</span>
+   return html`<span class=${'tw-pill '+st.cls}>${st.label}</span>${ready&&!r.progress?.complete?html`<span class="ac-prec ac-ready">Conseils appris : ${learnt.length?learnt.join(' · '):'aucun encore'}</span>`:nothing}
     ${st.missing.length?html`<span class="ac-prec ac-left">${st.missing.map(m=>html`<span>${m}</span>`)}</span>`
      :html`<span class="ac-prec">${p?`±${fr(p.temperature,p.temperature<1?2:1)} °C · ±${fr(p.humidity,0)} %`:''}</span>`}`;};
   // What the other room weighs here, as learned by this room's twin: its windows, its air, its heating.
@@ -203,10 +205,13 @@ export class ComfortSetup extends LitElement {
  private learningHow(){
   const rooms=(this.twins?.rooms??[]).filter(r=>r.progress),mean=rooms.length?Math.round(rooms.reduce((n,r)=>n+r.progress!.percent,0)/rooms.length):null;
   const done=rooms.filter(r=>r.progress!.complete).length;
-  return html`${mean!=null?html`<div class="tw-week">${[[`${mean} %`,'du logement appris'],[`${done} / ${rooms.length}`,done>1?'pièces apprises à 100 %':'pièce apprise à 100 %']].map(([b,t])=>html`<div><b>${b}</b><span>${t}</span></div>`)}</div>`:nothing}
+  // Rooms that already give at least one optimised advice, without waiting for 100 %.
+  const some=rooms.filter(r=>{const x=r.progress!.ready;return !!x&&(x.humidity||x.temperature||(x.air??[]).length>0);}).length;
+  return html`${mean!=null?html`<div class="tw-week">${[[`${mean} %`,'du logement appris'],[`${some} / ${rooms.length}`,some>1?'pièces ont déjà des conseils optimisés':'pièce a déjà des conseils optimisés'],[`${done} / ${rooms.length}`,done>1?'pièces apprises à 100 %':'pièce apprise à 100 %']].map(([b,t])=>html`<div><b>${b}</b><span>${t}</span></div>`)}</div>`:nothing}
    <ul class="tw-how">
     <li>Confort observe chaque pièce toutes les 30 minutes : température, humidité, soleil, fenêtres, chauffage.</li>
     <li>Il en déduit comment elle réagit, puis vérifie ses prévisions sur la veille.</li>
+    <li>Sans attendre 100 %, chaque conseil appris (humidité, température, air) annonce son résultat : « Conseil optimisé ».</li>
     <li>100 % : il a tout vu. Une semaine de mesures, des prévisions justes, cinq aérations, le chauffage en marche.</li></ul>`;
  }
  /** Questions on the habits found: a « yes » names a cause; nothing is ever guessed without it. */
