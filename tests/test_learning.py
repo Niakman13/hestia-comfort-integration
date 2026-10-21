@@ -96,8 +96,16 @@ class DryingAdviceTests(unittest.TestCase):
         self.assertLess(result.features["drying"]["gain"], learning.MIN_GAIN)
 
     def test_an_open_window_keeps_its_airing_to_the_end(self):
-        result = wet_room(SLOW, opened=True)
+        # Three points still to take off: under the five asked to open, enough to keep it open.
+        result = wet_room({**SLOW, "tau": 100.0}, opened=True)
         self.assertEqual((result.action, result.reason), ("ok", "drying_possible"))
+        self.assertGreaterEqual(result.features["drying"]["gain"], 3)
+
+    def test_an_open_window_bringing_a_point_or_two_is_not_kept_open(self):
+        """Chambre P, 21 October: « Encore 56 min d’aération » for about one point of humidity."""
+        result = wet_room(SLOW, opened=True)
+        self.assertLess(result.features["drying"]["gain"], 3)
+        self.assertNotEqual(result.reason, "drying_possible")
 
     def test_a_much_drier_evening_is_announced(self):
         now = datetime(2026, 10, 17, 14, 0, tzinfo=timezone.utc)
