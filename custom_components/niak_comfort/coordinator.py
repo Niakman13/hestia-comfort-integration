@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, LEARNING_REFRESH_SECONDS, OPEN_DEBOUNCE_SECONDS, SEASON_REFRESH_SECONDS, SOURCES, STARTUP_GRACE_SECONDS, VIEW_VERSION
 from .engine.assessment import Opening, Settings, Sun, assess
-from .engine import feedback, habits, learning, twin
+from .engine import feedback, habits, learning, sunlight, twin
 from .engine.volume import arbitrate
 from .engine.sources import normalize, Reading
 from .configuration import DATA_CONFIG
@@ -24,6 +24,8 @@ from .discovery import voc_device_class
 from . import cover_link, weather_link
 
 STATE_KINDS = ("window", "heating", "rain", "pollution", "presence", "purifier", "ventilation", "cover", "cover_state", "shutter_auto", "shutter_override", "shutter_sun", "shutter_target", "purifier_speed")
+# The sunshine is read as its mean over this long: clouds come and go faster than a shutter is moved.
+SUN_SMOOTHING = timedelta(minutes=15)
 # Twin samples stored before 1.2.9 counted the other room's windows as this room's own: rebuilt from the history.
 TWIN_FORMAT = 3
 # What belongs to an air shared by rooms open onto each other: a room without its own reads its partner's.
@@ -49,6 +51,11 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.absent_since = {}
         self.history_reports = {}
         self.histories = {"temperature_history": deque(maxlen=360), "outdoor_history": deque(maxlen=360)}
+        # The sun of the last quarter of an hour: a passing cloud does not make « Soleil » come and go.
+        self._sun_samples = deque(maxlen=120)
+        # Where the station's sensor is shaded, learned from its history; the sky's share seen just before the shade.
+        self.sun_shade = None
+        self._sun_before = self._sky_bias = None
         # (computed at, seven-day outdoor mean or None): the seasonal comfort range follows it.
         self.season = (None, None)
         self.day_range = None
@@ -313,6 +320,9 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 mode, detail = (preset, "preset") if preset and preset != "none" else (state.state, "hvac")
                 readings["heating_mode"] = Reading(mode, "valid", selected["heating"], state.last_reported.isoformat(), detail)
         outlook = weather_link.outlook(self.hass, self._weather_place())
+        # The sun: estimated where the station is shaded (engine/sunlight.py), then averaged over a quarter of an hour.
+        if (solar := readings.get("solar")) is not None:
+            readings["solar"] = self._steady_sun(self._unshaded_sun(solar, now, outlook), now)
         await self._refresh_season(now)
         if self._learning_due is None or now >= self._learning_due:
             self._learning_due = now + timedelta(seconds=LEARNING_REFRESH_SECONDS)
@@ -532,6 +542,12 @@ class ComfortCoordinator(DataUpdateCoordinator):
             self.drying_model = model
             await self.async_request_refresh()
 
+    def _sun_history(self, states, entity_id):
+        """The station's sunshine over the last days, with the hours it is shaded learned and estimated."""
+        points, latitude, longitude = self._points(states, entity_id), self.hass.config.latitude, self.hass.config.longitude
+        self.sun_shade = sunlight.learn(points, latitude, longitude, dt_util.get_default_time_zone())
+        return sunlight.corrected(points, latitude, longitude, self.sun_shade)
+
     def _points(self, states, entity_id):
         """Numeric (time, value) points of one entity from a recorder answer, in °C for temperatures."""
         state = self.hass.states.get(entity_id)
@@ -573,7 +589,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
                         if hasattr(row, "attributes")]
                 fresh = await self.hass.async_add_executor_job(
                     partial(twin.samples, start, now, *(self._points(states, sources[k]) for k in keys),
-                            self._points(states, solar) if solar else [], contacts, heat,
+                            self._sun_history(states, solar) if solar else [], contacts, heat,
                             facades=self._facades(), location=(self.hass.config.latitude, self.hass.config.longitude),
                             co2=self._points(states, air["co2"]) if air["co2"] else [], voc=self._points(states, air["voc"]) if air["voc"] else [],
                             near=set(self.config.get("windows", [])) if self.partners else None,
@@ -614,6 +630,38 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 if other and other.state not in ("unknown", "unavailable") and other.last_reported > latest:
                     latest = other.last_reported
         return latest
+
+    def _unshaded_sun(self, reading, now, outlook):
+        """The sun at the station, estimated while its sensor is in the shade of the house (engine/sunlight.py)."""
+        if reading.quality != "valid" or not isinstance(reading.value, (int, float)) or not self.sun_shade:
+            return reading
+        latitude, longitude = self.hass.config.latitude, self.hass.config.longitude
+        hour = next((h for h in (outlook or {}).get("hours") or [] if isinstance(h.get("time"), str)
+                     and 0 <= (now - datetime.fromisoformat(h["time"])).total_seconds() < 3600), None)
+        sky = sunlight.sky_factor(hour)
+        seen = sunlight.share(float(reading.value), now, latitude, longitude, self.sun_shade)
+        if seen is not None:
+            # In the open, the station is the truth: it also says how far the forecast cloud cover is from it.
+            self._sun_before = (now, seen)
+            if sky is not None and sky >= 0.1:
+                self._sky_bias = (now, max(0.3, min(2.0, seen / sky)))
+            return reading
+        recent = lambda kept: kept[1] if kept and now - kept[0] <= timedelta(hours=3) else None
+        bias, before = recent(self._sky_bias), recent(self._sun_before)
+        # In the shade: Niak Weather's cloud cover, set right by what the station measured in the open just before.
+        factor = sky * bias if sky is not None and bias is not None else sky
+        value, estimated = sunlight.estimate(float(reading.value), now, latitude, longitude, self.sun_shade, factor, before)
+        return replace(reading, value=value, detail="shaded_estimate") if estimated else reading
+
+    def _steady_sun(self, reading, now):
+        """The sunshine averaged over the last 15 minutes (SUN_SMOOTHING): the advice and the card's tile read the same."""
+        if reading.quality != "valid" or not isinstance(reading.value, (int, float)):
+            return reading
+        self._sun_samples.append((now, float(reading.value)))
+        while self._sun_samples and now - self._sun_samples[0][0] > SUN_SMOOTHING:
+            self._sun_samples.popleft()
+        mean = sum(v for _, v in self._sun_samples) / len(self._sun_samples)
+        return replace(reading, value=round(mean, 1), detail=reading.detail if reading.detail == "shaded_estimate" else "mean_15_min")
 
     def _remember_season(self, name):
         self.season_name = name

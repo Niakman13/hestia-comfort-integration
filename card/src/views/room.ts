@@ -399,7 +399,7 @@ export function tiles(v:View,config:Config):Tile[] {
       list.push({ic:open?'open':'window',label:'Fenêtres',value:`${open}/${contacts.length}`,note:flagged?'à refermer':open?(open>1?`${open} ouvertes`:'1 ouverte'):'toutes fermées',level:flagged?'action':'neutral',out:flagged});}}
   if(mods.has('shutters')){const s=a.sun,solar=numeric(o.solar),entering=(a.openings??[]).some(x=>x.flags.includes('sun_entering'));
     if(s||solar!==null){const night=!!s&&s.elevation<=0,value=night?'Nuit':solar===null?'—':solar<150?'Faible':solar<500?'Moyen':'Fort';
-      list.push({ic:night?'moon':'sun',label:'Soleil',value,note:entering?'entre dans la pièce':night?'pas d’apport':solar===null?'non mesuré':`${number(solar)} W/m²`,level:entering?'action':'neutral',out:entering});}}
+      list.push({ic:night?'moon':'sun',label:'Soleil',value,note:entering?'entre dans la pièce':night?'pas d’apport':solar===null?'non mesuré':`${number(solar)} W/m²${o.solar?.detail==='shaded_estimate'?' · estimé, station à l’ombre':''}`,level:entering?'action':'neutral',out:entering});}}
   // A connected cover: where it stands, and who moves it (Adaptive Cover Pro, the person, or nobody yet).
   if(mods.has('shutters'))for(const s of a.features?.shutters??[]){if(s.mode!=='connected')continue;
     const p=s.position,shut=p===0||(p==null&&s.state==='closed'),open=p===100||(p==null&&s.state==='open'),act=s.manual_override!==true&&!!s.advice;

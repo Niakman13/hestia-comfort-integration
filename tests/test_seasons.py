@@ -9,6 +9,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "niak_comfort"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from engine.assessment import Opening, Settings, Sun, absolute_humidity, assess, seasonal
 from engine.sources import Reading
 
@@ -77,3 +78,27 @@ class Seasons(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SteadySun(unittest.TestCase):
+    def test_a_passing_cloud_does_not_make_the_sun_come_and_go(self):
+        """21 October at 12 h 44: the station falls to 78 W/m² for one minute between 470 and 500."""
+        try:
+            from custom_components.niak_comfort.coordinator import ComfortCoordinator
+        except ImportError:
+            self.skipTest("Home Assistant is not installed")
+        from collections import deque
+        from datetime import timedelta
+        room = ComfortCoordinator.__new__(ComfortCoordinator)
+        room._sun_samples = deque(maxlen=120)
+        t = NOW
+        for value in (470, 480, 500, 490, 78, 495, 488):
+            seen = room._steady_sun(Reading(value, "valid", "sensor.solar"), t)
+            t += timedelta(minutes=1)
+        self.assertGreater(seen.value, 250)
+        # A quarter of an hour later, the old ones are forgotten.
+        for _ in range(16):
+            seen = room._steady_sun(Reading(90, "valid", "sensor.solar"), t)
+            t += timedelta(minutes=1)
+        self.assertEqual(seen.value, 90)
+        self.assertEqual(room._steady_sun(Reading(None, "unknown", "sensor.solar"), t).value, None)
