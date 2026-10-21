@@ -1,3 +1,33 @@
+## 1.2.5 — Des conseils qui ne se contredisent plus, et l’apprentissage de chaque pièce
+
+**En bref**
+
+- **Des conseils qui ne se contredisent plus** : une seule pluie pour tout le logement, et les pièces au même air (un salon ouvert sur sa cuisine) jugées ensemble, avec une seule carte.
+- **Chaque pièce apprend** : quand son apprentissage est optimal, le conseil annonce le résultat (« Aérez 15 min · 76 → 68 % »), aussi pour le CO₂ et les COV.
+- **Le bandeau dit le geste à faire ; l’encart « À savoir » dit le reste.**
+- **Un vrai accueil Confort dans le hub Niak**, et des réglages généraux plus simples.
+
+### Nouveautés
+
+- Pièces au même air : à cocher dans les réglages d’une pièce ; une seule carte « Salon · Cuisine ».
+- L’humidité est jugée sur ce qu’aérer peut gagner ; le risque de moisissure sur les murs froids devient une alerte.
+- Apprentissage de chaque pièce : optimal après 7 jours, quand ses prévisions tiennent à ±0,5 °C et ±3 %.
+- Chaque aération suivie est mesurée : son résultat sur la carte, le bilan de la semaine dans le hub.
+- Des questions Oui / Non pour affiner l’apprentissage : une humidité qui revient à la même heure, une fenêtre ouverte la nuit.
+- Accueil Confort : l’état du logement, trois compteurs, puis « Vos pièces » avec, pour chacune, ses mesures, son apprentissage, sa courbe sur 24 h et un bouton Modifier. Une pièce s’ajoute sur place.
+
+### Améliorations
+
+- Réglages généraux : avec Niak Weather, les mesures du dehors sont reprises de sa station et seulement affichées ; avec vos propres capteurs, un choix par mesure, avec sa valeur du moment.
+- Chaque conseil est vérifié dans 32 400 situations (hiver, été, pluie, rafales, chauffage, présence…), à chaque mise à jour.
+- Une fenêtre ouverte après « Aérez » compte aussitôt.
+- Des messages plus justes ; une mesure hors plage n’a plus de cadre orange quand rien n’est à faire.
+
+### Corrections
+
+- Le panneau et les cartes restaient affichés dans leur ancienne version : leur numéro suit maintenant chaque mise à jour.
+- Le bouton « Réglages des pièces » de l’accueil ne menait nulle part : chaque pièce a désormais son bouton Modifier.
+
 ## 1.2.5-beta.9 — Préversion : l’accueil Confort
 
 **En bref**
