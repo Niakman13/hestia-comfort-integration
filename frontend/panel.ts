@@ -147,27 +147,43 @@ export class ComfortSetup extends LitElement {
     <p class="ac-state"><span class=${'hl-dot '+(h.level==='ok'?'ok':'bad')}></span><b>${h.level==='ok'?'Tout fonctionne':h.summary}</b><span class="muted"> · ${h.rooms_summary}</span></p></div>
 </div>
   <div class="ac-kpis">${kpi(`${answering} / ${configured}`,'capteurs qui répondent',answering===configured?'ok':'bad')}
-   ${kpi(`${known} / ${t.length||h.rooms.length}`,'pièces en apprentissage optimal',t.length&&known===t.length?'ok':'')}
+   ${kpi(`${known} / ${t.length||h.rooms.length}`,'pièces observées à 100 %',t.length&&known===t.length?'ok':'')}
    ${kpi(String(todo),todo>1?'points à régler':'point à régler',todo?'bad':'ok')}</div>
   ${todo?frame('À régler',html`${h.todo.length?html`<ul class="hl-lines">${h.todo.map(l=>this.hline(l))}</ul>`:nothing}${h.tips.length?html`<h4 class="ac-h4">À améliorer</h4><ul class="hl-lines">${h.tips.map(l=>this.hline(l))}</ul>`:nothing}`,{className:'todo'}):nothing}
   ${this.roomsBox()}
   <div class="ac-cols">${this.learningBox()}<div>
    ${frame('Extérieur',html`<div class="ac-bar"><p class="hint">La météo et la pollution, communes à toutes les pièces.</p><button class="ac-edit" ?disabled=${this.busy} aria-label="Modifier l’extérieur" @click=${()=>void this.goTo({kind:'exterior',label:'Extérieur'})}>Modifier</button></div>
-    ${outside.map(x=>row(x.label==='Extérieur'?'Météo':x.label,x.text,x.level))}`)}
+    ${outside.map(x=>row(x.label==='Extérieur'?'Météo':x.label,x.text,x.level))}${this.shadeRow(row)}`)}
    ${frame('Liaisons',html`${linked.map(x=>row(x.label,x.text,x.level))}${versions.map(l=>{const [label,rest]=versionLine(l.text);return row(label,rest,l.level);})}${row('Interface Maison','niak_comfort_api v1','ok')}`)}
    ${frame('Les cartes',html`<p class="hint">Dans un tableau de bord : <strong>Ajouter une carte</strong>, puis <strong>Niak Confort</strong> pour une pièce (les pièces au même air n’en font qu’une), ou <strong>Niak Confort · logement</strong> pour la synthèse.</p>`)}
   </div></div>`;}
+ /** Where the station's sun sensor is shaded, learned from its history: there the sun is estimated. */
+ private shadeRow(row:(label:string,text:string,level:string)=>unknown){
+  const shade=(this.twins?.rooms??[]).map(r=>r.sun_shade).find(s=>s)??null;if(!shade)return nothing;
+  const morning=shade.shaded.some(a=>a<180),afternoon=shade.shaded.some(a=>a>=180);
+  const when=morning&&afternoon?'le matin et l’après-midi':morning?'le matin':afternoon?'l’après-midi':'';
+  return row('Ensoleillement',when?`station à l’ombre ${when} : soleil estimé`:'station dégagée','ok');
+ }
  /** Each room once: what measures it, how well it is learned, and a clear way to change it or add another. */
  private roomsBox(){const h=this.health!,twins=new Map((this.twins?.rooms??[]).map(r=>[r.entry_id,r]));
   const measures=(cells:{level:string;text:string}[])=>html`<span class="ac-meas">${cells.map((c,i)=>c.level==='none'?nothing:html`<span class=${c.level}><span class="hl-dot"></span>${h.columns[i]==='Ouvrants'?c.text:c.level==='ok'?h.columns[i]:c.level==='shared'?`${h.columns[i]} · ${c.text}`:`${h.columns[i]} : ${c.text}`}</span>`)}</span>`;
   const learning=(entry_id:string)=>{const r=twins.get(entry_id);if(!r)return html`<span class="muted">—</span>`;
-   const st=learnState(r.twin,r.progress),p=r.twin.precision,ready=r.progress?.ready;
-   // The advice it can already promise, measure by measure: « Conseil optimisé » on the card.
-   const learnt=ready?[ready.humidity?'humidité':'',ready.temperature?'température':'',...(ready.air??[]).map(a=>a==='co2'?'CO₂':'COV')].filter(Boolean):[];
+   const st=learnState(r.twin,r.progress),p=r.twin.precision;
    // What is left to see, in words; once everything is seen, how closely the room is forecast.
-   return html`<span class=${'tw-pill '+st.cls}>${st.label}</span>${ready&&!r.progress?.complete?html`<span class="ac-prec ac-ready">Conseils appris : ${learnt.length?learnt.join(' · '):'aucun encore'}</span>`:nothing}
+   // « Observé »: what Confort has seen of the room; « Conseils optimisés », in its own column, what it can promise.
+   return html`<span class=${'tw-pill '+st.cls}>${st.label}</span>
     ${st.missing.length?html`<span class="ac-prec ac-left">${st.missing.map(m=>html`<span>${m}</span>`)}</span>`
      :html`<span class="ac-prec">${p?`±${fr(p.temperature,p.temperature<1?2:1)} °C · ±${fr(p.humidity,0)} %`:''}</span>`}`;};
+  // What the advice can already promise, measure by measure (« Conseil optimisé » on the card), or what holds it back.
+  const optimised=(entry_id:string)=>{const r=twins.get(entry_id);if(!r)return html`<span class="muted">—</span>`;
+   const ready=r.progress?.ready,p=r.twin.precision,seen=r.progress?.seen;if(!ready)return html`<span class="muted">—</span>`;
+   const learnt=[ready.humidity?'humidité':'',ready.temperature?'température':'',...(ready.air??[]).map(a=>a==='co2'?'CO₂':'COV')].filter(Boolean);
+   if(learnt.length)return html`<span class="ac-ready">${learnt.join(' · ')}</span>`;
+   const blocked=r.twin.status!=='ready'||(seen?.days??0)<7?'une semaine de mesures d’abord':!p?'prévisions à vérifier'
+    :p.temperature>0.5&&p.humidity>3?`prévisions à affiner (±${fr(p.temperature,2)} °C, ±${fr(p.humidity,0)} %)`
+    :(seen?.airings??0)<5&&(seen?.open??0)<6?'fenêtres à observer davantage'
+    :p.humidity>3?`humidité à affiner (±${fr(p.humidity,0)} %)`:`température à affiner (±${fr(p.temperature,2)} °C)`;
+   return html`<span class="muted">pas encore</span><span class="ac-prec">${blocked}</span>`;};
   // What the other room weighs here, as learned by this room's twin: its windows, its air, its heating.
   const byTitle=new Map((this.twins?.rooms??[]).map(x=>[x.title,x]));
   const weights=(r:{entry_id:string;title:string},others:string[])=>{const me=twins.get(r.entry_id)?.twin.room,other=others.length===1?byTitle.get(others[0])?.twin.room:null;
@@ -176,11 +192,11 @@ export class ComfortSetup extends LitElement {
    return parts.length?html`<small class="ac-weight">Poids ici : ${parts.join(' · ')}</small>`:nothing;};
   const shared=(r:{entry_id:string;title:string})=>{const others=(this.volumeName(r.entry_id)??'').split(' · ').filter(x=>x&&x!==r.title);return others.length?html`<small>Même air que ${others.join(' et ')}</small>${weights(r,others)}`:nothing;};
   return frame('Vos pièces',html`${this.addBar()}
-   <div class="hl-table" tabindex="0" role="region" aria-label="Vos pièces, tableau défilant"><table><thead><tr><th scope="col">Pièce</th><th scope="col">Mesures</th><th scope="col">Apprentissage</th><th scope="col">24 h</th><th scope="col"><span class="sr">Modifier</span></th></tr></thead>
+   <div class="hl-table" tabindex="0" role="region" aria-label="Vos pièces, tableau défilant"><table><thead><tr><th scope="col">Pièce</th><th scope="col">Mesures</th><th scope="col">Observé</th><th scope="col">Conseils optimisés</th><th scope="col">24 h</th><th scope="col"><span class="sr">Modifier</span></th></tr></thead>
    <tbody>${h.rooms.map(r=>{const tw=twins.get(r.entry_id),curve=tw?.twin.precision?.curve;
-    return html`<tr><th scope="row" class="ac-room">${r.title}${shared(r)}</th><td class="ac-wrap">${measures(r.cells)}</td><td>${learning(r.entry_id)}</td><td>${curve?this.twinCurve(curve,false):nothing}</td>
+    return html`<tr><th scope="row" class="ac-room">${r.title}${shared(r)}</th><td class="ac-wrap">${measures(r.cells)}</td><td class="ac-obs">${learning(r.entry_id)}</td><td class="ac-obs">${optimised(r.entry_id)}</td><td>${curve?this.twinCurve(curve,false):nothing}</td>
     <td class="ac-go">${this.editButton(r.entry_id,r.title)}</td></tr>`;})}</tbody></table></div>
-   <div class="ac-foot"><p class="tw-legend"><span class="measured">mesurée</span><span class="replayed">rejouée</span></p><p class="hint">Optimal : la pièce est apprise à 100 %, Confort a vu tout ce qu’elle possède.</p></div>`,{className:'ac-rooms'});}
+   <div class="ac-foot"><p class="tw-legend"><span class="measured">mesurée</span><span class="replayed">rejouée</span></p><p class="hint">Observé : ce que Confort a vu de la pièce ; Optimal quand il a tout vu. Conseils optimisés : ce qu’il prévoit assez juste pour annoncer un résultat.</p></div>`,{className:'ac-rooms'});}
  private addBar(){return html`<div class="ac-bar"><p class="hint">Modifier une pièce : ses capteurs, ses ouvrants, le même air et ses réglages.</p>
    <button class="primary" aria-expanded=${this.adding?'true':'false'} @click=${()=>this.adding=!this.adding}>${this.adding?'Fermer':'Ajouter une pièce'}</button></div>
    ${this.adding?html`<div class="ac-add">${this.addRoom()}</div>`:nothing}`;}
@@ -208,11 +224,11 @@ export class ComfortSetup extends LitElement {
   const done=rooms.filter(r=>r.progress!.complete).length;
   // Rooms that already give at least one optimised advice, without waiting for 100 %.
   const some=rooms.filter(r=>{const x=r.progress!.ready;return !!x&&(x.humidity||x.temperature||(x.air??[]).length>0);}).length;
-  return html`${mean!=null?html`<div class="tw-week">${[[`${mean} %`,'du logement appris'],[`${some} / ${rooms.length}`,some>1?'pièces ont déjà des conseils optimisés':'pièce a déjà des conseils optimisés'],[`${done} / ${rooms.length}`,done>1?'pièces apprises à 100 %':'pièce apprise à 100 %']].map(([b,t])=>html`<div><b>${b}</b><span>${t}</span></div>`)}</div>`:nothing}
+  return html`${mean!=null?html`<div class="tw-week">${[[`${mean} %`,'du logement observé'],[`${some} / ${rooms.length}`,some>1?'pièces ont déjà des conseils optimisés':'pièce a déjà des conseils optimisés'],[`${done} / ${rooms.length}`,done>1?'pièces observées à 100 %':'pièce observée à 100 %']].map(([b,t])=>html`<div><b>${b}</b><span>${t}</span></div>`)}</div>`:nothing}
    <ul class="tw-how">
     <li>Confort observe chaque pièce toutes les 30 minutes : température, humidité, soleil, fenêtres, chauffage.</li>
     <li>Il en déduit comment elle réagit, puis vérifie ses prévisions sur la veille.</li>
-    <li>Sans attendre 100 %, chaque conseil appris (humidité, température, air) annonce son résultat : « Conseil optimisé ».</li>
+    <li>« Observé » dit ce que Confort a vu. « Conseils optimisés » : dès que ses prévisions sont assez justes pour une mesure (humidité, température, air), le conseil annonce son résultat.</li>
     <li>100 % : il a tout vu. Une semaine de mesures, des prévisions justes, cinq aérations, le chauffage en marche.</li></ul>`;
  }
  /** Questions on the habits found: a « yes » names a cause; nothing is ever guessed without it. */

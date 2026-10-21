@@ -1,3 +1,19 @@
+## 1.3.2 — Observé et conseils optimisés, chacun sa colonne
+
+**En bref**
+
+- **Le soleil à l’ombre est vraiment estimé.** La couverture nuageuse de Niak Weather est trouvée même quand sa prévision commence à l’heure suivante.
+- **« Observé » et « Conseils optimisés » en deux colonnes** sur l’accueil Confort : un pourcentage élevé et « pas encore » ne se contredisent plus.
+
+### Améliorations
+
+- Accueil Confort : la colonne « Observé » dit ce que Confort a vu de chaque pièce, la colonne « Conseils optimisés » ce qu’il prévoit assez juste pour annoncer un résultat, ou ce qui manque (« prévisions à affiner (±0,57 °C, ±5 %) », « fenêtres à observer davantage »).
+- Le pavé Extérieur indique quand votre station est à l’ombre (« station à l’ombre le matin et l’après-midi : soleil estimé »).
+
+### Corrections
+
+- Station à l’ombre : le soleil restait à la mesure brute quand la prévision horaire commençait à l’heure suivante.
+
 ## 1.3.1 — Le soleil juste, même station à l’ombre
 
 **En bref**

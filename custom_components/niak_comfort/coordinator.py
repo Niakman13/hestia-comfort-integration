@@ -636,9 +636,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         if reading.quality != "valid" or not isinstance(reading.value, (int, float)) or not self.sun_shade:
             return reading
         latitude, longitude = self.hass.config.latitude, self.hass.config.longitude
-        hour = next((h for h in (outlook or {}).get("hours") or [] if isinstance(h.get("time"), str)
-                     and 0 <= (now - datetime.fromisoformat(h["time"])).total_seconds() < 3600), None)
-        sky = sunlight.sky_factor(hour)
+        sky = sunlight.sky_factor(sunlight.nearest_hour((outlook or {}).get("hours"), now))
         seen = sunlight.share(float(reading.value), now, latitude, longitude, self.sun_shade)
         if seen is not None:
             # In the open, the station is the truth: it also says how far the forecast cloud cover is from it.

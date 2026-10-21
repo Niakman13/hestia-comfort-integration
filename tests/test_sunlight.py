@@ -57,3 +57,13 @@ class Sunlight(unittest.TestCase):
         fixed = dict(sunlight.corrected(points, *GARDANNE, learned))
         four = next(t for t, _ in points if t.astimezone(timezone(timedelta(hours=2))).hour == 16 and t.minute == 0)
         self.assertGreater(fixed[four], dict(points)[four] * 3)
+
+
+class NearestHour(unittest.TestCase):
+    def test_the_forecast_that_starts_at_the_next_hour_still_gives_the_sky(self):
+        """21 October at 16 h 26: the forecast list began at 17 h, and the shade estimate found no sky."""
+        now = datetime(2026, 10, 21, 14, 26, tzinfo=timezone.utc)
+        hours = [{"time": "2026-10-21T15:00:00+00:00", "cloud_coverage": 10}, {"time": "2026-10-21T16:00:00+00:00", "cloud_coverage": 80}]
+        self.assertEqual(sunlight.nearest_hour(hours, now)["cloud_coverage"], 10)
+        self.assertIsNone(sunlight.nearest_hour([{"time": "2026-10-21T19:00:00+00:00"}], now))
+        self.assertIsNone(sunlight.nearest_hour([], now))

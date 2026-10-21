@@ -13,7 +13,7 @@ house). The windows facing that way would be told there is no sun. So, from the 
 
 Nothing is set by hand: a station in the open is never found shaded, and nothing changes for it.
 """
-from datetime import timedelta
+from datetime import datetime, timedelta
 import math
 
 from .twin import sun_position
@@ -79,6 +79,22 @@ def learn(points, latitude, longitude, zone=None):
             days.setdefault(b, set()).add(day)
     shaded = sorted(b for b, shares in seen.items() if len(days[b]) >= SHADED_DAYS and _quantile(shares, 0.5) < SHADED)
     return {"scale": round(scale, 3), "shaded": shaded, "sunny_days": len(sunny)}
+
+
+def nearest_hour(hours, now, within=timedelta(minutes=90)):
+    """The forecast hour closest to now: the service often starts its list at the next hour."""
+    best = None
+    for hour in hours or ():
+        try:
+            when = datetime.fromisoformat(hour["time"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if when.tzinfo is None:
+            continue
+        gap = abs((when + timedelta(minutes=30) - now).total_seconds())
+        if gap <= within.total_seconds() and (best is None or gap < best[0]):
+            best = (gap, hour)
+    return best[1] if best else None
 
 
 def sky_factor(hour):
