@@ -33,20 +33,20 @@ L’extérieur se règle une seule fois, dans **Confort → Réglages généraux
 
 Si [Niak Weather](https://github.com/Niakman13/niak-weather-integration) est installé, choisissez **Niak Weather** puis votre lieu.
 
-Confort reprend alors :
+Confort reprend alors, sans rien à choisir :
 
 - la station de votre lieu : température, humidité, pluie, vent, soleil ;
 - les prévisions : « Refermez avant la pluie », « Aérez vers 22 h », fraîcheur de la nuit ;
 - les vigilances et les orages ;
 - la qualité de l’air du jour.
 
-L’air du dehors suit la source choisie dans Niak Weather : Atmo France ou une station WAQI. Changez-la dans Weather : Confort suit. Il faut Niak Weather 2.5.7 ou plus récent.
+Les mesures sont seulement affichées, avec leur valeur du moment. Pour en changer : changez la station dans Niak Weather, ou choisissez **Vos propres capteurs**.
 
-Vous avez choisi **Pas de qualité de l’air** dans Confort ? Ce choix est respecté : l’air de Weather n’est pas pris en compte.
+L’air du dehors suit la source choisie dans Niak Weather : Atmo France ou une station WAQI. Changez-la dans Weather : Confort suit. Il faut Niak Weather 2.5.7 ou plus récent. Dans Confort, seul le niveau de prudence se règle. Pour ne pas tenir compte de l’air, désactivez la qualité de l’air dans Niak Weather.
 
 ### Avec vos propres capteurs
 
-Choisissez **Vos propres capteurs**, puis chaque mesure. Toutes sont facultatives :
+Choisissez **Vos propres capteurs**, puis le capteur de chaque mesure ; sa valeur du moment s’affiche à côté. Toutes sont facultatives :
 
 | Mesure | À quoi elle sert |
 | --- | --- |
@@ -65,7 +65,7 @@ Une mesure absente reste inconnue : Niak conseille quand même et le dit sur la 
 
 ## Les pièces
 
-La **vue d’ensemble** liste vos pièces. **Configurer** ouvre les réglages d’une pièce.
+L’accueil Confort (**Vue d’ensemble**) liste vos pièces : leurs mesures, leur apprentissage et un bouton **Modifier**, qui ouvre les réglages de la pièce. **Ajouter une pièce** propose vos pièces Home Assistant pas encore suivies, ou une pièce libre.
 
 ![Les réglages d’une pièce : l’onglet Ouvertures](images/niak-comfort-reglages.png)
 
@@ -152,6 +152,7 @@ Il ne commande rien.
 - Le nom de la pièce et sa pièce Home Assistant.
 - L’étage : repris de Home Assistant, ou à choisir pour une pièce libre.
 - **Pièce non chauffée** : Niak ne conseille jamais de la réchauffer.
+- **Même air** : cochez les pièces ouvertes sur celle-ci, sans mur ni porte entre elles (un salon ouvert sur sa cuisine). Leurs fenêtres comptent pour les deux, elles n’ont qu’une carte, et jamais deux gestes contraires.
 - Les réglages avancés, facultatifs : rafales (45 km/h), gel (1 °C), soleil sur une façade (250 W/m²), faible lumière (100 lux), ancienneté des mesures (3 h).
 
 Un capteur à vérifier demande une confirmation. Elle est retenue ensuite.
@@ -179,6 +180,8 @@ Un capteur à vérifier demande une confirmation. Elle est retenue ensuite.
 
 Niak ne parle que pour un geste qui aide. Sinon : « Rien à faire ».
 
+**Dessous, « À savoir »** : ce qui est utile à savoir, sans geste à faire. Une idée par ligne : risque de moisissure sur les murs froids, air humide dehors, même air qu’une autre pièce, VMC en marche, résultat de la dernière aération (« humidité 76 → 70 % »).
+
 Plusieurs conseils ? Ils défilent, le plus important d’abord. Un appui passe au suivant.
 
 **Pendant l’aération**, le conseil suit le temps : « Encore 5 min d’aération », puis « Vous pouvez refermer ».
@@ -189,7 +192,7 @@ Plusieurs conseils ? Ils défilent, le plus important d’abord. Un appui passe 
 - le trait sombre : le minimum et le maximum des dernières 24 h ;
 - le rond vide : la température dehors.
 
-**Les mesures** sont des tuiles : humidité, CO₂, fenêtres, soleil, chauffage, VMC… Une mesure hors de votre plage s’encadre en ambre.
+**Les mesures** sont des tuiles : humidité, CO₂, fenêtres, soleil, chauffage, VMC… Une mesure hors de votre plage n’est encadrée en ambre que si un geste est conseillé.
 
 **Détails** rassemble les sources, la tendance, l’apprentissage (« Séchage ») et ce qui manque.
 
@@ -318,6 +321,18 @@ Ce que ça change :
 - **Le bon moment** : « Aérez vers 22 h » quand l’air du soir sera plus sec (avec Niak Weather).
 
 Dans **Détails**, la ligne **Séchage** dit sur combien d’aérations la pièce a appris.
+
+### Apprentissage optimal
+
+Niak rejoue chaque jour les prévisions de la pièce sur les dernières 24 heures. L’apprentissage est **optimal** après 7 jours de mesures, quand ces prévisions tiennent à ±0,5 °C et ±3 % d’humidité.
+
+Alors le conseil est **optimisé** : il annonce le résultat, « Aérez 15 min · 76 → 68 % en 15 min », aussi pour le CO₂ et les COV. Une pastille « Conseil optimisé » le signale. Si les prévisions ne tiennent plus, la pièce repasse en conseil estimé.
+
+Chaque aération conseillée et suivie est mesurée : la carte montre son résultat pendant 24 h, l’accueil Confort le bilan de la semaine.
+
+Quand l’humidité d’une pièce monte souvent à la même heure, ou qu’une fenêtre reste ouverte la nuit, l’accueil pose une question : Oui, Non ou Je ne sais pas. Une cause n’est jamais devinée : seul un « Oui » la nomme.
+
+L’accueil Confort montre où en est chaque pièce : optimal, en cours, à affiner ou à vérifier, avec la précision de ses prévisions et sa courbe sur 24 h.
 
 Pour apprendre, une pièce a besoin :
 
