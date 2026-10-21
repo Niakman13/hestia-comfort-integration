@@ -1,3 +1,25 @@
+## 1.4.0 — Une humidité mieux nuancée, de l’air sec à l’air humide
+
+**En bref**
+
+- **Une plage d’humidité avec deux limites réglables** : minimum 40 % et maximum 60 % proposés. Le maximum déjà choisi est conservé.
+- **À 60,6 % pour une limite de 60 %, « Légèrement humide »** remplace le verdict trop catégorique. Un léger écart seul ne compte plus la pièce parmi celles à surveiller.
+
+### Nouveautés
+
+- Même graduation pour l’air humide et l’air sec : jusqu’à 3 points hors de la plage, « Légèrement humide / sec » ; jusqu’à 10 points, « Air humide / sec » ; au-delà, « Très humide / sec ». Ce sont des paliers Niak, pas des seuils sanitaires.
+- Les cartes de pièce et de logement suivent la mesure actuelle, avec une indication d’amélioration ou d’écart durable dans « À savoir ».
+- Pour l’air sec, l’effet de l’air extérieur est expliqué quand les mesures permettent de le calculer ; sans ces mesures, cet effet reste inconnu.
+
+### Corrections
+
+- Un besoin d’assécher antérieur ne conserve plus une indication alarmiste près de la limite. Un léger dépassement seul ne déclenche plus de conseil d’aération.
+- Les risques estimés sur les murs froids et les autres conseils utiles restent distincts de la graduation d’humidité.
+
+### Après la mise à jour
+
+- Redémarrez Home Assistant, puis rechargez votre tableau de bord. Les deux limites se trouvent dans Niak → Confort → Modifier une pièce → Température et humidité.
+
 ## 1.3.2 — Observé et conseils optimisés, chacun sa colonne
 
 **En bref**

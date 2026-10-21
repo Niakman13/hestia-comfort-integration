@@ -60,6 +60,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.season = (None, None)
         self.day_range = None
         self.humidity_floor = None
+        self.humidity_ceiling = None
         self._season_failed = False
         # What airing really does in this room, learned from its past openings (engine/learning.py).
         self.drying_model = learning.fit([])
@@ -230,6 +231,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 "heated": self.config.get("heated", True), "outdoor_mean_7d": self.season[1],
                 "indoor_day_range": self.day_range, "drying_model": self.drying_model,
                 "humidity_floor_3h": self.humidity_floor,
+                "humidity_ceiling_3h": self.humidity_ceiling,
                 "opening_minutes": {e: minutes(e, self.opened_since, "on") for e in self.windows},
                 "presence_off_minutes": {e: minutes(e, self.absent_since, "off") for e in self.config.get("presence", [])},
                 **{k: list(v) for k, v in self.histories.items()}}
@@ -606,8 +608,10 @@ class ComfortCoordinator(DataUpdateCoordinator):
     async def _humidity_floor(self, now):
         """Lowest indoor humidity of the last three full hours: above the threshold, the excess lasts."""
         entity_id = self.config.get("sources", {}).get("indoor_humidity")
-        rows = await self._statistics(entity_id, now - timedelta(hours=4), now, {"min"}) if entity_id else None
+        rows = await self._statistics(entity_id, now - timedelta(hours=4), now, {"min", "max"}) if entity_id else None
         lows = [row["min"] for row in rows or [] if isinstance(row.get("min"), (int, float))][-3:]
+        highs = [row["max"] for row in rows or [] if isinstance(row.get("max"), (int, float))][-3:]
+        self.humidity_ceiling = max(highs) if len(highs) == 3 else None
         return min(lows) if len(lows) == 3 else None
 
     async def _bounce_over(self, _now):

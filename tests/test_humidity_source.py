@@ -4,7 +4,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "niak_comfort"))
-from engine.assessment import assess
+from engine.assessment import Settings, assess
 from test_engine import zone
 
 # 20 Oct., 13 h 50: 16.9 °C and 90 % outdoors, 12.9 g/m³ of water; no room can be aired below about 71 %.
@@ -12,6 +12,43 @@ OUT = dict(outdoor_temperature=16.9, outdoor_humidity=90)
 
 
 class HumiditySource(unittest.TestCase):
+    def test_current_measure_graduates_both_sides_of_the_configured_range(self):
+        settings = Settings(humidity_low=40, humidity_high=60)
+        for value, status, degree in [(40, "normal", 0), (60, "normal", 0), (60.6, "high", 1),
+                                      (63, "high", 1), (63.1, "high", 2), (70, "high", 2),
+                                      (70.1, "high", 3), (39.4, "low", 1), (37, "low", 1),
+                                      (36.9, "low", 2), (30, "low", 2), (29.9, "low", 3)]:
+            with self.subTest(value=value):
+                result = assess(zone(indoor_humidity=value), settings=settings)
+                self.assertEqual((result.features["humidity"]["status"], result.features["humidity"]["degree"]), (status, degree))
+
+    def test_small_recovering_excess_does_not_keep_asking_for_drying(self):
+        settings = Settings(humidity_high=60)
+        previous = assess(zone(indoor_humidity=75), settings=settings)
+        current = assess(zone(indoor_humidity=60.6), settings=settings, previous=previous)
+        self.assertNotIn("dry", current.needs)
+        self.assertEqual(current.features["humidity"]["degree"], 1)
+        self.assertEqual(current.features["humidity"]["trend"], "improving")
+        normal = assess(zone(indoor_humidity=59), settings=settings, previous=current)
+        self.assertEqual(normal.features["humidity"]["status"], "normal")
+
+    def test_unknown_humidity_stays_unknown_and_ranges_must_be_ordered(self):
+        self.assertEqual(assess(zone(indoor_humidity=None)).features["humidity"]["status"], "unknown")
+        for low, high in [(60, 60), (61, 60), (-1, 60), (40, 101)]:
+            with self.assertRaises(ValueError):
+                Settings(humidity_low=low, humidity_high=high)
+
+    def test_a_lasting_small_excess_stays_discreet_without_a_wall_risk(self):
+        result = assess(zone(indoor_humidity=60.6), settings=Settings(humidity_high=60), context={"humidity_floor_3h": 60.2})
+        self.assertNotIn("dry", result.needs)
+        self.assertTrue(result.features["humidity"]["lasting"])
+
+    def test_dry_air_duration_does_not_invent_an_airing_benefit(self):
+        result = assess(zone(indoor_humidity=30, outdoor_humidity=None), context={"humidity_ceiling_3h": 35})
+        self.assertTrue(result.features["humidity"]["lasting"])
+        self.assertIsNone(result.features["humidity"]["reachable"])
+        self.assertNotEqual(result.action, "ouvrir")
+
     def test_the_weathers_own_humidity_is_no_need(self):
         al = assess(zone(indoor_temperature=20.7, indoor_humidity=72.4, **OUT))
         self.assertNotIn("dry", al.needs)

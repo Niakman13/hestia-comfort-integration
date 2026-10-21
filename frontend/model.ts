@@ -69,7 +69,7 @@ export function newRoom(area:{area_id:string;name:string}|null,name:string,d:Dis
 }
 // New rooms use these explained operating choices. Existing settings are never
 // replaced when opening the editor; backend defaults preserve older rooms.
-export const airReferenceDefaults={co2_potential:800,co2_action:1000,co2_urgent:1500,pm25_action:15,humidity_high:60};
+export const airReferenceDefaults={co2_potential:800,co2_action:1000,co2_urgent:1500,pm25_action:15,humidity_low:40,humidity_high:60};
 export function vocPreset(c?:Candidate):{value:number;unit:string}|undefined {
  const r=c?.voc_reference;
  return r?.id==='sensirion_index'&&r.unit===(c?.unit??'')?{value:r.value,unit:r.unit}:undefined;

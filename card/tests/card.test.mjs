@@ -19,6 +19,25 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
 after(()=>rm(temp,{recursive:true,force:true}));
 
 test('the twelve Python snapshots conform to the card contract',()=>{for(const f of fixtures)assert.equal(isView(f.view),true,f.id);});
+test('humidity graduation stays consistent on room and home cards, including dry air',async()=>{
+  const {humidityLabel,tiles,needs}=await import(pathToFileURL(join(temp,'views/room.mjs')));
+  for(const [status,degree,value,label] of [['high',1,60.6,'Légèrement humide'],['high',2,67,'Air humide'],['high',3,75,'Très humide'],
+    ['low',1,39,'Légèrement sec'],['low',2,35,'Air sec'],['low',3,25,'Très sec']]){
+    const v=fresh();v.observations.indoor_humidity={value,quality:'valid',source:'sensor.h'};
+    v.assessment={...v.assessment,level:'calm',reason:'within_comfort',action:'ok',needs:[],missing:[],features:{humidity:{status,degree,measured:value,reachable:20},air:{co2_status:'ok',pm25_status:'ok',voc_status:'ok'}}};
+    assert.equal(humidityLabel(v),label);assert.equal(advice(v).pill,label);
+    const tile=tiles(v,cleanConfig({type:'custom:niak-comfort-card',modules:['humidity']}))[0];
+    assert.equal(tile.note,label.toLowerCase());assert.equal(tile.out,degree>=2);
+    assert.equal(needs(v,false).length,degree>=2?1:0);assert.match(needs(v)[0],new RegExp(label.toLowerCase()));
+    if(status==='low')assert.match(facts(v)[0].text,/assécherait davantage/);
+  }
+});
+test('humidity severity never masks another gesture or interprets an unavailable sensor',async()=>{
+  const {humidityLabel}=await import(pathToFileURL(join(temp,'views/room.mjs')));
+  const v=fresh();v.assessment={...v.assessment,level:'urgent',action:'fermer',reason:'rain_open_windows',features:{humidity:{status:'low',degree:3}}};
+  assert.equal(advice(v).title,'Fermez, il pleut');assert.equal(advice(v).pill,undefined);
+  v.observations.indoor_humidity={value:25,quality:'stale'};assert.equal(humidityLabel(v),null);
+});
 test('reject incompatible versions, invalid levels and non-finite measures',()=>{
   for(const mutate of [v=>v.version=2,v=>v.assessment.level='normal',v=>v.observations.co2.value=Infinity,v=>v.assessment.needs=null,v=>v.computed_at='bad']){
     const v=fresh();mutate(v);assert.equal(isView(v),false);

@@ -103,10 +103,14 @@ Chaque pièce a six onglets, détaillés ci-dessous. Le cadre **À quoi sert cet
 ### Température
 
 - La température : la seule mesure obligatoire.
-- L’humidité : facultative, elle repère un air trop humide.
+- L’humidité : facultative, elle repère un air humide ou sec.
 - Votre plage de confort : 20 à 24 °C l’hiver, jusqu’à 26 °C l’été par défaut.
 - La plage d’été arrive en douceur, quand les 7 derniers jours se réchauffent.
-- Le seuil d’humidité haute : 60 % par défaut.
+- La plage d’humidité : minimum 40 % et maximum 60 % proposés, réglables pour chaque pièce. Le maximum déjà choisi est conservé.
+
+Un écart jusqu’à 3 points reste discret : « Légèrement humide » ou « Légèrement sec », sans compter la pièce parmi celles à surveiller pour ce seul écart. Entre 3 et 10 points, la carte indique « Air humide » ou « Air sec » ; au-delà de 10 points, « Très humide » ou « Très sec ». Ce sont des paliers d’affichage Niak, pas des seuils sanitaires. À 60,6 % avec un maximum de 60 %, la carte indique donc « Légèrement humide ».
+
+L’état affiché suit la mesure actuelle, même après une humidité plus élevée. Une amélioration et un écart durable sont précisés dans « À savoir ». Le conseil reste lié à un geste utile : ouvrir n’est pas conseillé pour un léger dépassement seul, et un risque estimé sur les murs froids reste expliqué séparément. Pour un air sec, la carte précise si l’air extérieur assécherait davantage ou pourrait augmenter l’humidité ; sans mesure extérieure, elle ne suppose aucun effet.
 
 ### Ouvertures
 

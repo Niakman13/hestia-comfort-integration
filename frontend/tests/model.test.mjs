@@ -16,6 +16,7 @@ test('new room copies proposals, describes each opening and freezes no data',()=
  assert.deepEqual(room.openings['binary_sensor.window'],{exposure:null,kind:'window',sheltered:false});
  room.windows.push('binary_sensor.second');assert.equal(d.suggestions.windows.length,1);
  assert.equal(room.sources.co2,undefined);
+ assert.equal(room.settings.humidity_low,40);assert.equal(room.settings.humidity_high,60);
 });
 test('a free room has a name and no Home Assistant area',()=>{
  const room=newRoom(null,'Étage',{suggestions:{}});

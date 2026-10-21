@@ -162,9 +162,11 @@ class UsefulAdviceTests(unittest.TestCase):
         return assess({k: Reading(v, "valid", "fictitious") for k, v in values.items()}, context=context)
 
     def test_a_little_above_the_threshold_for_a_moment_is_not_a_need(self):
-        # Default threshold 62 %: 64 % for a moment is fine, three hours above it or 68 % is not.
+        # Default threshold 62 %: 64 % stays a slight excess, even when lasting; 68 % calls for drying.
         self.assertNotIn("dry", self.room(64.0).needs)
-        self.assertIn("dry", self.room(64.0, context={"humidity_floor_3h": 63.0}).needs)
+        lasting = self.room(64.0, context={"humidity_floor_3h": 63.0})
+        self.assertNotIn("dry", lasting.needs)
+        self.assertTrue(lasting.features["humidity"]["lasting"])
         self.assertIn("dry", self.room(68.0).needs)
 
     def test_outdoor_air_as_wet_as_inside_leaves_the_banner_calm(self):

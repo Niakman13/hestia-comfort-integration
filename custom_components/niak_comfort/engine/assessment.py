@@ -12,8 +12,8 @@ from .wind import DRIVEN_RAIN_GUST, crossing as wind_crossing, open_first, side 
 from .outlook import IMMINENT, rain_timing, slot as next_slot
 from . import learning
 
-# Points above the humidity threshold that call for a gesture at once; below, only a lasting excess does.
-HUMIDITY_GRACE = 5
+# Points above the humidity threshold beyond which a useful drying gesture can be proposed.
+HUMIDITY_GRACE = 3
 # Water (g/m³) the room must hold above the outdoor air for its humidity to come from inside: below it,
 # the humidity is the weather's, and no airing can lower it.
 INDOOR_SOURCE = 0.5
@@ -39,6 +39,7 @@ class Settings:
     minimum: float = 20
     maximum: float = 24
     humidity_high: float = 62
+    humidity_low: float = 40
     co2_potential: float = 1000
     co2_action: float = 1200
     co2_urgent: float = 1600
@@ -65,7 +66,7 @@ class Settings:
             raise ValueError("invalid_temperature_range")
         if not (0 <= self.co2_potential < self.co2_action < self.co2_urgent <= 100000):
             raise ValueError("invalid_co2_thresholds")
-        if not (0 < self.humidity_high <= 100):
+        if not (0 <= self.humidity_low < self.humidity_high <= 100):
             raise ValueError("invalid_humidity_threshold")
         if not (0 <= self.temperature_hysteresis < (self.maximum - self.minimum) / 2):
             raise ValueError("invalid_temperature_hysteresis")
@@ -179,6 +180,18 @@ class Assessment:
         return asdict(self)
 
 
+def humidity_state(value, settings, previous=None, lasting=False):
+    status = "unknown" if value is None else "low" if value < settings.humidity_low else "high" if value > settings.humidity_high else "normal"
+    distance = 0 if value is None else max(settings.humidity_low - value, value - settings.humidity_high, 0)
+    degree = 0 if distance == 0 else 1 if distance <= 3 else 2 if distance <= 10 else 3
+    before = (previous.features.get("humidity") or {}).get("measured") if previous else None
+    old_distance = max(settings.humidity_low - before, before - settings.humidity_high, 0) if before is not None else None
+    trend = "improving" if old_distance is not None and distance < old_distance - 0.5 else "worsening" if old_distance is not None and distance > old_distance + 0.5 else "stable"
+    return {"status": status, "degree": degree, "measured": value, "minimum": settings.humidity_low,
+            "maximum": settings.humidity_high, "lasting": lasting if status == "high" else False,
+            "trend": trend if value is not None else None}
+
+
 def absolute_humidity(t: float | None, rh: float | None) -> float | None:
     if t is None or rh is None:
         return None
@@ -280,8 +293,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     air_detail["co2_status"] = ("not_configured" if "co2" not in readings else "unknown" if co2 is None
                                else "high" if co2_air else "ok")
     air = co2_air or (air_detail["pm25_status"] == "high" and not air_detail["pm25_treated"]) or air_detail["voc_status"] == "high"
-    # A little above the threshold for an afternoon bothers nobody: humidity calls for a gesture when it is
-    # clearly high, or when it has stayed above the threshold for the last three hours.
+    # Lasting humidity matters for the explanation and the cold-wall risk, separately from the current degree.
     lasting = context.get("humidity_floor_3h")
     lasting = isinstance(lasting, (int, float)) and not isinstance(lasting, bool) and lasting > settings.humidity_high
     # Rooms open onto each other share one air: its humidity is judged on the mean water of the volume, at its
@@ -312,7 +324,11 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     # the weather's own humidity does not, however high. Without the outdoor humidity, as before.
     excess = ai - ae if ai is not None and ae is not None else None
     from_inside = excess is None or excess >= INDOOR_SOURCE - (0.3 if "dry" in old else 0)
-    wet = (humid or mould) and from_inside
+    humidity_scale = humidity_state(hi, settings, previous, lasting)
+    ceiling = context.get("humidity_ceiling_3h")
+    if humidity_scale["status"] == "low":
+        humidity_scale["lasting"] = isinstance(ceiling, (int, float)) and not isinstance(ceiling, bool) and ceiling < settings.humidity_low
+    wet = ((humid and hhi > settings.humidity_high + HUMIDITY_GRACE) or mould) and from_inside
     humid_outdoor = (humid or mould) and not from_inside
     # Pre-cooling (template « prérefroidir »): at night, when tomorrow is announced well above the comfort range.
     tomorrow_max = outlook.get("tomorrow_max")
@@ -519,6 +535,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     if isinstance(extended.get("humidity"), dict):
         saturated = absolute_humidity(ti, 100) if ti is not None else None
         extended["humidity"].update(
+            **humidity_scale,
             surface=None if surface is None else round(surface), mould=mould,
             excess=None if excess is None else round(excess, 1), source="inside" if wet else "outside" if humid_outdoor else None,
             # Water above the shared air of the volume (g/m³): a local source such as cooking steam.

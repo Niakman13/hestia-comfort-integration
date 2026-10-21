@@ -37,6 +37,15 @@ class WorkspaceTests(AdapterFixture):
     def config(self,**extra):
         return {'area_id':'salon','name':'Salon','sources':{'indoor_temperature':'sensor.local'},'windows':[], 'settings':{'minimum':20,'maximum':24},**extra}
 
+    async def test_humidity_range_keeps_custom_limits_and_rejects_reversed_bounds(self):
+        existing,_=self.service.validate(self.config(settings={'humidity_high':67}))
+        self.assertEqual(existing['settings']['humidity_low'],40)
+        self.assertEqual(existing['settings']['humidity_high'],67)
+        custom,_=self.service.validate(self.config(settings={'humidity_low':35,'humidity_high':65}))
+        self.assertEqual((custom['settings']['humidity_low'],custom['settings']['humidity_high']),(35,65))
+        with self.assertRaises(ValueError):
+            self.service.validate(self.config(settings={'humidity_low':65,'humidity_high':60}))
+
     async def test_health_suggestions_keep_full_catalog_results_without_scanning_other_rooms(self):
         from custom_components.niak_comfort import health
         from custom_components.niak_comfort.discovery import candidate
