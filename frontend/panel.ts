@@ -157,14 +157,20 @@ export class ComfortSetup extends LitElement {
   </div></div>`;}
  /** Each room once: what measures it, how well it is learned, and a clear way to change it or add another. */
  private roomsBox(){const h=this.health!,twins=new Map((this.twins?.rooms??[]).map(r=>[r.entry_id,r]));
-  const measures=(cells:{level:string;text:string}[])=>html`<span class="ac-meas">${cells.map((c,i)=>c.level==='none'?nothing:html`<span class=${c.level}><span class="hl-dot"></span>${h.columns[i]==='Ouvrants'?c.text:c.level==='ok'?h.columns[i]:`${h.columns[i]} : ${c.text}`}</span>`)}</span>`;
+  const measures=(cells:{level:string;text:string}[])=>html`<span class="ac-meas">${cells.map((c,i)=>c.level==='none'?nothing:html`<span class=${c.level}><span class="hl-dot"></span>${h.columns[i]==='Ouvrants'?c.text:c.level==='ok'?h.columns[i]:c.level==='shared'?`${h.columns[i]} · ${c.text}`:`${h.columns[i]} : ${c.text}`}</span>`)}</span>`;
   const learning=(entry_id:string)=>{const r=twins.get(entry_id);if(!r)return html`<span class="muted">—</span>`;
    const st=learnState(r.twin,r.progress),p=r.twin.precision;
    // What is left to see, in words; once everything is seen, how closely the room is forecast.
    return html`<span class=${'tw-pill '+st.cls}>${st.label}</span>
     ${st.missing.length?html`<span class="ac-prec ac-left">${st.missing.map(m=>html`<span>${m}</span>`)}</span>`
      :html`<span class="ac-prec">${p?`±${fr(p.temperature,p.temperature<1?2:1)} °C · ±${fr(p.humidity,0)} %`:''}</span>`}`;};
-  const shared=(r:{entry_id:string;title:string})=>{const others=(this.volumeName(r.entry_id)??'').split(' · ').filter(x=>x&&x!==r.title);return others.length?html`<small>Même air que ${others.join(' et ')}</small>`:nothing;};
+  // What the other room weighs here, as learned by this room's twin: its windows, its air, its heating.
+  const byTitle=new Map((this.twins?.rooms??[]).map(x=>[x.title,x]));
+  const weights=(r:{entry_id:string;title:string},others:string[])=>{const me=twins.get(r.entry_id)?.twin.room,other=others.length===1?byTitle.get(others[0])?.twin.room:null;
+   const heat=me?.heating_degrees!=null&&other?.heating_degrees?Math.round(100*me.heating_degrees/other.heating_degrees):null;
+   const parts=[me?.far_window_percent!=null?`fenêtres ${me.far_window_percent} %`:'',me?.mixing_percent!=null?`air ${me.mixing_percent} % par heure`:'',heat!=null?`chauffage ${Math.min(heat,100)} %`:''].filter(Boolean);
+   return parts.length?html`<small class="ac-weight">Poids ici : ${parts.join(' · ')}</small>`:nothing;};
+  const shared=(r:{entry_id:string;title:string})=>{const others=(this.volumeName(r.entry_id)??'').split(' · ').filter(x=>x&&x!==r.title);return others.length?html`<small>Même air que ${others.join(' et ')}</small>${weights(r,others)}`:nothing;};
   return frame('Vos pièces',html`${this.addBar()}
    <div class="hl-table" tabindex="0" role="region" aria-label="Vos pièces, tableau défilant"><table><thead><tr><th scope="col">Pièce</th><th scope="col">Mesures</th><th scope="col">Apprentissage</th><th scope="col">24 h</th><th scope="col"><span class="sr">Modifier</span></th></tr></thead>
    <tbody>${h.rooms.map(r=>{const tw=twins.get(r.entry_id),curve=tw?.twin.precision?.curve;

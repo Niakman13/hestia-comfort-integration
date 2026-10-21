@@ -24,6 +24,10 @@ from .discovery import voc_device_class
 from . import cover_link, weather_link
 
 STATE_KINDS = ("window", "heating", "rain", "pollution", "presence", "purifier", "ventilation", "cover", "cover_state", "shutter_auto", "shutter_override", "shutter_sun", "shutter_target", "purifier_speed")
+# Twin samples stored before 1.2.9 counted the other room's windows as this room's own: rebuilt from the history.
+TWIN_FORMAT = 3
+# What belongs to an air shared by rooms open onto each other: a room without its own reads its partner's.
+SHARED_SOURCES = ("heating", "co2", "voc", "pm25", "purifier", "ventilation", "ventilation_boost")
 
 
 class ComfortCoordinator(DataUpdateCoordinator):
@@ -70,6 +74,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
         # Rooms open onto this one (no wall between them): their openings are this room's too.
         self.partners = self._partners()
         self.windows = list(dict.fromkeys([*self.config.get("windows", []), *(e for p in self.partners for e in p["windows"])]))
+        # The sources read for this room: its own, completed by what belongs to its shared air (engine/volume.py).
+        self.sources = self._sources()
         # This room's advice as computed alone, before the volume settles opposite gestures.
         self.own = None
         self._own_gesture = None
@@ -88,10 +94,29 @@ class ComfortCoordinator(DataUpdateCoordinator):
             # Only what the weather needs: the partner room keeps its covers to itself.
             found.append({"entry_id": entry_id, "title": config.get("name") or entry.title, "windows": list(config.get("windows", [])),
                           "sources": len(config.get("sources", {})),
+                          "shared": {k: v for k, v in config.get("sources", {}).items() if k in SHARED_SOURCES and v},
+                          # Its own temperature and humidity: the twin learns how much they weigh here.
+                          "indoor": [config.get("sources", {}).get(k) for k in ("indoor_temperature", "indoor_humidity")],
                           "openings": {e: Opening(**{"sheltered": sheltered, **{k: v for k, v in declared.get(e, {}).items()
                                                                                if k in ("exposure", "kind", "sheltered")}})
                                        for e in config.get("windows", [])}})
         return found
+
+    def _sources(self):
+        """Its own sources, plus those of the shared air it has none of: the kitchen open onto the living room is heated
+        by its thermostat and breathes the air its CO₂ sensor measures. Its temperature and humidity stay its own."""
+        own = dict(self.config.get("sources", {}))
+        for partner in self.partners:
+            for key, entity_id in partner.get("shared", {}).items():
+                if key == "heating" and self.config.get("heated") is False:
+                    continue
+                own.setdefault(key, entity_id)
+        return own
+
+    def inherited(self):
+        """The sources this room reads from its shared air, by key: {"heating": "Salon"}."""
+        own = self.config.get("sources", {})
+        return {key: p["title"] for p in reversed(self.partners) for key in p.get("shared", {}) if key not in own and key in self.sources}
 
     @property
     def volume_name(self):
@@ -104,7 +129,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
 
     async def async_start(self):
         self.config_entry.async_on_unload(self.async_stopped)
-        ids = set(self.config.get("sources", {}).values()) | set(self.windows) | set(self.config.get("presence", []))
+        ids = set(self.sources.values()) | set(self.windows) | set(self.config.get("presence", []))
         for meta in self.config.get("openings", {}).values():
             ids.update(meta[k] for k in ("cover_entity", "auto_entity", "override_entity") if meta.get(k))
         # Covers driven by Adaptive Cover Pro: its signals are read without being chosen by hand.
@@ -199,7 +224,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         now = dt_util.utcnow()
         readings = {}
-        selected = self.config.get("sources", {})
+        selected = self.sources
         for key, kind in SOURCES.items():
             entity_id = selected.get(key)
             # Optional unselected sources do not fabricate a missing measurement.
@@ -298,6 +323,11 @@ class ComfortCoordinator(DataUpdateCoordinator):
                    "opened": 1.0 if any(r.usable and r.value is True for k, r in advice_readings.items() if k.startswith("window:")) else 0.0,
                    "heated": 1.0 if readings.get("heating") and readings["heating"].value == "heating" else 0.0,
                    "co2": now_value("co2"), "voc": now_value("voc")}
+        # Only the windows of the room sharing this air open: the twin weighs them as it learned.
+        mine = set(self.config.get("windows", []))
+        open_now = {k[7:] for k, r in advice_readings.items() if k.startswith("window:") and r.usable and r.value is True}
+        current["far"] = 1.0 if self.partners and open_now and not open_now & mine else 0.0
+        current["beside"] = self._beside_now()
         own = self.previous.to_dict()
         # The room's own learning, once optimal, gives the advised gesture its predicted result.
         summary = feedback.summarize(self.feedback, now)
@@ -371,6 +401,17 @@ class ComfortCoordinator(DataUpdateCoordinator):
             return None
         return {"water": sum(water(t, h) for t, h in samples) / len(samples), "temperature": sum(t for t, _ in samples) / len(samples),
                 "rooms": len(samples), "drying_model": max(models, key=lambda m: m.get("openings", 0))}
+
+    def _beside_now(self):
+        """The temperature and humidity measured now in the rooms sharing this air, averaged; None without them."""
+        found = []
+        for partner in self.partners:
+            entry = self.hass.config_entries.async_get_entry(partner["entry_id"])
+            obs = (getattr(getattr(entry, "runtime_data", None), "data", None) or {}).get("observations", {})
+            t, h = obs.get("indoor_temperature") or {}, obs.get("indoor_humidity") or {}
+            if t.get("quality") == "valid" and h.get("quality") == "valid" and isinstance(t.get("value"), (int, float)) and isinstance(h.get("value"), (int, float)):
+                found.append((t["value"], h["value"]))
+        return (sum(t for t, _ in found) / len(found), sum(h for _, h in found) / len(found)) if found else None
 
     def _settle(self, own):
         """One gesture per shared air: this room follows a partner whose reason outweighs its own."""
@@ -451,7 +492,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         """The entity behind a room source, chosen in the room or shared by the home (outdoor ones)."""
         if self.home_configuration and (spec := self.home_configuration.effective_sources(self.config).get(key)):
             return spec["entity_id"]
-        return self.config.get("sources", {}).get(key)
+        return self.sources.get(key)
 
     async def _learn(self, now):
         """Refit the room's airing model from the stored openings plus the recorder's recent history."""
@@ -500,20 +541,22 @@ class ComfortCoordinator(DataUpdateCoordinator):
         """Add the last ten days to the twin's half-hour samples (thirty days kept) and refit it."""
         stored = await self._twin_store.async_load() or {}
         # Samples kept before the sun was counted on the windows and the air was learned are rebuilt from the history.
-        rows = stored.get("samples") if isinstance(stored.get("samples"), list) and stored.get("format") == 2 else []
+        rows = stored.get("samples") if isinstance(stored.get("samples"), list) and stored.get("format") == TWIN_FORMAT else []
         keys = ("indoor_temperature", "indoor_humidity", "outdoor_temperature", "outdoor_humidity")
         sources = {k: self._source_entity(k) for k in keys}
         if all(sources.values()) and "recorder" in self.hass.config.components:
             try:
                 from homeassistant.components.recorder import get_instance, history
-                solar, heating = self._source_entity("solar"), self.config.get("sources", {}).get("heating")
+                solar, heating = self._source_entity("solar"), self.sources.get("heating")
                 # The air as well: how CO₂ and VOC go down, windows shut and open.
-                air = {k: self.config.get("sources", {}).get(k) for k in ("co2", "voc")}
+                air = {k: self.sources.get(k) for k in ("co2", "voc")}
                 start = now - timedelta(days=10)
                 recorder = get_instance(self.hass)
+                beside = [p["indoor"] for p in self.partners if all(p.get("indoor") or [None])]
                 states = await recorder.async_add_executor_job(
                     history.get_significant_states, self.hass, start, now,
-                    [*self.windows, *sources.values(), *([solar] if solar else []), *(e for e in air.values() if e)], None, True, False, False, True)
+                    [*self.windows, *sources.values(), *([solar] if solar else []), *(e for e in air.values() if e),
+                     *(e for pair in beside for e in pair)], None, True, False, False, True)
                 # The thermostat's running state is an attribute: its own query keeps them.
                 running = await recorder.async_add_executor_job(
                     history.get_significant_states, self.hass, start, now, [heating], None, True, False, False, False) if heating else {}
@@ -524,9 +567,11 @@ class ComfortCoordinator(DataUpdateCoordinator):
                     partial(twin.samples, start, now, *(self._points(states, sources[k]) for k in keys),
                             self._points(states, solar) if solar else [], contacts, heat,
                             facades=self._facades(), location=(self.hass.config.latitude, self.hass.config.longitude),
-                            co2=self._points(states, air["co2"]) if air["co2"] else [], voc=self._points(states, air["voc"]) if air["voc"] else []))
+                            co2=self._points(states, air["co2"]) if air["co2"] else [], voc=self._points(states, air["voc"]) if air["voc"] else [],
+                            near=set(self.config.get("windows", [])) if self.partners else None,
+                            beside=[(self._points(states, t), self._points(states, h)) for t, h in beside]))
                 rows = twin.merge(rows, fresh, now)
-                await self._twin_store.async_save({"samples": rows, "format": 2})
+                await self._twin_store.async_save({"samples": rows, "format": TWIN_FORMAT})
             except Exception:  # the twin then keeps what it learned before
                 if not self._twin_failed:
                     self._twin_failed = True
@@ -581,11 +626,24 @@ class ComfortCoordinator(DataUpdateCoordinator):
         home = getattr(self.home_configuration, "home", None) or {}
         return (home.get("answers") or {}).get(self.entry_id, {})
 
-    def learning_progress(self):
-        """How much of the room is learned: only what it has (a window, a heating, CO₂ or VOC sensors) is asked."""
-        sources = self.config.get("sources", {})
-        return twin.progress(self.twin, (self.drying_model or {}).get("openings", 0), windows=bool(self.windows),
-                             heating=bool(sources.get("heating")), air=tuple(k for k in ("co2", "voc") if sources.get(k)))
+    def learning_progress(self, alone=False):
+        """How much of the room is learned: only what it has (a window, a heating, CO₂ or VOC sensors) is asked.
+
+        Rooms sharing one air are learned together: one percentage for all of them, complete once each one is."""
+        # The airings are learned for the whole air (the volume reads the model learned from the most openings).
+        airings = max([(self.drying_model or {}).get("openings", 0)]
+                      + [(getattr(getattr(self.hass.config_entries.async_get_entry(p["entry_id"]), "runtime_data", None), "drying_model", None)
+                          or {}).get("openings", 0) for p in self.partners])
+        own = twin.progress(self.twin, airings, windows=bool(self.windows),
+                            heating=bool(self.sources.get("heating")), air=tuple(k for k in ("co2", "voc") if self.sources.get(k)))
+        if alone or not self.partners:
+            return own
+        others = []
+        for partner in self.partners:
+            entry = self.hass.config_entries.async_get_entry(partner["entry_id"])
+            if (coordinator := getattr(entry, "runtime_data", None)) is not None and hasattr(coordinator, "learning_progress"):
+                others.append(coordinator.learning_progress(alone=True))
+        return twin.together([own, *others])
 
     def questions(self):
         return habits.questions(self.config.get("name") or self.config_entry.title, self.config.get("area_id"), self.habits, self._answers())

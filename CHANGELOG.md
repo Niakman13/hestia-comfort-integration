@@ -1,3 +1,22 @@
+## 1.2.9 — Les pièces au même air apprises ensemble
+
+**En bref**
+
+- **Les pièces au même air sont vraiment liées** : une cuisine ouverte sur le salon reprend son chauffage et son CO₂, et les deux pièces apprennent ensemble.
+- **Chaque pièce apprend ce que l’autre pèse chez elle** : ses fenêtres, son air, son chauffage.
+
+### Nouveautés
+
+- Une pièce sans chauffage, sans CO₂, sans COV, sans purificateur ni VMC reprend ceux de la pièce au même air. Ses propres capteurs passent toujours avant. Une pièce « non chauffée » ne reprend pas de thermostat.
+- Dans « Vos pièces », la ligne affiche « Chauffage · Salon » ou « CO₂ · Salon » pour ce qui vient de l’autre pièce.
+- Sous « Même air que… », les poids appris : « Poids ici : fenêtres 50 % · air 4 % par heure · chauffage 40 % ».
+- Les pièces au même air ont un seul pourcentage d’apprentissage : elles sont « Optimal » ensemble.
+
+### Améliorations
+
+- Les fenêtres de l’autre pièce ne comptent plus comme les siennes : leur effet est appris à part.
+- La température et l’humidité de l’autre pièce entrent dans les prévisions : elles sont plus justes, surtout dans le salon.
+
 ## 1.2.8 — Une fenêtre ouverte seulement quand ça vaut le coup
 
 **En bref**
