@@ -26,8 +26,24 @@ const NEED_PILLS:Record<string,string>={dry:'Trop humide',heat:'Trop frais',cool
 /** …and its disk shows the measure's own pictogram: the tick is kept for « nothing to report ». */
 const NEED_DISKS:Record<string,string>={dry:'drop',heat:'temp',cool:'temp',air:'air'};
 const SEASON_NAMES:Record<string,string>={spring:'printemps',summer:'été',autumn:'automne',winter:'hiver'};
+export function humidityLabel(v:View):string|null {
+  if(numeric(v.observations.indoor_humidity)===null)return null;
+  const humidity=v.assessment.features?.humidity;
+  if(!humidity?.status)return v.assessment.needs.includes('dry')?'Trop humide':null;
+  if(humidity.status==='unknown')return null;
+  if(humidity.status==='normal')return 'Dans votre plage';
+  const wet=humidity.status==='high';
+  return humidity.degree===1?(wet?'Légèrement humide':'Légèrement sec'):humidity.degree===3?(wet?'Très humide':'Très sec'):(wet?'Air humide':'Air sec');
+}
 export function advice(v:View):Advice {
   const out=withLearning(v,gesture(v));
+  const humidity=v.assessment.features?.humidity,label=humidityLabel(v);
+  if(label&&humidity?.status&&v.assessment.reason!=='shared_volume'&&['calm','neutral'].includes(v.assessment.level)&&!unreadable(v)
+      &&v.assessment.action!=='fermer'&&!v.assessment.needs.some(need=>need!=='dry'&&need!=='precool')){
+    if(humidity.mould)return {...out,pill:'Murs à surveiller',disk:'drop',level:'neutral'};
+    if(humidity.status==='normal'&&out.pill==='Trop humide')return {...out,pill:undefined,disk:'check',level:v.assessment.level};
+    if(humidity.status==='low'||humidity.status==='high')return {...out,pill:label,disk:'drop',level:humidity.degree===1?'calm':'neutral'};
+  }
   // To close, say which window: in a shared air it may be in the other room.
   if(v.assessment.action==='fermer'&&!out.cap){
     const open=(v.assessment.openings??[]).filter(o=>o.open).map(o=>v.names?.[o.entity_id]??o.entity_id);
@@ -210,6 +226,11 @@ export function facts(v:View):Fact[] {
   // A room that cannot be read has no advice to explain: the banner sends to « Mesures ».
   if(unreadable(v))return out;
   const hum=f?.humidity,w=f?.warmth,air=f?.air,vol=f?.volume;
+  if(hum?.status==='low')out.push({ic:'drop',title:'Air sec',text:hum.reachable!=null&&hum.measured!=null
+    ?hum.reachable<hum.measured?'aérer assécherait davantage la pièce':hum.reachable>hum.measured?'l’air extérieur pourrait augmenter l’humidité ; le conseil tient aussi compte de la température':'aérer ne changerait pas l’humidité'
+    :'effet de l’aération inconnu sans mesure extérieure'});
+  if(hum?.trend==='improving'&&hum.degree)out.push({ic:'drop',title:'Humidité',text:'revient vers votre plage'});
+  else if(hum?.lasting&&hum.degree)out.push({ic:'clock',title:'Humidité',text:hum.status==='low'?'sous votre plage depuis plusieurs heures':'au-dessus de votre plage depuis plusieurs heures'});
   if(a.reason==='shared_volume'&&vol)out.push({ic:'home',title:'Même air',text:`conseil commun avec : ${vol.lead}`});
   if(a.reason==='open_neutral')out.push({ic:'open',title:'Fenêtre ouverte',text:a.needs.includes('dry')?'elle ne fait presque pas baisser l’humidité, vous pouvez refermer':'sans effet sur le confort, vous pouvez refermer'});
   // Opening held back: what holds it, in words.
@@ -387,8 +408,8 @@ const tileKeys:Record<string,string>={'CO₂':'co2',Particules:'pm25',COV:'voc',
 const ownTiles=(v:View,list:Tile[])=>list.filter(t=>!v.inherited?.[tileKeys[t.label]??'']);
 export function tiles(v:View,config:Config):Tile[] {
   const o=v.observations,a=v.assessment,mods=new Set(config.modules??[]),list:Tile[]=[],air=a.features?.air;
-  if(mods.has('humidity')&&o.indoor_humidity){const h=numeric(o.indoor_humidity),wet=a.needs.includes('dry'),outside=a.features?.humidity?.source==='outside';
-    list.push({ic:'drop',label:'Humidité',value:number(h),unit:'%',note:h===null?gone(o.indoor_humidity):a.features?.humidity?.local?'vapeur locale':wet?'trop humide':outside?'humide dehors aussi':'normale',level:wet?'watch':'calm',out:wet});}
+  if(mods.has('humidity')&&o.indoor_humidity){const h=numeric(o.indoor_humidity),hum=a.features?.humidity,wet=a.needs.includes('dry'),outside=hum?.source==='outside',out=h!==null&&(hum?.degree!==undefined?hum.degree>=2:wet);
+    list.push({ic:'drop',label:'Humidité',value:number(h),unit:'%',note:h===null?gone(o.indoor_humidity):(humidityLabel(v)?.toLowerCase()??(outside?'humide dehors aussi':'normale')),level:out?'watch':'calm',out});}
   if(mods.has('air')&&o.co2){const c=numeric(o.co2),high=air?.co2_status==='high';
     list.push({ic:'air',label:'CO₂',value:number(c),unit:'ppm',note:c===null?gone(o.co2):high?'à renouveler':'normal',level:high?(a.level==='urgent'?'urgent':'watch'):'calm',out:high});}
   if(mods.has('air'))for(const [key,ic,label,status] of [['pm25','pm','Particules',air?.pm25_status],['voc','flask','COV',air?.voc_status]] as const){
@@ -484,7 +505,7 @@ function chipValues(v:View,which:readonly Chip[]):{ic:string;text:string;out:boo
   const o=v.observations,a=v.assessment,out=[];
   for(const c of which){
     if(c==='temperature'){const t=numeric(o.indoor_temperature);if(t!==null)out.push({ic:'temp',text:number(t)+' °C',out:a.needs.includes('cool')||a.needs.includes('heat'),entity:o.indoor_temperature?.source??undefined});}
-    if(c==='humidity'){const h=numeric(o.indoor_humidity);if(h!==null)out.push({ic:'drop',text:number(h)+' %',out:a.needs.includes('dry'),entity:o.indoor_humidity?.source??undefined});}
+    if(c==='humidity'){const h=numeric(o.indoor_humidity),degree=a.features?.humidity?.degree;if(h!==null)out.push({ic:'drop',text:number(h)+' %',out:degree!==undefined?degree>=2:a.needs.includes('dry'),entity:o.indoor_humidity?.source??undefined});}
     if(c==='co2'){const x=numeric(o.co2);if(x!==null)out.push({ic:'air',text:number(x)+' ppm',out:a.features?.air?.co2_status==='high',entity:o.co2?.source??undefined});}
   }
   return out;
@@ -594,13 +615,14 @@ if(!customElements.get('niak-advice-ticker'))customElements.define('niak-advice-
 
 /** What a room needs, as measured: « 68 % trop humide », « 282 COV élevés ». The home card shows it under
     the room, since the advice itself is already in its banner. A device at work is not a need. */
-export function needs(v:View):string[] {
+export function needs(v:View,includeSlight=true):string[] {
   const o=v.observations,a=v.assessment,air=a.features?.air,out:string[]=[],val=(k:string)=>numeric(o[k]);
   const h=val('indoor_humidity'),c=val('co2'),pm=val('pm25'),voc=val('voc');
   // The temperature is the tile's own figure, just above: the words alone.
   if(a.needs.includes('cool'))out.push('trop chaud');
   if(a.needs.includes('heat'))out.push('trop frais');
-  if(a.needs.includes('dry'))out.push(h!==null?`${number(h)} % trop humide`:'trop humide');
+  const humidity=humidityLabel(v),degree=a.features?.humidity?.degree;
+  if(humidity&&(degree!==undefined?degree>=(includeSlight?1:2):a.needs.includes('dry')))out.push(h!==null?`${number(h)} % ${humidity.toLowerCase()}`:humidity.toLowerCase());
   if(air?.co2_status==='high')out.push(c!==null?`${number(c)} ppm de CO₂`:'CO₂ élevé');
   if(air?.pm25_status==='high'&&air?.pm25_treated!==true)out.push(pm!==null?`${number(pm)} particules élevées`:'particules élevées');
   if(air?.voc_status==='high')out.push(voc!==null?`${number(voc)} COV élevés`:'COV élevés');

@@ -179,7 +179,7 @@ export class NiakComfortHomeCard extends LitElement {
     if(!this.config)return nothing;
     const focus=this.rooms.find(r=>r.entry_id===h.focus);
     // No gesture, but rooms out of range: the home says how many, like each room card, never a tick and « Tout va bien ».
-    const watched=this.rooms.filter(r=>needs(r).length>0);
+    const watched=this.rooms.filter(r=>needs(r,false).length>0);
     const calmAdvice={title:'Rien à faire',line:h2`Aucune pièce <b>ne demande de geste</b>`,disk:h.open_rooms.length?'open':watched.length?'info':'check',cap:h.open_rooms.length?undefined:'Tout est fermé',
       ...(watched.length?{pill:`${watched.length} à surveiller`,level:'neutral' as Level}:{})};
     const homeSlides=muteAdvice?[{...muteAdvice}]:this.slides(h,calmAdvice);
@@ -187,7 +187,7 @@ export class NiakComfortHomeCard extends LitElement {
     const rooms=this.rooms.flatMap(r=>{const t=numeric(r.observations.indoor_temperature);return t===null?[]:[{name:r.title,entity:r.observations.indoor_temperature?.source??undefined,short:shorts.get(r.entry_id)!,value:t,level:(r.assessment.features?.season?.heated===false&&!['action','urgent'].includes(r.assessment.level)?'neutral':r.assessment.level) as Level}];});
     const st=this.state(),floors=h.floors?.length?h.floors:[{floor_id:null,name:'Mon logement',level:null,room_ids:this.rooms.map(r=>r.entry_id),mean:null,measured:0,total:0,hottest:null}];
     // « À surveiller » counts what the room cards call so: a gesture to make, or a measure out of range.
-    const all=this.rooms.map(r=>this.roomTile(r)),outside=this.rooms.filter(r=>['action','urgent'].includes(r.assessment.level)||needs(r).length>0);
+    const all=this.rooms.map(r=>this.roomTile(r)),outside=this.rooms.filter(r=>['action','urgent'].includes(r.assessment.level)||needs(r,false).length>0);
     const body=h2`<div class="nc-tiles">${floors.map(f=>h2`${floors.length>1?h2`<div class="nc-floor"><span class="nw-label">${f.name}</span><b>${number(f.mean)} °C</b></div>`:nothing}${this.collapse(this.rooms.filter(r=>f.room_ids.includes(r.entry_id))).map(r=>this.roomTile(r))}`)}</div>`;
     const c=this.config,name=c.title||'Mon logement',still=c.animations===false||c.rotate===false;
     const top=homeSlides[0]?.level??h.level as Level;
