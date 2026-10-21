@@ -71,6 +71,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self._advice_followed = False
         # Habits found in the twin's half hours (engine/habits.py), asked about in the hub.
         self.habits = []
+        # The season the home lives in (Niak Weather's, or a season sensor): hours of airing, answers by season.
+        self.season_name = None
         # Rooms open onto this one (no wall between them): their openings are this room's too.
         self.partners = self._partners()
         self.windows = list(dict.fromkeys([*self.config.get("windows", []), *(e for p in self.partners for e in p["windows"])]))
@@ -212,8 +214,12 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 starts.pop(eid, None)
             start = starts.get(eid)
             return max(0, (now - start).total_seconds() / 60) if start else None
+        # The season first: the hours of airing and the answers about a window open at night depend on it.
+        self._remember_season(weather_link.season(self.hass, self._weather_place()) or self._season(readings))
         return {**self.config.get("evolution", {}), "occupied": self._occupied(), "volume": self._volume_air(readings),
-                "intended_open": self._intended_open(now),
+                "intended_open": self._intended_open(now), "zone": dt_util.get_default_time_zone(),
+                # The season: Niak Weather's when it is the exterior source, else a season sensor chosen in « Extérieur ».
+                "season_name": self.season_name,
                 "heated": self.config.get("heated", True), "outdoor_mean_7d": self.season[1],
                 "indoor_day_range": self.day_range, "drying_model": self.drying_model,
                 "humidity_floor_3h": self.humidity_floor,
@@ -609,6 +615,15 @@ class ComfortCoordinator(DataUpdateCoordinator):
                     latest = other.last_reported
         return latest
 
+    def _remember_season(self, name):
+        self.season_name = name
+        return name
+
+    @staticmethod
+    def _season(readings):
+        reading = readings.get("season")
+        return reading.value if reading and reading.quality == "valid" else None
+
     def _weather_place(self):
         home = self.home_configuration.home if self.home_configuration else {}
         return home.get("weather") if home.get("configured") else None
@@ -650,12 +665,17 @@ class ComfortCoordinator(DataUpdateCoordinator):
         return twin.together([own, *others])
 
     def questions(self):
-        return habits.questions(self.config.get("name") or self.config_entry.title, self.config.get("area_id"), self.habits, self._answers())
+        return habits.questions(self.config.get("name") or self.config_entry.title, self.config.get("area_id"), self.habits, self._answers(),
+                                self.season_name)
 
     def _intended_open(self, now):
         """At night, a window the person said is open on purpose is not an oversight."""
         local = dt_util.as_local(now)
-        return self._answers().get("night_open") == "yes" and (local.hour >= 21 or local.hour < 8)
+        # The answer holds for the season it was given in (an older answer, without one, for the summer).
+        answers = self._answers()
+        given = answers.get(habits.night_key(self.season_name)) or (answers.get("night_open") if habits.season_group(self.season_name) == "summer" else None)
+        # In winter a window open at night is always said: no answer covers it.
+        return given == "yes" and habits.season_group(self.season_name) != "winter" and (local.hour >= 21 or local.hour < 8)
 
     def _track(self, assessment, current, now):
         """The feedback loop: close an airing followed, and note an advice left aside half an hour."""

@@ -48,13 +48,27 @@ class Habits(unittest.TestCase):
         self.assertEqual(assess(cold, openings={"a": Opening(exposure="E")}).action, "fermer")
         kept = assess(cold, openings={"a": Opening(exposure="E")}, context={"intended_open": True})
         self.assertEqual((kept.action, kept.reason), ("ok", "open_neutral"))
+        # On purpose, for the cool air: a warmer outside or a room getting too cold still gets its « Refermez ».
+        warm = zone(indoor_temperature=22.5, outdoor_temperature=25, **{"window:a": True})
+        self.assertEqual(assess(warm, openings={"a": Opening(exposure="E")}, context={"intended_open": True}).action, "fermer")
+        chilly = zone(indoor_temperature=18.5, outdoor_temperature=12, **{"window:a": True})
+        self.assertEqual(assess(chilly, openings={"a": Opening(exposure="E")}, context={"intended_open": True}).action, "fermer")
         # Rain still closes it.
         wet = zone(rain=True, indoor_temperature=20.3, outdoor_temperature=12, **{"window:a": True})
         self.assertEqual(assess(wet, openings={"a": Opening(exposure="E")}, context={"intended_open": True}).action, "fermer")
 
 
-if __name__ == "__main__":
-    unittest.main()
+class NightBySeason(unittest.TestCase):
+    def test_the_answer_holds_for_its_season_and_is_asked_again_in_the_next(self):
+        found = [h for h in habits.detect(rows(night_open=True), UTC) if h["kind"] == "night_open"]
+        asked = habits.questions("Chambre AL", "chambre_al", found, {}, "summer")
+        self.assertEqual([q["key"] for q in asked], ["night_open:summer"])
+        self.assertIn("cet été", asked[0]["text"])
+        self.assertEqual(habits.questions("Chambre AL", "chambre_al", found, {"night_open:summer": "yes"}, "summer"), [])
+        self.assertEqual([q["key"] for q in habits.questions("Chambre AL", "chambre_al", found, {"night_open:summer": "yes"}, "autumn")],
+                         ["night_open:between"])
+        self.assertEqual(habits.night_key("winter"), "night_open:winter")
+        self.assertEqual(habits.night_key(None), "night_open:between")
 
 
 class Answers(unittest.TestCase):
@@ -79,3 +93,7 @@ class Answers(unittest.TestCase):
         self.assertEqual(service.revision(), before)
         with self.assertRaises(ValueError):
             asyncio.run(service.answer("sdb", "night_open", "maybe"))
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -109,7 +109,9 @@ class Configuration:
         if "pollution" not in sources and air:
             sources["pollution"] = {"entity_id": air["entity_id"], "adapter": "niak_air", "block_from": 4}
         shown = {"provider": air["provider"], "index": air.get("index"), "label": air.get("label")} if air else None
-        return {"entry_id": found["entry_id"], "title": found["title"], "sources": sources, "air": shown}
+        # Its season too (2.6.2): from its own Season sensor or the date, read through its interface.
+        season = weather_link.season(self.hass, found["entry_id"])
+        return {"entry_id": found["entry_id"], "title": found["title"], "sources": sources, "air": shown, "season": season}
 
     def overview(self):
         used = {{**e.data, **e.options}.get("area_id") for e in self.entries()}

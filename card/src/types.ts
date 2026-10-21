@@ -63,7 +63,8 @@ export interface Features {
  warmth?:{occupied:boolean|null;heating:'on'|'off'|null}|null;
  drying?:{minutes:number;now:number;after:number;gain:number;tau:number;openings:number;later:{minutes:number;now:number;after:number;gain:number;time:string}|null}|null;
  trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string};
- season?:{known:boolean;weight:number|null;outdoor_mean:number|null;minimum:number;maximum:number;heated:boolean};
+ season?:{known:boolean;weight:number|null;outdoor_mean:number|null;minimum:number;maximum:number;heated:boolean;
+   /** The home's season when known (Niak Weather's, or a season sensor): it sets the rules of the advice. */ name?:string|null;group?:'summer'|'between'|'winter'|null};
  day_range?:{min:number;max:number}|null;
 }
 export interface Assessment {

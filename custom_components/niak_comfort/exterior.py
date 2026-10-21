@@ -58,4 +58,10 @@ def exterior_reading(state, key, spec, *, now, max_age):
         # Like ATMO: a regional daily index can flag the precaution, never prove the air is good now.
         return Reading(index >= spec.get("block_from", 4), "estimated", source=entity_id,
                        received_at=state.last_reported.isoformat(), detail="atmo_daily_forecast")
+    if adapter == "season":
+        # The season the home lives in, for the hours an airing can be asked for: a state, never a measure to age.
+        from .discovery import SEASONS
+        season = SEASONS.get(str(state.state).casefold().strip())
+        return Reading(season, "valid" if season else "unknown", source=entity_id, received_at=state.last_reported.isoformat(),
+                       detail="season" if season else "unavailable")
     return Reading(None, "unknown", source=entity_id, detail="unsupported_adapter")

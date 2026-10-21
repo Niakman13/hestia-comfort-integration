@@ -178,10 +178,22 @@ def outcome(model, indoor_temperature, indoor_water, outdoor_water, duration=Non
     return {"minutes": duration, "now": round(now, 1), "after": round(now - gain, 1), "gain": round(gain, 1)}
 
 
-def best_moment(model, indoor_temperature, indoor_water, outdoor_water, hours, now, horizon=12):
+# Hours an airing can be asked for, local time, by season (0 winter … 1 summer, engine/assessment.py seasonal):
+# the summer evening until bedtime, the in-between seasons by day, the winter in its least cold hours.
+AWAKE = {"summer": (7, 23), "between": (8, 21), "winter": (10, 18)}
+
+
+def awake(name=None):
+    """The (from, until) local hours an airing can be asked for in this season: Niak Weather's, or the season sensor
+    chosen in « Extérieur ». Spring, autumn, or no season known: the in-between hours, nothing guessed."""
+    return AWAKE[name] if name in ("summer", "winter") else AWAKE["between"]
+
+
+def best_moment(model, indoor_temperature, indoor_water, outdoor_water, hours, now, horizon=12, zone=None, season=None, duration=None):
     """A later hour that would dry clearly better than now, from the Niak Weather forecast.
 
-    The forecast is set on the local station: its error at the current hour is carried over.
+    The forecast is set on the local station: its error at the current hour is carried over. Only waking hours are
+    proposed (`awake`, for the `season` name, in the home's time zone `zone`): « Aérez vers 3 h » asks for nothing anyone would do.
     """
     forecast = []
     for hour in hours or []:
@@ -203,12 +215,15 @@ def best_moment(model, indoor_temperature, indoor_water, outdoor_water, hours, n
     if abs(bias) > MAX_FORECAST_BIAS:
         # The forecast does not describe this place well enough right now to promise a better hour.
         return None
-    present = outcome(model, indoor_temperature, indoor_water, outdoor_water)["gain"]
+    present = outcome(model, indoor_temperature, indoor_water, outdoor_water, duration)["gain"]
     best = None
     for when, water in forecast:
         if water is None or not now + timedelta(hours=1) <= when <= now + timedelta(hours=horizon):
             continue
-        later = outcome(model, indoor_temperature, indoor_water, max(0.5, water + bias))
+        start, until = awake(season)
+        if not start <= (when.astimezone(zone) if zone else when).hour < until:
+            continue
+        later = outcome(model, indoor_temperature, indoor_water, max(0.5, water + bias), duration)
         if later["gain"] >= MIN_GAIN and later["gain"] >= present + 4 and (best is None or later["gain"] > best["gain"]):
             best = {**later, "time": when.isoformat()}
     return best

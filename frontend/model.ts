@@ -1,6 +1,6 @@
-export const labels:Record<string,string>={indoor_temperature:'Température de la pièce',indoor_humidity:'Humidité de la pièce',co2:'CO₂',pm25:'Particules fines PM2.5',voc:'Composés organiques volatils (COV)',purifier:'Purificateur',ventilation:'Ventilation (VMC)',ventilation_boost:'Vitesse rapide de la VMC (Turbo)',presence:'Présence dans la pièce',illuminance:'Luminosité',windows:'Fenêtres et portes vers l’extérieur',heating:'Chauffage',outdoor_temperature:'Température dehors',outdoor_humidity:'Humidité dehors',rain:'Pluie actuelle',wind_gust:'Rafales de vent',wind_bearing:'Direction du vent',solar:'Ensoleillement',pollution:'Qualité de l’air extérieur'};
+export const labels:Record<string,string>={season:'Saison',indoor_temperature:'Température de la pièce',indoor_humidity:'Humidité de la pièce',co2:'CO₂',pm25:'Particules fines PM2.5',voc:'Composés organiques volatils (COV)',purifier:'Purificateur',ventilation:'Ventilation (VMC)',ventilation_boost:'Vitesse rapide de la VMC (Turbo)',presence:'Présence dans la pièce',illuminance:'Luminosité',windows:'Fenêtres et portes vers l’extérieur',heating:'Chauffage',outdoor_temperature:'Température dehors',outdoor_humidity:'Humidité dehors',rain:'Pluie actuelle',wind_gust:'Rafales de vent',wind_bearing:'Direction du vent',solar:'Ensoleillement',pollution:'Qualité de l’air extérieur'};
 export const indoor=['indoor_temperature','indoor_humidity'] as const;
-export const outdoor=['outdoor_temperature','outdoor_humidity','rain','wind_gust','wind_bearing','solar','pollution'] as const;
+export const outdoor=['outdoor_temperature','outdoor_humidity','rain','wind_gust','wind_bearing','solar','pollution','season'] as const;
 export const multiple=new Set(['windows','presence']);
 export const exposures:[string,string][]=[['N','Nord'],['NE','Nord-est'],['E','Est'],['SE','Sud-est'],['S','Sud'],['SO','Sud-ouest'],['O','Ouest'],['NO','Nord-ouest']];
 export const kinds:[string,string][]=[['window','Fenêtre'],['french','Porte-fenêtre ou baie'],['skylight','Vasistas ou petite fenêtre'],['door','Porte']];
@@ -85,7 +85,7 @@ export function coverage(room:RoomConfig):string {
  const n=room.windows.length;
  return (parts.join(', ')||'Mesures à compléter')+' · '+(n?n+' ouvrant'+(n>1?'s':''):'fenêtres non mesurées');
 }
-const shortNames:Record<string,string>={outdoor_temperature:'température',outdoor_humidity:'humidité',rain:'pluie',wind_gust:'rafales',wind_bearing:'direction du vent',solar:'ensoleillement',pollution:'qualité de l’air'};
+const shortNames:Record<string,string>={season:'saison',outdoor_temperature:'température',outdoor_humidity:'humidité',rain:'pluie',wind_gust:'rafales',wind_bearing:'direction du vent',solar:'ensoleillement',pollution:'qualité de l’air'};
 export function exteriorSummary(sources:Record<string,Spec>):string {
  const names=outdoor.filter(k=>sources[k]).map(k=>shortNames[k]);
  return names.length?names.join(', ').replace(/^./,c=>c.toUpperCase()):'Rien de configuré';
@@ -117,7 +117,9 @@ export const intros:Record<string,string[]>={
   'Réglées une fois, elles servent à toutes vos pièces.'],
 };
 // The exterior sensors, by frame: title and keys.
-export const outdoorGroups:[string,string[]][]=[['Température et humidité',['outdoor_temperature','outdoor_humidity']],['Pluie et vent',['rain','wind_gust','wind_bearing']],['Soleil',['solar']]];
+export const outdoorGroups:[string,string[]][]=[['Température et humidité',['outdoor_temperature','outdoor_humidity']],['Pluie et vent',['rain','wind_gust','wind_bearing']],['Soleil',['solar']],['Saison',['season']]];
+/** A season sensor's state, in words: the Season integration speaks English. */
+export const seasonNames:Record<string,string>={spring:'Printemps',printemps:'Printemps',summer:'Été',ete:'Été','été':'Été',autumn:'Automne',fall:'Automne',automne:'Automne',winter:'Hiver',hiver:'Hiver'};
 // Only the settings still displayed inside the "Autres réglages" advanced frame.
 export const advancedDefaults:Record<string,number>={illuminance_low:100,gust_max:45,frost:1,sun_facade:250,max_age_seconds:10800};
 export function changedAdvanced(settings:Record<string,number>):number{return Object.entries(advancedDefaults).filter(([k,v])=>settings[k]!==undefined&&settings[k]!==v).length;}
