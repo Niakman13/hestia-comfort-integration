@@ -1,3 +1,20 @@
+## 1.2.7 — L’apprentissage de chaque pièce en pourcentage
+
+**En bref**
+
+- **Chaque pièce a son pourcentage d’apprentissage**, et « Optimal » veut dire qu’elle a tout appris : ses mesures, ses fenêtres, son chauffage, son air.
+
+### Nouveautés
+
+- Dans « Vos pièces », le pourcentage de chaque pièce et ce qui reste à apprendre, une ligne par élément (« fenêtres : 2 aérations sur 5 », « chauffage pas encore vu en marche »).
+- Le pavé Apprentissage explique en trois lignes ce que Confort observe, et donne le pourcentage du logement.
+- Sur la carte, « À savoir » dit quand le résultat annoncé est encore estimé.
+
+### Corrections
+
+- Une pièce pouvait rester « À vérifier » sans fin : une demi-heure manquante après un redémarrage empêchait de vérifier ses prévisions.
+- Une porte ouverte quelques secondes n’est plus comptée comme une aération, et le résultat d’une aération est lu quelques minutes après la fermeture.
+
 ## 1.2.6 — La qualité de l’air de Niak Weather gardée
 
 **En bref**

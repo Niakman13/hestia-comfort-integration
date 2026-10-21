@@ -3,8 +3,7 @@ import {customElement,property,state} from 'lit/decorators.js';
 import {live} from 'lit/directives/live.js';
 import styles from './styles.css';
 import {frame,hubStyles,modernStyles,hubIcon,helpTip,defaultValue} from './socle/ui';
-import {labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,stages,intros,outdoorGroups,changedAdvanced,advancedDefaults,airSource,airChoices,exteriorChoices,airReferenceDefaults,vocPreset,thresholdSources,type Choice,type Area,type Candidate,type Discovery,type Health,type HealthLine,type Target,type Snapshot,type Hass,type Room,type RoomConfig,type Spec,type Twins,type Twin} from './model';
-/** Where a room's learning stands: optimal after a week, the last day replayed within ±0.5 °C and ±3 % (engine/twin.py). */
+import {labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,stages,intros,outdoorGroups,changedAdvanced,advancedDefaults,airSource,airChoices,exteriorChoices,airReferenceDefaults,vocPreset,thresholdSources,type Choice,type Area,type Candidate,type Discovery,type Health,type HealthLine,type Target,type Snapshot,type Hass,type Room,type RoomConfig,type Spec,type Twins,type Twin,type Progress} from './model';
 /** « Intégration 1.2.5 » → Intégration · 1.2.5 ; « Relié à Niak Weather · Gardanne » → Niak Weather · relié, Gardanne. */
 function versionLine(text:string):[string,string]{
   const weather=text.match(/Niak Weather(.*)$/);if(weather)return ['Niak Weather',(text.startsWith('Relié')?'relié':'')+weather[1].replace(/^\s*·\s*/,' · ').trim()];
@@ -12,12 +11,18 @@ function versionLine(text:string):[string,string]{
 }
 const fr=(v:number,d=1)=>v.toLocaleString('fr-FR',{maximumFractionDigits:d,minimumFractionDigits:0});
 const days=(d:number)=>{const n=Math.max(1,Math.floor(d));return `${n} jour${n>1?'s':''}`;};
-function learnState(t:Twin):{label:string;cls:string;text:string;rank:number}{
-  const p=t.precision,figures=p?`prévisions justes à ±${fr(p.temperature,p.temperature<1?2:1)} °C et ±${fr(p.humidity,0)} %`:'';
-  if(t.status!=='ready'||t.days<7)return {label:'En cours',cls:'',text:`Apprentissage en cours : ${days(t.days)} sur 7${p?' · '+figures:''}`,rank:1};
-  if(!p)return {label:'À vérifier',cls:'',text:'Vérification en attente : il manque une journée de mesures complète',rank:2};
-  if(p.temperature<=0.5&&p.humidity<=3)return {label:'Connue',cls:'ok',text:`Apprentissage optimal : ${figures}`,rank:0};
-  return {label:'À affiner',cls:'',text:`Apprentissage en cours : ${figures}`,rank:1};
+/** Where a room's learning stands: 100 % once it has seen everything it has (engine/twin.py progress). */
+function learnState(t:Twin,g?:Progress|null):{label:string;cls:string;missing:string[]}{
+  if(!g)return {label:t.status==='ready'?'—':'En cours',cls:'',missing:[]};
+  const p=g.parts,s=g.seen,missing:string[]=[];
+  if((p.days??1)<1)missing.push(`mesures : ${days(s.days)} sur 7`);
+  if((p.precision??1)<1)missing.push(t.precision?'prévisions à affiner':'prévisions à vérifier');
+  if((p.sun??1)<1)missing.push('soleil pas encore vu');
+  // Airings are kept three months, the twin's open half hours one: old airings alone are not enough.
+  if((p.windows??1)<1)missing.push(s.airings<5?`fenêtres : ${s.airings} aération${s.airings>1?'s':''} sur 5`:'fenêtres pas assez ouvertes ce mois-ci');
+  if((p.heating??1)<1)missing.push('chauffage pas encore vu en marche');
+  if((p.air??1)<1)missing.push('air pas encore vu fenêtre ouverte');
+  return {label:g.complete?'Optimal':`${g.percent} %`,cls:g.complete?'ok':'',missing};
 }
 const roomSections=[{stage:0,path:'temperature',label:'Température',title:'Température et humidité',icon:'temperature'},{stage:1,path:'ouvertures',label:'Ouvertures',title:'Fenêtres et portes',icon:'openings'},{stage:2,path:'air',label:'Air intérieur',title:'Qualité de l’air',icon:'air'},{stage:6,path:'presence',label:'Présence',title:'Présence',icon:'presence'},{stage:3,path:'chauffage',label:'Chauffage',title:'Chauffage',icon:'heating'},{stage:4,path:'piece',label:'La pièce',title:'La pièce et ses réglages',icon:'room'}];
 const roomOrder=[0,1,2,6,3,4,5];
@@ -128,7 +133,7 @@ export class ComfortSetup extends LitElement {
  /** The technical home of Confort: is everything working, then each room once (sensors and learning together), then the links. */
  private healthPage(){const h=this.health!,t=this.twins?.rooms??[];
   const cells=h.rooms.flatMap(r=>r.cells),configured=cells.filter(c=>c.level!=='none').length,answering=cells.filter(c=>c.level==='ok').length;
-  const known=t.filter(r=>learnState(r.twin).cls==='ok').length,todo=h.todo.length+h.tips.length;
+  const known=t.filter(r=>r.progress?.complete).length,todo=h.todo.length+h.tips.length;
   const kpi=(value:string,label:string,cls='')=>html`<div class=${'ac-kpi '+cls}><b>${value}</b><span>${label}</span></div>`;
   const row=(label:string,text:string,level:string)=>html`<div class="ac-row"><b>${label}</b><span class=${level==='ok'?'':'bad'}>${text}</span></div>`;
   // Niak Weather already shows as the exterior source: its link line would say it twice.
@@ -154,16 +159,18 @@ export class ComfortSetup extends LitElement {
  private roomsBox(){const h=this.health!,twins=new Map((this.twins?.rooms??[]).map(r=>[r.entry_id,r]));
   const measures=(cells:{level:string;text:string}[])=>html`<span class="ac-meas">${cells.map((c,i)=>c.level==='none'?nothing:html`<span class=${c.level}><span class="hl-dot"></span>${h.columns[i]==='Ouvrants'?c.text:c.level==='ok'?h.columns[i]:`${h.columns[i]} : ${c.text}`}</span>`)}</span>`;
   const learning=(entry_id:string)=>{const r=twins.get(entry_id);if(!r)return html`<span class="muted">—</span>`;
-   const st=learnState(r.twin),p=r.twin.precision,air=(r.air??[]).map(a=>a==='co2'?'CO₂':'COV').join(' et ');
-   return html`<span class=${'tw-pill '+st.cls}>${st.cls==='ok'?'Optimal':st.label} · ${days(r.twin.days)}</span>
-    <span class="ac-prec">${p?`±${fr(p.temperature,p.temperature<1?2:1)} °C · ±${fr(p.humidity,0)} %`:'pas encore de prévision rejouée'}${air?` · ${air} appris`:''}</span>`;};
+   const st=learnState(r.twin,r.progress),p=r.twin.precision;
+   // What is left to see, in words; once everything is seen, how closely the room is forecast.
+   return html`<span class=${'tw-pill '+st.cls}>${st.label}</span>
+    ${st.missing.length?html`<span class="ac-prec ac-left">${st.missing.map(m=>html`<span>${m}</span>`)}</span>`
+     :html`<span class="ac-prec">${p?`±${fr(p.temperature,p.temperature<1?2:1)} °C · ±${fr(p.humidity,0)} %`:''}</span>`}`;};
   const shared=(r:{entry_id:string;title:string})=>{const others=(this.volumeName(r.entry_id)??'').split(' · ').filter(x=>x&&x!==r.title);return others.length?html`<small>Même air que ${others.join(' et ')}</small>`:nothing;};
   return frame('Vos pièces',html`${this.addBar()}
    <div class="hl-table" tabindex="0" role="region" aria-label="Vos pièces, tableau défilant"><table><thead><tr><th scope="col">Pièce</th><th scope="col">Mesures</th><th scope="col">Apprentissage</th><th scope="col">24 h</th><th scope="col"><span class="sr">Modifier</span></th></tr></thead>
    <tbody>${h.rooms.map(r=>{const tw=twins.get(r.entry_id),curve=tw?.twin.precision?.curve;
     return html`<tr><th scope="row" class="ac-room">${r.title}${shared(r)}</th><td class="ac-wrap">${measures(r.cells)}</td><td>${learning(r.entry_id)}</td><td>${curve?this.twinCurve(curve,false):nothing}</td>
     <td class="ac-go">${this.editButton(r.entry_id,r.title)}</td></tr>`;})}</tbody></table></div>
-   <div class="ac-foot"><p class="tw-legend"><span class="measured">mesurée</span><span class="replayed">rejouée</span></p><p class="hint">Optimal : 7 jours de mesures et les 24 dernières heures rejouées à ±0,5 °C et ±3 %.</p></div>`,{className:'ac-rooms'});}
+   <div class="ac-foot"><p class="tw-legend"><span class="measured">mesurée</span><span class="replayed">rejouée</span></p><p class="hint">Optimal : la pièce est apprise à 100 %, Confort a vu tout ce qu’elle possède.</p></div>`,{className:'ac-rooms'});}
  private addBar(){return html`<div class="ac-bar"><p class="hint">Modifier une pièce : ses capteurs, ses ouvrants, le même air et ses réglages.</p>
    <button class="primary" aria-expanded=${this.adding?'true':'false'} @click=${()=>this.adding=!this.adding}>${this.adding?'Fermer':'Ajouter une pièce'}</button></div>
    ${this.adding?html`<div class="ac-add">${this.addRoom()}</div>`:nothing}`;}
@@ -183,8 +190,17 @@ export class ComfortSetup extends LitElement {
  }
  /** What learning asks and what it gave this week; the state of each room is in « Vos pièces ». */
  private learningBox(){
-  const q=this.learningQuestions(),w=this.learningWeek();if(q===nothing&&w===nothing)return nothing;
-  return frame('Apprentissage',html`${q}${w}`);
+  return frame('Apprentissage',html`${this.learningHow()}${this.learningQuestions()}${this.learningWeek()}`);
+ }
+ /** What learning is, in a few plain lines, and how far the home has got. */
+ private learningHow(){
+  const rooms=(this.twins?.rooms??[]).filter(r=>r.progress),mean=rooms.length?Math.round(rooms.reduce((n,r)=>n+r.progress!.percent,0)/rooms.length):null;
+  const done=rooms.filter(r=>r.progress!.complete).length;
+  return html`${mean!=null?html`<div class="tw-week">${[[`${mean} %`,'du logement appris'],[`${done} / ${rooms.length}`,done>1?'pièces apprises à 100 %':'pièce apprise à 100 %']].map(([b,t])=>html`<div><b>${b}</b><span>${t}</span></div>`)}</div>`:nothing}
+   <ul class="tw-how">
+    <li>Confort observe chaque pièce toutes les 30 minutes : température, humidité, soleil, fenêtres, chauffage.</li>
+    <li>Il en déduit comment elle réagit, puis vérifie ses prévisions sur la veille.</li>
+    <li>100 % : il a tout vu. Une semaine de mesures, des prévisions justes, cinq aérations, le chauffage en marche.</li></ul>`;
  }
  /** Questions on the habits found: a « yes » names a cause; nothing is ever guessed without it. */
  private learningQuestions(){

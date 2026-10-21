@@ -162,6 +162,14 @@ function withLearning(v:View,out:Advice):Advice {
 function learning(v:View):Fact|null {
   const t=v.twin,gestureNow=['action','urgent','benefit'].includes(v.assessment.level);
   if(!t||!gestureNow||v.assessment.features?.learned)return null;
+  // How much of the room is learned, and what the advised gesture still lacks: its result is then estimated.
+  const g=t.progress;
+  if(g){if(g.complete)return null;
+    const p=g.parts,n=g.seen.airings;
+    const why=(p.windows??1)<1&&v.assessment.action==='ouvrir'?(n<5?`fenêtre : ${n} aération${n>1?'s':''} sur 5`:'fenêtre pas assez ouverte ce mois-ci')
+      :(p.days??1)<1?`${Math.max(1,Math.floor(g.seen.days))} jour${Math.floor(g.seen.days)>1?'s':''} de mesures sur 7`
+      :(p.precision??1)<1?'prévisions pas encore assez justes':null;
+    return {ic:'clock',title:'Apprentissage',text:`${g.percent} %${why?' · '+why:''}, résultat estimé`};}
   // A room is learned after a week of measures at least, then only if its twin replays the last day well.
   if(t.status!=='ready'||t.days<7)return {ic:'clock',title:'Apprentissage',text:`en cours : ${Math.max(1,Math.floor(t.days))} jour${Math.floor(t.days)>1?'s':''} sur 7`};
   if(!t.precision)return {ic:'clock',title:'Apprentissage',text:'vérification en attente : il manque une journée de mesures complète'};

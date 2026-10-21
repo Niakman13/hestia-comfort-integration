@@ -62,6 +62,36 @@ class Twin(unittest.TestCase):
         merged = twin.merge(rows, [], START + timedelta(days=31))
         self.assertTrue(all(datetime.fromisoformat(r[0]) >= START + timedelta(days=1) for r in merged))
 
+    def test_a_half_hour_left_out_does_not_stop_the_replay(self):
+        """Chambre P, 20 October: its contact answered one second after a restart, and the day was never replayed."""
+        rows, end = known_room(days=8)
+        model = twin.fit(rows)
+        full = twin.replay(model, rows)
+        holed = [r for r in rows if r[0] != rows[-12][0]]
+        replayed = twin.replay(model, holed)
+        self.assertIsNotNone(replayed)
+        self.assertLess(abs(replayed["temperature"] - full["temperature"]), 0.2)
+        # Most of the day missing: no replay.
+        self.assertIsNone(twin.replay(model, rows[:-48] + rows[-20:]))
+
+    def test_the_learning_is_complete_only_once_everything_the_room_has_is_seen(self):
+        rows, end = known_room(days=8)
+        learned = twin.summary(rows, end)
+        # The window was opened every evening, five airings learned: nothing more for a room without heating.
+        done = twin.progress(learned, airings=5, windows=True)
+        self.assertEqual((done["percent"], done["complete"]), (100, True))
+        # A thermostat that never ran: the room is not completely learned.
+        cold = twin.progress(learned, airings=5, windows=True, heating=True)
+        self.assertFalse(cold["complete"])
+        self.assertEqual(cold["parts"]["heating"], 0)
+        self.assertEqual(cold["percent"], 89)
+        # Chambre M: a window never opened long enough, the closed room known well.
+        shut = twin.progress({**learned, "model": {**learned["model"], "open_samples": 0}}, airings=0, windows=True)
+        self.assertEqual((shut["percent"], shut["parts"]["windows"]), (76, 0))
+        # A room without a contact is not asked for its windows.
+        self.assertNotIn("windows", twin.progress(learned)["parts"])
+        self.assertEqual(twin.progress(None)["percent"], 0)
+
     def test_the_sun_never_cools_a_room(self):
         rows, end = known_room()
         flipped = [[r[0], r[1], r[2], r[3], r[4], 0.0 if r[5] else 0.5, r[6], r[7]] for r in rows]
