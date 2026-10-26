@@ -1,3 +1,14 @@
+## 1.7.2 — L’interrupteur de l’échelle répond
+
+### Corrections
+
+- **Section 1 · Bandeau conseil : l’interrupteur « Échelle de température » se coupe enfin.** Le formulaire de Home Assistant renvoyait aussi l’ancienne liste des repères, qui rallumait l’échelle aussitôt.
+- Format Mesures : le même interrupteur affiche ou retire l’échelle.
+
+### Après la mise à jour
+
+- Rechargez la page (ou videz le cache de l’application mobile).
+
 ## 1.7.1 — Un graphique plus lisible, un bandeau plus simple à régler
 
 **En bref**

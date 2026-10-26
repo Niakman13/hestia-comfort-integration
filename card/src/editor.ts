@@ -75,6 +75,19 @@ function tidy(next:Record<string,unknown>,before:Record<string,unknown>,defaults
   return next;
 }
 
+/** Is the temperature scale shown: the switch, else the list of marks a card kept from before. */
+export const scaleShown=(c:Config)=>c.show_scale??!(c.scale_marks?.length===0||(c.scale_marks===undefined&&c.format==='measures'));
+/** The card after one change in the form. Home Assistant's form sends back every field it holds, the hidden ones too:
+    only what really changed may replace a setting (the scale switch was undone by the list of marks it carries). */
+export function nextConfig(config:Config,v:Record<string,unknown>):Record<string,unknown>{
+  const next:Record<string,unknown>={...config,...v};
+  // The scale needs the temperature module.
+  if(Array.isArray(v.modules))next.modules=[...(v.modules as string[]),...((config.modules??MODULES).includes('temperature')?['temperature']:[])];
+  if(typeof v.show_scale==='boolean'&&v.show_scale!==scaleShown(config)){next.show_scale=v.show_scale;delete next.scale_marks;}
+  else{next.scale_marks=config.scale_marks;next.show_scale=config.show_scale;}
+  if('modules' in v&&!('show_measures' in v))delete next.show_measures;
+  return next;
+}
 export class ComfortEditor extends LitElement {
   @property({attribute:false}) hass?:HomeAssistant;
   @state() private config?:Config;
@@ -111,14 +124,7 @@ export class ComfortEditor extends LitElement {
   }
   private changed(e:CustomEvent<{value:Record<string,unknown>}>){
     e.stopPropagation();if(!this.config)return;
-    const v=e.detail.value,next:Record<string,unknown>={...this.config,...v};
-    // The scale needs the temperature module; the lists replace the older on/off switches they cover.
-    if(Array.isArray(v.modules))next.modules=[...(v.modules as string[]),...((this.config.modules??MODULES).includes('temperature')?['temperature']:[])];
-    if('scale_marks' in v)delete next.show_scale;
-    // The scale is now shown or not: the switch replaces a list of marks kept from before.
-    if('show_scale' in v)delete next.scale_marks;
-    if('modules' in v&&!('show_measures' in v))delete next.show_measures;
-    this.config=cleanConfig(tidy(next,this.config as unknown as Record<string,unknown>,this.defaults(this.config)) as unknown as Config);
+    this.config=cleanConfig(tidy(nextConfig(this.config,e.detail.value),this.config as unknown as Record<string,unknown>,this.defaults(this.config)) as unknown as Config);
     this.dispatchEvent(new CustomEvent('config-changed',{detail:{config:this.config},bubbles:true,composed:true}));
   }
   private defaults(c:Config):Record<string,unknown>{
@@ -131,7 +137,7 @@ export class ComfortEditor extends LitElement {
     if(!this.config||!this.hass)return nothing;
     const c=this.config;
     const data={...this.defaults(c),hold_action:c.hold_action??(c.hold_path?'page':'popup'),
-      ...c,show_scale:c.show_scale??!(c.scale_marks?.length===0||(c.scale_marks===undefined&&c.format==='measures')),modules:(c.modules??MODULES).filter(m=>m!=='temperature')};
+      ...c,show_scale:scaleShown(c),modules:(c.modules??MODULES).filter(m=>m!=='temperature')};
     const one=this.entries?.length===1?this.entries[0]:this.entries?.find(e=>e.entry_id===c.entry_id);
     return html`${this.entries===null?html`<p class="note warn">L’intégration Niak Confort ne répond pas : vérifiez qu’elle est installée et chargée.</p>`
       :this.entries?.length===0?html`<p class="note warn">Aucune pièce : ouvrez <a href="/niak/confort" @click=${follow}>Niak Confort</a> dans la barre latérale pour en ajouter une.</p>`
