@@ -378,17 +378,21 @@ export function scale(s:ScaleInput):TemplateResult {
   });
   // The bubble stays inside the frame when the value sits near an end of the scale.
   const bubble=(x:number)=>x<12?'left:0;transform:none':x>88?'right:0;left:auto;transform:none':'left:'+x.toFixed(2)+'%';
+  // Temperature only: the track says too cool (blue) and too warm (orange) around the range; the last 24 hours are a
+  // thin whisker over it, so the range always shows through.
+  const zones=unit==='°C';
   const said=[s.now!=null?`Maintenant ${fmt(s.now)} ${unit}`:'',s.band?`plage ${fmt(s.band[0])} à ${fmt(s.band[1])} ${unit}`:'',s.out!=null?`dehors ${fmt(s.out)} ${unit}`:''].filter(Boolean).join(', ');
   return html`<div class="nc-scale" role="img" aria-label=${said}>
     <div class="nc-track"></div>
-    ${s.band?html`<div class="nc-band" style=${`left:${pct(s.band[0])};width:${(pos(s.band[1])-pos(s.band[0])).toFixed(2)}%`}></div>`:nothing}
+    ${s.band&&zones?html`<div class="nc-zone cold" style=${`left:0;width:${pct(s.band[0])}`}></div><div class="nc-zone warm" style=${`left:${pct(s.band[1])};right:0`}></div>`:nothing}
+    ${s.band?html`<div class=${'nc-band'+(zones?' zoned':'')} style=${`left:${pct(s.band[0])};width:${(pos(s.band[1])-pos(s.band[0])).toFixed(2)}%`}></div>`:nothing}
     ${s.day?html`<div class="nc-day" style=${`left:${pct(s.day.min)};width:${(pos(s.day.max)-pos(s.day.min)).toFixed(2)}%`}></div>`:nothing}
     ${s.out!=null?(s.outEntity?html`<button type="button" class="nc-mk out nc-hit" style=${'left:'+pct(s.out)} title="Détails : dehors" aria-label="Détails de la température dehors" @click=${(e:Event)=>moreInfo(e,s.outEntity!)}></button>`:html`<span class="nc-mk out" style=${'left:'+pct(s.out)}></span>`):nothing}
     ${(s.rooms??[]).map(r=>r.entity?html`<button type="button" class="nc-mk room nc-hit" data-level=${r.level} style=${'left:'+pct(r.value)} title=${r.name+' '+fmt(r.value)+' '+unit} aria-label=${'Détails : '+r.name} @click=${(e:Event)=>moreInfo(e,r.entity!)}></button>`:html`<span class="nc-mk room" data-level=${r.level} style=${'left:'+pct(r.value)} title=${r.name+' '+fmt(r.value)+' '+unit}></span>`)}
     ${s.now!=null?html`<span class="nc-ring" style=${'left:'+pct(s.now)}></span>${s.nowEntity?html`<button type="button" class="nw-pill nc-now nc-hit" style=${bubble(pos(s.now))} title="Détails de la température" @click=${(e:Event)=>moreInfo(e,s.nowEntity!)}>${fmt(s.now)} ${unit}</button>`:html`<span class="nw-pill nc-now" style=${bubble(pos(s.now))}>${fmt(s.now)} ${unit}</span>`}`:nothing}
     ${placed}
   </div>
-  <div class="nw-legend nc-legend">${s.band?html`<span><i class="k-band"></i>votre plage</span>`:nothing}${s.day?html`<span><i class="k-day"></i>min–max 24 h</span>`:nothing}${s.rooms?html`<span><i class="k-room"></i>pièces</span>`:nothing}${s.out!=null?html`<span><i class="k-out"></i>dehors</span>`:nothing}</div>`;
+  <div class="nw-legend nc-legend">${s.band&&zones?html`<span><i class="k-zone cold"></i>trop frais</span>`:nothing}${s.band?html`<span><i class=${'k-band'+(zones?' zoned':'')}></i>votre plage</span>`:nothing}${s.band&&zones?html`<span><i class="k-zone warm"></i>trop chaud</span>`:nothing}${s.day?html`<span><i class="k-day"></i>min–max 24 h</span>`:nothing}${s.rooms?html`<span><i class="k-room"></i>pièces</span>`:nothing}${s.out!=null?html`<span><i class="k-out"></i>dehors</span>`:nothing}</div>`;
 }
 
 /** `watch` (soft yellow): the measure leaves your range, without a gesture asked; orange stays for gestures. */
