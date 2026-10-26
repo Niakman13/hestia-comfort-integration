@@ -1,3 +1,21 @@
+## 1.7.5 — Une pièce fraîche dit vrai
+
+**En bref**
+
+- Quand le chauffage s’occupe d’une pièce un peu fraîche, la carte dit « Rien à faire » sans laisser croire à un problème.
+- Quand personne ne la réchauffe, elle demande de rallumer le chauffage.
+
+### Améliorations
+
+- **Plus de « Un peu frais » à côté de « Rien à faire »** : la pastille dit « Tout va bien », ou nomme l’autre problème de la pièce (« Murs à surveiller », « Trop humide »). Le froid passe dans « À savoir » : « Un peu frais · le chauffage s’en charge ».
+- **« Rallumez le chauffage » aussi sans détecteur de présence** : une pièce nettement froide depuis 30 min, chauffage coupé à la main, le demande même quand Niak ne sait pas si quelqu’un est là.
+- **Carte « Mon logement »** : une pièce juste un peu fraîche n’est plus comptée « à surveiller ».
+
+### Corrections
+
+- **« un peu sous votre plage » seulement quand c’est un peu** : une pièce nettement froide dit « sous votre plage ».
+- **Pièce chauffée sans chauffage relié** : elle garde « Trop frais » quand elle est nettement sous sa plage, jamais « Tout va bien ».
+
 ## 1.7.4 — Le soleil montré tel qu’il est
 
 **En bref**

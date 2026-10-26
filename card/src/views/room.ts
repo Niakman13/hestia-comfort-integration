@@ -30,6 +30,11 @@ const unreadable=(v:View)=>{const failed=v.assessment.missing.filter(k=>!!v.obse
 const NEED_PILLS:Record<string,string>={dry:'Trop humide',heat:'Trop frais',cool:'Trop chaud',air:'Air à renouveler'};
 /** …and its disk shows the measure's own pictogram: the tick is kept for « nothing to report ». */
 const NEED_DISKS:Record<string,string>={dry:'drop',heat:'temp',cool:'temp',air:'air'};
+/** A cool room that asks no gesture is no problem to the person: the heating takes care of it, nobody is home, the
+ * outdoor air or the room itself warms it, or it is within the tolerance. Only a room clearly cold with no heating
+ * known keeps its « Trop frais »: Niak cannot say who warms it, and « Tout va bien » would be wrong. */
+const coldSettled=(a:View['assessment'])=>{const w=a.features?.warmth;
+  return !w||w.slight||w.heating!=null||!!w.thermostat||w.occupied===false||!!w.outdoor_warms||!!w.warming;};
 const SEASON_NAMES:Record<string,string>={spring:'printemps',summer:'été',autumn:'automne',winter:'hiver'};
 export function humidityLabel(v:View):string|null {
   if(numeric(v.observations.indoor_humidity)===null)return null;
@@ -44,7 +49,7 @@ export function advice(v:View):Advice {
   const out=withLearning(v,gesture(v));
   const humidity=v.assessment.features?.humidity,label=humidityLabel(v);
   if(label&&humidity?.status&&v.assessment.reason!=='shared_volume'&&['calm','neutral'].includes(v.assessment.level)&&!unreadable(v)
-      &&v.assessment.action!=='fermer'&&!v.assessment.needs.some(need=>need!=='dry'&&need!=='precool')){
+      &&v.assessment.action!=='fermer'&&!v.assessment.needs.some(need=>need!=='dry'&&need!=='precool'&&(need!=='heat'||!coldSettled(v.assessment)))){
     if(humidity.mould)return {...out,pill:'Murs à surveiller',disk:'drop',level:'neutral'};
     if(humidity.status==='normal'&&out.pill==='Trop humide')return {...out,pill:undefined,disk:'check',level:v.assessment.level};
     if(humidity.status==='low'||humidity.status==='high')return {...out,pill:label,disk:'drop',level:humidity.degree===1?'calm':'neutral'};
@@ -122,10 +127,12 @@ function gesture(v:View):Advice {
     // Opening is held back (rain, gusts, outdoor air): not that it would bring nothing; « À savoir » says why.
     // A warm room in winter: opening would cool it, but too fast; the season, not the physics, says no.
     const winterWarm=a.features?.season?.group==='winter'&&a.needs.includes('cool');
+    // « Un peu frais » beside « Rien à faire » read as « heat it »: a settled cold is said in « À savoir » alone.
+    const shown=a.needs.filter(need=>need!=='heat'||!coldSettled(a));
     return {title:'Rien à faire',line:opened?html`Ouverte ou fermée, ${b('cela ne change rien')}`:a.reason==='opening_blocked'?html`Aérer ${b('n’est pas possible')} pour l’instant`
       :winterWarm?html`Ouvrir la ${b('refroidirait trop vite')} en hiver`:html`Ouvrir ${b('n’apporterait rien')} pour l’instant`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined,
       // The pill names what is out, never « plage »: that word is the temperature's range alone.
-      ...(a.needs.length?{pill:a.needs[0]==='heat'&&a.features?.warmth?.slight?'Un peu frais':NEED_PILLS[a.needs[0]]??'À surveiller',level:'neutral' as Level,...(opened?{}:{disk:NEED_DISKS[a.needs[0]]??'info'})}:{})};}
+      ...(shown.length?{pill:NEED_PILLS[shown[0]]??'À surveiller',level:'neutral' as Level,...(opened?{}:{disk:NEED_DISKS[shown[0]]??'info'})}:{})};}
   switch(a.reason){
     case 'within_comfort': return {title:'Rien à faire',line:html`${deg(ti)}, ${b('dans votre plage')}`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
     case 'rain_open_windows': return {title:'Fermez, il pleut',line:html`La pluie ${b('entre par les ouvrants exposés')}`,disk:'rain'};
@@ -266,12 +273,12 @@ export function facts(v:View):Fact[] {
   if(a.reason==='exchange_harmful'&&a.needs.includes('dry'))
     out.push({ic:'drop',title:'Humidité',text:gain!=null&&gain<4?`l’aération ne la baisserait que ${gain<1.5?'d’un point à peine':`de ${Math.round(gain)} points`}`:'l’aération ne la ferait pas assez baisser'});
   if(a.reason==='heat_needed'&&a.action!=='fermer'&&a.level!=='action')
-    out.push({ic:'temp',title:'Pièce fraîche',text:w?.outdoor_warms?'l’air du dehors, plus chaud, la réchauffe : vous pouvez laisser ouvert'
+    out.push({ic:'temp',title:w?.slight?'Un peu frais':'Pièce fraîche',text:w?.outdoor_warms?'l’air du dehors, plus chaud, la réchauffe : vous pouvez laisser ouvert'
       :w?.occupied===false?(f?.people?.away?.length?`${f.people.away.join(' et ')} ${f.people.away.length>1?'absents':'absent'} : pas besoin de chauffer`:'maison vide : pas besoin de chauffer')
       :w?.thermostat?.lowered?`thermostat en ${presetWord(w.thermostat.preset)}${w.thermostat.target!=null?` : ${deg(w.thermostat.target)} visés`:''}`
       :w?.thermostat?.off_reason&&w.thermostat.off_reason!=='manual'?`chauffage arrêté par le thermostat (${offWords[w.thermostat.off_reason]??'automatique'}), il repartira seul`
       :w?.heating==='on'?'le chauffage s’en charge':w?.warming?`${deg(ti)}, elle se réchauffe d’elle-même`
-      :w?.heating==='off'?`${deg(ti)}, un peu sous votre plage · chauffage coupé`:`${deg(ti)}, sous votre plage`});
+      :w?.heating==='off'?`${deg(ti)}, ${w.slight?'un peu ':''}sous votre plage · chauffage coupé`:`${deg(ti)}, sous votre plage`});
   // Tonight, simulated on the room's twin (after NADIR): the hours to open and what it leaves for tomorrow's peak.
   const plan=f?.night,warm=a.needs.includes('cool')||a.needs.includes('precool')||['cooling_possible','precool_possible','precool_later','cooling_unavailable'].includes(a.reason);
   if(plan?.worth&&warm&&plan.windows.length){const w0=plan.windows[0];
@@ -328,7 +335,7 @@ export function facts(v:View):Fact[] {
 /** The « À savoir » box, under the advice; nothing when there is nothing to know. */
 /** The topic of an « À savoir » line, from its title: what the card's settings keep or leave out. */
 const TOPICS:Record<string,string>={'Humidité':'humidity','Air sec':'humidity','Humidité élevée':'humidity','Air humide dehors':'humidity','Vapeur':'humidity',
-  'Pièce fraîche':'heating','Pièce chaude':'heating','Soleil':'sun','Fenêtres':'windows','Autres fenêtres':'windows','Fenêtre ouverte':'windows',
+  'Pièce fraîche':'heating','Un peu frais':'heating','Pièce chaude':'heating','Soleil':'sun','Fenêtres':'windows','Autres fenêtres':'windows','Fenêtre ouverte':'windows',
   'Aération':'windows','Aération d’hiver':'windows','Pièce vide':'household','Nuit':'household','Purificateur':'equipment','VMC':'equipment',
   'Cette nuit':'forecast','Dernière aération':'learning'};
 export function factBox(v:View,partners:View[]=[],config:Config={type:'custom:niak-comfort-card'}):TemplateResult|typeof nothing {
@@ -692,7 +699,9 @@ export function needs(v:View,includeSlight=true):string[] {
   const h=val('indoor_humidity'),c=val('co2'),pm=val('pm25'),voc=val('voc');
   // The temperature is the tile's own figure, just above: the words alone.
   if(a.needs.includes('cool'))out.push('trop chaud');
-  if(a.needs.includes('heat'))out.push(a.features?.warmth?.slight?'un peu frais':'trop frais');
+  // A little cool, like slightly humid, is no room to watch on the home card.
+  const slight=!!a.features?.warmth?.slight;
+  if(a.needs.includes('heat')&&(includeSlight||!slight))out.push(slight?'un peu frais':'trop frais');
   const humidity=humidityLabel(v),degree=a.features?.humidity?.degree;
   if(humidity&&(degree!==undefined?degree>=(includeSlight?1:2):a.needs.includes('dry')))out.push(h!==null?`${number(h)} % ${humidity.toLowerCase()}`:humidity.toLowerCase());
   if(air?.co2_status==='high')out.push(c!==null?`${number(c)} ppm de CO₂`:'CO₂ élevé');
