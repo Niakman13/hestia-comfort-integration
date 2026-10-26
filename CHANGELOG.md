@@ -1,3 +1,15 @@
+## 1.7.1 — Un graphique plus lisible, un bandeau plus simple à régler
+
+**En bref**
+
+- **Le graphique « Prochaines heures » est plus lisible** : une courbe lissée, une échelle qui ne grossit plus quelques dixièmes, la plage de confort en simples lignes pointillées, les valeurs de départ et d’arrivée au bout de la courbe.
+- **La courbe prévue se voit** quand il n’y a pas de geste (le soleil) : en couleur, avec un léger fond dessous. « Le soleil va réchauffer la pièce » quand la pièce est déjà dans sa plage, « inutile de chauffer » seulement quand elle est fraîche.
+- **Section 1 · Bandeau conseil plus simple** : le conseil est la base de la carte et ne se coupe plus. Il reste trois interrupteurs : faire défiler les conseils, l’échelle de température, le graphique « Prochaines heures ».
+
+### Après la mise à jour
+
+- Redémarrez Home Assistant, puis rechargez la page. Une carte qui avait retiré des repères de l’échelle garde son réglage tant qu’on ne touche pas à l’interrupteur.
+
 ## 1.7.0 — Le graphique « Prochaines heures », une carte réglable section par section
 
 **En bref**

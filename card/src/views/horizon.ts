@@ -15,7 +15,7 @@ export function horizonHead(h:Horizon):string{
   switch(h.kind){
     case 'cool':return `ouvrez de ${hour(r.open_from as string)} à ${hour(r.open_until as string)}`;
     case 'air':case 'dry':return `aérez ${r.minutes} min ${soon(r.at as string)?'maintenant':'vers '+hour(r.at as string)}`;
-    case 'sun':return 'le soleil réchauffe : inutile de chauffer';
+    case 'sun':return r.cold?'le soleil réchauffe : inutile de chauffer':'le soleil va réchauffer la pièce';
   }
   return '';
 }
@@ -37,28 +37,41 @@ const gestureLabel:Record<string,string>={cool:'aéré',air:'en aérant',dry:'en
 export function horizonChart(h:Horizon,plage:[number,number]|null):TemplateResult{
   const n=h.base.length,t0=new Date(h.start).getTime(),stepMs=h.step_minutes*60e3,t1=t0+(n-1)*stepMs;
   const X=(t:number)=>((t-t0)/(t1-t0))*W,values=[...h.base,...(h.gesture??[])];
-  const pad=h.unit==='%'?3:0.6,lo=Math.min(...values)-pad,hi=Math.max(...values)+pad;
-  const Y=(v:number)=>H-(Math.max(lo,Math.min(hi,v))-lo)/(hi-lo)*H;
-  const path=(s:number[])=>s.map((v,i)=>(i?'L':'M')+X(t0+i*stepMs).toFixed(1)+' '+Y(v).toFixed(1)).join(' ');
-  const color=COLORS[h.kind]??'var(--nc-h-air)';
-  const span=([a,b]:string[])=>{const xa=Math.max(0,X(new Date(a).getTime())),xb=Math.min(W,Math.max(X(new Date(b).getTime()),xa+5));return [xa,xb];};
+  // A few tenths must not look like a cliff: at least 3 °C (12 %) from top to bottom, around the curves.
+  const span=Math.max(h.unit==='%'?12:3,Math.max(...values)-Math.min(...values)+(h.unit==='%'?4:0.8)),mid=(Math.max(...values)+Math.min(...values))/2;
+  const lo=mid-span/2,hi=mid+span/2,Y=(v:number)=>H-(Math.max(lo,Math.min(hi,v))-lo)/(hi-lo)*H;
+  // A smooth line through the half hours (Catmull-Rom as Bézier curves).
+  const path=(s:number[])=>{const p=s.map((v,i)=>[X(t0+i*stepMs),Y(v)]);let d=`M${p[0][0].toFixed(1)} ${p[0][1].toFixed(1)}`;
+    for(let i=0;i<p.length-1;i++){const a=p[Math.max(0,i-1)],b=p[i],c=p[i+1],e=p[Math.min(p.length-1,i+2)];
+      d+=` C${(b[0]+(c[0]-a[0])/6).toFixed(1)} ${(b[1]+(c[1]-a[1])/6).toFixed(1)} ${(c[0]-(e[0]-b[0])/6).toFixed(1)} ${(c[1]-(e[1]-b[1])/6).toFixed(1)} ${c[0].toFixed(1)} ${c[1].toFixed(1)}`;}
+    return d;};
+  const color=COLORS[h.kind]??'var(--nc-h-air)',line=h.gesture??h.base;
+  const band=([a,b]:string[])=>{const xa=Math.max(0,X(new Date(a).getTime())),xb=Math.min(W,Math.max(X(new Date(b).getTime()),xa+5));return [xa,xb];};
   const ticks:TemplateResult[]=[];
   for(let i=0;i<n;i++){const d=new Date(t0+i*stepMs);if(d.getMinutes()===0&&d.getHours()%6===0){const x=X(d.getTime());
     ticks.push(svg`<text x=${x} y=${H+30} text-anchor=${x<12?'start':x>W-12?'end':'middle'} class="nc-h-tick">${d.getHours()===0?'minuit':d.getHours()+' h'}</text>`);}}
-  return html`<svg class="nc-h-svg" viewBox="-2 -2 ${W+4} ${H+36}" role="img" aria-label=${`${horizonHead(h)}`}>
-    ${plage?svg`<rect x="0" y=${Y(plage[1])} width=${W} height=${Math.max(0,Y(plage[0])-Y(plage[1]))} class="nc-h-plage"/>`:nothing}
-    <path d=${path(h.base)} class="nc-h-base"/>
-    ${h.gesture?svg`<path d=${path(h.gesture)} class="nc-h-line" style=${'stroke:'+color}/>`:svg`<path d=${path(h.base)} class="nc-h-line" style=${'stroke:'+color}/>`}
-    <line x1="0" x2="0" y1="0" y2=${H} class="nc-h-now"/>
+  // The comfort range as two thin lines, only where they fall inside the drawing.
+  const edges=plage?plage.filter(v=>v>lo&&v<hi):[];
+  const fmt=(v:number)=>number(Math.round(v*10)/10)+(h.unit==='%'?' %':'°');
+  const last=line[line.length-1];
+  return html`<svg class="nc-h-svg" viewBox="-2 -6 ${W+30} ${H+42}" role="img" aria-label=${`${horizonHead(h)}`}>
+    <defs><linearGradient id="nc-h-fill" x1="0" x2="0" y1="0" y2="1" style=${'color:'+color}><stop offset="0" stop-color="currentColor" stop-opacity=".16"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>
+    ${edges.map(v=>svg`<line x1="0" x2=${W} y1=${Y(v)} y2=${Y(v)} class="nc-h-edge"/><text x=${W+4} y=${Y(v)+3} class="nc-h-tick">${fmt(v)}</text>`)}
+    ${h.gesture?svg`<path d=${path(h.base)} class="nc-h-base"/>`:svg`<path d=${path(h.base)+` L${W} ${H} L0 ${H} Z`} style=${'color:'+color} fill="url(#nc-h-fill)"/>`}
+    <path d=${path(line)} class="nc-h-line" style=${'stroke:'+color}/>
+    <circle cx="0" cy=${Y(line[0])} r="3" class="nc-h-dot" style=${'stroke:'+color}/>
+    <text x="4" y=${Y(line[0])-6} class="nc-h-value">${fmt(line[0])}</text>
+    <text x=${W+4} y=${Y(last)+3} class="nc-h-value">${fmt(last)}</text>
     <rect x="0" y=${H+6} width=${W} height="10" rx="5" class="nc-h-strip"/>
-    ${h.extra.map(e=>{const [a,b]=span(e);return svg`<rect x=${a} y=${H+6} width=${b-a} height="10" rx="5" class="nc-h-keep"/>`;})}
-    ${h.bands.map(e=>{const [a,b]=span(e);return svg`<rect x=${a} y=${H+6} width=${b-a} height="10" rx="5" style=${'fill:'+color}/>`;})}
+    ${h.extra.map(e=>{const [a,b]=band(e);return svg`<rect x=${a} y=${H+6} width=${b-a} height="10" rx="5" class="nc-h-keep"/>`;})}
+    ${h.bands.map(e=>{const [a,b]=band(e);return svg`<rect x=${a} y=${H+6} width=${b-a} height="10" rx="5" style=${'fill:'+color}/>`;})}
     ${ticks}
   </svg>`;
 }
 export function horizonLegend(h:Horizon):TemplateResult{
   const color=COLORS[h.kind]??'var(--nc-h-air)';
-  return html`<div class="nw-legend nc-legend nc-h-legend"><span><i class="k-h-base"></i>${baseLabel[h.kind]}</span>${h.gesture?html`<span><i class="k-h-line" style=${'border-color:'+color}></i>${gestureLabel[h.kind]}</span>`:nothing}<span><i class="k-h-band" style=${'background:'+color}></i>${bandLabel[h.kind]}</span>${h.extra.length?html`<span><i class="k-h-band keep"></i>fermé, soleil</span>`:nothing}</div>`;
+  // Without a gesture there is one curve, the forecast, drawn in colour.
+  return html`<div class="nw-legend nc-legend nc-h-legend">${h.gesture?html`<span><i class="k-h-base"></i>${baseLabel[h.kind]}</span><span><i class="k-h-line" style=${'border-color:'+color}></i>${gestureLabel[h.kind]}</span>`:html`<span><i class="k-h-line" style=${'border-color:'+color}></i>${baseLabel[h.kind]}</span>`}<span><i class="k-h-band" style=${'background:'+color}></i>${bandLabel[h.kind]}</span>${h.extra.length?html`<span><i class="k-h-band keep"></i>fermé, soleil</span>`:nothing}</div>`;
 }
 /** The graph for the banner: one subject, or two behind small tabs (the banner's first). */
 export function horizonBox(list:Horizon[],o:{plage:(s:HorizonSubject)=>[number,number]|null;second:boolean;onTab:()=>void;subjects?:HorizonSubject[]}):TemplateResult|typeof nothing{
