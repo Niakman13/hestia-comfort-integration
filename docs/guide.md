@@ -244,7 +244,7 @@ Carte d’une pièce :
 
 | Format | Ce qu’il montre |
 | --- | --- |
-| Complète | Le conseil, l’échelle, les mesures et les détails |
+| Complète | Le bandeau conseil (avec l’échelle et le graphique), À savoir, les mesures et les détails techniques |
 | Tuile | Le conseil et ses pastilles ; elle se déplie d’un appui |
 | Tuile dépliée | La même, ouverte au départ |
 | Mini | Une ligne : le conseil et la température |
@@ -255,7 +255,16 @@ Carte du logement : complète, tuile, liste des pièces, mini ou alerte.
 
 Un appui long sur une tuile ouvre la carte complète en fenêtre, une page de votre choix, ou rien. Sur mini et alerte, un simple appui suffit.
 
-Ensuite, des groupes repliables, qui changent avec le format : visuel et animations, bandeau, échelle, mesures, détails. Le contenu du bandeau, les pastilles et les rubriques se cochent et s’ordonnent.
+Ensuite, les réglages suivent les quatre sections de la carte, numérotées dans le même ordre :
+
+1. **Bandeau conseil** : faire défiler les conseils, ce qui défile après le conseil (équipements en marche, meilleur moment plus tard), les repères de l’échelle de température, et le **graphique « Prochaines heures »** avec ses sujets (température, humidité).
+2. **À savoir** : afficher ou non, les sujets gardés (humidité, chauffage, soleil, fenêtres, équipements, personnes et alarme, prévisions, apprentissage) et le nombre de lignes.
+3. **Mesures** : afficher ou non, les rubriques dans l’ordre voulu, dépliées ou non au départ.
+4. **Détails techniques** : afficher ou non, les lignes gardées (plage, créneau, fenêtres, volets, personnes, séchage, tendance, capteurs), dépliés ou non.
+
+Puis l’apparence (animations, verre dépoli) et l’appui long. Pour une tuile, un premier groupe règle ses pastilles et ce qui s’ouvre d’un appui (échelle, graphique, mesures, détails) ; chaque section garde les réglages ci-dessus.
+
+**Le graphique « Prochaines heures »**, sous l’échelle : la pièce sans le geste conseillé (en pointillé gris) et avec (en couleur), une frise qui dit quand. Son sujet suit le conseil : rafraîchir la nuit en été, aérer sans perdre la chaleur en hiver, laisser le soleil réchauffer, assécher. Quand la température et l’humidité ont chacune quelque chose à montrer, deux onglets : celui du conseil d’abord. Il n’apparaît que quand il aide ; c’est une tendance, pas une mesure.
 
 La carte suit le thème de Home Assistant, clair ou sombre.
 

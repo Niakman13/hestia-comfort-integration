@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, LEARNING_REFRESH_SECONDS, OPEN_DEBOUNCE_SECONDS, SEASON_REFRESH_SECONDS, SOURCES, STARTUP_GRACE_SECONDS, VIEW_VERSION
 from .engine.assessment import Opening, Settings, Sun, assess
-from .engine import feedback, habits, learning, night, people, sunlight, thermostat as thermostats, twin
+from .engine import feedback, habits, horizon, learning, night, people, sunlight, thermostat as thermostats, twin
 from .engine.volume import arbitrate
 from .engine.sources import normalize, Reading
 from .configuration import DATA_CONFIG
@@ -333,6 +333,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
                    "he": now_value("outdoor_humidity"), "sun": self._sun_now(now_value("solar")),
                    "opened": 1.0 if any(r.usable and r.value is True for k, r in advice_readings.items() if k.startswith("window:")) else 0.0,
                    "heated": 1.0 if readings.get("heating") and readings["heating"].value == "heating" else 0.0,
+                   "holding": bool(readings.get("heating") and readings["heating"].value in ("heating", "idle")),
                    "co2": now_value("co2"), "voc": now_value("voc")}
         # Only the windows of the room sharing this air open: the twin weighs them as it learned.
         mine = set(self.config.get("windows", []))
@@ -354,6 +355,10 @@ class ComfortCoordinator(DataUpdateCoordinator):
         own["features"]["night"] = night.plan(learned_twin.get("model") if learned_twin.get("status") == "ready" else None,
                                               current, outlook.get("hours") or [], now, minimum=self.settings.minimum,
                                               mass=learned_twin.get("mass"), sun=self._sun_ahead())
+        # « Prochaines heures »: the room without the advised gesture and with it, for the card's graph (engine/horizon.py).
+        own["features"]["horizon"] = horizon.build(own, learned_twin.get("model") if learned_twin.get("status") == "ready" else None,
+                                                   current, outlook.get("hours") or [], now, minimum=self.settings.minimum,
+                                                   mass=learned_twin.get("mass"), sun=self._sun_ahead())
         assessment = self._settle(own)
         self._track(assessment, current, now)
         learned = self.twin or {}
