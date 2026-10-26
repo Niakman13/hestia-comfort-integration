@@ -155,7 +155,7 @@ class EvolutionAdapterTests(AdapterFixture):
                 self.service.validate(self.config(openings={'binary_sensor.w': {'width': bad}}))
         for bad in ('binary_sensor.motion', ['sensor.t']):
             with self.assertRaises(ValueError): self.service.validate(self.config(presence=bad))
-        for bad in ({'glazing_factor': 2}, {'presence_delay_minutes': -1}, {'voc_threshold': {'value': 2, 'unit': 'ppm'}}, {'voc_threshold': {'value': True, 'unit': 'ppb'}}):
+        for bad in ({'glazing_factor': 2}, {'presence_delay_minutes': -1}, {'voc_delay_minutes': -1}, {'voc_pause_minutes': 500}, {'voc_threshold': {'value': 2, 'unit': 'ppm'}}, {'voc_threshold': {'value': True, 'unit': 'ppb'}}):
             with self.assertRaises(ValueError): self.service.validate(self.config(evolution=bad))
 
     async def test_manual_shutter_needs_no_cover(self):

@@ -1,4 +1,14 @@
-## 1.7.2 — L’interrupteur de l’échelle répond
+## 1.7.2 — Des COV plus calmes, l’interrupteur de l’échelle répond
+
+### Améliorations
+
+- **COV : un conseil qui ne va plus et vient.** L’indice des COV bouge beaucoup (cuisine, produit ménager, bougie, quelqu’un qui entre). Confort ne le compare plus mesure par mesure au seuil :
+  - il juge la **moyenne des 10 dernières minutes** ;
+  - il conseille d’aérer quand elle reste au-dessus du seuil **pendant 10 minutes**, tout de suite si l’indice atteint **le double du seuil** ;
+  - le conseil cesse quand la moyenne repasse sous **le seuil moins 20 %** (120 pour un seuil de 150), comme pour le CO₂ ;
+  - après une aération, il attend **45 minutes** avant de redemander, sauf si l’indice remonte nettement : si la source est encore là, rouvrir ne sert à rien.
+- Le texte dit ce qui se passe : « COV au-dessus de l’habituel depuis 12 min » (ou « au-dessus du seuil » pour un capteur avec unité). La tuile COV affiche « depuis 12 min ».
+- **Réglages** (panneau Niak, pièce, onglet Air intérieur, capteur COV) : le délai et la pause sont modifiables.
 
 ### Corrections
 

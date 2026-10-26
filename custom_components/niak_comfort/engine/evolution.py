@@ -5,6 +5,8 @@ No commands, inferred equipment state, or guaranteed air renewal are produced.
 from datetime import datetime, timedelta
 import math
 
+from . import voc as vocs
+
 
 def _number(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
@@ -37,9 +39,19 @@ def air_features(readings, settings, context):
     pm_treated = pm == 'high' and purifier_on
     voc, threshold = readings.get('voc'), context.get('voc_threshold')
     vs = 'not_configured' if voc is None else 'unknown' if not voc.usable else 'uninterpreted'
+    judged = {}
     if (voc and voc.usable and isinstance(threshold, dict) and _number(threshold.get('value'))
             and threshold['value'] > 0 and isinstance(threshold.get('unit'),str) and threshold['unit'] == (voc.unit or '')):
-        vs = 'high' if voc.value >= threshold['value'] else 'ok'
+        # Judged on its recent mean, with a margin, a delay and a pause after an airing (engine/voc.py).
+        def setting(key, default):
+            value = context.get(key)
+            return value if _number(value) else default
+        judged = vocs.judge(voc.value, threshold['value'], context.get('now'), mean=context.get('voc_mean'),
+                            was_high=context.get('voc_was_high') is True, above_since=context.get('voc_above_since'),
+                            delay=setting('voc_delay_minutes', vocs.DELAY_MINUTES),
+                            pause=setting('voc_pause_minutes', vocs.PAUSE_MINUTES),
+                            aired_at=context.get('voc_aired_at'), aired_after=context.get('voc_aired_after'))
+        vs = 'high' if judged['high'] else 'ok'
     covered = [label for key, label in (('co2','CO₂'),('pm25','PM2.5'),('voc','COV')) if _value(readings,key) is not None]
     missing = [label for key, label in (('co2','CO₂'),('pm25','PM2.5'),('voc','COV')) if _value(readings,key) is None]
     coverage = 'Mesures disponibles : ' + (', '.join(covered) or 'aucune')
@@ -47,11 +59,17 @@ def air_features(readings, settings, context):
         coverage += ' ; non suivies ou indisponibles : ' + ', '.join(missing)
     messages = []
     if pm == 'high': messages.append('PM2.5 élevées : le purificateur les filtre.' if pm_treated else 'PM2.5 élevées : besoin d’air maintenu sous réserve des conditions extérieures.')
-    if vs == 'high': messages.append('COV au-dessus du seuil choisi : besoin d’air maintenu.')
+    if vs == 'high':
+        # An index without unit (Sensirion) is relative to the home's own mean: « l'habituel ».
+        above = 'COV au-dessus du seuil' if voc.unit else 'COV au-dessus de l’habituel'
+        messages.append(f"{above} depuis {judged['minutes']} min : besoin d’air maintenu." if judged.get('minutes')
+                        else f"{above} : besoin d’air maintenu.")
     if vs == 'uninterpreted': messages.append('COV mesurés, interprétation indisponible sans seuil de même unité.')
     if 'purifier' in readings:
         messages.append('Le purificateur ne renouvelle pas l’air et ne retire pas le CO₂ ; son action sur les COV n’est pas présumée.')
     return dict(pm25_status=pm,voc_status=vs,voc_unit=voc.unit if voc else None,
+                voc_above_since=judged.get('above_since'),voc_minutes=judged.get('minutes'),voc_mean=judged.get('mean'),
+                voc_paused=judged.get('paused', False),
                 purifier={'on':_value(readings,'purifier'),'speed':_value(readings,'purifier_speed')},pm25_treated=pm_treated,
                 ventilation=_ventilation(readings),
                 coverage=coverage,message=' '.join(messages) or 'Les mesures d’air restent distinctes.')

@@ -176,10 +176,12 @@ class Configuration:
         if not isinstance(presence, list) or any(not isinstance(e, str) for e in presence):
             raise ValueError("Capteurs de présence invalides.")
         evolution = payload.get("evolution", {})
-        if not isinstance(evolution, dict) or set(evolution) - {"voc_threshold", "glazing_factor", "presence_delay_minutes"}:
+        if not isinstance(evolution, dict) or set(evolution) - {"voc_threshold", "glazing_factor", "presence_delay_minutes",
+                                                                   "voc_delay_minutes", "voc_pause_minutes"}:
             raise ValueError("Préférences avancées invalides.")
         cleaned_evolution = {}
-        for key, default, low, high in (("glazing_factor", 0.7, 0, 1), ("presence_delay_minutes", 5, 0, 120)):
+        for key, default, low, high in (("glazing_factor", 0.7, 0, 1), ("presence_delay_minutes", 5, 0, 120),
+                                         ("voc_delay_minutes", 10, 0, 120), ("voc_pause_minutes", 45, 0, 240)):
             value = evolution.get(key, default)
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not low <= value <= high:
                 raise ValueError("Valeur avancée invalide : " + key)
