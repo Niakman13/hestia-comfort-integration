@@ -470,7 +470,9 @@ export function details(v:View,config:Config):TemplateResult[] {
   const season=f?.season;
   if(season)out.push(row('Votre plage de confort',`${number(season.minimum)} à ${number(season.maximum)} °C${!season.heated?' · pièce non chauffée':''}${season.name?' · '+(SEASON_NAMES[season.name]??season.name):season.known?(season.weight===0?' · hiver':season.weight===1?' · été':' · entre-saisons'):' · saison non calculée'}`));
   if(a.action==='ouvrir'&&a.open_first?.length)out.push(row('Ouvrez d’abord',a.open_first.map(id=>v.names?.[id]??id).join(' et ')));
-  if(a.slot)out.push(row(a.slot.kind==='open'?'Ouverture possible':'Fermeture conseillée',`${hour(a.slot.time)} · ${number(a.slot.temperature)} °C${a.slot.wind_bearing!=null?' · '+windFrom(a.slot.wind_bearing):''}`));
+  // Only a complete slot is said: an hour and a temperature, never « NaN h ».
+  const slotOk=!!a.slot&&typeof a.slot.temperature==='number'&&!Number.isNaN(new Date(a.slot.time).getTime());
+  if(slotOk)out.push(row(a.slot!.kind==='open'?'Ouverture possible':'Fermeture conseillée',`${hour(a.slot!.time)} · ${number(a.slot!.temperature)} °C${a.slot!.wind_bearing!=null?' · '+windFrom(a.slot!.wind_bearing):''}`));
   const silent=a.missing.filter(k=>!!v.observations[k]);
   if(silent.length)out.push(row('Ne répond pas',silent.map(k=>sourceLabel(v,k)).join(', ')));
   if(a.unverified?.length&&a.action!=='fermer')out.push(row('Sans capteur',a.unverified.map(k=>k==='rain'?'pluie':'qualité de l’air dehors').join(', ')));
@@ -478,8 +480,9 @@ export function details(v:View,config:Config):TemplateResult[] {
   if(mods.has('windows')&&vent){if(vent.opened_minutes!=null)out.push(row('Ouvert depuis',`${number(vent.opened_minutes)} min`));}
   if(mods.has('shutters'))for(const s of f?.shutters??[]){if(s.mode==='none'||(!s.advice&&!s.manual_override&&s.position==null))continue;
     const from=clock(s.sun_start),to=clock(s.sun_end);
-    out.push(row(v.names?.[s.entity_id]??'Volet',[s.manual_override?'repris à la main':s.advice==='close'?'à fermer':s.advice==='open'?'à ouvrir':s.driver&&(s.driving??s.automatic===true)?'piloté par Adaptive Cover Pro':'rien à faire',s.driver&&s.detection===false?'reprise à la main non détectée':'',s.driver&&s.climate===false?'mode climat coupé':'',
-      s.position!=null?`ouvert à ${number(s.position)} %`:'',s.driver&&s.target!=null&&s.target!==s.position?`visé ${number(s.target)} %`:'',from&&to?`soleil de ${from} à ${to}`:'',s.driver&&s.reason?`selon Adaptive Cover Pro : ${s.reason}`:''].filter(Boolean).join(' · ')));}
+    // In plain words: who sets it, where it stands, when the sun comes. Adaptive Cover Pro's own wording is left out.
+    out.push(row(v.names?.[s.entity_id]??'Volet',[s.manual_override?'réglé à la main':s.advice==='close'?'à fermer':s.advice==='open'?'à ouvrir':s.driver&&(s.driving??s.automatic===true)?'piloté par Adaptive Cover Pro':'rien à faire',s.driver&&s.detection===false?'reprise à la main non détectée':'',s.driver&&s.climate===false?'mode climat coupé':'',
+      s.position!=null?`ouvert à ${number(s.position)} %`:'',s.driver&&s.target!=null&&s.target!==s.position?`visé ${number(s.target)} %`:'',from&&to?`soleil de ${from} à ${to}`:''].filter(Boolean).join(' · ')));}
   if(mods.has('air')&&f?.presence&&f.presence.state!=='not_configured')out.push(row('Présence',{occupied:'quelqu’un est là',empty:'pièce vide',unknown:'inconnue'}[f.presence.state]??''));
   // Where the drying promise comes from: this room's own airings, or an ordinary room until one is seen.
   if(mods.has('humidity')&&f?.drying)out.push(row('Séchage',f.drying.openings?`appris sur ${f.drying.openings} aération${f.drying.openings>1?'s':''}`:'estimé, aucune aération observée'));
