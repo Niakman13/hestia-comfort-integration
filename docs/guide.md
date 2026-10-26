@@ -155,10 +155,10 @@ Niak sait alors si le chauffage tourne. Il évite de conseiller d’ouvrir penda
 
 Un thermostat qui ne dit pas ce qu’il fait (sans « action » dans Home Assistant) est au moins lu « coupé » quand son mode est arrêt.
 
-**Avec Versatile Thermostat**, reconnu tout seul, l’onglet montre ses consignes et propose de prendre sa **température confort comme minimum** de la pièce (coché par défaut) : une seule consigne à régler, sur le thermostat. Niak lit aussi :
+**Avec Versatile Thermostat**, reconnu tout seul, l’onglet montre ses consignes et propose de prendre sa **consigne comme minimum** de la pièce (coché par défaut) : le minimum suit ce que le thermostat vise, en confort ou en éco. Une pièce à 18 °C quand il vise 17 °C en éco n’est donc pas « trop fraîche ». Le hors-gel protège sans être un confort : la température confort reste alors le minimum, mais Niak ne demande pas de rallumer. Niak lit aussi :
 
 - pourquoi il est arrêté : seul un arrêt à la main appelle « Rallumez ». Arrêté par une fenêtre ouverte, par son arrêt automatique, un mode central ou un délestage, il repartira seul : la carte l’explique ;
-- son préréglage : en éco, hors-gel ou absence, une pièce plus fraîche est voulue, Niak ne demande rien ;
+- son préréglage : en éco, hors-gel ou absence, une pièce plus fraîche est voulue, Niak ne demande pas de rallumer ;
 - la pente de la température, tant que le jumeau de la pièce apprend ;
 - la présence ou le mouvement qu’il suit, pour une pièce sans détecteur à elle ;
 - la fenêtre ouverte qu’il détecte, dite dans « À savoir » quand aucun contact de la pièce ne le dit.

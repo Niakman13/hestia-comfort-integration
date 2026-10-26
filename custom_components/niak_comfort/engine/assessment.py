@@ -492,7 +492,8 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     elif hot:
         action, reason = "attendre", "cooling_unavailable"
     elif cold:
-        action, reason = ("fermer" if opened else "ok"), "heat_needed"
+        # A window letting in warmer air helps a cold room: « Refermez » only when the outside is not warmer.
+        action, reason = ("fermer" if opened and (delta is None or delta <= 0) else "ok"), "heat_needed"
     elif wet and drying and drying["later"]:
         action, reason = "attendre", "drying_later"
     elif wet and drying:
@@ -562,7 +563,8 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
             coming = ti + slope
         warming = (isinstance(coming, (int, float)) and not isinstance(coming, bool) and ti is not None
                    and coming >= ti + WARMING)
-        warmth.update(chilly_since=chilly_since, tolerance=settings.heating_tolerance, warming=warming)
+        warmth.update(chilly_since=chilly_since, tolerance=settings.heating_tolerance, warming=warming,
+                      outdoor_warms=opened and delta is not None and delta > 0.5)
         # Only a heating switched off by hand is the person's to switch back on: a window, the thermostat's own
         # start-stop or a central mode resume by themselves, and an eco or frost preset aims lower on purpose.
         theirs = not thermostat or (thermostat.get("off_reason") in (None, "manual") and not thermostats.lowered(thermostat))

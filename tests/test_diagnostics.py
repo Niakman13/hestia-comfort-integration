@@ -1,0 +1,73 @@
+"""« Télécharger les diagnostics »: one file that explains a room's advice, without the home's coordinates."""
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+import sys
+import tempfile
+from types import SimpleNamespace
+import unittest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from homeassistant.config_entries import ConfigEntries, ConfigEntry, ConfigEntryState
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er, floor_registry as fr
+from custom_components.niak_comfort.configuration import get_configuration
+from custom_components.niak_comfort.diagnostics import async_get_config_entry_diagnostics
+
+
+class Diagnostics(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.hass = HomeAssistant(self.temp.name)
+        self.hass.config_entries = ConfigEntries(self.hass, {})
+        await self.hass.config_entries.async_initialize()
+        await fr.async_load(self.hass)
+        await ar.async_load(self.hass)
+        dr.async_setup(self.hass)
+        await dr.async_load(self.hass)
+        await er.async_load(self.hass)
+        await get_configuration(self.hass)
+
+    async def asyncTearDown(self):
+        await self.hass.async_stop()
+        self.temp.cleanup()
+
+    async def test_one_file_with_the_advice_the_sensors_and_what_was_learned(self):
+        self.hass.states.async_set("sensor.t", "18.2", {"unit_of_measurement": "°C", "device_class": "temperature", "entity_picture": "x"})
+        self.hass.states.async_set("climate.vt", "off", {"hvac_mode": "off", "preset_mode": "eco", "temperature": 17,
+                                                          "specific_states": {"hvac_off_reason": "hvac_off_manual"}})
+        entry = ConfigEntry(domain="niak_comfort", title="Chambre P", unique_id="p", version=1, minor_version=1, source="user",
+                            data={"name": "Chambre P", "area_id": None, "sources": {"indoor_temperature": "sensor.t", "heating": "climate.vt",
+                                                                                     "co2": "sensor.gone"},
+                                  "windows": ["binary_sensor.w"]},
+                            options={}, discovery_keys={}, subentries_data=[])
+        slot = {"kind": "close", "time": "2026-10-26T18:00:00+01:00", "temperature": 19.7, "wind_bearing": None}
+        entry.runtime_data = SimpleNamespace(
+            data={"assessment": {"reason": "heat_needed", "slot": slot, "missing": []}, "observations": {}},
+            twin={"status": "ready", "days": 9, "samples": 400, "mass": 18.4, "model": {"thermal": {"a": 0.01, "z": 0.05}, "water": {}, "samples": 400},
+                  "precision": {"hours": 24, "temperature": 0.3, "humidity": 2, "curve": [1, 2, 3]}},
+            feedback=[], drying_model={"tau": 40}, home_configuration=None,
+            _thermostat=lambda: {"name": "Versatile Thermostat", "preset": "eco", "target": 17},
+            _weather_place=lambda: None)
+        self.hass.config_entries._entries[entry.entry_id] = entry
+        entry._async_set_state(self.hass, ConfigEntryState.LOADED, None)
+        result = await async_get_config_entry_diagnostics(self.hass, entry)
+        json.dumps(result)  # Home Assistant writes it as JSON.
+        self.assertEqual(result["view"]["assessment"]["slot"], slot)
+        self.assertEqual(result["thermostat"]["target"], 17)
+        self.assertEqual(result["learning"]["twin"]["mass"], 18.4)
+        self.assertNotIn("curve", result["learning"]["twin"]["precision"])
+        self.assertEqual(result["states"]["source:indoor_temperature"]["attributes"], {"unit_of_measurement": "°C", "device_class": "temperature"})
+        self.assertEqual(result["states"]["source:heating"]["attributes"]["specific_states"]["hvac_off_reason"], "hvac_off_manual")
+        self.assertTrue(result["states"]["source:co2"]["missing"])
+        self.assertIn("binary_sensor.w", result["states"]["window:binary_sensor.w"]["entity_id"])
+
+    async def test_coordinates_are_removed(self):
+        from custom_components.niak_comfort.diagnostics import TO_REDACT
+        from homeassistant.components.diagnostics import async_redact_data
+        self.assertEqual(async_redact_data({"latitude": 43.5, "x": {"longitude": 5.4}}, TO_REDACT),
+                         {"latitude": "**REDACTED**", "x": {"longitude": "**REDACTED**"}})
+
+
+if __name__ == "__main__":
+    unittest.main()
