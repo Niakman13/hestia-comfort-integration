@@ -5,6 +5,11 @@
 - **La consigne de Versatile Thermostat sert de minimum** : en éco à 17 °C, une pièce à 18 °C n’est plus « trop fraîche ». Avant, seule sa température confort comptait. Le hors-gel protège sans être un confort : sa consigne (7 °C, ou 14 °C pour un poêle) ne sert pas de minimum, la température confort reste la référence, sans conseil de rallumer.
 - **Plus de « Refermez » quand l’air du dehors réchauffe la pièce.** Une pièce trop fraîche, fenêtre ouverte, avec un dehors plus chaud : Niak dit que vous pouvez laisser ouvert.
 
+### Corrections
+
+- « Fermeture conseillée · NaN h · NaN °C » : la ligne n’apparaît plus quand l’heure ou la température manque.
+- La ligne d’un volet piloté par Adaptive Cover Pro est plus courte : qui le règle, où il en est, quand vient le soleil. Le texte technique d’Adaptive Cover Pro, qui répétait la même chose, est retiré.
+
 ### Après la mise à jour
 
 - Redémarrez Home Assistant, puis rechargez la page. Si la case « Prendre la consigne du thermostat comme minimum » est décochée dans l’onglet Chauffage d’une pièce, c’est le minimum de la pièce qui reste utilisé.
