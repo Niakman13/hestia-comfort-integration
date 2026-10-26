@@ -1,3 +1,18 @@
+## 1.5.3 — « Un peu frais », présence mieux suivie
+
+**En bref**
+
+- **« Un peu frais » au lieu de « Trop frais »** quand la pièce reste dans la tolérance de son chauffage (1 °C par défaut, réglable dans l’onglet Chauffage). « Trop frais » est gardé pour un vrai écart.
+- **La présence n’est plus « inconnue » pour rien.** Pendant le délai avant de dire la pièce vide, la carte affiche « personne depuis 4 min (vide après 5 min) ». Et après un redémarrage de Home Assistant, Niak sait tout de suite depuis quand personne n’a été détecté.
+
+### Corrections
+
+- Deux pièces qui partagent leur air (salon et cuisine) : carte repliée, les mesures à surveiller portent le nom de leur pièce (« Salon », « Cuisine ») au lieu de deux fois « Température ».
+
+### Après la mise à jour
+
+- Redémarrez Home Assistant, puis rechargez la page.
+
 ## 1.5.2 — Le thermostat en éco compte, la fenêtre qui réchauffe reste ouverte
 
 **En bref**
