@@ -22,7 +22,8 @@ const detailOptions:[string,string][]=[['range','Plage de confort'],['slot','Cr�
 /** The four sections of the card, in its order: the same number in the editor and on the card. */
 // The advice itself is the card: it is never switched off. The scale and the graph are shown or not, nothing more.
 const scaleToggle={name:'show_scale',title:'Échelle de température',selector:{boolean:{}}};
-const banner=(expanded=true)=>group('1 · Bandeau conseil','mdi:numeric-1-circle',[toggle('rotate'),scaleToggle,toggle('show_horizon')],expanded);
+const horizonMode=dropdown('horizon_mode',[['needed','Seulement quand il aide le conseil'],['always','Toujours (la tendance sans conseil)']]);
+const banner=(expanded=true)=>group('1 · Bandeau conseil','mdi:numeric-1-circle',[toggle('rotate'),scaleToggle,toggle('show_horizon'),horizonMode],expanded);
 const insights=()=>group('2 · À savoir','mdi:numeric-2-circle',[toggle('show_insights'),choices('insight_topics',topicOptions),{name:'insight_max',selector:{number:{min:1,max:8,mode:'slider'}}}]);
 const details=()=>group('4 · Détails techniques','mdi:numeric-4-circle',[toggle('show_details'),choices('detail_rows',detailOptions),toggle('details_open')]);
 /** One choice per air: rooms open onto each other are offered once, as « Salon · Cuisine ». A card already set on one of
@@ -42,14 +43,15 @@ export function roomChoices(entries:Entry[],current?:string):{value:string;label
 const labels:Record<string,string>={entry_id:'Pièce',title:'Titre facultatif',format:'Format',animations:'Animations',glass_effect:'Effet verre dépoli',
   rotate:'Faire défiler les conseils',banner_blocks:'Contenu du bandeau',scale_marks:'Repères de l’échelle',modules:'Rubriques',measures_open:'Mesures dépliées au départ',
   show_details:'Afficher la section',details_open:'Dépliés au départ',show_measures:'Afficher la section',show_insights:'Afficher la section',
-  show_horizon:'Graphique « Prochaines heures »',horizon_subjects:'Sujets du graphique',insight_topics:'Sujets',insight_max:'Lignes au plus',detail_rows:'Lignes',tile_chips:'Pastilles de la tuile repliée',tile_blocks:'Contenu de la tuile dépliée',
+  show_horizon:'Graphique « Prochaines heures »',horizon_mode:'Quand l’afficher',horizon_subjects:'Sujets du graphique',insight_topics:'Sujets',insight_max:'Lignes au plus',detail_rows:'Lignes',tile_chips:'Pastilles de la tuile repliée',tile_blocks:'Contenu de la tuile dépliée',
   mini_values:'Valeurs de la ligne',hold_action:'Appui long',hold_path:'Page à ouvrir',show_scale:'Échelle des pièces',show_rooms:'Section Pièces',rooms_open:'Pièces dépliées au départ',
   list_order:'Ordre des pièces'};
 const helpers:Record<string,string>={
   animations:'Coupées, la lumière et l’anneau restent fixes et les conseils ne défilent plus seuls.',
   glass_effect:'Le flou demande beaucoup de ressources : à couper sur un appareil lent. Coupé, le verre devient plus opaque.',
   rotate:'Toutes les 4,5 s ; décoché, ils changent d’un appui.',
-  show_horizon:'Sous l’échelle : la pièce sans le geste et avec, et quand le faire. Seulement quand il aide.',
+  show_horizon:'Sous l’échelle : la pièce sans le geste et avec, et quand le faire.',
+  horizon_mode:'« Seulement quand il aide » : la carte change de taille en douceur. « Toujours » : sans geste à montrer, la température prévue sans rien faire.',
   horizon_subjects:'Deux sujets : un onglet chacun, celui du conseil d’abord.',insight_topics:'Ce qui explique le conseil, sous le bandeau. Faites glisser pour l’ordre de préférence.',
   detail_rows:'Pour comprendre et vérifier. Tout décocher vide la section.',
   banner_blocks:'Le conseil du moment reste toujours. Cochez ce qui défile après lui, dans l’ordre.',
@@ -129,7 +131,7 @@ export class ComfortEditor extends LitElement {
   }
   private defaults(c:Config):Record<string,unknown>{
     return {animations:true,glass_effect:true,rotate:true,show_details:true,details_open:false,measures_open:false,show_measures:true,
-      show_horizon:true,horizon_subjects:[...HORIZON_SUBJECTS],show_insights:true,insight_topics:[...INSIGHT_TOPICS],insight_max:4,detail_rows:[...DETAIL_ROWS],
+      show_horizon:true,horizon_mode:'needed',horizon_subjects:[...HORIZON_SUBJECTS],show_insights:true,insight_topics:[...INSIGHT_TOPICS],insight_max:4,detail_rows:[...DETAIL_ROWS],
       banner_blocks:['remedies','later'],tile_chips:[...CHIPS],tile_blocks:[...TILE_BLOCKS],mini_values:['temperature'],hold_action:c.hold_path?'page':'popup',
       scale_marks:c.show_scale===false||c.format==='measures'?[]:[...SCALE_MARKS]};
   }

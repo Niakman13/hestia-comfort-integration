@@ -11,6 +11,11 @@ follows the advice of the moment:
 
 Two subjects at most: the temperature (one kind at a time, the season decides) and the humidity. The first one is the
 banner's. Everything is an estimate, drawn to show a trend, not a decimal.
+
+Each subject says whether it is `needed`: what the gesture changes must be seen on the drawing. Shown from SHOW, kept
+down to KEEP while the advice stays the same, so that a graph does not come and go on a few hundredths. A « trend »
+(the room's temperature without doing anything) always comes last, never needed: for a card that keeps its graph.
+The sun is needed only when the advice is about heating; otherwise it is the forecast such a card shows first.
 """
 from datetime import datetime, timedelta
 
@@ -27,6 +32,10 @@ HOLD_SHARE, HOLD_GAIN = 0.35, 1.5
 COOL_REASONS = ("cooling_possible", "precool_possible", "precool_later", "cooling_unavailable")
 DRY_REASONS = ("drying_possible", "drying_later")
 AIR_REASONS = ("air_needed", "short_air_change", "optional_air_change")
+# What the gesture must change for the graph to be needed (°C, or points of humidity for « dry »): shown from the first,
+# kept down to the second while the advice stays the same.
+SHOW = {"cool": 0.4, "air": 0.4, "sun": 0.5, "dry": 3.0}
+KEEP = {"cool": 0.2, "air": 0.2, "sun": 0.3, "dry": 1.5}
 
 
 def _r(x, n=1):
@@ -136,8 +145,24 @@ def dry(model, start, series, *, mass, sun, heated, at, minutes):
                    "without": _r(base[i]["hi"], 0), "with": _r(aired[i]["hi"], 0)})
 
 
-def build(assessment, model, current, hours, now, *, minimum, mass=None, sun=None):
-    """The subjects to draw, the banner's first; [] when there is nothing worth drawing."""
+def trend(model, start, series, *, mass, sun, heated):
+    """The room's temperature without doing anything: the graph of a card that keeps it when no gesture needs one."""
+    base = _simulate(model, start, series, mass=mass, sun=sun, opened=lambda t: 0.0, heated=heated)
+    top, low = max(base, key=lambda r: r["ti"]), min(base, key=lambda r: r["ti"])
+    return _shape("temperature", "trend", base, None, "ti", (), (),
+                  {"top": _r(top["ti"]), "top_time": top["time"].isoformat(), "low": _r(low["ti"]), "low_time": low["time"].isoformat()})
+
+
+def _change(subject, start):
+    """What the gesture changes on the drawing, in the subject's unit."""
+    r = subject["result"]
+    return {"cool": lambda: r.get("gain"), "air": lambda: r.get("drop"), "sun": lambda: r["top"] - start["ti"],
+            "dry": lambda: r["without"] - r["with"]}[subject["kind"]]() or 0.0
+
+
+def build(assessment, model, current, hours, now, *, minimum, mass=None, sun=None, previous=None):
+    """The subjects to draw, the banner's first, then the trend; [] without a forecast or a measure.
+    `previous`: what the last call returned, to keep a needed graph while the advice stays the same."""
     if not current or not all(isinstance(current.get(k), (int, float)) for k in ("ti", "hi")):
         return []
     model = model if isinstance(model, dict) and isinstance(model.get("thermal"), dict) else night.ORDINARY
@@ -164,8 +189,9 @@ def build(assessment, model, current, hours, now, *, minimum, mass=None, sun=Non
             span = (features.get("ventilation") or {}).get("duration_minutes") or {}
             temperature = air(model, start, series, mass=mass, sun=sun, heated=heated, at=now,
                               minutes=int(span.get("max") or (5 if shown == "short_air_change" else 10)))
-    if temperature is None and ("heat" in needs or (features.get("warmth") or {}).get("warming")
-                                or (features.get("season") or {}).get("group") == "between"):
+    # The sun answers the heating: needed only when the advice is about it; in between seasons, only drawn.
+    heating = "heat" in needs or bool((features.get("warmth") or {}).get("warming"))
+    if temperature is None and (heating or (features.get("season") or {}).get("group") == "between"):
         temperature = sunny(model, start, series, mass=mass, sun=sun, heated=heated, minimum=minimum)
     # The humidity: an airing to dry, now or at the better moment.
     humidity = None
@@ -177,4 +203,11 @@ def build(assessment, model, current, hours, now, *, minimum, mass=None, sun=Non
     out = [s for s in (temperature, humidity) if s]
     if humidity and shown in DRY_REASONS:
         out = [humidity] + [s for s in out if s is not humidity]
+    advice = f"{shown}|{action}"
+    kept = {(p.get("kind"), p.get("advice")) for p in previous or () if p.get("needed")}
+    for s in out:
+        s["advice"] = advice
+        s["needed"] = ((s["kind"] != "sun" or heating)
+                       and _change(s, start) >= (KEEP if (s["kind"], advice) in kept else SHOW)[s["kind"]])
+    out.append({**trend(model, start, series, mass=mass, sun=sun, heated=heated), "advice": advice, "needed": False})
     return out
