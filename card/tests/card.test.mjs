@@ -246,7 +246,9 @@ test('the banner carries a gesture or « Rien à faire »; what is worth knowing
   v.assessment={...v.assessment,reason:'drying_slow',level:'calm',action:'attendre',features:{...v.assessment.features,warmth:null,humidity:{dew_point:null,incoming_relative:null,glass_temperature:null,condensation_risk:null,message:'',surface:88,mould:true,excess:0.2,source:'outside',reachable:75}}};
   assert.equal(advice(v).title,'Rien à faire');
   const lines=facts(v).map(f=>f.title+' · '+plain(f.text));
-  assert.equal(lines[0],'Humidité élevée · risque de moisissure');
+  assert.equal(lines[0],'Humidité élevée · risque de moisissure, aérer ne gagnerait presque rien');
+  // 26 Oct.: one line for the humidity, never two about the same thing.
+  assert.equal(lines.filter(l=>/umid|Aération/.test(l)).length,1,lines.join(' / '));
   assert.ok(lines.every(l=>!/%|µg|murs froids|retour du sec/.test(l)),lines.join(' / '));
   v.assessment={...v.assessment,reason:'open_neutral',level:'calm',action:'ok',features:{...v.assessment.features,humidity:undefined}};
   assert.equal(advice(v).title,'Rien à faire');assert.equal(facts(v)[0].title,'Fenêtre ouverte');
@@ -282,11 +284,16 @@ test('« Au mieux » under « Rien à faire »: « À savoir » says first what 
     features:{...v.assessment.features,warmth:null,humidity:{status:'high',degree:2,lasting:true,measured:63.5,reachable:70}}};
   v.feedback={last:{measure:'co2',before:1072,after:702,predicted:986}};
   assert.equal(advice(v).title,'Rien à faire');assert.equal(slides(v)[0].pill,'Au mieux');assert.equal(slides(v)[0].level,'calm');
-  assert.deepEqual(facts(v).map(f=>f.title),['Air humide','Aération','Dernière aération']);
+  assert.deepEqual(facts(v).map(f=>f.title==='Dernière aération'?f.title:f.title+' · '+plain(f.text)),['Air humide · depuis plusieurs heures, aérer ne gagnerait presque rien','Dernière aération']);
   // A risk comes before the state; the pill keeps naming it.
   v.assessment.features.humidity={...v.assessment.features.humidity,mould:true};
   assert.equal(advice(v).pill,'Murs à surveiller');
-  assert.deepEqual(facts(v).map(f=>f.title).slice(0,2),['Humidité élevée','Air humide']);
+  assert.deepEqual(facts(v).map(f=>f.title==='Dernière aération'?f.title:f.title+' · '+plain(f.text)),['Humidité élevée · risque de moisissure, depuis plusieurs heures, aérer ne gagnerait presque rien','Dernière aération']);
+  // Salon · Cuisine, 26 Oct.: « Air humide » then « Humidité · aérer refroidirait… » said the humidity twice.
+  const s=fresh();s.observations.indoor_humidity={value:65,quality:'valid',source:'sensor.h'};
+  s.assessment={...s.assessment,reason:'heat_needed',action:'ok',level:'calm',needs:['heat','dry'],constraints:[],
+    features:{...s.assessment.features,humidity:{status:'high',degree:2,lasting:false,measured:65,reachable:70},warmth:{occupied:true,heating:'on',slight:true,thermostat:{name:'Versatile Thermostat',preset:'frost',target:14,off_reason:null,lowered:true,reference:20}}}};
+  assert.deepEqual(facts(s).map(f=>f.title+' · '+plain(f.text)),['Air humide · aérer refroidirait une pièce déjà fraîche','Un peu frais · thermostat en hors-gel : 14 °C visés']);
 });
 test('every banner title is a gesture or « Rien à faire »',()=>{
   const v=fresh(),GESTURE=/^(Aérez|Ouvrez|Refermez|Fermez|Gardez fermé|Lancez la VMC|Laissez ouvert|Rallumez le chauffage|Adaptez les volets|Aération en cours|Encore \d+ min|Vous pouvez refermer|Renouvelez|Vérifiez|Rien à faire|Mesures (absentes|en chargement)|Bilan partiel)/;
@@ -391,7 +398,7 @@ test('high humidity is said without guessing its cause',()=>{
   const v=fresh(),hum={dew_point:null,incoming_relative:null,glass_temperature:null,condensation_risk:null,message:'',surface:88,mould:true,excess:1,source:'inside',reachable:75};
   for(const title of ['Chambre P','Salle de bain','Cuisine','Salon']){
     v.title=title;v.assessment={...v.assessment,reason:'drying_unavailable',level:'calm',action:'attendre',features:{...v.assessment.features,humidity:hum}};
-    assert.deepEqual(facts(v).map(f=>f.title+' · '+plain(f.text)),['Humidité élevée · risque de moisissure','Aération · n’aiderait pas, l’air du dehors n’est pas plus sec']);
+    assert.deepEqual(facts(v).map(f=>f.title+' · '+plain(f.text)),['Humidité élevée · risque de moisissure, aérer n’aiderait pas, l’air du dehors n’est pas plus sec']);
   }
 });
 test('rooms sharing one air show each measure once, under the room that has it',()=>{
