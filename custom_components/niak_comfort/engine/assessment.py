@@ -28,6 +28,11 @@ MOULD_MINUTES = 60
 VENTILATION_DELTA = 0.8
 # Humidity points an already open window must still take off to be worth keeping open.
 OPEN_GAIN = 3.0
+# A room under its range with the heating off is first said in « À savoir »; « Rallumez » comes only once it has been
+# below the range by more than the room's tolerance for this long, and its twin does not see it warming by itself.
+HEAT_MINUTES = 30
+# Degrees the twin must see the room gain within the hour for it to be warming by itself (the sun, a neighbour's heat).
+WARMING = 0.3
 # Reasons that only say « do not open »: with nothing open, they bring nothing and stay off the banner.
 QUIET_REASONS = ("open_neutral", "humid_outdoor", "drying_unavailable", "drying_slow", "opening_blocked", "heat_needed", "cooling_unavailable", "precool_later")
 LEVELS = ("calm", "benefit", "action", "urgent", "neutral")
@@ -57,6 +62,8 @@ class Settings:
     illuminance_low: float = 100
     # Upper comfort limit once summer has settled in; `maximum` stays the winter limit.
     summer_maximum: float = 26
+    # Degrees under `minimum` the room may stay before « Rallumez le chauffage » is a gesture.
+    heating_tolerance: float = 1.0
 
     def __post_init__(self) -> None:
         if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v)
@@ -80,6 +87,8 @@ class Settings:
             raise ValueError("invalid_frost_threshold")
         if not self.minimum < self.summer_maximum <= 40:
             raise ValueError("invalid_summer_maximum")
+        if not 0 <= self.heating_tolerance <= 5:
+            raise ValueError("invalid_heating_tolerance")
 
 
 # Seven-day mean outdoor temperature between which the comfort limit moves from winter to summer.
@@ -523,7 +532,19 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
           and not (reason == "opening_blocked" and ("air" in needs or ("cool" in needs and cool)))):
         level = "neutral" if partial or level == "neutral" else "calm"
     if reason == "heat_needed" and action != "fermer":
-        level = "action" if warmth["occupied"] is True and warmth["heating"] == "off" else "neutral" if partial else "calm"
+        # One degree under the range is not worth switching the heating on: only a room clearly and lastingly cold.
+        before = ((previous.features.get("warmth") or {}) if previous else {}).get("chilly_since")
+        margin = settings.heating_tolerance - (settings.temperature_hysteresis if before else 0)
+        chilly = ti is not None and ti < settings.minimum - margin
+        chilly_since = (before or (now.isoformat() if now else None)) if chilly else None
+        lasting = chilly and (now is None or chilly_since is None
+                              or (now - datetime.fromisoformat(chilly_since)).total_seconds() >= HEAT_MINUTES * 60)
+        coming = context.get("next_hour_temperature")
+        warming = (isinstance(coming, (int, float)) and not isinstance(coming, bool) and ti is not None
+                   and coming >= ti + WARMING)
+        warmth.update(chilly_since=chilly_since, tolerance=settings.heating_tolerance, warming=warming)
+        asked = warmth["occupied"] is True and warmth["heating"] == "off" and lasting and not warming
+        level = "action" if asked else "neutral" if partial else "calm"
     # Protections never configured: the advice stands, the card says what Niak does not watch.
     unverified = tuple(k for k in ("pollution", "rain") if k not in readings and not (k == "rain" and all_sheltered))
     extended = features(readings, settings, context, openings, sun, details,

@@ -89,11 +89,10 @@ class EveryCombination(unittest.TestCase):
             check("a cold room open to a colder outside is closed", not (opened and room == "cold" and te < ti - 2 and co2 == "ok") or act == "fermer", case, a)
             check("an urgent CO₂ is never calm", not (co2 == "urgent" and level == "calm"), case, a)
             check("a hot room is never « nothing to do »", not (room == "hot" and nothing_to_do(a)), case, a)
-            check("a cold room with the heating off and someone home always gets a gesture",
-                  not (room == "cold" and equipment == "heating_off_home" and window == "closed" and nothing_to_do(a)), case, a)
+            # One degree under the range is within the room's tolerance: said in « À savoir », never « Rallumez ».
+            check("a room just under its range is never told to switch the heating on",
+                  not (room == "cold" and reason == "heat_needed" and act != "fermer") or level in ("calm", "neutral"), case, a)
             check("a gesture to make is never shown as « nothing to do »", not (level in ("action", "urgent") and nothing_to_do(a)), case, a)
-            check("a cold room with the heating off and someone home is orange",
-                  not (room == "cold" and equipment == "heating_off_home" and reason == "heat_needed" and act != "fermer") or level == "action", case, a)
             check("a cold room in an empty home stays blue",
                   not (room == "cold" and equipment == "heating_off_away" and reason == "heat_needed" and act != "fermer") or level in ("calm", "neutral"), case, a)
         self.assertEqual(broken, {})

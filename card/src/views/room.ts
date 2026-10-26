@@ -243,7 +243,8 @@ export function facts(v:View):Fact[] {
     out.push({ic:'drop',title:'Humidité',text:gain!=null&&gain<4?`l’aération ne la baisserait que ${gain<1.5?'d’un point à peine':`de ${Math.round(gain)} points`}`:'l’aération ne la ferait pas assez baisser'});
   if(a.reason==='heat_needed'&&a.action!=='fermer'&&a.level!=='action')
     out.push({ic:'temp',title:'Pièce fraîche',text:w?.occupied===false?'maison vide : pas besoin de chauffer'
-      :w?.heating==='on'?'le chauffage s’en charge':`${deg(ti)}, sous votre plage`});
+      :w?.heating==='on'?'le chauffage s’en charge':w?.warming?`${deg(ti)}, elle se réchauffe d’elle-même`
+      :w?.heating==='off'?`${deg(ti)}, un peu sous votre plage · chauffage coupé`:`${deg(ti)}, sous votre plage`});
   // Words for everyone: the risk and where it comes from, never a percentage against a wall.
   // The cause is not guessed: after days of rain, walls and fabrics give back water without a shower or a meal.
   if(hum?.mould)out.push({ic:'drop',title:'Humidité élevée',text:'risque de moisissure'});

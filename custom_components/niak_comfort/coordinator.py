@@ -332,7 +332,6 @@ class ComfortCoordinator(DataUpdateCoordinator):
         # The card shows a contact as it is; the advice ignores an opening younger than the bounce delay.
         advice_readings = {k: (replace(r, value=False, detail="debounce") if k.startswith("window:") and self._bouncing(k[7:], r, now) else r)
                            for k, r in readings.items()}
-        self.previous = assess(advice_readings, self.settings, self.previous, openings, self._sun(), outlook, now, context=self._context(now, readings))
         def now_value(key):
             reading = readings.get(key)
             return reading.value if reading and reading.usable and isinstance(reading.value, (int, float)) and not isinstance(reading.value, bool) else None
@@ -346,6 +345,10 @@ class ComfortCoordinator(DataUpdateCoordinator):
         open_now = {k[7:] for k, r in advice_readings.items() if k.startswith("window:") and r.usable and r.value is True}
         current["far"] = 1.0 if self.partners and open_now and not open_now & mine else 0.0
         current["beside"] = self._beside_now()
+        context = self._context(now, readings)
+        # The room in an hour, as its twin sees it: a cold room already warming by itself is not told to heat.
+        context["next_hour_temperature"] = (twin.next_hour(self.twin, current) or {}).get("temperature")
+        self.previous = assess(advice_readings, self.settings, self.previous, openings, self._sun(), outlook, now, context=context)
         own = self.previous.to_dict()
         # The room's own learning, once optimal, gives the advised gesture its predicted result.
         summary = feedback.summarize(self.feedback, now)
