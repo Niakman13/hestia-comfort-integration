@@ -178,10 +178,11 @@ export class NiakComfortHomeCard extends LitElement {
   private homeCard(h:Home,muteAdvice:(Advice&{pill:string;level:Level})|undefined,format:HomeFormat){
     if(!this.config)return nothing;
     const focus=this.rooms.find(r=>r.entry_id===h.focus);
-    // No gesture, but rooms out of range: the home says how many, like each room card, never a tick and « Tout va bien ».
+    // No gesture, but rooms out of range: never a tick and « Tout va bien »; the rooms section says how many.
     const watched=this.rooms.filter(r=>needs(r,false).length>0);
     const calmAdvice={title:'Rien à faire',line:h2`Aucune pièce <b>ne demande de geste</b>`,disk:h.open_rooms.length?'open':watched.length?'info':'check',cap:h.open_rooms.length?undefined:'Tout est fermé',
-      ...(watched.length?{pill:`${watched.length} à surveiller`,level:'neutral' as Level}:{})};
+      // Out of range with nothing to do: « Au mieux », like each room card; « À savoir » of the rooms says what.
+      ...(watched.length?{pill:'Au mieux',level:'calm' as Level}:{})};
     const homeSlides=muteAdvice?[{...muteAdvice}]:this.slides(h,calmAdvice);
     const shorts=this.shorts(this.rooms),season=(focus??this.rooms[0])?.assessment.features?.season;
     const rooms=this.rooms.flatMap(r=>{const t=numeric(r.observations.indoor_temperature);return t===null?[]:[{name:r.title,entity:r.observations.indoor_temperature?.source??undefined,short:shorts.get(r.entry_id)!,value:t,level:(r.assessment.features?.season?.heated===false&&!['action','urgent'].includes(r.assessment.level)?'neutral':r.assessment.level) as Level}];});

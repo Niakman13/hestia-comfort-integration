@@ -35,6 +35,10 @@ HEAT_MINUTES = 30
 WARMING = 0.3
 # Reasons that only say « do not open »: with nothing open, they bring nothing and stay off the banner.
 QUIET_REASONS = ("open_neutral", "humid_outdoor", "drying_unavailable", "drying_slow", "opening_blocked", "heat_needed", "cooling_unavailable", "precool_later")
+# The air against the cold wall from which « Chauffez un peu plus » is worth asking: a clear risk, not the threshold.
+WARM_WALL_SURFACE = 82.0
+# Reasons that leave damp walls without a remedy: « Chauffez un peu plus » may then be asked.
+WARM_WALL_REASONS = ("drying_slow", "drying_unavailable", "heat_needed", "humid_outdoor", "open_neutral", "within_comfort")
 LEVELS = ("calm", "benefit", "action", "urgent", "neutral")
 ACTIONS = ("ok", "ouvrir", "fermer", "attendre", "unknown")
 
@@ -588,6 +592,28 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         # Nobody known away is someone maybe home: a cold room never sits under « Rien à faire » for want of a presence sensor.
         asked = warmth["occupied"] is not False and warmth["heating"] == "off" and lasting and not warming and theirs
         level = "action" if asked else "neutral" if partial else "calm"
+    # Damp walls that no airing nor running ventilation dries: one or two degrees more warm their coldest spot, and the
+    # air touching it falls under the mould threshold. Heating removes no water; it only keeps the walls warm enough.
+    # Asked only when it is enough to pass under the threshold, the room staying a degree under its maximum; for a
+    # clear risk, not one at the threshold; in waking hours; never against a thermostat lowered on purpose.
+    warm_walls = None
+    awake_now = True
+    if now is not None:
+        start, until = learning.awake(context.get("season_name"))
+        awake_now = start <= (now.astimezone(context["zone"]) if context.get("zone") else now).hour < until
+    if (mould and surface is not None and surface >= WARM_WALL_SURFACE and awake_now and not thermostats.lowered(thermostat) and ai is not None and te is not None and ti is not None and heated
+            and "heating" in readings and occupied is not False and action != "fermer"
+            and level not in ("action", "urgent", "benefit") and reason in WARM_WALL_REASONS
+            and (air_detail.get("ventilation") or {}).get("on") is not True):
+        for degrees in (1, 2):
+            if ti + degrees > settings.maximum - 1:
+                break
+            after = min(100.0, ai / absolute_humidity(te + WALL_FACTOR * (hti + degrees - te), 100) * 100)
+            if after < MOULD_RH:
+                warm_walls = {"degrees": degrees, "target": round(ti + degrees, 1), "surface": round(surface), "after": round(after)}
+                break
+    if warm_walls:
+        action, reason, level = "ok", "warm_walls", "action"
     # Protections never configured: the advice stands, the card says what Niak does not watch.
     unverified = tuple(k for k in ("pollution", "rain") if k not in readings and not (k == "rain" and all_sheltered))
     extended = features(readings, settings, context, openings, sun, details,
@@ -596,6 +622,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     # Where the air should go through: the card says it under the advice, only while airing is asked.
     extended["airflow"] = airflow_plan(details, flows)
     extended["drying"] = drying
+    extended["warm_walls"] = warm_walls
     extended["benefits"] = _benefits(details, openings, settings, ti, hot, cold, heated, te, group)
     # Within the heating tolerance a room is « a little cool », not « too cool »: the card says it gently.
     warmth["slight"] = ti is not None and ti >= settings.minimum - settings.heating_tolerance
