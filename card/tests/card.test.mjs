@@ -246,7 +246,7 @@ test('the banner carries a gesture or « Rien à faire »; what is worth knowing
   v.assessment={...v.assessment,reason:'drying_slow',level:'calm',action:'attendre',features:{...v.assessment.features,warmth:null,humidity:{dew_point:null,incoming_relative:null,glass_temperature:null,condensation_risk:null,message:'',surface:88,mould:true,excess:0.2,source:'outside',reachable:75}}};
   assert.equal(advice(v).title,'Rien à faire');
   const lines=facts(v).map(f=>f.title+' · '+plain(f.text));
-  assert.equal(lines[0],'Humidité élevée · risque de moisissure, aérer ne gagnerait presque rien');
+  assert.equal(lines[0],'Humidité élevée · risque de moisissure : ne séchez pas de linge ici, écartez les meubles du mur');
   // 26 Oct.: one line for the humidity, never two about the same thing.
   assert.equal(lines.filter(l=>/umid|Aération/.test(l)).length,1,lines.join(' / '));
   assert.ok(lines.every(l=>!/%|µg|murs froids|retour du sec/.test(l)),lines.join(' / '));
@@ -268,7 +268,7 @@ test('a cool room the heating takes care of is no problem on the banner, only in
   // Damp walls remain the room's problem: the pill names it, never the cold.
   v.assessment.features.humidity={status:'high',degree:2,dew_point:null,incoming_relative:null,glass_temperature:null,condensation_risk:null,message:'',surface:88,mould:true,excess:0.2,source:'outside',reachable:75};
   v.assessment.needs=['heat','dry'];
-  a=advice(v);assert.equal(a.title,'Rien à faire');assert.equal(a.pill,'Murs à surveiller');
+  a=advice(v);assert.equal(a.title,'Rien à faire');assert.equal(a.pill,'Au mieux');
   // Beyond the tolerance with the heating off, the engine asks the gesture: no more « Rien à faire ».
   v.assessment={...v.assessment,level:'action',features:{...v.assessment.features,humidity:undefined,warmth:{occupied:true,heating:'off',slight:false}}};
   assert.equal(advice(v).title,'Rallumez le chauffage');
@@ -287,17 +287,31 @@ test('« Au mieux » under « Rien à faire »: « À savoir » says first what 
   assert.deepEqual(facts(v).map(f=>f.title==='Dernière aération'?f.title:f.title+' · '+plain(f.text)),['Air humide · depuis plusieurs heures, aérer ne gagnerait presque rien','Dernière aération']);
   // A risk comes before the state; the pill keeps naming it.
   v.assessment.features.humidity={...v.assessment.features.humidity,mould:true};
-  assert.equal(advice(v).pill,'Murs à surveiller');
-  assert.deepEqual(facts(v).map(f=>f.title==='Dernière aération'?f.title:f.title+' · '+plain(f.text)),['Humidité élevée · risque de moisissure, depuis plusieurs heures, aérer ne gagnerait presque rien','Dernière aération']);
+  assert.equal(advice(v).pill,'Au mieux');
+  assert.deepEqual(facts(v).map(f=>f.title==='Dernière aération'?f.title:f.title+' · '+plain(f.text)),['Humidité élevée · risque de moisissure, depuis plusieurs heures : ne séchez pas de linge ici, écartez les meubles du mur','Dernière aération']);
   // Salon · Cuisine, 26 Oct.: « Air humide » then « Humidité · aérer refroidirait… » said the humidity twice.
   const s=fresh();s.observations.indoor_humidity={value:65,quality:'valid',source:'sensor.h'};
   s.assessment={...s.assessment,reason:'heat_needed',action:'ok',level:'calm',needs:['heat','dry'],constraints:[],
     features:{...s.assessment.features,humidity:{status:'high',degree:2,lasting:false,measured:65,reachable:70},warmth:{occupied:true,heating:'on',slight:true,thermostat:{name:'Versatile Thermostat',preset:'frost',target:14,off_reason:null,lowered:true,reference:20}}}};
   assert.deepEqual(facts(s).map(f=>f.title+' · '+plain(f.text)),['Air humide · aérer refroidirait une pièce déjà fraîche','Un peu frais · thermostat en hors-gel : 14 °C visés']);
 });
+test('damp walls: a remedy at work, a gesture, or a tip, never a fatality',()=>{
+  const lines=v=>facts(v).map(f=>f.title+' · '+plain(f.text));
+  const v=fresh();v.observations.indoor_humidity={value:68,quality:'valid',source:'sensor.h'};
+  const mould={status:'high',degree:2,lasting:true,mould:true,surface:84,measured:68,reachable:70};
+  // 26 Oct., Chambre P: the ventilation runs, it is the answer.
+  v.assessment={...v.assessment,reason:'drying_slow',action:'attendre',level:'neutral',needs:['dry'],constraints:[],
+    features:{...v.assessment.features,warmth:null,humidity:mould,air:{co2_status:'ok',pm25_status:'ok',voc_status:'ok',ventilation:{on:true,boost:false},coverage:'',message:''}}};
+  assert.equal(advice(v).title,'Rien à faire');assert.equal(slides(v)[0].pill,'Au mieux');assert.equal(slides(v)[0].level,'calm');
+  assert.deepEqual(lines(v),['Humidité élevée · risque de moisissure, depuis plusieurs heures, la VMC l’assèche']);
+  // Nothing at work, one degree more is enough: the engine asks it.
+  v.assessment={...v.assessment,reason:'warm_walls',action:'ok',level:'action',features:{...v.assessment.features,air:undefined,warm_walls:{degrees:1,target:19.7,surface:84,after:79}}};
+  const a=advice(v);assert.equal(a.title,'Chauffez un peu plus');assert.match(plain(a.line),/Visez 19,7 °C/);
+  assert.ok(!lines(v).some(l=>/linge/.test(l)),lines(v).join(' | '));
+});
 test('every banner title is a gesture or « Rien à faire »',()=>{
-  const v=fresh(),GESTURE=/^(Aérez|Ouvrez|Refermez|Fermez|Gardez fermé|Lancez la VMC|Laissez ouvert|Rallumez le chauffage|Adaptez les volets|Aération en cours|Encore \d+ min|Vous pouvez refermer|Renouvelez|Vérifiez|Rien à faire|Mesures (absentes|en chargement)|Bilan partiel)/;
-  const reasons=['within_comfort','rain_open_windows','opening_blocked','verify_exterior','air_needed','cooling_possible','drying_possible','exchange_harmful','cooling_unavailable','heat_needed','drying_unavailable','drying_later','drying_slow','ventilation_possible','incomplete_data','optional_air_change','gust_open_windows','short_air_change','sun_entering','rain_soon','precool_possible','precool_later','shared_volume','humid_outdoor','open_neutral','rehumidification_risk','shutter_protection'];
+  const v=fresh(),GESTURE=/^(Aérez|Ouvrez|Refermez|Fermez|Gardez fermé|Lancez la VMC|Laissez ouvert|Rallumez le chauffage|Chauffez un peu plus|Adaptez les volets|Aération en cours|Encore \d+ min|Vous pouvez refermer|Renouvelez|Vérifiez|Rien à faire|Mesures (absentes|en chargement)|Bilan partiel)/;
+  const reasons=['within_comfort','rain_open_windows','opening_blocked','verify_exterior','air_needed','cooling_possible','drying_possible','exchange_harmful','cooling_unavailable','heat_needed','drying_unavailable','drying_later','drying_slow','ventilation_possible','incomplete_data','optional_air_change','gust_open_windows','short_air_change','sun_entering','rain_soon','precool_possible','precool_later','shared_volume','warm_walls','humid_outdoor','open_neutral','rehumidification_risk','shutter_protection'];
   for(const reason of reasons)for(const action of ['ok','ouvrir','fermer','attendre'])for(const level of ['calm','benefit','action','urgent','neutral']){
     v.assessment={...v.assessment,reason,action,level,features:{...v.assessment.features,warmth:{occupied:true,heating:'off'},humidity:{dew_point:null,incoming_relative:null,glass_temperature:null,condensation_risk:null,message:'',surface:90,mould:true,excess:2,source:'inside',reachable:70}}};
     const t=advice(v).title;assert.match(t,GESTURE,`${reason}/${action}/${level} → ${t}`);
@@ -370,6 +384,9 @@ test('the home card names what a room needs, as measured',async()=>{
   const v=fresh();v.observations={...v.observations,indoor_humidity:{value:68,quality:'valid',unit:'%'},voc:{value:282,quality:'valid',unit:'ppb'}};
   v.assessment={...v.assessment,level:'action',needs:['dry'],openings:[],features:{...v.assessment.features,air:{...(v.assessment.features?.air??{}),co2_status:'ok',voc_status:'high',ventilation:{on:true,boost:false}}}};
   assert.deepEqual(needs(v),['68 % trop humide','282 COV élevés']);
+  // 26 Oct., Salon · Cuisine on the home card: « un peu frais » came first though the heating had it in hand.
+  v.assessment={...v.assessment,level:'calm',needs:['heat','dry'],features:{...v.assessment.features,warmth:{occupied:true,heating:'on',slight:true}}};
+  assert.equal(needs(v)[0],'68 % trop humide');assert.equal(needs(v).at(-1),'un peu frais');
 });
 test('a cover driven by Adaptive Cover Pro has its own tile, and asks nothing while it drives',async()=>{
   const {tiles}=await import(pathToFileURL(join(temp,'views/room.mjs')));
@@ -398,7 +415,7 @@ test('high humidity is said without guessing its cause',()=>{
   const v=fresh(),hum={dew_point:null,incoming_relative:null,glass_temperature:null,condensation_risk:null,message:'',surface:88,mould:true,excess:1,source:'inside',reachable:75};
   for(const title of ['Chambre P','Salle de bain','Cuisine','Salon']){
     v.title=title;v.assessment={...v.assessment,reason:'drying_unavailable',level:'calm',action:'attendre',features:{...v.assessment.features,humidity:hum}};
-    assert.deepEqual(facts(v).map(f=>f.title+' · '+plain(f.text)),['Humidité élevée · risque de moisissure, aérer n’aiderait pas, l’air du dehors n’est pas plus sec']);
+    assert.deepEqual(facts(v).map(f=>f.title+' · '+plain(f.text)),['Humidité élevée · risque de moisissure : ne séchez pas de linge ici, écartez les meubles du mur']);
   }
 });
 test('rooms sharing one air show each measure once, under the room that has it',()=>{
