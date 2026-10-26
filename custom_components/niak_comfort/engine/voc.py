@@ -18,6 +18,8 @@ STRONG = 2.0
 RISE = 1 / 3
 DELAY_MINUTES = 10
 PAUSE_MINUTES = 45
+# Seconds the newest reading counts at least in the mean: one update of the room.
+LATEST = 30
 
 
 def _since(value):
@@ -50,12 +52,15 @@ def judge(value, threshold, now, *, mean=None, was_high=False, above_since=None,
 def mean(points, now, minutes=MEAN_MINUTES):
     """The index's mean over the last `minutes`, each reading weighed by how long it stood; None without one.
 
-    `points`: [(datetime, value)] in time order. A reading taken before the window counts from its start."""
+    `points`: [(datetime, value)] in time order. A reading taken before the window counts from its start; the newest
+    counts at least LATEST seconds, so that a reading just received is not left out."""
     start = now - timedelta(minutes=minutes)
     total = weight = 0.0
     for i, (when, value) in enumerate(points):
         until = points[i + 1][0] if i + 1 < len(points) else now
         span = (min(until, now) - max(when, start)).total_seconds()
+        if i + 1 == len(points):
+            span = max(span, LATEST)
         if span > 0:
             total += value * span
             weight += span

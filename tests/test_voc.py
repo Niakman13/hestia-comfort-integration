@@ -52,6 +52,8 @@ class Judge(unittest.TestCase):
     def test_mean_weighs_each_reading_by_its_time(self):
         points = [(NOW - timedelta(minutes=30), 100), (NOW - timedelta(minutes=5), 200), (NOW - timedelta(minutes=1), 100)]
         self.assertAlmostEqual(voc.mean(points, NOW), (100 * 5 + 200 * 4 + 100 * 1) / 10)
+        # A reading just received counts too.
+        self.assertAlmostEqual(voc.mean([(NOW - timedelta(minutes=10), 100), (NOW, 220)], NOW), (100 * 600 + 220 * 30) / 630)
         self.assertIsNone(voc.mean([], NOW))
 
 
