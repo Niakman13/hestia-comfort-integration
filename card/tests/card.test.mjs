@@ -25,7 +25,8 @@ test('humidity graduation stays consistent on room and home cards, including dry
     ['low',1,39,'Légèrement sec'],['low',2,35,'Air sec'],['low',3,25,'Très sec']]){
     const v=fresh();v.observations.indoor_humidity={value,quality:'valid',source:'sensor.h'};
     v.assessment={...v.assessment,level:'calm',reason:'within_comfort',action:'ok',needs:[],missing:[],features:{humidity:{status,degree,measured:value,reachable:20},air:{co2_status:'ok',pm25_status:'ok',voc_status:'ok'}}};
-    assert.equal(humidityLabel(v),label);assert.equal(advice(v).pill,label);
+    assert.equal(humidityLabel(v),label);assert.equal(advice(v).pill,'Au mieux');assert.equal(advice(v).level,'calm');
+    if(status==='high')assert.equal(facts(v)[0].title,label);
     const tile=tiles(v,cleanConfig({type:'custom:niak-comfort-card',modules:['humidity']}))[0];
     assert.equal(tile.note,label.toLowerCase());assert.equal(tile.out,degree>=2);
     assert.equal(needs(v,false).length,degree>=2?1:0);assert.match(needs(v)[0],new RegExp(label.toLowerCase()));
@@ -259,8 +260,8 @@ test('a cool room the heating takes care of is no problem on the banner, only in
   v.assessment={...v.assessment,reason:'heat_needed',level:'calm',action:'ok',needs:['heat'],constraints:[],
     features:{...v.assessment.features,humidity:undefined,warmth:{occupied:true,heating:'on',slight:true}}};
   let a=advice(v);
-  assert.equal(a.title,'Rien à faire');assert.equal(a.pill,undefined);assert.equal(a.disk,'check');
-  assert.equal(slides(v)[0].pill,'Tout va bien');
+  assert.equal(a.title,'Rien à faire');assert.equal(a.pill,'Au mieux');assert.equal(a.level,'calm');assert.equal(a.disk,'temp');
+  assert.equal(slides(v)[0].pill,'Au mieux');
   assert.deepEqual(facts(v).map(f=>f.title+' · '+plain(f.text)),['Un peu frais · le chauffage s’en charge']);
   // Damp walls remain the room's problem: the pill names it, never the cold.
   v.assessment.features.humidity={status:'high',degree:2,dew_point:null,incoming_relative:null,glass_temperature:null,condensation_risk:null,message:'',surface:88,mould:true,excess:0.2,source:'outside',reachable:75};
@@ -272,7 +273,20 @@ test('a cool room the heating takes care of is no problem on the banner, only in
   // Clearly cold with no heating known (a towel rail not yet linked): « Tout va bien » would be wrong.
   v.assessment={...v.assessment,level:'calm',needs:['heat'],features:{...v.assessment.features,warmth:{occupied:true,heating:null,slight:false}}};
   assert.equal(advice(v).pill,'Trop frais');
-  v.assessment.features.warmth.slight=true;assert.equal(advice(v).pill,undefined);
+  v.assessment.features.warmth.slight=true;assert.equal(advice(v).pill,'Au mieux');
+});
+test('« Au mieux » under « Rien à faire »: « À savoir » says first what counts most',()=>{
+  // 26 Oct., Chambre A at 63.5 %: « Air humide » beside « Rien à faire » read as « do something ».
+  const v=fresh();v.observations.indoor_humidity={value:63.5,quality:'valid',source:'sensor.h'};
+  v.assessment={...v.assessment,reason:'drying_slow',action:'attendre',level:'calm',needs:['dry'],constraints:[],
+    features:{...v.assessment.features,warmth:null,humidity:{status:'high',degree:2,lasting:true,measured:63.5,reachable:70}}};
+  v.feedback={last:{measure:'co2',before:1072,after:702,predicted:986}};
+  assert.equal(advice(v).title,'Rien à faire');assert.equal(slides(v)[0].pill,'Au mieux');assert.equal(slides(v)[0].level,'calm');
+  assert.deepEqual(facts(v).map(f=>f.title),['Air humide','Aération','Dernière aération']);
+  // A risk comes before the state; the pill keeps naming it.
+  v.assessment.features.humidity={...v.assessment.features.humidity,mould:true};
+  assert.equal(advice(v).pill,'Murs à surveiller');
+  assert.deepEqual(facts(v).map(f=>f.title).slice(0,2),['Humidité élevée','Air humide']);
 });
 test('every banner title is a gesture or « Rien à faire »',()=>{
   const v=fresh(),GESTURE=/^(Aérez|Ouvrez|Refermez|Fermez|Gardez fermé|Lancez la VMC|Laissez ouvert|Rallumez le chauffage|Adaptez les volets|Aération en cours|Encore \d+ min|Vous pouvez refermer|Renouvelez|Vérifiez|Rien à faire|Mesures (absentes|en chargement)|Bilan partiel)/;
@@ -410,7 +424,7 @@ test('a damp room with nothing to do is not « Tout va bien », and a « Referme
   const {facts}=await import(pathToFileURL(join(temp,'views/room.mjs')));
   // Chambre A, 21 October: 68.9 %, airing would barely help.
   const a=fresh();a.assessment={...a.assessment,reason:'drying_slow',action:'attendre',level:'calm',needs:['dry']};
-  assert.equal(advice(a).pill,'Trop humide');
+  assert.equal(advice(a).pill,'Au mieux');assert.notEqual(slides(a)[0].pill,'Tout va bien');
   assert.equal(advice(a).disk,'drop');
   const ok=fresh();ok.assessment={...ok.assessment,reason:'within_comfort',action:'ok',level:'calm',needs:[]};
   assert.equal(advice(ok).pill,undefined);

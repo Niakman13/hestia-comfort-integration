@@ -251,6 +251,11 @@ button.nc-row:hover { background:color-mix(in srgb, var(--nw-fg) 5%, transparent
 .nc-facts li { display:flex; gap:8px; align-items:flex-start; color:var(--nw-fg2); }
 .nc-facts li svg { width:16px; height:16px; flex:none; margin-top:2px; opacity:.8; }
 .nc-facts li b { color:var(--nw-fg); font-weight:600; }
+/* What counts most, first: in full ink, its pictogram lit; a risk in the « to watch » colour. */
+.nc-facts li.key { color:var(--nw-fg); padding-bottom:6px; border-bottom:1px solid var(--nw-line); }
+.nc-facts li.key svg { opacity:1; }
+.nc-facts li.risk svg { color:var(--nw-watch); opacity:1; }
+.nc-facts li.risk b { color:color-mix(in oklab, var(--nw-watch) 55%, var(--nw-fg)); }
 /* One card for rooms sharing one air: each room's own measures under its name. */
 .nc-room-label { margin:12px 0 6px; }
 .nc-room-label:first-child { margin-top:4px; }
