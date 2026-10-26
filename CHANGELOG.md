@@ -2,7 +2,7 @@
 
 **En bref**
 
-- **La consigne de Versatile Thermostat sert de minimum**, quel que soit son préréglage : en éco à 17 °C, une pièce à 18 °C n’est plus « trop fraîche » ; en hors-gel, non plus. Avant, seule sa température confort comptait.
+- **La consigne de Versatile Thermostat sert de minimum** : en éco à 17 °C, une pièce à 18 °C n’est plus « trop fraîche ». Avant, seule sa température confort comptait. Le hors-gel protège sans être un confort : sa consigne (7 °C, ou 14 °C pour un poêle) ne sert pas de minimum, la température confort reste la référence, sans conseil de rallumer.
 - **Plus de « Refermez » quand l’air du dehors réchauffe la pièce.** Une pièce trop fraîche, fenêtre ouverte, avec un dehors plus chaud : Niak dit que vous pouvez laisser ouvert.
 
 ### Après la mise à jour
