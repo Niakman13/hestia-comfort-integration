@@ -206,6 +206,10 @@ class Configuration:
         heated = payload.get("heated", True)
         if not isinstance(heated, bool):
             raise ValueError("« Pièce chauffée » doit être oui ou non.")
+        # A Versatile Thermostat's comfort temperature stands as the room's minimum unless the person says otherwise.
+        thermostat_reference = payload.get("thermostat_reference", True)
+        if not isinstance(thermostat_reference, bool):
+            raise ValueError("« Minimum repris du thermostat » doit être oui ou non.")
         # Rooms with no wall between them (a salon open onto its kitchen) share one air.
         open_to = payload.get("open_to", [])
         known = {e.entry_id for e in self.entries()}
@@ -279,7 +283,7 @@ class Configuration:
         cleaned = {"name": name.strip(), "area_id": area_id, "floor_id": floor_id, "sources": cleaned_sources,
                    "windows": list(dict.fromkeys(windows)), "openings": cleaned_openings, "settings": settings,
                    "presence": list(dict.fromkeys(presence)), "evolution": cleaned_evolution, "use_home": not legacy,
-                   "air_reference_version": AIR_REFERENCE_VERSION, "heated": heated, "open_to": list(dict.fromkeys(open_to))}
+                   "air_reference_version": AIR_REFERENCE_VERSION, "heated": heated, "thermostat_reference": thermostat_reference, "open_to": list(dict.fromkeys(open_to))}
         return cleaned, warnings
 
     @staticmethod

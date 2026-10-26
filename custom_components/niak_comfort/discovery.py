@@ -4,6 +4,7 @@ import re
 from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
 
 from .const import OUTDOOR_AREAS, SOURCES
+from .engine import thermostat as thermostats
 
 INDOOR = ("indoor_temperature", "indoor_humidity", "co2", "windows", "heating", "illuminance", "pm25", "voc", "purifier", "ventilation", "ventilation_boost", "presence")
 OPENING_SOURCES = ("covers", "shutter_auto", "shutter_override")
@@ -185,7 +186,8 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
         warnings.append("other_area")
     if key == "windows" and device_class != "window":
         warnings.append("contact_role")
-    if entry.platform in ("template", "plant", "versatile_thermostat"):
+    # A temperature derived by Versatile Thermostat is second-hand; its climate entity, as the heating, is the extension.
+    if entry.platform in ("template", "plant") or (entry.platform == thermostats.PLATFORM and key != "heating"):
         warnings.append("derived")
     if key == "heating" and not attrs.get("hvac_action"):
         warnings.append("no_hvac_action")
@@ -213,7 +215,8 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
             "local": local, "outside": outside, "reference": bool(reference), "available": available,
             "adapter": adapter, "warnings": list(dict.fromkeys(warnings)), "provenance": chain,
             "device_class": device_class, "atmo_label": attrs.get("Libellé") if adapter == "atmo_daily" else None,
-            **({"voc_reference": voc_reference(hass, entry, device_class, attrs.get("unit_of_measurement"))} if key == "voc" else {})}
+            **({"voc_reference": voc_reference(hass, entry, device_class, attrs.get("unit_of_measurement"))} if key == "voc" else {}),
+            **({"thermostat": thermostats.read(state.state, dict(attrs))} if key == "heating" and entry.platform == thermostats.PLATFORM else {})}
 
 
 def catalog(hass, area_id=None, selected=None, indoor_ids=(), *, keys=None, entries=None):

@@ -7,7 +7,8 @@ from dataclasses import dataclass, field
 
 from homeassistant.util import dt as dt_util
 
-from . import weather_link
+from . import cover_link, weather_link
+from .engine import thermostat as thermostats
 from .configuration import get_configuration
 from homeassistant.helpers import entity_registry as er
 
@@ -45,6 +46,10 @@ class Room:
     """Sensors Home Assistant has in this room for what is not chosen: key → name."""
     shared: dict = field(default_factory=dict)
     """Sources read from the room it shares its air with: key → that room's name."""
+    thermostat: bool = False
+    """Its heating is a Versatile Thermostat (engine/thermostat.py)."""
+    driven_covers: int = 0
+    """Its covers driven by Adaptive Cover Pro."""
 
 
 @dataclass
@@ -154,13 +159,23 @@ def report(f):
                 cells.append({"level": "ok", "text": _plural(len(mine), "contact") if key == "windows" else "répond"})
         rooms.append({"entry_id": room.entry_id, "title": room.title, "cells": cells})
 
+    # Extensions: other integrations Niak recognises by itself, each making the advice better where it is used.
+    vt = [r.title for r in f.rooms if r.thermostat]
+    acp = [r.title for r in f.rooms if r.driven_covers]
+    extensions = [
+        {"name": "Niak Weather", "level": "ok" if f.weather else "none", "role": "Extérieur, prévisions, pluie, vigilances",
+         "text": f"relié · {f.weather}" if f.weather else "installé, pas relié" if f.weather_installed else "non installé"},
+        {"name": thermostats.NAME, "level": "ok" if vt else "none", "role": "Consigne confort, raison d’un arrêt, présets, pente",
+         "text": f"{_plural(len(vt), 'pièce')} · " + ", ".join(vt) if vt else "aucun chauffage reconnu"},
+        {"name": cover_link.NAME, "level": "ok" if acp else "none", "role": "Volets pilotés avec le soleil",
+         "text": f"{_plural(len(acp), 'pièce')} · " + ", ".join(acp) if acp else "aucun volet reconnu"}]
     versions = [{"level": "ok", "text": f"Intégration {f.version}", "why": "avec sa carte"},
                 {"level": "ok", "text": f"Relié à Niak Weather · {f.weather}", "why": "l’extérieur vient de sa station et de ses prévisions"} if f.weather else
                 {"level": "none", "text": "Pas relié à Niak Weather", "why": "installé : il peut remplir l’extérieur" if f.weather_installed else "non installé"}]
     return {"level": "action" if todo else "ok", "summary": _plural(len(todo), "point") + " à régler" if todo else "Tout est suivi",
             "tips_summary": _plural(len(tips), "réglage") + " à améliorer" if tips else "",
             "rooms_summary": _plural(len(f.rooms), "pièce suivie", "pièces suivies"),
-            "todo": todo, "tips": tips, "sources": sources, "columns": [label for _, label in COLUMNS], "rooms": rooms, "versions": versions}
+            "todo": todo, "tips": tips, "sources": sources, "extensions": extensions, "columns": [label for _, label in COLUMNS], "rooms": rooms, "versions": versions}
 
 
 def _weather_air(spec):
@@ -193,6 +208,9 @@ async def facts(hass, version):
         room = Room(entry.entry_id, entry.title, entry.state.value == "loaded")
         coordinator = getattr(entry, "runtime_data", None)
         room.shared = coordinator.inherited() if hasattr(coordinator, "inherited") else {}
+        heating = er.async_get(hass).async_get(sources["heating"]) if sources.get("heating") else None
+        room.thermostat = bool(heating and heating.platform == thermostats.PLATFORM)
+        room.driven_covers = sum(1 for w in windows if w in (getattr(coordinator, "drivers", None) or {}))
         room.sensors = [_sensor(hass, key, sources[key], now) for key in ("indoor_temperature", "indoor_humidity", "co2", "heating", "illuminance", "pm25", "voc", "purifier", "ventilation", "ventilation_boost") if sources.get(key)]
         room.sensors += [_sensor(hass, "windows", w, now) for w in windows]
         room.sensors += [_sensor(hass, "presence", e, now) for e in config.get("presence", [])]

@@ -10,7 +10,7 @@ from typing import Mapping
 from .sources import Reading
 from .wind import DRIVEN_RAIN_GUST, crossing as wind_crossing, open_first, side as wind_side
 from .outlook import IMMINENT, rain_timing, slot as next_slot
-from . import learning
+from . import learning, thermostat as thermostats
 
 # Points above the humidity threshold beyond which a useful drying gesture can be proposed.
 HUMIDITY_GRACE = 3
@@ -267,6 +267,15 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     openings = openings or {}
     outlook = outlook or {}
     context = context or {}
+    # A Versatile Thermostat (engine/thermostat.py): its comfort temperature can stand as the room's minimum.
+    thermostat = context.get("thermostat") if isinstance(context.get("thermostat"), Mapping) else None
+    comfort = thermostats.reference(thermostat, settings.maximum) if context.get("thermostat_reference") else None
+    if comfort is not None:
+        try:
+            settings = replace(settings, minimum=comfort)
+        except ValueError:
+            # Too close to the maximum for the hysteresis: the room's own minimum stays.
+            comfort = None
     # The upper comfort limit follows the season; a room declared unheated never calls for warmth.
     settings, season = seasonal(settings, context.get("outdoor_mean_7d"), context.get("season_name"))
     group = season.get("group")
@@ -512,9 +521,16 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         action, reason = "ok", "open_neutral"
     # A cold room speaks only when it points at something: someone at home and the heating switched off.
     occupied = context.get("occupied")
+    if not isinstance(occupied, bool) and thermostat:
+        # No presence sensor of its own: the presence or motion the thermostat follows.
+        occupied = thermostat.get("occupied")
     heating_state = value("heating") if "heating" in readings else None
     warmth = {"occupied": occupied if isinstance(occupied, bool) else None,
               "heating": None if "heating" not in readings else "off" if heating_state == "off" else "on" if heating_state in ("heating", "idle") else None}
+    if thermostat:
+        warmth["thermostat"] = {"name": thermostat.get("name"), "preset": thermostat.get("preset"), "target": thermostat.get("target"),
+                                "off_reason": thermostat.get("off_reason"), "lowered": thermostats.lowered(thermostat),
+                                "reference": comfort}
     heating = (value("heating") or "unknown") if "heating" in readings else "not_configured"
     first = tuple(open_first(details)) if action == "ouvrir" else ()
     coming = next_slot(outlook.get("hours") or [], now, ti, hot=hot or precool, cool_now=cool, margin=settings.cooling_delta) if now else None
@@ -540,10 +556,17 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         lasting = chilly and (now is None or chilly_since is None
                               or (now - datetime.fromisoformat(chilly_since)).total_seconds() >= HEAT_MINUTES * 60)
         coming = context.get("next_hour_temperature")
+        slope = (thermostat or {}).get("slope")
+        if not isinstance(coming, (int, float)) and isinstance(slope, (int, float)) and ti is not None:
+            # A twin still learning: the slope the thermostat measures, in °C per hour.
+            coming = ti + slope
         warming = (isinstance(coming, (int, float)) and not isinstance(coming, bool) and ti is not None
                    and coming >= ti + WARMING)
         warmth.update(chilly_since=chilly_since, tolerance=settings.heating_tolerance, warming=warming)
-        asked = warmth["occupied"] is True and warmth["heating"] == "off" and lasting and not warming
+        # Only a heating switched off by hand is the person's to switch back on: a window, the thermostat's own
+        # start-stop or a central mode resume by themselves, and an eco or frost preset aims lower on purpose.
+        theirs = not thermostat or (thermostat.get("off_reason") in (None, "manual") and not thermostats.lowered(thermostat))
+        asked = warmth["occupied"] is True and warmth["heating"] == "off" and lasting and not warming and theirs
         level = "action" if asked else "neutral" if partial else "calm"
     # Protections never configured: the advice stands, the card says what Niak does not watch.
     unverified = tuple(k for k in ("pollution", "rain") if k not in readings and not (k == "rain" and all_sheltered))
@@ -553,6 +576,10 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     extended["drying"] = drying
     extended["benefits"] = _benefits(details, openings, settings, ti, hot, cold, heated, te, group)
     extended["warmth"] = warmth if cold else None
+    # The window a Versatile Thermostat saw open, worth saying when no contact of the room says it.
+    extended["thermostat"] = ({"name": thermostat.get("name"), "window": thermostat.get("window") is True and not opened,
+                               "preset": thermostat.get("preset"), "target": thermostat.get("target"), "reference": comfort}
+                              if thermostat else None)
     if isinstance(extended.get("humidity"), dict):
         saturated = absolute_humidity(ti, 100) if ti is not None else None
         extended["humidity"].update(
