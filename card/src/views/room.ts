@@ -588,7 +588,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
   const scaleBox=sc?html`<div class="nc-sec nw-glass"><div class="nw-label">Température</div>${sc}</div>`:nothing;
   // « Prochaines heures » (engine/horizon.py): under the scale, the banner's subject first, the other one behind a tab.
   const hum=f?.humidity,season=f?.season;
-  const graph=config.show_horizon===false?nothing:horizonBox(f?.horizon??[],{subjects:config.horizon_subjects,second:!!st.horizonAlt,onTab:()=>st.toggle('horizonAlt'),
+  const graph=config.show_horizon===false?nothing:horizonBox(f?.horizon??[],{subjects:config.horizon_subjects,mode:config.horizon_mode,uid:st.uid,second:!!st.horizonAlt,onTab:()=>st.toggle('horizonAlt'),
     plage:s=>s==='humidity'?(hum?.minimum!=null&&hum?.maximum!=null?[hum.minimum,hum.maximum]:null):(season?[season.minimum,season.maximum]:null)});
   if(format==='mini'){
     const values=chipValues(v,config.mini_values??['temperature']),temp=values.find(c=>c.ic==='temp');

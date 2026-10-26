@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 const root=new URL('../',import.meta.url),temp=await mkdtemp(join(tmpdir(),'niak-comfort-card-'));
-await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts','src/views/room.ts','src/editor.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
+await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts','src/views/room.ts','src/views/horizon.ts','src/editor.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
   bundle:true,platform:'node',format:'esm',outExtension:{'.js':'.mjs'},logLevel:'silent'});
 const {cleanConfig,cleanHomeConfig,homeAction}=await import(pathToFileURL(join(temp,'types.mjs')));
 const {isView,numeric,summary,readingStatus,coverageText,windFrom,evolutionLines,co2Metric,solarMetric}=await import(pathToFileURL(join(temp,'view.mjs')));
@@ -489,4 +489,28 @@ test('the scale switch turns the scale off and on, even though the form sends ba
   // Another switch leaves a card's own marks untouched.
   const kept=cleanConfig(nextConfig(cleanConfig({type:'custom:niak-comfort-card',scale_marks:['band']}),{show_scale:true,scale_marks:['band','day','out'],rotate:false}));
   assert.deepEqual(kept.scale_marks,['band']);
+});
+
+test('the graph shows when the gesture changes something, or always with the trend, and folds away instead of jumping',async()=>{
+  const {horizonShown,horizonBox}=await import(pathToFileURL(join(temp,'views/horizon.mjs')));
+  const subject=(kind,needed,subject='temperature')=>({subject,kind,needed,unit:'°C',start:'2026-10-26T22:00:00+01:00',step_minutes:30,base:[19.8,19.7,19.7,19.8],
+    gesture:kind==='trend'?null:[19.8,19.6,19.7,19.8],bands:[],extra:[],result:{drop:0,top:19.8,low:19.7}});
+  const barely=[subject('air',false),subject('trend',false)],clear=[subject('air',true),subject('trend',false)];
+  assert.deepEqual(horizonShown(barely).map(h=>h.kind),[]);
+  assert.deepEqual(horizonShown(barely,'always').map(h=>h.kind),['trend']);
+  assert.deepEqual(horizonShown(clear,'always').map(h=>h.kind),['air']);
+  assert.deepEqual(horizonShown([subject('dry',true,'humidity'),subject('trend',false)],'always',['temperature']).map(h=>h.kind),['trend']);
+  assert.deepEqual(horizonShown([subject('air',false),subject('sun',false),subject('trend',false)],'always').map(h=>h.kind),['sun']);
+  // An older engine, without `needed`: drawn as before.
+  assert.deepEqual(horizonShown([{...subject('air'),needed:undefined}]).map(h=>h.kind),['air']);
+  assert.equal(cleanConfig({type:'custom:niak-comfort-card',horizon_mode:'always'}).horizon_mode,'always');
+  assert.throws(()=>cleanConfig({type:'custom:niak-comfort-card',horizon_mode:'parfois'}),/graphique/);
+  const o={plage:()=>null,second:false,onTab:()=>{},uid:'test'};
+  const text=r=>JSON.stringify(r);
+  assert.equal(horizonBox(barely,{...o,uid:'never'}),Symbol.for('lit-nothing'));
+  assert.equal(horizonBox(clear,o).values[0],'open');
+  // The advice no longer needs it: the last drawing stays while it folds, hidden from screen readers.
+  const folding=horizonBox(barely,o);
+  assert.deepEqual(folding.values.slice(0,3),['','true',true]);
+  assert.match(text(folding),/en aérant/);
 });
