@@ -68,9 +68,13 @@ def _presence(readings, context):
         delay = context.get('presence_delay_minutes',5)
         delay = delay if _number(delay) and 0 <= delay <= 120 else 5
         times = context.get('presence_off_minutes') or {}
-        if all(r.usable and r.value is False and r.detail in ('occupancy','presence')
-               and _number(times.get(e)) and times[e] >= delay for e,r in sources.items()):
+        quiet = all(r.usable and r.value is False and r.detail in ('occupancy','presence') and _number(times.get(e)) for e,r in sources.items())
+        if quiet and all(times[e] >= delay for e in sources):
             state = 'empty'
+        elif quiet:
+            # Nobody seen for a few minutes, not yet the delay: said as it is, not « unknown ».
+            return {'state':'leaving','minutes':round(min(times[e] for e in sources)),'delay':delay,
+                    'message':'Personne détecté depuis quelques minutes ; la pièce sera dite vide après le délai choisi.'}
     return {'state':state,'message':{'occupied':'Présence détectée.', 'empty':'Pièce confirmée vide : suivi du confort et de l’air conservé ; vérifiez les fenêtres ouvertes.',
                                    'unknown':'Présence inconnue ; le silence d’un détecteur de mouvement ne prouve pas l’absence.'}[state]}
 

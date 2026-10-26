@@ -48,7 +48,6 @@ class ComfortCoordinator(DataUpdateCoordinator):
         # Windows opened while the advice said « open »: the gesture was followed, no bounce delay to wait for.
         self.followed = set()
         self.started = dt_util.utcnow()
-        self.absent_since = {}
         self.history_reports = {}
         self.histories = {"temperature_history": deque(maxlen=360), "outdoor_history": deque(maxlen=360)}
         # The sun of the last quarter of an hour: a passing cloud does not make « Soleil » come and go.
@@ -192,12 +191,6 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 # Recompute right when the bounce delay ends, not at the next periodic refresh.
                 cancel = async_call_later(self.hass, OPEN_DEBOUNCE_SECONDS + 1, self._bounce_over)
                 self.stop_listeners.add(cancel)
-        if entity_id in self.config.get("presence", []):
-            kind = new.attributes.get("device_class") if new else None
-            if kind not in ("occupancy", "presence") or after != "off" or before not in ("on", "off"):
-                self.absent_since.pop(entity_id, None)
-            elif before == "on":
-                self.absent_since[entity_id] = now
         await self.async_request_refresh()
 
     def _context(self, now, readings):
@@ -233,7 +226,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 "humidity_floor_3h": self.humidity_floor,
                 "humidity_ceiling_3h": self.humidity_ceiling,
                 "opening_minutes": {e: minutes(e, self.opened_since, "on") for e in self.windows},
-                "presence_off_minutes": {e: minutes(e, self.absent_since, "off") for e in self.config.get("presence", [])},
+                "presence_off_minutes": {e: self._off_minutes(e, now) for e in self.config.get("presence", [])},
                 **{k: list(v) for k, v in self.histories.items()}}
 
     async def _async_update_data(self):
@@ -386,6 +379,13 @@ class ComfortCoordinator(DataUpdateCoordinator):
         entities = getattr(er.async_get(self.hass), "entities", None) or {}
         panels = [e.entity_id for e in entities.values() if e.domain == "alarm_control_panel" and e.platform == "alarmo"]
         return [*panels, "zone.home"]
+
+    def _off_minutes(self, entity_id, now):
+        """Minutes a presence sensor has said « nobody », read from Home Assistant: right even after a restart."""
+        state = self.hass.states.get(entity_id)
+        if not state or state.state != "off" or state.attributes.get("device_class") not in ("occupancy", "presence"):
+            return None
+        return max(0.0, (now - state.last_changed).total_seconds() / 60)
 
     def _occupied(self):
         """True when someone is at home, False when nobody is, None when nothing says it.

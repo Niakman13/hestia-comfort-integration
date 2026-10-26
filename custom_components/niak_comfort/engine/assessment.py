@@ -577,6 +577,8 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     extended["season"] = {**season, "heated": heated}
     extended["drying"] = drying
     extended["benefits"] = _benefits(details, openings, settings, ti, hot, cold, heated, te, group)
+    # Within the heating tolerance a room is « a little cool », not « too cool »: the card says it gently.
+    warmth["slight"] = ti is not None and ti >= settings.minimum - settings.heating_tolerance
     extended["warmth"] = warmth if cold else None
     # The window a Versatile Thermostat saw open, worth saying when no contact of the room says it.
     extended["thermostat"] = ({"name": thermostat.get("name"), "window": thermostat.get("window") is True and not opened,

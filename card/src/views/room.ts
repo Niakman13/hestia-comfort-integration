@@ -124,7 +124,7 @@ function gesture(v:View):Advice {
     return {title:'Rien à faire',line:opened?html`Ouverte ou fermée, ${b('cela ne change rien')}`:a.reason==='opening_blocked'?html`Aérer ${b('n’est pas possible')} pour l’instant`
       :winterWarm?html`Ouvrir la ${b('refroidirait trop vite')} en hiver`:html`Ouvrir ${b('n’apporterait rien')} pour l’instant`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined,
       // The pill names what is out, never « plage »: that word is the temperature's range alone.
-      ...(a.needs.length?{pill:NEED_PILLS[a.needs[0]]??'À surveiller',level:'neutral' as Level,...(opened?{}:{disk:NEED_DISKS[a.needs[0]]??'info'})}:{})};}
+      ...(a.needs.length?{pill:a.needs[0]==='heat'&&a.features?.warmth?.slight?'Un peu frais':NEED_PILLS[a.needs[0]]??'À surveiller',level:'neutral' as Level,...(opened?{}:{disk:NEED_DISKS[a.needs[0]]??'info'})}:{})};}
   switch(a.reason){
     case 'within_comfort': return {title:'Rien à faire',line:html`${deg(ti)}, ${b('dans votre plage')}`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined};
     case 'rain_open_windows': return {title:'Fermez, il pleut',line:html`La pluie ${b('entre par les ouvrants exposés')}`,disk:'rain'};
@@ -399,7 +399,7 @@ export function scale(s:ScaleInput):TemplateResult {
 /** A partner room's temperature, as a tile: the scale above shows only the chosen room. */
 function roomTemperature(p:View):Tile[] {
   const t=numeric(p.observations.indoor_temperature),n=p.assessment.needs,out=n.includes('cool')||n.includes('heat');
-  return t===null?[]:[{ic:'temp',label:'Température',value:number(t),unit:'°C',note:n.includes('cool')?'trop chaud':n.includes('heat')?'trop frais':'dans votre plage',level:out?'watch':'calm',out,entity:p.observations.indoor_temperature?.source??undefined}];
+  return t===null?[]:[{ic:'temp',label:'Température',value:number(t),unit:'°C',note:n.includes('cool')?'trop chaud':n.includes('heat')?(p.assessment.features?.warmth?.slight?'un peu frais':'trop frais'):'dans votre plage',level:out?'watch':'calm',out,entity:p.observations.indoor_temperature?.source??undefined}];
 }
 export interface Tile {ic:string;label:string;value:string;unit?:string;note:string;level:Level|'watch';out:boolean;entity?:string;
   /** A device at work (purifier, ventilation): framed like a measure, never counted out of your range. */
@@ -487,7 +487,7 @@ export function details(v:View,config:Config):TemplateResult[] {
     // In plain words: who sets it, where it stands, when the sun comes. Adaptive Cover Pro's own wording is left out.
     out.push(row(v.names?.[s.entity_id]??'Volet',[s.manual_override?'réglé à la main':s.advice==='close'?'à fermer':s.advice==='open'?'à ouvrir':s.driver&&(s.driving??s.automatic===true)?'piloté par Adaptive Cover Pro':'rien à faire',s.driver&&s.detection===false?'reprise à la main non détectée':'',s.driver&&s.climate===false?'mode climat coupé':'',
       s.position!=null?`ouvert à ${number(s.position)} %`:'',s.driver&&s.target!=null&&s.target!==s.position?`visé ${number(s.target)} %`:'',from&&to?`soleil de ${from} à ${to}`:''].filter(Boolean).join(' · ')));}
-  if(mods.has('air')&&f?.presence&&f.presence.state!=='not_configured')out.push(row('Présence',{occupied:'quelqu’un est là',empty:'pièce vide',unknown:'inconnue'}[f.presence.state]??''));
+  if(mods.has('air')&&f?.presence&&f.presence.state!=='not_configured')out.push(row('Présence',{occupied:'quelqu’un est là',empty:'pièce vide',leaving:`personne depuis ${f.presence.minutes??0} min (vide après ${f.presence.delay??5} min)`,unknown:'inconnue'}[f.presence.state]??''));
   // Where the drying promise comes from: this room's own airings, or an ordinary room until one is seen.
   if(mods.has('humidity')&&f?.drying)out.push(row('Séchage',f.drying.openings?`appris sur ${f.drying.openings} aération${f.drying.openings>1?'s':''}`:'estimé, aucune aération observée'));
   if(mods.has('humidity')&&f?.humidity&&f.humidity.condensation_risk!==null)out.push(row('Buée',f.humidity.condensation_risk?'risque estimé':'aucun risque estimé'));
@@ -552,6 +552,9 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
   // A measure out of range is framed in orange only when the room asks for a gesture.
   const soft=!['action','urgent'].includes(top);
   const summary=tileSummary(list.length,outside.length,'mesure',muted.length,!!v.starting);
+  // Folded, a card shared by several rooms names each room on the measures it keeps: « Salon », « Cuisine », not twice « Température ».
+  const named=(t:Tile,room:string)=>others.length?{...t,label:t.label==='Température'?room:`${t.label} · ${room}`}:t;
+  const watched=[...own.map(t=>named(t,v.title)),...others.flatMap(o=>o.list.map(t=>named(t,o.title)))].filter(t=>(t.out&&!t.remedy)||tileClass(t).includes(' mute'));
   const grid=others.length?html`<div class="nw-label nc-room-label">${v.title}</div><div class="nc-tiles">${own.map(t=>tile(t,soft))}</div>${others.map(o=>o.list.length?html`<div class="nw-label nc-room-label">${o.title}</div><div class="nc-tiles">${o.list.map(t=>tile(t,soft))}</div>`:nothing)}`
     :html`<div class="nc-tiles">${list.map(t=>tile(t,soft))}</div>`;
   const box=factBox(v,partners);
@@ -584,7 +587,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
     ${hero({name,level:top,slides:all,scaleLabel:'Température',scale:sc??html``,st,why:whyLines(v),compact:!sc,still})}
     ${box}
     ${!body?nothing:html`<div class="nc-body">
-      ${measures?fold({label:'Mesures',summary,open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tiles',body:grid,keep:list.filter(t=>(t.out&&!t.remedy)||tileClass(t).includes(' mute')).map(t=>tile(t,soft))}):nothing}
+      ${measures?fold({label:'Mesures',summary,open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tiles',body:grid,keep:watched.map(t=>tile(t,soft))}):nothing}
       ${config.show_details===false?nothing:fold({label:'Détails',summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:st.uid+'-details',body:detailList})}
     </div>`}
   </ha-card>`;
@@ -641,7 +644,7 @@ export function needs(v:View,includeSlight=true):string[] {
   const h=val('indoor_humidity'),c=val('co2'),pm=val('pm25'),voc=val('voc');
   // The temperature is the tile's own figure, just above: the words alone.
   if(a.needs.includes('cool'))out.push('trop chaud');
-  if(a.needs.includes('heat'))out.push('trop frais');
+  if(a.needs.includes('heat'))out.push(a.features?.warmth?.slight?'un peu frais':'trop frais');
   const humidity=humidityLabel(v),degree=a.features?.humidity?.degree;
   if(humidity&&(degree!==undefined?degree>=(includeSlight?1:2):a.needs.includes('dry')))out.push(h!==null?`${number(h)} % ${humidity.toLowerCase()}`:humidity.toLowerCase());
   if(air?.co2_status==='high')out.push(c!==null?`${number(c)} ppm de CO₂`:'CO₂ élevé');
