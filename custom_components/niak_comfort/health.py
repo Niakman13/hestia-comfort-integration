@@ -32,8 +32,9 @@ class Sensor:
     key: str
     name: str
     status: str
-    """« ok », « silent » or « missing »."""
+    """« ok », « silent », « stale » (Home Assistant has it, the advice cannot use it) or « missing »."""
     age: float | None = None
+    entity_id: str = ""
 
 
 @dataclass
@@ -50,6 +51,8 @@ class Room:
     """Its heating is a Versatile Thermostat (engine/thermostat.py)."""
     driven_covers: int = 0
     """Its covers driven by Adaptive Cover Pro."""
+    windows_intended: bool = False
+    """No contact on its windows, on purpose: not suggested again."""
 
 
 @dataclass
@@ -90,7 +93,7 @@ def _since(age):
 
 
 def _broken(s):
-    return "n’existe plus" if s.status == "missing" else "ne répond pas"
+    return {"missing": "n’existe plus", "stale": "ne donne pas de mesure exploitable"}.get(s.status, "ne répond pas")
 
 
 def report(f):
@@ -107,10 +110,11 @@ def report(f):
         for key in ("indoor_humidity", "co2", "heating"):
             if key not in chosen and key not in room.shared and key in room.available:
                 tips.append(_line("tip", f"{room.title} : ajouter {SUBJECTS[key]}", f"« {room.available[key]} » est disponible : {GAINS[key]}.", target))
-        if "windows" not in chosen:
+        if "windows" not in chosen and not room.windows_intended:
             found = room.available.get("windows")
             tips.append(_line("tip", f"{room.title} : ouvrants non mesurés", (f"« {found} » est disponible. " if found else "")
-                              + "Un contact sur la fenêtre dirait si elle est ouverte : le conseil d’ouvrir ne viserait plus une fenêtre déjà ouverte.", target))
+                              + "Un contact sur la fenêtre dirait si elle est ouverte : le conseil d’ouvrir ne viserait plus une fenêtre déjà ouverte."
+                              + " Pas de contact voulu ici : Modifier → Ouvertures.", target))
     exterior_target = {"kind": "exterior", "label": "Extérieur"}
     if not f.configured:
         todo.append(_line("bad", "Extérieur à configurer", "Sans l’extérieur, impossible de dire s’il vaut mieux ouvrir ou fermer.", exterior_target))
@@ -172,7 +176,10 @@ def report(f):
     versions = [{"level": "ok", "text": f"Intégration {f.version}", "why": "avec sa carte"},
                 {"level": "ok", "text": f"Relié à Niak Weather · {f.weather}", "why": "l’extérieur vient de sa station et de ses prévisions"} if f.weather else
                 {"level": "none", "text": "Pas relié à Niak Weather", "why": "installé : il peut remplir l’extérieur" if f.weather_installed else "non installé"}]
-    return {"level": "action" if todo else "ok", "summary": _plural(len(todo), "point") + " à régler" if todo else "Tout est suivi",
+    # One count everywhere: every sensor checked here, in the rooms (a shared one once) and outside.
+    checked = [s for r in f.rooms for s in r.sensors] + list(f.exterior)
+    sensors = {"answering": sum(1 for s in checked if s.status == "ok"), "total": len(checked)}
+    return {"level": "action" if todo else "ok", "sensors": sensors, "summary": _plural(len(todo), "point") + " à régler" if todo else "Tout est suivi",
             "tips_summary": _plural(len(tips), "réglage") + " à améliorer" if tips else "",
             "rooms_summary": _plural(len(f.rooms), "pièce suivie", "pièces suivies"),
             "todo": todo, "tips": tips, "sources": sources, "extensions": extensions, "columns": [label for _, label in COLUMNS], "rooms": rooms, "versions": versions}
@@ -185,17 +192,31 @@ def _weather_air(spec):
 def _sensor(hass, key, entity_id, now):
     state = hass.states.get(entity_id)
     if state is None:
-        return Sensor(key, entity_id, "missing")
+        return Sensor(key, entity_id, "missing", entity_id=entity_id)
     name = str(state.attributes.get("friendly_name") or entity_id)
     if state.state in GONE:
-        return Sensor(key, name, "silent", (now - state.last_changed).total_seconds() / 60)
+        return Sensor(key, name, "silent", (now - state.last_changed).total_seconds() / 60, entity_id)
     seen = getattr(state, "last_reported", None) or state.last_updated
-    return Sensor(key, name, "ok", (now - seen).total_seconds() / 60)
+    return Sensor(key, name, "ok", (now - seen).total_seconds() / 60, entity_id)
+
+
+def _unusable(coordinator):
+    """Entities whose reading the room's last advice could not use: listed in its `missing`."""
+    data = getattr(coordinator, "data", None)
+    if not isinstance(data, dict):
+        return set()
+    assessment, observations = data.get("assessment") or {}, data.get("observations") or {}
+    found = set()
+    for key in assessment.get("missing") or ():
+        source = (observations.get(key) or {}).get("source") if isinstance(observations.get(key), dict) else None
+        if isinstance(source, str):
+            found.add(source)
+    return found
 
 
 async def facts(hass, version):
     service, now = await get_configuration(hass), dt_util.utcnow()
-    rooms, used = [], set()
+    rooms, used, stale = [], set(), set()
     indoor_ids = {{**e.data, **e.options}.get("sources", {}).get(k) for e in service.entries() for k in ("indoor_temperature", "indoor_humidity")} - {None}
     # Only local, unselected suggestions are used here. Index the registry once,
     # rather than scanning every entity for every role for every configured room.
@@ -211,6 +232,7 @@ async def facts(hass, version):
         heating = er.async_get(hass).async_get(sources["heating"]) if sources.get("heating") else None
         room.thermostat = bool(heating and heating.platform == thermostats.PLATFORM)
         room.driven_covers = sum(1 for w in windows if w in (getattr(coordinator, "drivers", None) or {}))
+        room.windows_intended = config.get("windows_unmeasured") is True
         room.sensors = [_sensor(hass, key, sources[key], now) for key in ("indoor_temperature", "indoor_humidity", "co2", "heating", "illuminance", "pm25", "voc", "purifier", "ventilation", "ventilation_boost") if sources.get(key)]
         room.sensors += [_sensor(hass, "windows", w, now) for w in windows]
         room.sensors += [_sensor(hass, "presence", e, now) for e in config.get("presence", [])]
@@ -231,10 +253,19 @@ async def facts(hass, version):
                 if isinstance(entity_id, str) and not selected.get(key):
                     state = hass.states.get(entity_id)
                     room.available[key] = str(state.attributes.get("friendly_name") or entity_id) if state else entity_id
+        # What Home Assistant still shows but the advice cannot use (too old, wrong unit): the same as the room's card says.
+        unusable = _unusable(coordinator)
+        stale |= unusable
+        for sensor in room.sensors:
+            if sensor.status == "ok" and sensor.entity_id in unusable:
+                sensor.status = "stale"
         rooms.append(room)
     home = service.live_sources()
     exterior = [_weather_air(spec) if spec.get("adapter") == "niak_air" else _sensor(hass, key, spec["entity_id"], now)
                 for key, spec in home.items() if spec.get("entity_id")]
+    for sensor in exterior:
+        if sensor.status == "ok" and sensor.entity_id and sensor.entity_id in stale:
+            sensor.status = "stale"
     link = weather_link.status(hass)
     weather = next((p["title"] for p in link.get("places", []) if p["entry_id"] == service.home.get("weather")), "")
     free = [(a["area_id"], a["name"]) for a in overview(hass, used) if isinstance(a["suggestions"].get("indoor_temperature"), str)]

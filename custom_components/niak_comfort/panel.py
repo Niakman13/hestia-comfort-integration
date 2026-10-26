@@ -41,11 +41,6 @@ def _plural(n, word):
     return f"{n} {word}{'s' if n > 1 else ''}"
 
 
-SILENT_LABELS = {"pollution": "la qualité de l’air dehors", "heating": "le chauffage", "rain": "la pluie",
-                 "outdoor_temperature": "la température dehors", "outdoor_humidity": "l’humidité dehors",
-                 "wind_gust": "les rafales", "window": "un contact d’ouvrant"}
-
-
 async def comfort_status(hass):
     """What the « Niak » home page says about Niak Confort, from its own settings only."""
     service = await get_configuration(hass)
@@ -55,29 +50,9 @@ async def comfort_status(hass):
         return {"level": "action", "summary": "Aucune pièce suivie pour l’instant.",
                 "details": ["Commencez par le Salon dans l’onglet Confort."], "links": []}
     followed = _plural(len(rooms), "pièce") + (" suivies" if len(rooms) > 1 else " suivie")
-    todo, details, links = [], [], []
-    stopped = [r["title"] for r in rooms if not r["loaded"]]
-    if stopped:
-        todo.append("Calcul arrêté : " + ", ".join(stopped))
-    incomplete, silent = [], {}
-    for room in rooms:
-        data = getattr(getattr(room["entry"], "runtime_data", None), "data", None)
-        if not isinstance(data, dict):
-            continue
-        assessment = data.get("assessment", {})
-        if assessment.get("reason") == "incomplete_data":
-            incomplete.append(room["title"])
-        # A configured source that stopped answering is a point to fix, whatever the advice became.
-        for key in assessment.get("missing", []):
-            if key in data.get("observations", {}):
-                silent.setdefault(SILENT_LABELS.get(key.split(":", 1)[0], "un capteur"), []).append(room["title"])
-    if incomplete:
-        todo.append("Information incomplète : " + ", ".join(incomplete) + " (un capteur ne répond pas)")
-    for label, titles in silent.items():
-        where = "toutes les pièces" if len(titles) == len(rooms) and len(rooms) > 1 else ", ".join(dict.fromkeys(titles))
-        todo.append(f"{label[0].upper() + label[1:]} ne répond pas ({where})")
-    if not service.home.get("configured"):
-        todo.append("Extérieur à configurer")
+    # The same points as the « Confort » tab's technical report: one count everywhere.
+    checked = health.report(await health.facts(hass, VERSION))
+    todo, details, links = [line["text"] for line in checked["todo"]], [], []
     linked = next((p for p in weather.get("places", []) if p["entry_id"] == service.home.get("weather")), None)
     if linked:
         links.append(f"Relié à Niak Weather · {linked['title']}")

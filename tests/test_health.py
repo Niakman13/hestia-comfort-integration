@@ -50,5 +50,26 @@ class HealthTests(unittest.TestCase):
         self.assertEqual([ago(0.5), ago(12), ago(300)], ["à l’instant", "il y a 12 min", "il y a 5 h"])
 
 
+
+
+class Counts(unittest.TestCase):
+    def test_one_sensor_count_for_rooms_and_exterior(self):
+        r = report(Facts(rooms=[room(sensors=[Sensor("indoor_temperature", "T", "ok", 1), Sensor("presence", "P", "silent", 9),
+                                              Sensor("windows", "F", "ok", 1), Sensor("windows", "G", "ok", 1)])],
+                         configured=True, exterior=[Sensor("rain", "Pluie", "ok", 1)]))
+        # The presence sensor has no column of its own: it still counts, and is still a point to fix.
+        self.assertEqual(r["sensors"], {"answering": 4, "total": 5})
+        self.assertEqual([t["text"] for t in r["todo"]], ["Salon : la présence ne répond pas"])
+
+    def test_stale_reading_is_named(self):
+        r = report(Facts(rooms=[room(sensors=[Sensor("indoor_temperature", "T", "stale", 300), Sensor("windows", "F", "ok", 1)])], configured=True))
+        self.assertEqual(r["todo"][0]["text"], "Salon : la température ne donne pas de mesure exploitable")
+        self.assertEqual(r["sensors"], {"answering": 1, "total": 2})
+
+    def test_windows_without_contact_on_purpose_are_not_suggested(self):
+        r = report(Facts(rooms=[room("Garage", [Sensor("indoor_temperature", "T", "ok", 1)], windows_intended=True)], configured=True))
+        self.assertNotIn("Garage : ouvrants non mesurés", [t["text"] for t in r["tips"]])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -134,8 +134,8 @@ export class ComfortSetup extends LitElement {
  /** The technical home of Confort: is everything working, then each room once (sensors and learning together), then the links. */
  private healthPage(){const h=this.health!,t=this.twins?.rooms??[];
   // A sensor read from the room sharing the air is counted once, in the room that has it.
-  const cells=h.rooms.flatMap(r=>r.cells).filter(c=>c.level!=='shared'),configured=cells.filter(c=>c.level!=='none').length,answering=cells.filter(c=>c.level==='ok').length;
-  const known=t.filter(r=>r.progress?.complete).length,todo=h.todo.length+h.tips.length;
+  const cells=h.rooms.flatMap(r=>r.cells).filter(c=>c.level!=='shared'),configured=h.sensors?.total??cells.filter(c=>c.level!=='none').length,answering=h.sensors?.answering??cells.filter(c=>c.level==='ok').length;
+  const known=t.filter(r=>r.progress?.complete).length,todo=h.todo.length,tips=h.tips.length;
   const kpi=(value:string,label:string,cls='')=>html`<div class=${'ac-kpi '+cls}><b>${value}</b><span>${label}</span></div>`;
   const row=(label:string,text:string,level:string)=>html`<div class="ac-row"><b>${label}</b><span class=${level==='ok'?'':'bad'}>${text}</span></div>`;
   // Niak Weather already shows as the exterior source: its link line would say it twice.
@@ -148,8 +148,8 @@ export class ComfortSetup extends LitElement {
 </div>
   <div class="ac-kpis">${kpi(`${answering} / ${configured}`,'capteurs qui répondent',answering===configured?'ok':'bad')}
    ${kpi(`${known} / ${t.length||h.rooms.length}`,'pièces observées à 100 %',t.length&&known===t.length?'ok':'')}
-   ${kpi(String(todo),todo>1?'points à régler':'point à régler',todo?'bad':'ok')}</div>
-  ${todo?frame('À régler',html`${h.todo.length?html`<ul class="hl-lines">${h.todo.map(l=>this.hline(l))}</ul>`:nothing}${h.tips.length?html`<h4 class="ac-h4">À améliorer</h4><ul class="hl-lines">${h.tips.map(l=>this.hline(l))}</ul>`:nothing}`,{className:'todo'}):nothing}
+   ${kpi(String(todo),(todo>1?'points à régler':'point à régler')+(tips?` · ${tips} à améliorer`:''),todo?'bad':'ok')}</div>
+  ${todo||tips?frame(todo?'À régler':'À améliorer',html`${h.todo.length?html`<ul class="hl-lines">${h.todo.map(l=>this.hline(l))}</ul>`:nothing}${h.tips.length?html`${todo?html`<h4 class="ac-h4">À améliorer</h4>`:nothing}<ul class="hl-lines">${h.tips.map(l=>this.hline(l))}</ul>`:nothing}`,{className:'todo'}):nothing}
   ${this.roomsBox()}
   <div class="ac-cols">${this.learningBox()}<div>
    ${frame('Extérieur',html`<div class="ac-bar"><p class="hint">La météo et la pollution, communes à toutes les pièces.</p><button class="ac-edit" ?disabled=${this.busy} aria-label="Modifier l’extérieur" @click=${()=>void this.goTo({kind:'exterior',label:'Extérieur'})}>Modifier</button></div>
@@ -588,7 +588,7 @@ export class ComfortSetup extends LitElement {
  private wizard(){const d=this.draft!,section=roomSections.find(x=>x.stage===this.stage);return html`<div class="workspace-head"><button class="link" @click=${()=>this.cancel()}>← Vue d’ensemble Confort</button><h1 tabindex="-1">Configurer ${d.name||'la pièce'}</h1><p class="step-count">${d.area_id?'Pièce Home Assistant : '+this.areaName(d.area_id):'Pièce libre'} · Les réglages de cette pièce</p></div>
   <nav class="room-menu" aria-label="Réglages de la pièce">${[roomSections.slice(0,3),roomSections.slice(3)].map(row=>html`<div class="room-menu-row">${row.map(x=>html`<button aria-label=${x.title} title=${x.title} aria-current=${x.stage===this.stage?'page':nothing} @click=${()=>this.go(x.stage)}>${hubIcon(x.icon)}<span>${x.label}</span></button>`)}</div>`)}</nav>
   <div class="room-content-head"><h2>${section?.title??'Récapitulatif'}</h2></div>${this.intro(String(this.stage))}
-  ${this.stage===0?[...indoor,'illuminance'].map(key=>this.field(key)):this.stage===1?this.field('windows'):this.stage===2?this.airPresence():this.stage===6?this.field('presence'):this.stage===3?this.field('heating'):this.stage===4?this.preferences():this.summary()}
+  ${this.stage===0?[...indoor,'illuminance'].map(key=>this.field(key)):this.stage===1?html`${this.field('windows')}${this.draft&&!this.draft.windows.length?html`<label class="check"><input type="checkbox" .checked=${this.draft.windows_unmeasured===true} @change=${(e:Event)=>this.draft={...this.draft!,windows_unmeasured:(e.target as HTMLInputElement).checked}}>Pas de contact de fenêtre ici, c’est voulu : ne plus le suggérer</label>`:nothing}`:this.stage===2?this.airPresence():this.stage===6?this.field('presence'):this.stage===3?this.field('heating'):this.stage===4?this.preferences():this.summary()}
   ${this.stage!==4&&this.stage!==5?html`<button class="link" ?disabled=${this.busy} @click=${()=>this.refreshCandidates()}>Rechercher à nouveau les capteurs</button>`:nothing}${this.errorBlock()}
   <div class="bottom"><button ?disabled=${this.busy} @click=${()=>this.stage?this.go(roomOrder[roomOrder.indexOf(this.stage)-1]??0):this.cancel()}>Retour</button><div>${this.stage!==5?html`<button ?disabled=${this.busy} @click=${()=>this.go(5)}>Récapitulatif</button>`:nothing}<button class="primary" ?disabled=${this.busy} @click=${()=>this.stage===5?this.save():this.next()}>${this.stage===5?'Enregistrer':'Continuer'}</button></div></div>${this.removeBlock()}`;}
  private exterior(){return html`<div class="actions"><button class="link" @click=${()=>this.cancel()}>← Accueil Confort</button></div><h1 tabindex="-1">Réglages généraux</h1><p class="muted">La météo et la pollution, communes à toutes les pièces.</p>${this.intro('exterior')}

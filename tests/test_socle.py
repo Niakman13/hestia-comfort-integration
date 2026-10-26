@@ -10,6 +10,7 @@ from homeassistant.components.frontend import DATA_PANELS
 from homeassistant.components.websocket_api import DOMAIN as WS_DOMAIN
 from homeassistant.config_entries import ConfigEntries, ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er, floor_registry as fr
 from custom_components.niak_comfort import socle
 from custom_components.niak_comfort.configuration import get_configuration
 from custom_components.niak_comfort.panel import comfort_status
@@ -165,6 +166,11 @@ class ComfortStatusTests(unittest.IsolatedAsyncioTestCase):
         self.hass = HomeAssistant(self.temp.name)
         self.hass.config_entries = ConfigEntries(self.hass, {})
         await self.hass.config_entries.async_initialize()
+        await fr.async_load(self.hass)
+        await ar.async_load(self.hass)
+        dr.async_setup(self.hass)
+        await dr.async_load(self.hass)
+        await er.async_load(self.hass)
         self.config = await get_configuration(self.hass)
 
     async def asyncTearDown(self):
@@ -196,21 +202,23 @@ class ComfortStatusTests(unittest.IsolatedAsyncioTestCase):
         self.room("Cuisine", state=ConfigEntryState.SETUP_ERROR)
         status = await comfort_status(self.hass)
         self.assertEqual(status["level"], "action")
-        self.assertEqual(status["summary"], "2 pièces suivies, 3 points à régler.")
-        self.assertIn("Calcul arrêté : Cuisine", status["details"])
+        # The same points as the « Confort » tab: a stopped room and the exterior.
+        self.assertEqual(status["summary"], "2 pièces suivies, 2 points à régler.")
+        self.assertIn("Cuisine : calcul arrêté", status["details"])
         self.assertIn("Extérieur à configurer", status["details"])
-        self.assertTrue(any(d.startswith("Information incomplète : Salon") for d in status["details"]))
 
     async def test_a_silent_source_is_a_point_to_fix_even_when_advice_stands(self):
         for name in ("Salon", "Chambre"):
             self.room(name, reason="drying_possible")
+        self.hass.states.async_set("sensor.atmo", "2")
         silent = {"value": None, "quality": "unknown", "source": "sensor.atmo"}
         for entry in self.hass.config_entries._entries.values():
             entry.runtime_data.data = {"assessment": {"reason": "drying_possible", "missing": ["pollution"]}, "observations": {"pollution": silent}}
-        self.config.home = {"configured": True, "sources": {}, "revision": 1}
+        self.config.home = {"configured": True, "sources": {"pollution": {"entity_id": "sensor.atmo", "adapter": "binary"}}, "revision": 1}
         status = await comfort_status(self.hass)
         self.assertEqual(status["level"], "action")
-        self.assertIn("La qualité de l’air dehors ne répond pas (toutes les pièces)", status["details"])
+        # Home Assistant still shows it, the advice cannot use it: one point, the same on the tab and on the home page.
+        self.assertIn("Extérieur : la pollution ne donne pas de mesure exploitable", status["details"])
 
 
 class Resources:
