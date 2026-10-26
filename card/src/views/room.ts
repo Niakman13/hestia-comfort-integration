@@ -225,13 +225,31 @@ function learning(v:View):Fact|null {
   if(t.precision.temperature>0.5||t.precision.humidity>3)return {ic:'clock',title:'Apprentissage',text:'en cours : prévisions pas encore assez justes, conseil estimé'};
   return null;
 }
+const PATHS:Record<string,string>={wind:'le vent entre par l’une et sort par l’autre',opposite:'l’air traverse de part en part',two_sides:'l’air passe en angle'};
+const AVOID:Record<string,string>={rain:'la pluie y entrerait',gust:'face aux rafales',sun:'le soleil y entre'};
+/** Which openings, while airing is asked or going on: the banner says to air, this line says where. */
+function airflowFacts(v:View):Fact[] {
+  const p=v.assessment.features?.airflow,g=advice(v);
+  if(!p||g.disk!=='open'||['Rien à faire','Vous pouvez refermer'].includes(g.title))return [];
+  const name=(id:string)=>v.names?.[id]??id,out:Fact[]=[];
+  if(p.open.length){
+    const faster=p.faster&&p.faster>=1.3?` · ${number(p.faster)} fois plus rapide`:'',why=p.open.length+p.keep.length>1?PATHS[p.path]:null;
+    out.push({ic:'open',topic:'windows',title:p.keep.length?`Ouvrez aussi ${p.open.map(name).join(' et ')}`:`Ouvrez ${p.open.map(name).join(' et ')}`,
+      text:`${why??'la meilleure ouverture maintenant'}${faster}${p.learned?` (d’après ${p.learned} aérations)`:''}`});}
+  // Said only when the plan had to leave it out: one line for the first one.
+  const left=p.avoid[0];
+  if(left)out.push({ic:'shut',topic:'windows',title:`Pas ${name(left.entity_id)}`,text:AVOID[left.why]??'à garder fermée'});
+  return out;
+}
 /** « À savoir »: what is worth knowing about the room, under the advice. Never a gesture, one idea per line. */
-export interface Fact {ic:string;title:string;text:TemplateResult|string}
+export interface Fact {ic:string;title:string;text:TemplateResult|string;topic?:string}
 export function facts(v:View):Fact[] {
   const a=v.assessment,o=v.observations,f=a.features,ti=numeric(o.indoor_temperature),out:Fact[]=[];
   // A room that cannot be read has no advice to explain: the banner sends to « Mesures ».
   if(unreadable(v))return out;
   const hum=f?.humidity,w=f?.warmth,air=f?.air,vol=f?.volume;
+  // Where to open comes first: it is the precise side of the gesture.
+  out.push(...airflowFacts(v));
   if(hum?.status==='low')out.push({ic:'drop',title:'Air sec',text:hum.reachable!=null&&hum.measured!=null
     ?hum.reachable<hum.measured?'aérer assécherait davantage la pièce':hum.reachable>hum.measured?'l’air extérieur pourrait augmenter l’humidité ; le conseil tient aussi compte de la température':'aérer ne changerait pas l’humidité'
     :'effet de l’aération inconnu sans mesure extérieure'});
@@ -320,7 +338,7 @@ export function factBox(v:View,partners:View[]=[],config:Config={type:'custom:ni
   // The card's room cannot be read: its banner sends to « Mesures », the other rooms' lines would explain no advice.
   if(unreadable(v))return nothing;
   // A line without a known topic (learning, the same air) follows « learning ».
-  const seen=new Set<string>(),list=[v,...partners].flatMap(r=>facts(r)).filter(f=>kept.has(TOPICS[f.title]??'learning'))
+  const seen=new Set<string>(),list=[v,...partners].flatMap(r=>facts(r)).filter(f=>kept.has(TOPICS[f.title]??f.topic??'learning'))
     .filter(f=>(!partners.length||f.title!=='Même air')&&!seen.has(f.title)&&!!seen.add(f.title)).slice(0,config.insight_max??4);
   return list.length?html`<div class="nc-facts"><div class="nw-label">À savoir</div><ul>${list.map(f=>html`<li>${icon(f.ic)}<span><b>${f.title}</b> · ${f.text}</span></li>`)}</ul></div>`:nothing;
 }
@@ -588,7 +606,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
   const scaleBox=sc?html`<div class="nc-sec nw-glass"><div class="nw-label">Température</div>${sc}</div>`:nothing;
   // « Prochaines heures » (engine/horizon.py): under the scale, the banner's subject first, the other one behind a tab.
   const hum=f?.humidity,season=f?.season;
-  const graph=config.show_horizon===false?nothing:horizonBox(f?.horizon??[],{subjects:config.horizon_subjects,second:!!st.horizonAlt,onTab:()=>st.toggle('horizonAlt'),
+  const graph=config.show_horizon===false?nothing:horizonBox(f?.horizon??[],{subjects:config.horizon_subjects,mode:config.horizon_mode,uid:st.uid,second:!!st.horizonAlt,onTab:()=>st.toggle('horizonAlt'),
     plage:s=>s==='humidity'?(hum?.minimum!=null&&hum?.maximum!=null?[hum.minimum,hum.maximum]:null):(season?[season.minimum,season.maximum]:null)});
   if(format==='mini'){
     const values=chipValues(v,config.mini_values??['temperature']),temp=values.find(c=>c.ic==='temp');

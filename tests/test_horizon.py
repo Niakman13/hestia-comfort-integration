@@ -59,7 +59,43 @@ class Horizon(unittest.TestCase):
                             minimum=19, sun=sun)
         self.assertEqual(out[0]["subject"], "humidity")
         self.assertLess(out[0]["result"]["with"], out[0]["result"]["without"])
-        self.assertLessEqual(len(out), 2)
+        self.assertLessEqual(len([s for s in out if s["kind"] != "trend"]), 2)
+
+    def test_an_airing_that_barely_cools_needs_no_graph_and_the_trend_comes_last(self):
+        now = datetime(2026, 10, 26, 22, tzinfo=timezone(timedelta(hours=1)))
+        advice = {"reason": "air_needed", "action": "ouvrir", "needs": ["air"], "features": {"ventilation": {"duration_minutes": {"min": 2, "max": 3}}}}
+        out = horizon.build(advice, MODEL, {"ti": 19.8, "hi": 66, "te": 16, "holding": True}, forecast(now, 16, 1), now, minimum=19, sun=sun)
+        self.assertEqual([s["kind"] for s in out], ["air", "trend"])
+        self.assertLess(out[0]["result"]["drop"], horizon.SHOW["air"])
+        self.assertEqual([s["needed"] for s in out], [False, False])
+        self.assertIsNone(out[-1]["gesture"])
+
+    def test_a_needed_graph_stays_while_the_advice_stays(self):
+        now = datetime(2026, 1, 20, 14, tzinfo=timezone(timedelta(hours=1)))
+        advice = {"reason": "air_needed", "action": "ouvrir", "needs": ["air"], "features": {}}
+        run = lambda a, previous=None: horizon.build(a, MODEL, {"ti": 20.2, "hi": 50, "te": 5, "holding": True}, forecast(now, 4, 4), now,
+                                                     minimum=19, sun=sun, previous=previous)
+        first = run(advice)
+        self.assertTrue(first[0]["needed"])
+        # The same drop, now between KEEP and SHOW: kept for the same advice, not shown for a new one.
+        drop = first[0]["result"]["drop"]
+        show, keep = dict(horizon.SHOW), dict(horizon.KEEP)
+        try:
+            horizon.SHOW["air"], horizon.KEEP["air"] = drop + 0.1, drop - 0.1
+            self.assertTrue(run(advice, first)[0]["needed"])
+            self.assertFalse(run(advice)[0]["needed"])
+            self.assertFalse(run({**advice, "reason": "short_air_change"}, first)[0]["needed"])
+        finally:
+            horizon.SHOW.update(show), horizon.KEEP.update(keep)
+
+    def test_the_sun_is_needed_only_when_the_advice_is_about_heating(self):
+        now = datetime(2026, 4, 10, 8, tzinfo=timezone(timedelta(hours=2)))
+        between = {"season": {"group": "between"}}
+        run = lambda a: horizon.build(a, MODEL, {"ti": 19.0, "hi": 55, "te": 8}, forecast(now, 11, 5), now, minimum=19, sun=sun)
+        heat = run({"reason": "heat_needed", "action": "ok", "needs": ["heat"], "features": between})
+        damp = run({"reason": "drying_slow", "action": "attendre", "needs": [], "features": between})
+        self.assertEqual((heat[0]["kind"], heat[0]["needed"]), ("sun", True))
+        self.assertEqual((damp[0]["kind"], damp[0]["needed"]), ("sun", False))
 
     def test_nothing_without_forecast_or_measure(self):
         now = datetime(2026, 7, 14, 18, tzinfo=timezone.utc)

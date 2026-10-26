@@ -259,7 +259,16 @@ button.nc-row:hover { background:color-mix(in srgb, var(--nw-fg) 5%, transparent
 .nc-learned .icon { width:12px; height:12px; }
 /* « Prochaines heures » : the room without the gesture (grey, dashed) and with it, the band and the strip of when. */
 .nc-horizon { --nc-h-cool:color-mix(in oklab, var(--nw-calm) 55%, var(--nw-fg)); --nc-h-air:color-mix(in oklab, var(--nw-cold) 50%, var(--nw-fg));
-  --nc-h-sun:color-mix(in oklab, var(--nw-watch) 70%, var(--nw-fg)); --nc-h-dry:oklch(.6 .14 300); }
+  --nc-h-sun:color-mix(in oklab, var(--nw-watch) 70%, var(--nw-fg)); --nc-h-dry:oklch(.6 .14 300); --nc-h-trend:var(--nw-fg2); }
+/* The graph opens and folds in height (and its margin with it): the card changes size smoothly, never with a jump. */
+.nc-h-fold { display:grid; grid-template-rows:0fr; opacity:0; transition:grid-template-rows .3s ease, opacity .25s ease, margin-top .3s ease; }
+.nc-h-fold.open { grid-template-rows:1fr; opacity:1; }
+@starting-style { .nc-h-fold.open { grid-template-rows:0fr; opacity:0; } }
+/* In the unfolded tile, the blocks are spaced by the grid's gap: a folded graph gives its gap back. */
+.nc-tile-blocks .nc-h-fold .nc-sec { margin-top:0; }
+.nc-tile-blocks > .nc-h-fold:not(.open) { margin-top:-12px; }
+.nc-h-inner { min-height:0; overflow:hidden; }
+@media (prefers-reduced-motion: reduce) { .nc-h-fold { transition:none; } }
 .nc-h-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
 .nc-h-gesture { margin-left:auto; font-size:var(--nw-fs-small); }
 .nc-h-tabs { display:inline-flex; gap:4px; }
