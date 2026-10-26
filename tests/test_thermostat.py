@@ -63,8 +63,13 @@ class Advice(unittest.TestCase):
         # Chambre P, 26 October 2026: thermostat off on its eco preset, 17 °C; the room at 18.2 °C is where it was asked.
         eco = thermostat.read("off", {**GROUPED, "preset_mode": "eco", "temperature": 17})
         self.assertNotEqual(run(18.2, eco).reason, "heat_needed")
-        frost = thermostat.read("heat", {**FLAT, "preset_mode": "frost_protection", "temperature": 7})
-        self.assertNotEqual(run(15, frost, heating="idle").reason, "heat_needed")
+        # Frost protection is a safeguard: the comfort temperature (19.5 °C) stays the minimum, the room at 15 °C is cool,
+        # and still not told to switch the heating on (a stove kept at 14 °C).
+        frost = thermostat.read("heat", {**FLAT, "preset_mode": "frost_protection", "temperature": 14})
+        a = run(15, frost, heating="idle")
+        self.assertEqual(a.reason, "heat_needed")
+        self.assertTrue(a.features["warmth"]["thermostat"]["lowered"])
+        self.assertIn(a.level, ("calm", "neutral"))
 
     def test_off_by_hand_asks_after_half_an_hour(self):
         vt = {**thermostat.read("off", GROUPED), "slope": None}
