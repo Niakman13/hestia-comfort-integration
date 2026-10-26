@@ -35,8 +35,8 @@ class Configuration:
 
     def revision(self):
         values = [(e.entry_id, dict(e.data), dict(e.options)) for e in self.entries()]
-        # The answers to the learning questions are not settings: answering never blocks a room being edited.
-        home = {k: v for k, v in self.home.items() if k != "answers"}
+        # The answers to the learning questions and the alarm, set on their own, never block a room being edited.
+        home = {k: v for k, v in self.home.items() if k not in ("answers", "alarm")}
         return hashlib.sha256(json.dumps([home, values], sort_keys=True, default=str).encode()).hexdigest()
 
     def home_sources(self):
@@ -61,7 +61,7 @@ class Configuration:
             entries.append({"entry_id": e.entry_id, "title": e.title, "loaded": e.state.value == "loaded", "config": config, "floor": room_floor(self.hass, config)})
         areas = [{"area_id": a.id, "name": a.name, "floor_id": a.floor_id, "outdoor": a.name.strip().casefold() in OUTDOOR_AREAS}
                  for a in ar.async_get(self.hass).areas.values()]
-        return {"version": 1, "revision": self.revision(), "home": {"sources": self.home_sources(), "configured": bool(self.home.get("configured")), "acknowledged": self.home.get("acknowledged", []), "weather": self.home.get("weather")}, "niak_weather": weather_link.status(self.hass), "integrations": {"atmofrance": bool(self.hass.config_entries.async_entries("atmofrance"))}, "rooms": entries, "floors": floor_catalog(self.hass), "areas": sorted(areas, key=lambda a: (a["name"].casefold() != "salon", a["name"].casefold()))}
+        return {"version": 1, "revision": self.revision(), "home": {"sources": self.home_sources(), "configured": bool(self.home.get("configured")), "acknowledged": self.home.get("acknowledged", []), "weather": self.home.get("weather"), "alarm": self.home.get("alarm")}, "niak_weather": weather_link.status(self.hass), "integrations": {"atmofrance": bool(self.hass.config_entries.async_entries("atmofrance"))}, "rooms": entries, "floors": floor_catalog(self.hass), "areas": sorted(areas, key=lambda a: (a["name"].casefold() != "salon", a["name"].casefold()))}
 
     def discover(self, area_id=None, entry_id=None):
         if area_id and not ar.async_get(self.hass).async_get_area(area_id):
@@ -210,6 +210,10 @@ class Configuration:
         thermostat_reference = payload.get("thermostat_reference", True)
         if not isinstance(thermostat_reference, bool):
             raise ValueError("« Minimum repris du thermostat » doit être oui ou non.")
+        # The people the room is for (`person` entities): a bedroom's one, a living room's several, or none for everyone.
+        persons = payload.get("persons", [])
+        if not isinstance(persons, list) or any(not isinstance(p, str) or not p.startswith("person.") for p in persons):
+            raise ValueError("Choisissez les personnes parmi celles de Home Assistant.")
         # No contact on the windows, on purpose (a garage, a room that is never aired): not suggested again.
         windows_unmeasured = payload.get("windows_unmeasured", False)
         if not isinstance(windows_unmeasured, bool):
@@ -288,7 +292,8 @@ class Configuration:
                    "windows": list(dict.fromkeys(windows)), "openings": cleaned_openings, "settings": settings,
                    "presence": list(dict.fromkeys(presence)), "evolution": cleaned_evolution, "use_home": not legacy,
                    "air_reference_version": AIR_REFERENCE_VERSION, "heated": heated, "thermostat_reference": thermostat_reference,
-                   "windows_unmeasured": windows_unmeasured and not windows, "open_to": list(dict.fromkeys(open_to))}
+                   "windows_unmeasured": windows_unmeasured and not windows,
+                   "persons": list(dict.fromkeys(persons)), "open_to": list(dict.fromkeys(open_to))}
         return cleaned, warnings
 
     @staticmethod
@@ -309,7 +314,7 @@ class Configuration:
             remembered = self.ensure_acknowledged(warnings, acknowledged or [])
             if home:
                 updated = {**cleaned, "acknowledged": remembered, "configured": True, "revision": self.home["revision"] + 1,
-                           "answers": self.home.get("answers", {})}
+                           "answers": self.home.get("answers", {}), "alarm": self.home.get("alarm")}
                 await self.store.async_save(updated)
                 self.home = updated
                 for entry in self.entries():
@@ -351,6 +356,18 @@ class Configuration:
             partners = set(self.volume(entry_id))
             await self.hass.config_entries.async_remove(entry_id)
             await self._reload_rooms(partners)
+            return self.snapshot()
+
+    async def set_alarm(self, value):
+        """The home's alarm: None to find Alarmo by itself, "" for none, or an `alarm_control_panel` entity."""
+        if value is not None and not (isinstance(value, str) and (value == "" or value.startswith("alarm_control_panel."))):
+            raise ValueError("Choisissez une alarme de Home Assistant.")
+        async with self.lock:
+            self.home = {**self.home, "alarm": value}
+            await self.store.async_save(self.home)
+            for entry in self.entries():
+                if entry.state.value == "loaded":
+                    await self.hass.config_entries.async_reload(entry.entry_id)
             return self.snapshot()
 
     async def answer(self, entry_id, key, value):
