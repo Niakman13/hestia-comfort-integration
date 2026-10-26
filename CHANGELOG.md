@@ -1,3 +1,21 @@
+## 1.7.4 — Le graphique dit quand
+
+**En bref**
+
+- Le soleil de demain ne s’affiche plus le soir comme un conseil.
+- Le graphique montre où est « maintenant ».
+
+### Corrections
+
+- **Le soir, plus de « le soleil va réchauffer la pièce ».** Le graphique du soleil n’est utile que si le soleil arrive dans les 3 heures. Sinon il ne s’affiche qu’en mode « Toujours », titré « soleil demain 8 h », sans « inutile de chauffer ».
+- **« maintenant » sous le premier point** de la courbe : elle se lit comme ce qui arrive, pas comme le passé.
+- Les heures du lendemain disent « demain » (« au plus haut 20,2 °C vers demain 18 h 30 »).
+- La phrase du soleil ne répète plus deux fois la même température.
+
+### Après la mise à jour
+
+- Rechargez la page (ou videz le cache de l’application mobile) : une ancienne carte en cache affiche deux onglets « Température », dont un vide.
+
 ## 1.7.3 — Le graphique suit le conseil, les bonnes fenêtres à ouvrir
 
 **En bref**
