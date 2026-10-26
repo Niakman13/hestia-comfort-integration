@@ -28,7 +28,10 @@ export type DetailRow = typeof DETAIL_ROWS[number];
 /** Subjects of the « Prochaines heures » graph. */
 export const HORIZON_SUBJECTS = ['temperature','humidity'] as const;
 export type HorizonSubject = typeof HORIZON_SUBJECTS[number];
-export interface Horizon {subject:HorizonSubject;kind:'cool'|'air'|'sun'|'dry';unit:'°C'|'%';start:string;step_minutes:number;base:number[];gesture:number[]|null;
+/** When the graph shows: only when the gesture changes something on it, or always (the trend when nothing is needed). */
+export const HORIZON_MODES = ['needed','always'] as const;
+export type HorizonMode = typeof HORIZON_MODES[number];
+export interface Horizon {subject:HorizonSubject;kind:'cool'|'air'|'sun'|'dry'|'trend';needed?:boolean;advice?:string;unit:'°C'|'%';start:string;step_minutes:number;base:number[];gesture:number[]|null;
   bands:string[][];extra:string[][];result:Record<string,string|number|null>}
 export const HOLD_ACTIONS = ['popup','page','none'] as const;
 export type HoldAction = typeof HOLD_ACTIONS[number];
@@ -41,7 +44,7 @@ export interface Config {
   banner_blocks?: BannerBlock[]; scale_marks?: ScaleMark[]; tile_chips?: Chip[]; tile_blocks?: TileBlock[]; mini_values?: Chip[];
   hold_action?: HoldAction; hold_path?: string;
   /** The « Prochaines heures » graph in the banner, and its subjects. */
-  show_horizon?: boolean; horizon_subjects?: HorizonSubject[];
+  show_horizon?: boolean; horizon_mode?: HorizonMode; horizon_subjects?: HorizonSubject[];
   /** « À savoir » and « Détails techniques »: shown or not, which topics and lines, how many lines. */
   show_insights?: boolean; insight_topics?: InsightTopic[]; insight_max?: number; detail_rows?: DetailRow[];
 }
@@ -129,6 +132,7 @@ export function cleanConfig(input:Config):Config {
   for(const key of ['animations','glass_effect','show_scale','show_measures','show_details','measures_open','details_open','rotate'] as const)
     if(input[key]!==undefined && typeof input[key]!=='boolean') throw new Error('Réglage d’affichage invalide.');
   if(input.modules && (!Array.isArray(input.modules) || input.modules.some(m=>!MODULES.includes(m)))) throw new Error('Rubrique inconnue.');
+  if(input.horizon_mode!==undefined&&!HORIZON_MODES.includes(input.horizon_mode))throw new Error('Réglage « graphique » invalide.');
   hold(input);
   const lists={banner_blocks:list(input.banner_blocks,BANNER_BLOCKS,'bandeau'),scale_marks:list(input.scale_marks,SCALE_MARKS,'échelle'),
     tile_chips:list(input.tile_chips,CHIPS,'pastilles'),tile_blocks:list(input.tile_blocks,TILE_BLOCKS,'tuile dépliée'),mini_values:list(input.mini_values,CHIPS,'ligne'),

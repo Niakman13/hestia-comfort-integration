@@ -1,3 +1,25 @@
+## 1.7.3 — Le graphique suit le conseil
+
+**En bref**
+
+- Le graphique « Prochaines heures » n’apparaît plus que s’il montre ce que le conseil change.
+- Nouveau réglage pour le garder toujours visible.
+
+### Améliorations
+
+- **Un graphique seulement quand il aide.** Un « Aérez » pour le CO₂ n’affiche plus une courbe de température où rien ne bouge (« −0 °C »).
+  - Il apparaît quand le geste change vraiment la pièce : au moins 0,4 °C, ou 3 points d’humidité.
+  - Une fois affiché, il reste tant que le conseil ne change pas, jusqu’à 0,2 °C : il ne clignote plus.
+  - Le graphique du soleil ne sort que si le conseil parle de chauffage.
+- **La carte change de taille en douceur.** Le graphique s’ouvre et se replie en 0,3 s, sans saut.
+- **Nouveau réglage « Quand l’afficher »** (Section 1 · Bandeau conseil) :
+  - « Seulement quand il aide le conseil » (par défaut) ;
+  - « Toujours » : sans geste à montrer, la carte garde sa taille et montre la température prévue sans rien faire (ou la montée due au soleil).
+
+### Après la mise à jour
+
+- Rechargez la page (ou videz le cache de l’application mobile).
+
 ## 1.7.2 — Des COV plus calmes, l’interrupteur de l’échelle répond
 
 ### Améliorations

@@ -42,6 +42,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.settings = Settings(**self.config.get("settings", {}))
         self.home_configuration = hass.data.get(DATA_CONFIG)
         self.previous = None
+        self._horizon = None
         self.entry_id = entry.entry_id
         self.stop_listeners = set()
         self.opened_since = {}
@@ -370,7 +371,9 @@ class ComfortCoordinator(DataUpdateCoordinator):
         # « Prochaines heures »: the room without the advised gesture and with it, for the card's graph (engine/horizon.py).
         own["features"]["horizon"] = horizon.build(own, learned_twin.get("model") if learned_twin.get("status") == "ready" else None,
                                                    current, outlook.get("hours") or [], now, minimum=self.settings.minimum,
-                                                   mass=learned_twin.get("mass"), sun=self._sun_ahead())
+                                                   mass=learned_twin.get("mass"), sun=self._sun_ahead(),
+                                                   previous=self._horizon)
+        self._horizon = own["features"]["horizon"]
         assessment = self._settle(own)
         self._track(assessment, current, now)
         learned = self.twin or {}
