@@ -40,7 +40,14 @@ ha-card.nc-c { overflow:hidden; border-radius:var(--nw-radius-card); background:
 .nc-scale { position:relative; height:62px; margin:8px 10px 0; }
 .nc-track { position:absolute; left:0; right:0; top:30px; height:8px; border-radius:4px; background:color-mix(in srgb, var(--nw-fg) 9%, transparent); }
 .nc-band { position:absolute; top:30px; height:8px; border-radius:4px; background:color-mix(in oklab, var(--nw-ok) 80%, transparent); }
-.nc-day { position:absolute; top:31px; height:6px; border-radius:3px; background:color-mix(in srgb, var(--nw-fg) 72%, transparent); box-shadow:0 0 0 1.5px var(--nw-bg); }
+.nc-zone { position:absolute; top:30px; height:8px; }
+/* With the zones, the range is the calm green: the charter's « ok » is its cold blue. */
+.nc-band.zoned, .k-band.zoned { background:color-mix(in oklab, var(--nw-calm) 85%, transparent); }
+.nc-zone.cold { border-radius:4px 0 0 4px; background:color-mix(in oklab, var(--nw-cold) 45%, transparent); }
+.nc-zone.warm { border-radius:0 4px 4px 0; background:color-mix(in oklab, var(--nw-heat) 45%, transparent); }
+/* The last 24 hours: a whisker (two ends and a thin line) laid over the track, never hiding the range. */
+.nc-day { position:absolute; top:26px; height:16px; box-sizing:border-box; border-left:2px solid var(--nw-fg); border-right:2px solid var(--nw-fg);
+  background:linear-gradient(var(--nw-fg), var(--nw-fg)) center / 100% 2px no-repeat; }
 .nc-ring { position:absolute; top:24px; width:20px; height:20px; margin-left:-10px; border-radius:50%; box-sizing:border-box; background:var(--nw-bg);
   border:4px solid color-mix(in oklab, var(--c) 70%, var(--nw-fg)); box-shadow:0 1px 4px color-mix(in srgb, var(--nw-fg) 20%, transparent); }
 .nc-now { top:0; transform:translateX(-50%); font-size:var(--nw-fs-text); }
@@ -52,7 +59,8 @@ ha-card.nc-c { overflow:hidden; border-radius:var(--nw-radius-card); background:
 .nc-legend { margin-top:6px; }
 .nc-legend i { display:inline-block; }
 .k-band { width:10px; height:10px; border-radius:3px; background:color-mix(in oklab, var(--nw-ok) 80%, transparent); }
-.k-day { width:14px; height:6px; border-radius:3px; background:color-mix(in srgb, var(--nw-fg) 72%, transparent); }
+.k-day { width:14px; height:10px; box-sizing:border-box; border-left:2px solid var(--nw-fg); border-right:2px solid var(--nw-fg); background:linear-gradient(var(--nw-fg), var(--nw-fg)) center / 100% 2px no-repeat; }
+.k-zone { width:10px; height:10px; border-radius:3px; } .k-zone.cold { background:color-mix(in oklab, var(--nw-cold) 45%, transparent); } .k-zone.warm { background:color-mix(in oklab, var(--nw-heat) 45%, transparent); }
 .k-out { width:9px; height:9px; border-radius:50%; border:2px solid var(--nw-fg2); }
 .k-room { width:10px; height:10px; border-radius:50%; background:color-mix(in oklab, var(--nw-ok) 75%, var(--nw-fg)); }
 /* Corps : sections repliables. */

@@ -246,7 +246,8 @@ export function facts(v:View):Fact[] {
   if(a.reason==='exchange_harmful'&&a.needs.includes('dry'))
     out.push({ic:'drop',title:'Humidité',text:gain!=null&&gain<4?`l’aération ne la baisserait que ${gain<1.5?'d’un point à peine':`de ${Math.round(gain)} points`}`:'l’aération ne la ferait pas assez baisser'});
   if(a.reason==='heat_needed'&&a.action!=='fermer'&&a.level!=='action')
-    out.push({ic:'temp',title:'Pièce fraîche',text:w?.occupied===false?'maison vide : pas besoin de chauffer'
+    out.push({ic:'temp',title:'Pièce fraîche',text:w?.outdoor_warms?'l’air du dehors, plus chaud, la réchauffe : vous pouvez laisser ouvert'
+      :w?.occupied===false?'maison vide : pas besoin de chauffer'
       :w?.thermostat?.lowered?`thermostat en ${presetWord(w.thermostat.preset)}${w.thermostat.target!=null?` : ${deg(w.thermostat.target)} visés`:''}`
       :w?.thermostat?.off_reason&&w.thermostat.off_reason!=='manual'?`chauffage arrêté par le thermostat (${offWords[w.thermostat.off_reason]??'automatique'}), il repartira seul`
       :w?.heating==='on'?'le chauffage s’en charge':w?.warming?`${deg(ti)}, elle se réchauffe d’elle-même`
@@ -377,17 +378,21 @@ export function scale(s:ScaleInput):TemplateResult {
   });
   // The bubble stays inside the frame when the value sits near an end of the scale.
   const bubble=(x:number)=>x<12?'left:0;transform:none':x>88?'right:0;left:auto;transform:none':'left:'+x.toFixed(2)+'%';
+  // Temperature only: the track says too cool (blue) and too warm (orange) around the range; the last 24 hours are a
+  // thin whisker over it, so the range always shows through.
+  const zones=unit==='°C';
   const said=[s.now!=null?`Maintenant ${fmt(s.now)} ${unit}`:'',s.band?`plage ${fmt(s.band[0])} à ${fmt(s.band[1])} ${unit}`:'',s.out!=null?`dehors ${fmt(s.out)} ${unit}`:''].filter(Boolean).join(', ');
   return html`<div class="nc-scale" role="img" aria-label=${said}>
     <div class="nc-track"></div>
-    ${s.band?html`<div class="nc-band" style=${`left:${pct(s.band[0])};width:${(pos(s.band[1])-pos(s.band[0])).toFixed(2)}%`}></div>`:nothing}
+    ${s.band&&zones?html`<div class="nc-zone cold" style=${`left:0;width:${pct(s.band[0])}`}></div><div class="nc-zone warm" style=${`left:${pct(s.band[1])};right:0`}></div>`:nothing}
+    ${s.band?html`<div class=${'nc-band'+(zones?' zoned':'')} style=${`left:${pct(s.band[0])};width:${(pos(s.band[1])-pos(s.band[0])).toFixed(2)}%`}></div>`:nothing}
     ${s.day?html`<div class="nc-day" style=${`left:${pct(s.day.min)};width:${(pos(s.day.max)-pos(s.day.min)).toFixed(2)}%`}></div>`:nothing}
     ${s.out!=null?(s.outEntity?html`<button type="button" class="nc-mk out nc-hit" style=${'left:'+pct(s.out)} title="Détails : dehors" aria-label="Détails de la température dehors" @click=${(e:Event)=>moreInfo(e,s.outEntity!)}></button>`:html`<span class="nc-mk out" style=${'left:'+pct(s.out)}></span>`):nothing}
     ${(s.rooms??[]).map(r=>r.entity?html`<button type="button" class="nc-mk room nc-hit" data-level=${r.level} style=${'left:'+pct(r.value)} title=${r.name+' '+fmt(r.value)+' '+unit} aria-label=${'Détails : '+r.name} @click=${(e:Event)=>moreInfo(e,r.entity!)}></button>`:html`<span class="nc-mk room" data-level=${r.level} style=${'left:'+pct(r.value)} title=${r.name+' '+fmt(r.value)+' '+unit}></span>`)}
     ${s.now!=null?html`<span class="nc-ring" style=${'left:'+pct(s.now)}></span>${s.nowEntity?html`<button type="button" class="nw-pill nc-now nc-hit" style=${bubble(pos(s.now))} title="Détails de la température" @click=${(e:Event)=>moreInfo(e,s.nowEntity!)}>${fmt(s.now)} ${unit}</button>`:html`<span class="nw-pill nc-now" style=${bubble(pos(s.now))}>${fmt(s.now)} ${unit}</span>`}`:nothing}
     ${placed}
   </div>
-  <div class="nw-legend nc-legend">${s.band?html`<span><i class="k-band"></i>votre plage</span>`:nothing}${s.day?html`<span><i class="k-day"></i>min–max 24 h</span>`:nothing}${s.rooms?html`<span><i class="k-room"></i>pièces</span>`:nothing}${s.out!=null?html`<span><i class="k-out"></i>dehors</span>`:nothing}</div>`;
+  <div class="nw-legend nc-legend">${s.band&&zones?html`<span><i class="k-zone cold"></i>trop frais</span>`:nothing}${s.band?html`<span><i class=${'k-band'+(zones?' zoned':'')}></i>votre plage</span>`:nothing}${s.band&&zones?html`<span><i class="k-zone warm"></i>trop chaud</span>`:nothing}${s.day?html`<span><i class="k-day"></i>min–max 24 h</span>`:nothing}${s.rooms?html`<span><i class="k-room"></i>pièces</span>`:nothing}${s.out!=null?html`<span><i class="k-out"></i>dehors</span>`:nothing}</div>`;
 }
 
 /** `watch` (soft yellow): the measure leaves your range, without a gesture asked; orange stays for gestures. */
@@ -469,7 +474,9 @@ export function details(v:View,config:Config):TemplateResult[] {
   const season=f?.season;
   if(season)out.push(row('Votre plage de confort',`${number(season.minimum)} à ${number(season.maximum)} °C${!season.heated?' · pièce non chauffée':''}${season.name?' · '+(SEASON_NAMES[season.name]??season.name):season.known?(season.weight===0?' · hiver':season.weight===1?' · été':' · entre-saisons'):' · saison non calculée'}`));
   if(a.action==='ouvrir'&&a.open_first?.length)out.push(row('Ouvrez d’abord',a.open_first.map(id=>v.names?.[id]??id).join(' et ')));
-  if(a.slot)out.push(row(a.slot.kind==='open'?'Ouverture possible':'Fermeture conseillée',`${hour(a.slot.time)} · ${number(a.slot.temperature)} °C${a.slot.wind_bearing!=null?' · '+windFrom(a.slot.wind_bearing):''}`));
+  // Only a complete slot is said: an hour and a temperature, never « NaN h ».
+  const slotOk=!!a.slot&&typeof a.slot.temperature==='number'&&!Number.isNaN(new Date(a.slot.time).getTime());
+  if(slotOk)out.push(row(a.slot!.kind==='open'?'Ouverture possible':'Fermeture conseillée',`${hour(a.slot!.time)} · ${number(a.slot!.temperature)} °C${a.slot!.wind_bearing!=null?' · '+windFrom(a.slot!.wind_bearing):''}`));
   const silent=a.missing.filter(k=>!!v.observations[k]);
   if(silent.length)out.push(row('Ne répond pas',silent.map(k=>sourceLabel(v,k)).join(', ')));
   if(a.unverified?.length&&a.action!=='fermer')out.push(row('Sans capteur',a.unverified.map(k=>k==='rain'?'pluie':'qualité de l’air dehors').join(', ')));
@@ -477,8 +484,9 @@ export function details(v:View,config:Config):TemplateResult[] {
   if(mods.has('windows')&&vent){if(vent.opened_minutes!=null)out.push(row('Ouvert depuis',`${number(vent.opened_minutes)} min`));}
   if(mods.has('shutters'))for(const s of f?.shutters??[]){if(s.mode==='none'||(!s.advice&&!s.manual_override&&s.position==null))continue;
     const from=clock(s.sun_start),to=clock(s.sun_end);
-    out.push(row(v.names?.[s.entity_id]??'Volet',[s.manual_override?'repris à la main':s.advice==='close'?'à fermer':s.advice==='open'?'à ouvrir':s.driver&&(s.driving??s.automatic===true)?'piloté par Adaptive Cover Pro':'rien à faire',s.driver&&s.detection===false?'reprise à la main non détectée':'',s.driver&&s.climate===false?'mode climat coupé':'',
-      s.position!=null?`ouvert à ${number(s.position)} %`:'',s.driver&&s.target!=null&&s.target!==s.position?`visé ${number(s.target)} %`:'',from&&to?`soleil de ${from} à ${to}`:'',s.driver&&s.reason?`selon Adaptive Cover Pro : ${s.reason}`:''].filter(Boolean).join(' · ')));}
+    // In plain words: who sets it, where it stands, when the sun comes. Adaptive Cover Pro's own wording is left out.
+    out.push(row(v.names?.[s.entity_id]??'Volet',[s.manual_override?'réglé à la main':s.advice==='close'?'à fermer':s.advice==='open'?'à ouvrir':s.driver&&(s.driving??s.automatic===true)?'piloté par Adaptive Cover Pro':'rien à faire',s.driver&&s.detection===false?'reprise à la main non détectée':'',s.driver&&s.climate===false?'mode climat coupé':'',
+      s.position!=null?`ouvert à ${number(s.position)} %`:'',s.driver&&s.target!=null&&s.target!==s.position?`visé ${number(s.target)} %`:'',from&&to?`soleil de ${from} à ${to}`:''].filter(Boolean).join(' · ')));}
   if(mods.has('air')&&f?.presence&&f.presence.state!=='not_configured')out.push(row('Présence',{occupied:'quelqu’un est là',empty:'pièce vide',unknown:'inconnue'}[f.presence.state]??''));
   // Where the drying promise comes from: this room's own airings, or an ordinary room until one is seen.
   if(mods.has('humidity')&&f?.drying)out.push(row('Séchage',f.drying.openings?`appris sur ${f.drying.openings} aération${f.drying.openings>1?'s':''}`:'estimé, aucune aération observée'));

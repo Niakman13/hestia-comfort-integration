@@ -46,16 +46,30 @@ class Reading_(unittest.TestCase):
     def test_unused_preset_and_reference_bounds(self):
         t = thermostat.read("off", GROUPED)
         self.assertNotIn("boost", t)
-        self.assertEqual(thermostat.reference(t, 24), 19)
+        # The set point it aims at now (19.5 °C), else its comfort temperature.
+        self.assertEqual(thermostat.reference(t, 24), 19.5)
+        self.assertEqual(thermostat.reference({**t, "target": None}, 24), 19)
         self.assertIsNone(thermostat.reference(t, 19))
 
 
 class Advice(unittest.TestCase):
-    def test_comfort_temperature_stands_as_minimum(self):
+    def test_set_point_stands_as_minimum(self):
         vt = thermostat.read("off", GROUPED)
-        # 19.5 °C: under the room's own 20 °C, above the thermostat's 19 °C comfort.
-        self.assertNotEqual(run(19.5, vt).reason, "heat_needed")
-        self.assertEqual(run(19.5, vt, reference=False).reason, "heat_needed")
+        # 19.6 °C: under the room's own 20 °C, above the thermostat's 19.5 °C set point.
+        self.assertNotEqual(run(19.6, vt).reason, "heat_needed")
+        self.assertEqual(run(19.6, vt, reference=False).reason, "heat_needed")
+
+    def test_eco_or_frost_set_point_is_not_too_cool(self):
+        # Chambre P, 26 October 2026: thermostat off on its eco preset, 17 °C; the room at 18.2 °C is where it was asked.
+        eco = thermostat.read("off", {**GROUPED, "preset_mode": "eco", "temperature": 17})
+        self.assertNotEqual(run(18.2, eco).reason, "heat_needed")
+        # Frost protection is a safeguard: the comfort temperature (19.5 °C) stays the minimum, the room at 15 °C is cool,
+        # and still not told to switch the heating on (a stove kept at 14 °C).
+        frost = thermostat.read("heat", {**FLAT, "preset_mode": "frost_protection", "temperature": 14})
+        a = run(15, frost, heating="idle")
+        self.assertEqual(a.reason, "heat_needed")
+        self.assertTrue(a.features["warmth"]["thermostat"]["lowered"])
+        self.assertIn(a.level, ("calm", "neutral"))
 
     def test_off_by_hand_asks_after_half_an_hour(self):
         vt = {**thermostat.read("off", GROUPED), "slope": None}
@@ -73,7 +87,9 @@ class Advice(unittest.TestCase):
 
     def test_eco_preset_aims_lower_on_purpose(self):
         vt = thermostat.read("heat", FLAT)
-        a = run(17.5, vt, heating="idle")
+        # Under its eco set point (17 °C) the room is cool, and still the thermostat's to warm: no « Rallumez ».
+        a = run(15.5, vt, heating="idle")
+        self.assertEqual(a.reason, "heat_needed")
         self.assertTrue(a.features["warmth"]["thermostat"]["lowered"])
         self.assertIn(a.level, ("calm", "neutral"))
 

@@ -58,6 +58,18 @@ class HeatingAdvice(unittest.TestCase):
         first = run(17, heating="heating")
         self.assertIn(run(17, first, NOW + timedelta(hours=1), heating="heating").level, ("calm", "neutral"))
 
+    def test_a_window_letting_in_warmer_air_is_not_closed(self):
+        # 18.2 °C inside, 20.3 °C outside, window open: the outdoor air warms the room.
+        values = {"indoor_temperature": 18.2, "outdoor_temperature": 20.3, "indoor_humidity": 60, "outdoor_humidity": 40,
+                  "heating": "off", "window:w": True}
+        readings = {k: Reading(v, "valid", "sensor.x") for k, v in values.items()}
+        a = assess(readings, SETTINGS, None, {}, None, {}, NOW, context={"heated": True, "occupied": True})
+        self.assertEqual((a.action, a.reason), ("ok", "heat_needed"))
+        self.assertTrue(a.features["warmth"]["outdoor_warms"])
+        values["outdoor_temperature"] = 12
+        readings = {k: Reading(v, "valid", "sensor.x") for k, v in values.items()}
+        self.assertEqual(assess(readings, SETTINGS, None, {}, None, {}, NOW, context={"heated": True, "occupied": True}).action, "fermer")
+
     def test_tolerance_is_bounded(self):
         with self.assertRaises(ValueError):
             Settings(heating_tolerance=-1)
