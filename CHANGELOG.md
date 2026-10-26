@@ -1,3 +1,31 @@
+## 1.5.0 — Chauffage plus tolérant, Versatile Thermostat, la nuit simulée
+
+**En bref**
+
+- **« Rallumez le chauffage » seulement quand ça vaut le coup.** Une pièce juste sous son minimum est dite dans « À savoir ». Le geste n’apparaît que si elle reste plus bas que la tolérance (1 °C par défaut) pendant 30 minutes, avec quelqu’un à la maison et le chauffage coupé, et qu’elle ne se réchauffe pas d’elle-même.
+- **Versatile Thermostat devient une extension**, reconnue toute seule : sa température confort sert de minimum à la pièce, et Niak comprend pourquoi il est arrêté.
+- **La nuit simulée sur le jumeau de chaque pièce**, d’après la méthode de NADIR : « Cette nuit : ouvrez de 22 h à 7 h · 1,8 °C de mieux demain au plus chaud ».
+- **Les cadres restent visibles avec les thèmes Home Assistant** dont les séparateurs ont la couleur du fond (Nordic et dérivés).
+
+### Nouveautés
+
+- Tolérance du chauffage réglable de 0 à 5 °C (Modifier une pièce → Chauffage). 0 rend la règle d’avant.
+- Versatile Thermostat (reconnu par sa plateforme) : consigne confort comme minimum (désactivable), raison d’un arrêt (manuel, fenêtre, arrêt automatique, mode central, délestage…), préréglages éco, hors-gel et absence, pente de température, présence ou mouvement suivis, fenêtre ouverte détectée. Seul un arrêt manuel appelle « Rallumez ». En éco, hors-gel ou absence, ou arrêté par une fenêtre, la carte l’explique.
+- Une section **Extensions** sur l’accueil Confort : Niak Weather, Versatile Thermostat, Adaptive Cover Pro, et les pièces où chacune sert.
+- Le jumeau apprend la masse des murs (second nœud qui suit l’air en environ 3 h) : une aération courte refroidit l’air, pas les murs, et la pièce remonte une fois fermée.
+- La simulation des 30 prochaines heures pèse le soleil qui entre volets relevés contre l’air frais, n’ouvre jamais sous la pluie ni sous le minimum, et signale un air humide (point de rosée au-dessus de 16 °C).
+
+### Corrections
+
+- Un thermostat qui ne publie pas son action est lu « coupé » quand son mode est arrêt.
+- Un seul compte partout : le nombre de capteurs qui répondent inclut tous ceux vérifiés (présence, volets, extérieur…), et l’accueil Niak, le sous-titre et l’indicateur donnent le même nombre de points à régler. Les suggestions sont comptées à part.
+- Un capteur que Home Assistant affiche mais que le conseil ne peut pas utiliser (trop ancien, unité) est nommé « ne donne pas de mesure exploitable ».
+- « Pas de contact de fenêtre ici, c’est voulu » (Modifier une pièce → Ouvertures) arrête la suggestion pour un garage ou une pièce jamais aérée.
+
+### Après la mise à jour
+
+- Redémarrez Home Assistant, puis rechargez votre tableau de bord. Le jumeau réapprend la masse des murs à partir des mesures déjà gardées : rien à faire.
+
 ## 1.4.0 — Une humidité mieux nuancée, de l’air sec à l’air humide
 
 **En bref**
