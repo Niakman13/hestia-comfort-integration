@@ -1,3 +1,14 @@
+## 1.7.7 — Une seule ligne pour l’humidité
+
+**En bref**
+
+- « À savoir » ne parle plus deux fois de l’humidité : une seule ligne dit l’état et pourquoi aérer n’aide pas.
+
+### Corrections
+
+- **Plus de doublon dans « À savoir »** : « Air humide » puis « Humidité · aérer refroidirait… » deviennent « Air humide · aérer refroidirait une pièce déjà fraîche ». De même « Air humide · depuis plusieurs heures, aérer ne gagnerait presque rien », et « Humidité élevée · risque de moisissure, depuis plusieurs heures ».
+- **Salon · Cuisine** : la ligne est celle de la pièce la plus humide, avec sa raison.
+
 ## 1.7.6 — « Au mieux » et un « À savoir » par ordre d’importance
 
 **En bref**

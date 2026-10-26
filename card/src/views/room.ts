@@ -350,7 +350,35 @@ export function facts(v:View):Fact[] {
     out.push({ic:'open',title:'Dernière aération',text:`${what}${f(last.before)} → ${f(last.after)}${u}${last.predicted!=null?` (prévu ${f(last.predicted)}${u})`:''}`});}
   const l=learning(v);if(l)out.push({...l,topic:l.topic??'learning'});
   // By priority: the sort is stable, lines of one rank keep the order they are said in.
-  return out.sort((x,y)=>rank(x)-rank(y)).slice(0,4);
+  return oneHumidity(out,hum?.mould?9:hum?.degree??0).sort((x,y)=>rank(x)-rank(y)).slice(0,4);
+}
+/** Why airing does not help the humidity, in a few words that follow its state: « Air humide · depuis plusieurs
+ * heures, aérer ne gagnerait presque rien ». */
+const HUMID_WHY:[RegExp,string|((m:RegExpMatchArray)=>string)][]=[
+  [/^ferait à peine baisser/,'aérer ne gagnerait presque rien'],
+  [/^n’aiderait pas, (.*)$/,m=>`aérer n’aiderait pas, ${m[1]}`],
+  [/^aérer ne ferait pas baisser|^l’humidité restera la même/,'l’air du dehors est humide aussi'],
+  [/^l’aération ne la baisserait que d’un point/,'aérer ne gagnerait qu’un point à peine'],
+  [/^l’aération ne la baisserait que de (\d+) points/,m=>`aérer ne gagnerait que ${m[1]} points`],
+  [/^l’aération ne la ferait pas assez baisser/,'aérer ne suffirait pas'],
+  [/^elle attendra que l’on puisse aérer/,'aérer n’est pas possible pour l’instant'],
+  [/^l’aération la baissera peu/,'aérer la baissera peu'],
+  [/^plus humide ici qu’à côté : (.*)$/,m=>`plus humide qu’à côté : ${m[1]}`],
+  [/^(au-dessus|sous) de votre plage depuis plusieurs heures/,'depuis plusieurs heures'],
+  [/^(au-dessus|sous) de votre plage$/,''],
+];
+const humidLine=(f:Fact)=>TOPICS[f.title]==='humidity'||(f.title==='Aération'&&typeof f.text==='string'&&/humidit|plus sec/.test(f.text));
+/** One line for the humidity: its risk or its state first, then why airing does not help, never two lines
+ * about the same thing. The line is keyed so rooms sharing one air say it once, from the most humid. */
+function oneHumidity(out:Fact[],weight:number):Fact[] {
+  const lines=out.filter(humidLine);
+  if(lines.length<2)return out.map(f=>humidLine(f)?{...f,key:'humidity',weight}:f);
+  const head=lines.find(f=>f.title==='Humidité élevée')??lines.find(f=>f.key==='humidity')??lines[0];
+  const short=(f:Fact)=>{const t=typeof f.text==='string'?f.text:'';for(const [re,to] of HUMID_WHY){const m=t.match(re);if(m)return typeof to==='string'?to:to(m);}return t;};
+  // The head's own state words step aside for the reason when there is one: « Air humide » already says it is out.
+  const rest=lines.filter(f=>f!==head).map(short).filter(Boolean),own=head.title==='Humidité élevée'?String(head.text):short(head);
+  const text=[own,...rest].filter(Boolean).filter((t,i,all)=>all.indexOf(t)===i).join(', ')||String(head.text);
+  return out.filter(f=>!humidLine(f)||f===head).map(f=>f===head?{...head,text,key:'humidity',weight}:f);
 }
 /** The « À savoir » box, under the advice; nothing when there is nothing to know. */
 /** The topic of an « À savoir » line, from its title: what the card's settings keep or leave out. */
