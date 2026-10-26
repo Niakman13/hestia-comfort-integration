@@ -1,3 +1,19 @@
+## 1.5.1 — Vos pièces lisibles sur petit écran
+
+**En bref**
+
+- **« Vos pièces » s’adapte à l’écran.** Sur un grand écran, les colonnes restent alignées. Sur une tablette ou un téléphone, chaque pièce devient une fiche : son nom et « Modifier » en haut, puis ses mesures, ce que Niak a observé, ses conseils optimisés et sa courbe sur 24 h. Plus de tableau coupé à droite.
+- **« Votre plage de confort »** remplace « Votre plage de température », avec une explication plus simple.
+
+### Corrections
+
+- Le bouton « Modifier » n’a plus de bloc de fond qui reste visible au survol.
+- Avec un Versatile Thermostat dont la température confort sert de minimum, la plage de confort le dit.
+
+### Après la mise à jour
+
+- Redémarrez Home Assistant, puis rechargez la page (ou videz le cache de l’application mobile).
+
 ## 1.5.0 — Chauffage plus tolérant, Versatile Thermostat, la nuit simulée
 
 **En bref**

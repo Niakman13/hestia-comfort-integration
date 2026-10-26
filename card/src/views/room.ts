@@ -467,7 +467,7 @@ const row=(t:string,x:string)=>html`<li><b>${t}</b><span> · ${x}</span></li>`;
 export function details(v:View,config:Config):TemplateResult[] {
   const a=v.assessment,f=a.features,mods=new Set(config.modules??[]),out:TemplateResult[]=[];
   const season=f?.season;
-  if(season)out.push(row('Votre plage de température',`${number(season.minimum)} à ${number(season.maximum)} °C${!season.heated?' · pièce non chauffée':''}${season.name?' · '+(SEASON_NAMES[season.name]??season.name):season.known?(season.weight===0?' · hiver':season.weight===1?' · été':' · entre-saisons'):' · saison non calculée'}`));
+  if(season)out.push(row('Votre plage de confort',`${number(season.minimum)} à ${number(season.maximum)} °C${!season.heated?' · pièce non chauffée':''}${season.name?' · '+(SEASON_NAMES[season.name]??season.name):season.known?(season.weight===0?' · hiver':season.weight===1?' · été':' · entre-saisons'):' · saison non calculée'}`));
   if(a.action==='ouvrir'&&a.open_first?.length)out.push(row('Ouvrez d’abord',a.open_first.map(id=>v.names?.[id]??id).join(' et ')));
   if(a.slot)out.push(row(a.slot.kind==='open'?'Ouverture possible':'Fermeture conseillée',`${hour(a.slot.time)} · ${number(a.slot.temperature)} °C${a.slot.wind_bearing!=null?' · '+windFrom(a.slot.wind_bearing):''}`));
   const silent=a.missing.filter(k=>!!v.observations[k]);
