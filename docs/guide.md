@@ -124,6 +124,8 @@ Pour chaque fenêtre ou porte qui donne dehors :
 
 Les dimensions sont facultatives. Elles affinent l’ombre et la durée d’aération.
 
+Pas de contact dans une pièce, et c’est voulu (un garage, une pièce jamais aérée) ? Cochez **Pas de contact de fenêtre ici, c’est voulu** : la suggestion « ouvrants non mesurés » disparaît pour cette pièce.
+
 ### Air intérieur
 
 Tout est facultatif :
@@ -148,6 +150,18 @@ Un détecteur de mouvement silencieux ne prouve pas que la pièce est vide. Dél
 Le thermostat ou la vanne de la pièce.
 
 Niak sait alors si le chauffage tourne. Il évite de conseiller d’ouvrir pendant qu’il chauffe.
+
+**Quand conseiller de rallumer** : sous le minimum de la pièce, Niak le dit d’abord dans « À savoir ». « Rallumez le chauffage » n’apparaît que si la pièce reste plus bas que la **tolérance** (1 °C par défaut, de 0 à 5 °C) pendant 30 minutes, avec quelqu’un à la maison et le chauffage coupé, et qu’elle ne se réchauffe pas d’elle-même (le soleil, par exemple).
+
+Un thermostat qui ne dit pas ce qu’il fait (sans « action » dans Home Assistant) est au moins lu « coupé » quand son mode est arrêt.
+
+**Avec Versatile Thermostat**, reconnu tout seul, l’onglet montre ses consignes et propose de prendre sa **température confort comme minimum** de la pièce (coché par défaut) : une seule consigne à régler, sur le thermostat. Niak lit aussi :
+
+- pourquoi il est arrêté : seul un arrêt à la main appelle « Rallumez ». Arrêté par une fenêtre ouverte, par son arrêt automatique, un mode central ou un délestage, il repartira seul : la carte l’explique ;
+- son préréglage : en éco, hors-gel ou absence, une pièce plus fraîche est voulue, Niak ne demande rien ;
+- la pente de la température, tant que le jumeau de la pièce apprend ;
+- la présence ou le mouvement qu’il suit, pour une pièce sans détecteur à elle ;
+- la fenêtre ouverte qu’il détecte, dite dans « À savoir » quand aucun contact de la pièce ne le dit.
 
 Il ne commande rien.
 
@@ -323,6 +337,8 @@ Ce que ça change :
 - **La durée de la pièce** : 20 min dans une buanderie qui sèche vite, une heure dans une chambre qui sèche mal.
 - **Pas de geste inutile** : si aérer ne gagne presque rien, Niak ne le demande pas. Il propose la VMC si la pièce en a une.
 - **Le bon moment** : « Aérez vers 22 h » quand l’air du soir sera plus sec (avec Niak Weather).
+- **Les murs** : le jumeau apprend aussi la masse de la pièce, qui suit l’air en quelques heures. Dix minutes d’aération refroidissent l’air, pas les murs ; une nuit entière, oui.
+- **La nuit simulée** (avec Niak Weather, d’après la méthode de [NADIR](https://solal3105.github.io/NADIR2/methodologie.html)) : quand la pièce a chaud, Niak simule les 30 prochaines heures, fenêtres fermées puis ouvertes aux bons moments. Il pèse le soleil qui entrerait volets relevés contre l’air frais, n’ouvre ni sous la pluie ni sous votre minimum. « À savoir » dit alors : « Cette nuit : ouvrez de 22 h à 7 h · 1,8 °C de mieux demain au plus chaud », et signale un air humide. Fiable à l’heure près, pas à la décimale.
 
 Dans **Détails**, la ligne **Séchage** dit sur combien d’aérations la pièce a appris.
 
