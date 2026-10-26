@@ -345,11 +345,16 @@ export function outsideGaps(v:View):string {
   const text=[part(silent,(f,pl)=>'indisponible'+(pl?'s':'')),part(absent,(f,pl)=>'non suivi'+(f?'e':'')+(pl?'s':''))].filter(Boolean).join(', ');
   return text?text[0].toUpperCase()+text.slice(1):'Extérieur à vérifier';
 }
+/** « COV au-dessus de l'habituel depuis 12 min »: an index without unit is relative to the home's own mean. */
+export function vocText(air:{voc_unit?:string|null;voc_minutes?:number|null}|undefined):string {
+  const base=air?.voc_unit?'COV au-dessus du seuil':'COV au-dessus de l’habituel',m=air?.voc_minutes;
+  return typeof m==='number'&&m>0?`${base} depuis ${m} min`:base;
+}
 function airWhy(v:View):TemplateResult {
   const o=v.observations,air=v.assessment.features?.air,parts:string[]=[];
   if(air?.co2_status==='high')parts.push(`CO₂ ${number(numeric(o.co2))} ppm`);
   if(air?.pm25_status==='high')parts.push('particules élevées');
-  if(air?.voc_status==='high')parts.push('COV élevés');
+  if(air?.voc_status==='high')parts.push(vocText(air));
   return html`${b(parts.join(', ')||'Air à renouveler')}`;
 }
 
@@ -448,7 +453,7 @@ export function tiles(v:View,config:Config):Tile[] {
     list.push({ic:'air',label:'CO₂',value:number(c),unit:'ppm',note:c===null?gone(o.co2):high?'à renouveler':'normal',level:high?(a.level==='urgent'?'urgent':'watch'):'calm',out:high});}
   if(mods.has('air'))for(const [key,ic,label,status] of [['pm25','pm','Particules',air?.pm25_status],['voc','flask','COV',air?.voc_status]] as const){
     if(!o[key])continue;const x=numeric(o[key]),high=status==='high',treated=key==='pm25'&&high&&air?.pm25_treated===true;
-    list.push({ic,label,value:number(x),unit:o[key].unit??'',note:x===null?gone(o[key]):treated?'filtrées':high?'élevés':status==='uninterpreted'?'sans seuil':key==='pm25'?'normales':'normaux',level:treated?'calm':high?'watch':status==='ok'?'calm':'neutral',out:high});}
+    list.push({ic,label,value:number(x),unit:o[key].unit??'',note:x===null?gone(o[key]):treated?'filtrées':high?(key==='voc'&&typeof air?.voc_minutes==='number'&&air.voc_minutes>0?`depuis ${air.voc_minutes} min`:'élevés'):status==='uninterpreted'?'sans seuil':key==='pm25'?'normales':'normaux',level:treated?'calm':high?'watch':status==='ok'?'calm':'neutral',out:high});}
   if(mods.has('windows')){const contacts=Object.entries(o).filter(([k])=>k.startsWith('window:')).map(([,r])=>r);
     if(contacts.length){const open=contacts.filter(r=>r.quality==='valid'&&r.value===true).length,flagged=(a.openings??[]).some(x=>x.flags.length>0&&x.open===true);
       list.push({ic:open?'open':'window',label:'Fenêtres',value:`${open}/${contacts.length}`,note:flagged?'à refermer':open?(open>1?`${open} ouvertes`:'1 ouverte'):'toutes fermées',level:flagged?'action':'neutral',out:flagged});}}
@@ -591,7 +596,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
       <div class="nc-line-text"><span>${name}</span><b>${all[0]?.title}</b></div>${chipRow(values.filter(c=>c!==temp))}${temp?html`<span class="nc-line-value">${temp.text.replace(' °C','')}<small> °C</small></span>`:nothing}</ha-card>`;
   }
   if(format==='measures')
-    return html`<ha-card class="nc-c nc-measures-card" data-level="neutral"><div class="nc-mhead"><h2>${name}</h2><span class="nw-sum">${summary}</span></div><div class="nc-mbody">${config.scale_marks?.length?scaleBox:nothing}${grid}</div></ha-card>`;
+    return html`<ha-card class="nc-c nc-measures-card" data-level="neutral"><div class="nc-mhead"><h2>${name}</h2><span class="nw-sum">${summary}</span></div><div class="nc-mbody">${config.show_scale===true||config.scale_marks?.length?scaleBox:nothing}${grid}</div></ha-card>`;
   if(format==='alert'){
     if(!asking(v))return null;
     return html`<ha-card class="nc-c" data-level=${top}>${hero({name,level:top,slides:all,scaleLabel:'',scale:html``,st,why:whyLines(v),compact:true,small:true,still})}</ha-card>`;

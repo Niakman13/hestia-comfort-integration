@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, LEARNING_REFRESH_SECONDS, OPEN_DEBOUNCE_SECONDS, SEASON_REFRESH_SECONDS, SOURCES, STARTUP_GRACE_SECONDS, VIEW_VERSION
 from .engine.assessment import Opening, Settings, Sun, assess
-from .engine import feedback, habits, horizon, learning, night, people, sunlight, thermostat as thermostats, twin
+from .engine import feedback, habits, horizon, learning, night, people, sunlight, thermostat as thermostats, twin, voc as vocs
 from .engine.volume import arbitrate
 from .engine.sources import normalize, Reading
 from .configuration import DATA_CONFIG
@@ -50,6 +50,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.started = dt_util.utcnow()
         self.history_reports = {}
         self.histories = {"temperature_history": deque(maxlen=360), "outdoor_history": deque(maxlen=360)}
+        # The VOC index of the last minutes, for its mean (engine/voc.py).
+        self.voc_points = deque(maxlen=240)
         # The sun of the last quarter of an hour: a passing cloud does not make « Soleil » come and go.
         self._sun_samples = deque(maxlen=120)
         # Where the station's sensor is shaded, learned from its history; the sky's share seen just before the shade.
@@ -215,6 +217,14 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 starts.pop(eid, None)
             start = starts.get(eid)
             return max(0, (now - start).total_seconds() / 60) if start else None
+        voc_reading = readings.get("voc")
+        if voc_reading and voc_reading.usable and isinstance(voc_reading.value, (int, float)):
+            if not self.voc_points or self.voc_points[-1][1] != voc_reading.value or now - self.voc_points[-1][0] > timedelta(minutes=1):
+                self.voc_points.append((now, voc_reading.value))
+        while self.voc_points and now - self.voc_points[0][0] > timedelta(minutes=2 * vocs.MEAN_MINUTES):
+            self.voc_points.popleft()
+        # The last airing about the VOC: what it left, for the pause that follows.
+        aired = next((r for r in reversed(self.feedback) if r.get("measure") == "voc" and r.get("end")), None)
         # The season first: the hours of airing and the answers about a window open at night depend on it.
         self._remember_season(weather_link.season(self.hass, self._weather_place()) or self._season(readings))
         return {**self.config.get("evolution", {}), "occupied": self._occupied(), "people": self._people(), "alarm": self._alarm(),
@@ -228,6 +238,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 "humidity_ceiling_3h": self.humidity_ceiling,
                 "opening_minutes": {e: minutes(e, self.opened_since, "on") for e in self.windows},
                 "presence_off_minutes": {e: self._off_minutes(e, now) for e in self.config.get("presence", [])},
+                "voc_mean": vocs.mean(list(self.voc_points), now) if voc_reading and voc_reading.usable else None,
+                "voc_aired_at": aired["end"] if aired else None, "voc_aired_after": aired.get("after") if aired else None,
                 **{k: list(v) for k, v in self.histories.items()}}
 
     async def _async_update_data(self):
