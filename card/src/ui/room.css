@@ -284,6 +284,7 @@ button.nc-row:hover { background:color-mix(in srgb, var(--nw-fg) 5%, transparent
 .nc-h-strip { fill:color-mix(in srgb, var(--nw-fg) 9%, transparent); }
 .nc-h-keep { fill:color-mix(in oklab, var(--nw-heat) 70%, transparent); }
 .nc-h-tick { font-size:8px; fill:var(--nw-fg2); }
+.nc-h-start { font-weight:700; fill:var(--nw-fg); }
 .nc-h-result { margin:4px 0 0; text-align:center; font-size:var(--nw-fs-small); }
 .k-h-base { width:14px; border-top:2px dashed var(--nw-fg2); }
 .k-h-line { width:14px; border-top:3px solid; }
