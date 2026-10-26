@@ -585,7 +585,8 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         # Only a heating switched off by hand is the person's to switch back on: a window, the thermostat's own
         # start-stop or a central mode resume by themselves, and an eco or frost preset aims lower on purpose.
         theirs = not thermostat or (thermostat.get("off_reason") in (None, "manual") and not thermostats.lowered(thermostat))
-        asked = warmth["occupied"] is True and warmth["heating"] == "off" and lasting and not warming and theirs
+        # Nobody known away is someone maybe home: a cold room never sits under « Rien à faire » for want of a presence sensor.
+        asked = warmth["occupied"] is not False and warmth["heating"] == "off" and lasting and not warming and theirs
         level = "action" if asked else "neutral" if partial else "calm"
     # Protections never configured: the advice stands, the card says what Niak does not watch.
     unverified = tuple(k for k in ("pollution", "rain") if k not in readings and not (k == "rain" and all_sheltered))
