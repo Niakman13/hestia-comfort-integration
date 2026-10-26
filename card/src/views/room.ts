@@ -5,6 +5,10 @@ import {numeric,number,heatingLabels,coverageText,windFrom,sourceLabel,needs as 
 import {icon} from '../ui/icons';
 
 /** The level, said in two or three words: the colour is never the only signal. */
+// Versatile Thermostat's presets and the reasons it stops by itself, in the person's words.
+const presetWord=(p:string|null)=>!p?'mode réduit':p.includes('frost')?'hors-gel':p.includes('away')?'absence':p.includes('eco')?'éco':p;
+const offWords:Record<string,string>={window:'fenêtre ouverte',auto_start_stop:'arrêt automatique',sleep:'veille',safety:'sécurité',central_mode:'mode central',inhibition:'délestage'};
+
 export const pills:Record<Level,string>={calm:'Tout va bien',benefit:'À saisir',action:'Geste conseillé',urgent:'Attention',neutral:'À vérifier'};
 const hour=(iso:string)=>{const h=new Date(iso).getHours();return h===0?'minuit':h===12?'midi':h+' h';};
 /** « 15 h 20 », to the five minutes: when to shut before a coming rain. */
@@ -243,8 +247,12 @@ export function facts(v:View):Fact[] {
     out.push({ic:'drop',title:'Humidité',text:gain!=null&&gain<4?`l’aération ne la baisserait que ${gain<1.5?'d’un point à peine':`de ${Math.round(gain)} points`}`:'l’aération ne la ferait pas assez baisser'});
   if(a.reason==='heat_needed'&&a.action!=='fermer'&&a.level!=='action')
     out.push({ic:'temp',title:'Pièce fraîche',text:w?.occupied===false?'maison vide : pas besoin de chauffer'
+      :w?.thermostat?.lowered?`thermostat en ${presetWord(w.thermostat.preset)}${w.thermostat.target!=null?` : ${deg(w.thermostat.target)} visés`:''}`
+      :w?.thermostat?.off_reason&&w.thermostat.off_reason!=='manual'?`chauffage arrêté par le thermostat (${offWords[w.thermostat.off_reason]??'automatique'}), il repartira seul`
       :w?.heating==='on'?'le chauffage s’en charge':w?.warming?`${deg(ti)}, elle se réchauffe d’elle-même`
       :w?.heating==='off'?`${deg(ti)}, un peu sous votre plage · chauffage coupé`:`${deg(ti)}, sous votre plage`});
+  // A window no contact of the room watches, seen open by the thermostat (its temperature drop).
+  if(f?.thermostat?.window)out.push({ic:'window',title:'Fenêtre ouverte',text:`vue par ${f.thermostat.name}`});
   // Words for everyone: the risk and where it comes from, never a percentage against a wall.
   // The cause is not guessed: after days of rain, walls and fabrics give back water without a shower or a meal.
   if(hum?.mould)out.push({ic:'drop',title:'Humidité élevée',text:'risque de moisissure'});

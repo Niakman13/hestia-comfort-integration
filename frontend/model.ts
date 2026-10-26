@@ -9,11 +9,12 @@ export interface Candidate {
  local:boolean;outside:boolean;reference:boolean;available:boolean;adapter:string;warnings:string[];
  provenance:{entity_id:string;name:string;area_id:string|null}[];device_class:string|null;atmo_label:string|null;
  voc_reference?:{id:'sensirion_index';value:number;unit:string}|null;
+ thermostat?:{name:string;mode:string|null;preset:string|null;target:number|null;comfort:number|null;eco:number|null;frost:number|null;off_reason:string|null;window:boolean|null;occupied:boolean|null}|null;
 }
 export interface Spec {entity_id:string;adapter:string;block_from?:number}
 export interface OpeningMeta {exposure:string|null;azimuth?:number|null;kind:string;sheltered:boolean;shutter?:'none'|'manual'|'connected';cover_entity?:string;auto_entity?:string;override_entity?:string;width?:number;height?:number;overhang_depth?:number;overhang_gap?:number}
 export interface EvolutionConfig {voc_threshold?:{value:number;unit:string};glazing_factor?:number;presence_delay_minutes?:number}
-export interface RoomConfig {presence?:string[];evolution?:EvolutionConfig;floor_id?:string|null;area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean;heated?:boolean;open_to?:string[]}
+export interface RoomConfig {presence?:string[];evolution?:EvolutionConfig;floor_id?:string|null;area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean;heated?:boolean;thermostat_reference?:boolean;open_to?:string[]}
 export interface Room {entry_id:string;title:string;loaded:boolean;config:RoomConfig}
 export interface Area {floor_id?:string|null;area_id:string;name:string;outdoor:boolean}
 export interface Snapshot {version:1;revision:string;floors?:{floor_id:string;name:string;level:number|null}[];areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null};niak_weather?:{installed:boolean;places:{entry_id:string;title:string}[]};integrations?:{atmofrance?:boolean}}
@@ -37,14 +38,14 @@ export interface Twins {version:1;rooms:{entry_id:string;title:string;twin:Twin;
  /** Where the station's sun sensor is shaded, learned (engine/sunlight.py): azimuths by 10°. */ sun_shade?:{scale:number;shaded:number[];sunny_days:number}|null}[]}
 export interface HealthLine {level:Level;text:string;why:string;target?:Target|null}
 export interface Health {level:'ok'|'action';summary:string;tips_summary:string;rooms_summary:string;todo:HealthLine[];tips:HealthLine[];
- sources:{label:string;level:Level;text:string}[];columns:string[];rooms:{entry_id:string;title:string;cells:{level:Level;text:string}[]}[];versions:HealthLine[]}
+ sources:{label:string;level:Level;text:string}[];extensions?:{name:string;level:Level;role:string;text:string}[];columns:string[];rooms:{entry_id:string;title:string;cells:{level:Level;text:string}[]}[];versions:HealthLine[]}
 export interface Hass {callWS<T>(msg:Record<string,unknown>):Promise<T>;user?:{is_admin:boolean};themes?:{darkMode?:boolean};connection?:unknown}
 export const warningText:Record<string,string>={
  alias:'Cette entité recopie une autre mesure. Vérifiez sa provenance ci-dessous.',
  other_area:'La mesure ou sa source est rattachée à une autre pièce. Confirmez qu’elle représente bien celle-ci.',
  contact_role:'Ce contact peut être une porte d’appareil, de meuble ou une porte intérieure. Gardez-le seulement s’il donne sur l’extérieur.',
  derived:'Il s’agit d’une donnée calculée ou regroupée. Vérifiez ce qu’elle mesure réellement.',
- no_hvac_action:'Cet équipement ne dit pas s’il chauffe réellement. Son état sera seulement affiché comme inconnu.',
+ no_hvac_action:'Cet équipement dit son mode mais pas s’il chauffe réellement : Niak saura quand il est coupé, pas quand il tourne.',
  binary_meaning:'Signal avancé : « actif » doit signifier pluie ou aération déconseillée. Un diagnostic de panne ne convient pas.',
  outdoor_role:'Ce capteur n’est pas rattaché à une pièce extérieure. Vérifiez qu’il mesure bien l’air du dehors.',
  used_indoor:'Ce capteur sert déjà de mesure intérieure pour une de vos pièces : il ne mesure sans doute pas l’air du dehors.',

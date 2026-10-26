@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, LEARNING_REFRESH_SECONDS, OPEN_DEBOUNCE_SECONDS, SEASON_REFRESH_SECONDS, SOURCES, STARTUP_GRACE_SECONDS, VIEW_VERSION
 from .engine.assessment import Opening, Settings, Sun, assess
-from .engine import feedback, habits, learning, sunlight, twin
+from .engine import feedback, habits, learning, sunlight, thermostat as thermostats, twin
 from .engine.volume import arbitrate
 from .engine.sources import normalize, Reading
 from .configuration import DATA_CONFIG
@@ -346,6 +346,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
         current["far"] = 1.0 if self.partners and open_now and not open_now & mine else 0.0
         current["beside"] = self._beside_now()
         context = self._context(now, readings)
+        context["thermostat"] = self._thermostat()
+        context["thermostat_reference"] = self.config.get("thermostat_reference", True)
         # The room in an hour, as its twin sees it: a cold room already warming by itself is not told to heat.
         context["next_hour_temperature"] = (twin.next_hour(self.twin, current) or {}).get("temperature")
         self.previous = assess(advice_readings, self.settings, self.previous, openings, self._sun(), outlook, now, context=context)
@@ -435,6 +437,15 @@ class ComfortCoordinator(DataUpdateCoordinator):
             if t.get("quality") == "valid" and h.get("quality") == "valid" and isinstance(t.get("value"), (int, float)) and isinstance(h.get("value"), (int, float)):
                 found.append((t["value"], h["value"]))
         return (sum(t for t, _ in found) / len(found), sum(h for _, h in found) / len(found)) if found else None
+
+    def _thermostat(self):
+        """What the room's Versatile Thermostat says (engine/thermostat.py); None for any other heating."""
+        entity_id = self.sources.get("heating")
+        entry = er.async_get(self.hass).async_get(entity_id) if entity_id else None
+        state = self.hass.states.get(entity_id) if entity_id else None
+        if not entry or entry.platform != thermostats.PLATFORM or not state or state.state in ("unknown", "unavailable"):
+            return None
+        return thermostats.read(state.state, dict(state.attributes))
 
     def _settle(self, own):
         """One gesture per shared air: this room follows a partner whose reason outweighs its own."""
@@ -800,6 +811,9 @@ class ComfortCoordinator(DataUpdateCoordinator):
                     return Reading(None, "unknown", entity_id, state.last_reported.isoformat(), "incompatible_unit")
             if kind == "heating":
                 raw = state.attributes.get("hvac_action")
+                # A thermostat that does not say what it is doing still says when it is off.
+                if raw is None and state.state == "off":
+                    raw = "off"
             elif kind in ("cover", "purifier_speed"):
                 raw = state.attributes.get("current_position" if kind == "cover" else "percentage") if state.state not in ("unknown", "unavailable") else None
                 unit = "%"

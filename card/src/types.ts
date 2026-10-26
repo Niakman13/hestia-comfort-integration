@@ -61,7 +61,8 @@ export interface Features {
  learned?:{now:number;after:number;minutes:number;measure:'humidity'|'temperature'|'co2'|'voc';openings:number;days:number;precision:{temperature:number;humidity:number};closing?:boolean}|null;
  /** What the sun on the windows does for the room now (engine/assessment.py, _benefits). */ benefits?:{kind:'sun_warms'|'sun_heats';openings:string[];watts:number;keep_shut?:boolean}[];
  volume?:{lead:string;reason:string;action:string;assessment?:Partial<Assessment>&{reason:string};observations?:Record<string,Reading>};
- warmth?:{occupied:boolean|null;heating:'on'|'off'|null;chilly_since?:string|null;tolerance?:number;warming?:boolean}|null;
+ warmth?:{occupied:boolean|null;heating:'on'|'off'|null;chilly_since?:string|null;tolerance?:number;warming?:boolean;thermostat?:{name:string;preset:string|null;target:number|null;off_reason:string|null;lowered:boolean;reference:number|null}}|null;
+ thermostat?:{name:string;window:boolean;preset:string|null;target:number|null;reference:number|null}|null;
  drying?:{minutes:number;now:number;after:number;gain:number;tau:number;openings:number;later:{minutes:number;now:number;after:number;gain:number;time:string}|null}|null;
  trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string};
  season?:{known:boolean;weight:number|null;outdoor_mean:number|null;minimum:number;maximum:number;heated:boolean;
