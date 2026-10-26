@@ -591,7 +591,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
       <div class="nc-line-text"><span>${name}</span><b>${all[0]?.title}</b></div>${chipRow(values.filter(c=>c!==temp))}${temp?html`<span class="nc-line-value">${temp.text.replace(' °C','')}<small> °C</small></span>`:nothing}</ha-card>`;
   }
   if(format==='measures')
-    return html`<ha-card class="nc-c nc-measures-card" data-level="neutral"><div class="nc-mhead"><h2>${name}</h2><span class="nw-sum">${summary}</span></div><div class="nc-mbody">${config.scale_marks?.length?scaleBox:nothing}${grid}</div></ha-card>`;
+    return html`<ha-card class="nc-c nc-measures-card" data-level="neutral"><div class="nc-mhead"><h2>${name}</h2><span class="nw-sum">${summary}</span></div><div class="nc-mbody">${config.show_scale===true||config.scale_marks?.length?scaleBox:nothing}${grid}</div></ha-card>`;
   if(format==='alert'){
     if(!asking(v))return null;
     return html`<ha-card class="nc-c" data-level=${top}>${hero({name,level:top,slides:all,scaleLabel:'',scale:html``,st,why:whyLines(v),compact:true,small:true,still})}</ha-card>`;

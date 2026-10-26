@@ -477,3 +477,16 @@ test('the four sections are settings of their own: À savoir topics and count, d
   assert.equal(details(v,cleanConfig({type:'custom:niak-comfort-card',detail_rows:[]})).length,0);
   assert.ok(text(details(v,cleanConfig({type:'custom:niak-comfort-card',detail_rows:['range']}))).includes('Votre plage de confort'));
 });
+
+test('the scale switch turns the scale off and on, even though the form sends back its hidden list of marks',async()=>{
+  const {nextConfig,scaleShown}=await import(pathToFileURL(join(temp,'editor.mjs')));
+  const base=cleanConfig({type:'custom:niak-comfort-card',format:'full'});
+  // What Home Assistant's form sends: every field, the hidden marks included.
+  const off=cleanConfig(nextConfig(base,{show_scale:false,scale_marks:['band','day','out'],rotate:true}));
+  assert.equal(scaleShown(off),false);
+  const on=cleanConfig(nextConfig(off,{show_scale:true,scale_marks:['band','day','out']}));
+  assert.equal(scaleShown(on),true);
+  // Another switch leaves a card's own marks untouched.
+  const kept=cleanConfig(nextConfig(cleanConfig({type:'custom:niak-comfort-card',scale_marks:['band']}),{show_scale:true,scale_marks:['band','day','out'],rotate:false}));
+  assert.deepEqual(kept.scale_marks,['band']);
+});
