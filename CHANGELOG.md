@@ -1,7 +1,10 @@
-## 1.5.3 — « Un peu frais », présence mieux suivie
+## 1.6.0 — Les personnes de chaque pièce, l’alarme, « un peu frais »
 
 **En bref**
 
+- **Les personnes de chaque pièce.** Dans l’onglet Présence, cochez à qui sert la pièce : une personne pour une chambre, plusieurs pour une pièce commune. Quand elles sont toutes absentes, la pièce compte comme vide, même si d’autres sont à la maison : pas de « Rallumez le chauffage » dans une chambre dont l’occupant est parti, et « Fenêtre ouverte · Paul est absent » si la sienne est restée ouverte.
+- **Alarmo devient une extension**, avec son réglage dans Réglages généraux : Alarmo trouvé tout seul, une autre alarme, ou aucune. Armée en absence ou en vacances avec une fenêtre ouverte : « Refermez », urgent. En mode nuit : « Refermez », sauf pour la fenêtre laissée ouverte exprès pour dormir au frais.
+- Une pièce vide alors que quelqu’un est à la maison : « Pièce vide · le bon moment pour aérer longuement ».
 - **« Un peu frais » au lieu de « Trop frais »** quand la pièce reste dans la tolérance de son chauffage (1 °C par défaut, réglable dans l’onglet Chauffage). « Trop frais » est gardé pour un vrai écart.
 - **La présence n’est plus « inconnue » pour rien.** Pendant le délai avant de dire la pièce vide, la carte affiche « personne depuis 4 min (vide après 5 min) ». Et après un redémarrage de Home Assistant, Niak sait tout de suite depuis quand personne n’a été détecté.
 
@@ -11,7 +14,7 @@
 
 ### Après la mise à jour
 
-- Redémarrez Home Assistant, puis rechargez la page.
+- Redémarrez Home Assistant, puis rechargez la page. Cochez ensuite les personnes de chaque pièce (Modifier → Présence) et vérifiez l’alarme (Réglages généraux).
 
 ## 1.5.2 — Le thermostat en éco compte, la fenêtre qui réchauffe reste ouverte
 

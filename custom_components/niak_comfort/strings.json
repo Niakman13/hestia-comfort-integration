@@ -82,6 +82,7 @@
           "incomplete_data": "Incomplete information",
           "optional_air_change": "Optional air renewal",
           "gust_open_windows": "Gusts: close",
+          "alarm_open": "Alarm armed: close",
           "short_air_change": "Short airing",
           "sun_entering": "Sun coming in",
           "rain_soon": "Rain coming",

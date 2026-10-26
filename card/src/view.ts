@@ -53,6 +53,7 @@ export const reasons:Record<string,[string,string]> = {
   incomplete_data:['Les mesures restent à vérifier','Certaines informations sont manquantes ou périmées. Aucun chiffre de remplacement ne complète le bilan.'],
   optional_air_change:['Un renouvellement peut faire du bien','Une aération est une possibilité d’amélioration, sans besoin prioritaire détecté.'],
   gust_open_windows:['Fermez, le vent est trop fort','Les rafales dépassent votre seuil : rien ne doit rester ouvert.'],
+  alarm_open:['Refermez, l’alarme est armée','Une fenêtre est restée ouverte alors que l’alarme est armée.'],
   short_air_change:['Aérez quelques minutes','De l’air neuf en quelques minutes, pour très peu de confort perdu. Refermez ensuite.'],
   rain_soon:['Refermez avant la pluie','La pluie arrive bientôt sur les ouvrants exposés.'],
   precool_later:['Pas encore, demain sera chaud','Ouvrez dès que l’air dehors sera plus frais que dedans : la maison stockera ce frais pour demain.'],

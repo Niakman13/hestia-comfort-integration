@@ -14,10 +14,10 @@ export interface Candidate {
 export interface Spec {entity_id:string;adapter:string;block_from?:number}
 export interface OpeningMeta {exposure:string|null;azimuth?:number|null;kind:string;sheltered:boolean;shutter?:'none'|'manual'|'connected';cover_entity?:string;auto_entity?:string;override_entity?:string;width?:number;height?:number;overhang_depth?:number;overhang_gap?:number}
 export interface EvolutionConfig {voc_threshold?:{value:number;unit:string};glazing_factor?:number;presence_delay_minutes?:number}
-export interface RoomConfig {presence?:string[];evolution?:EvolutionConfig;floor_id?:string|null;area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean;heated?:boolean;thermostat_reference?:boolean;windows_unmeasured?:boolean;open_to?:string[]}
+export interface RoomConfig {presence?:string[];evolution?:EvolutionConfig;floor_id?:string|null;area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean;heated?:boolean;thermostat_reference?:boolean;windows_unmeasured?:boolean;persons?:string[];open_to?:string[]}
 export interface Room {entry_id:string;title:string;loaded:boolean;config:RoomConfig}
 export interface Area {floor_id?:string|null;area_id:string;name:string;outdoor:boolean}
-export interface Snapshot {version:1;revision:string;floors?:{floor_id:string;name:string;level:number|null}[];areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null};niak_weather?:{installed:boolean;places:{entry_id:string;title:string}[]};integrations?:{atmofrance?:boolean}}
+export interface Snapshot {version:1;revision:string;floors?:{floor_id:string;name:string;level:number|null}[];areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null;alarm?:string|null};niak_weather?:{installed:boolean;places:{entry_id:string;title:string}[]};integrations?:{atmofrance?:boolean}}
 export interface Discovery {version:1;revision:string;candidates:Record<string,Candidate[]>;suggestions:Record<string,string|string[]>;drivers?:Record<string,Driver>}
 export interface DriverSignal {entity_id:string;name:string;on:boolean}
 export interface Driver {name:string;auto:string|null;override:string|null;signals?:Partial<Record<'enabled'|'auto'|'tracking'|'detection'|'override'|'sun'|'climate',DriverSignal|null>>;azimuth?:number|null;exposure?:string|null;width?:number|null;height?:number|null}
@@ -39,7 +39,7 @@ export interface Twins {version:1;rooms:{entry_id:string;title:string;twin:Twin;
 export interface HealthLine {level:Level;text:string;why:string;target?:Target|null}
 export interface Health {level:'ok'|'action';summary:string;tips_summary:string;rooms_summary:string;todo:HealthLine[];tips:HealthLine[];
  sources:{label:string;level:Level;text:string}[];sensors?:{answering:number;total:number};extensions?:{name:string;level:Level;role:string;text:string}[];columns:string[];rooms:{entry_id:string;title:string;cells:{level:Level;text:string}[]}[];versions:HealthLine[]}
-export interface Hass {callWS<T>(msg:Record<string,unknown>):Promise<T>;user?:{is_admin:boolean};themes?:{darkMode?:boolean};connection?:unknown}
+export interface Hass {callWS<T>(msg:Record<string,unknown>):Promise<T>;user?:{is_admin:boolean};themes?:{darkMode?:boolean};connection?:unknown;states?:Record<string,{state:string;attributes?:Record<string,unknown>}>}
 export const warningText:Record<string,string>={
  alias:'Cette entité recopie une autre mesure. Vérifiez sa provenance ci-dessous.',
  other_area:'La mesure ou sa source est rattachée à une autre pièce. Confirmez qu’elle représente bien celle-ci.',

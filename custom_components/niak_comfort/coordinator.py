@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, LEARNING_REFRESH_SECONDS, OPEN_DEBOUNCE_SECONDS, SEASON_REFRESH_SECONDS, SOURCES, STARTUP_GRACE_SECONDS, VIEW_VERSION
 from .engine.assessment import Opening, Settings, Sun, assess
-from .engine import feedback, habits, learning, night, sunlight, thermostat as thermostats, twin
+from .engine import feedback, habits, learning, night, people, sunlight, thermostat as thermostats, twin
 from .engine.volume import arbitrate
 from .engine.sources import normalize, Reading
 from .configuration import DATA_CONFIG
@@ -217,7 +217,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
             return max(0, (now - start).total_seconds() / 60) if start else None
         # The season first: the hours of airing and the answers about a window open at night depend on it.
         self._remember_season(weather_link.season(self.hass, self._weather_place()) or self._season(readings))
-        return {**self.config.get("evolution", {}), "occupied": self._occupied(), "volume": self._volume_air(readings),
+        return {**self.config.get("evolution", {}), "occupied": self._occupied(), "people": self._people(), "alarm": self._alarm(),
+                "volume": self._volume_air(readings),
                 "intended_open": self._intended_open(now), "zone": dt_util.get_default_time_zone(),
                 # The season: Niak Weather's when it is the exterior source, else a season sensor chosen in « Extérieur ».
                 "season_name": self.season_name,
@@ -375,10 +376,33 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 "names": {e: (state.name if (state := self.hass.states.get(e)) else e) for e in self.windows},
                 "starting": (now - self.started).total_seconds() < STARTUP_GRACE_SECONDS}
 
-    def _occupancy_entities(self):
+    def _alarm_entity(self):
+        """The home's alarm panel: the one chosen in the general settings, else Alarmo found by itself; None for none."""
+        chosen = (self.home_configuration.home.get("alarm") if self.home_configuration is not None else None)
+        if isinstance(chosen, str):
+            return chosen or None
         entities = getattr(er.async_get(self.hass), "entities", None) or {}
-        panels = [e.entity_id for e in entities.values() if e.domain == "alarm_control_panel" and e.platform == "alarmo"]
-        return [*panels, "zone.home"]
+        return next((e.entity_id for e in entities.values() if e.domain == "alarm_control_panel" and e.platform == people.PLATFORM
+                     and not e.disabled_by), None)
+
+    def _occupancy_entities(self):
+        alarm = self._alarm_entity()
+        return [*([alarm] if alarm else []), "zone.home", *self.config.get("persons", [])]
+
+    def _people(self):
+        """The room's people at home or away (engine/people.py); None when none are chosen."""
+        chosen = [e for e in self.config.get("persons", []) if isinstance(e, str)]
+        if not chosen:
+            return None
+        states = [self.hass.states.get(e) for e in chosen]
+        return people.people([(str(s.attributes.get("friendly_name") or e) if s else e, s.state if s else None)
+                              for e, s in zip(chosen, states)])
+
+    def _alarm(self):
+        entity_id = self._alarm_entity()
+        state = self.hass.states.get(entity_id) if entity_id else None
+        found = people.alarm(state.state if state else None)
+        return {**found, "entity_id": entity_id, "name": str(state.attributes.get("friendly_name") or entity_id)} if found else None
 
     def _off_minutes(self, entity_id, now):
         """Minutes a presence sensor has said « nobody », read from Home Assistant: right even after a restart."""
@@ -388,23 +412,16 @@ class ComfortCoordinator(DataUpdateCoordinator):
         return max(0.0, (now - state.last_changed).total_seconds() / 60)
 
     def _occupied(self):
-        """True when someone is at home, False when nobody is, None when nothing says it.
-
-        An Alarmo panel armed « away » or « vacation » means an empty home; otherwise the home zone counts the
-        people inside; an Alarmo panel disarmed or armed « home » / « night » still says someone is there."""
-        panels = [self.hass.states.get(e) for e in self._occupancy_entities() if e.startswith("alarm_control_panel.")]
-        states = {s.state for s in panels if s}
-        if states & {"armed_away", "armed_vacation"}:
-            return False
+        """True when the room's people (or, without any chosen, the household) are at home, False when not, None when
+        nothing says it. An alarm armed « away » or « vacation » means an empty home (engine/people.py)."""
         zone = self.hass.states.get("zone.home")
+        count = None
         if zone and zone.attributes.get("persons"):
             try:
-                return float(zone.state) > 0
+                count = float(zone.state)
             except (TypeError, ValueError):
-                pass
-        if states & {"disarmed", "armed_home", "armed_night", "armed_custom_bypass"}:
-            return True
-        return None
+                count = None
+        return people.occupied(self._people(), self._alarm(), count)
 
     def _volume_air(self, readings):
         """The air shared with the rooms open onto this one: mean water and temperature, and the drying model learned
