@@ -338,7 +338,7 @@ Ce que ça change :
 - **Pas de geste inutile** : si aérer ne gagne presque rien, Niak ne le demande pas. Il propose la VMC si la pièce en a une.
 - **Le bon moment** : « Aérez vers 22 h » quand l’air du soir sera plus sec (avec Niak Weather).
 - **Les murs** : le jumeau apprend aussi la masse de la pièce, qui suit l’air en quelques heures. Dix minutes d’aération refroidissent l’air, pas les murs ; une nuit entière, oui.
-- **La nuit simulée** (avec Niak Weather, d’après la méthode de [NADIR](https://solal3105.github.io/NADIR2/methodologie.html)) : quand la pièce a chaud, Niak simule les 30 prochaines heures, fenêtres fermées puis ouvertes aux bons moments. Il pèse le soleil qui entrerait volets relevés contre l’air frais, n’ouvre ni sous la pluie ni sous votre minimum. « À savoir » dit alors : « Cette nuit : ouvrez de 22 h à 7 h · 1,8 °C de mieux demain au plus chaud », et signale un air humide. Fiable à l’heure près, pas à la décimale.
+- **La nuit simulée** (avec Niak Weather, d’après la méthode de [NADIR](https://solal3105.github.io/NADIR2/methodologie.html), de Solal Gendrin ([son dépôt](https://github.com/solal3105/NADIR2))) : quand la pièce a chaud, Niak simule les 30 prochaines heures, fenêtres fermées puis ouvertes aux bons moments. Il pèse le soleil qui entrerait volets relevés contre l’air frais, n’ouvre ni sous la pluie ni sous votre minimum. « À savoir » dit alors : « Cette nuit : ouvrez de 22 h à 7 h · 1,8 °C de mieux demain au plus chaud », et signale un air humide. Fiable à l’heure près, pas à la décimale.
 
 Dans **Détails**, la ligne **Séchage** dit sur combien d’aérations la pièce a appris.
 

@@ -22,6 +22,11 @@
 - Un capteur que Home Assistant affiche mais que le conseil ne peut pas utiliser (trop ancien, unité) est nommé « ne donne pas de mesure exploitable ».
 - « Pas de contact de fenêtre ici, c’est voulu » (Modifier une pièce → Ouvertures) arrête la suggestion pour un garage ou une pièce jamais aérée.
 
+### Remerciements
+
+- La nuit simulée et la masse des murs s’inspirent de **NADIR**, de Solal Gendrin : [son dépôt](https://github.com/solal3105/NADIR2) et [sa méthodologie](https://solal3105.github.io/NADIR2/methodologie.html). Le code de Niak a été écrit indépendamment, à partir des équations publiées.
+- Merci à Gaël (@gael1980) d’avoir fait découvrir NADIR et partagé sa carte ([#2](https://github.com/Niakman13/niak-comfort-integration/issues/2)), et à Louis (@hellmer1234) pour ses retours sur l’affichage ([#1](https://github.com/Niakman13/niak-comfort-integration/issues/1)).
+
 ### Après la mise à jour
 
 - Redémarrez Home Assistant, puis rechargez votre tableau de bord. Le jumeau réapprend la masse des murs à partir des mesures déjà gardées : rien à faire.
