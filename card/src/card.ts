@@ -80,7 +80,7 @@ export class NiakComfortCard extends LitElement {
     // Opening at start follows the card's settings; the full card in its window always shows the measures.
     const measures=modal||(this.config?.measures_open??(fmt==='full'||fmt==='intermediate')),details=this.config?.details_open??false;
     const fallback=(k:string)=>k==='tilesOpen'?measures:k==='detailsOpen'?details:false;
-    return {why:get('why',false),tilesOpen:get('tilesOpen',measures),detailsOpen:get('detailsOpen',details),uid:this.uid+(modal?'-dialog':'-main'),
+    return {why:get('why',false),tilesOpen:get('tilesOpen',measures),detailsOpen:get('detailsOpen',details),horizonAlt:get('horizonAlt',false),uid:this.uid+(modal?'-dialog':'-main'),
       // Read the current state at click time: two quick clicks must not overwrite each other.
       toggle:k=>{const cur=this.open;this.open={...cur,[prefix+k]:!(cur[prefix+k]??fallback(k))};},
       configure:this.hass?.user?.is_admin?()=>this.configure():undefined};
