@@ -52,8 +52,8 @@ def _simulate(model, start, series, *, mass, sun, opened, heated):
 def _shape(subject, kind, rows_base, rows_gesture, key, bands=(), extra=(), result=None):
     unit = "%" if key == "hi" else "°C"
     return {"subject": subject, "kind": kind, "unit": unit, "start": rows_base[0]["time"].isoformat(), "step_minutes": 30,
-            "base": [_r(r[key], 0 if key == "hi" else 1) for r in rows_base],
-            "gesture": [_r(r[key], 0 if key == "hi" else 1) for r in rows_gesture] if rows_gesture else None,
+            "base": [_r(r[key]) for r in rows_base],
+            "gesture": [_r(r[key]) for r in rows_gesture] if rows_gesture else None,
             "bands": [[a.isoformat(), b.isoformat()] for a, b in bands], "extra": [[a.isoformat(), b.isoformat()] for a, b in extra],
             "result": result or {}}
 
@@ -111,7 +111,9 @@ def sunny(model, start, series, *, mass, sun, heated):
     if not warm:
         return None
     top = max(base, key=lambda r: r["ti"])
-    if top["ti"] < start["ti"] + 0.3:
+    # Only a room the sun is about to warm: its top comes later, during the sunny hours or just after.
+    if (top["ti"] < start["ti"] + 0.3 or top["time"] < base[0]["time"] + timedelta(hours=1)
+            or top["time"] > warm[0][1] + timedelta(hours=2)):
         return None
     after = [r for r in base if r["time"] > top["time"]]
     low = min(after, key=lambda r: r["ti"]) if after else None

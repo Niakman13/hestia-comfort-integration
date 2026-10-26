@@ -3,6 +3,7 @@ import {property,state} from 'lit/decorators.js';
 import {SCALE_MARKS,CHIPS,TILE_BLOCKS,type Config,type View,type Level,type Format,type BannerBlock,type Chip} from '../types';
 import {numeric,number,heatingLabels,coverageText,windFrom,sourceLabel,needs as needLabels,constraintLabels,shortWhy} from '../view';
 import {icon} from '../ui/icons';
+import {horizonBox} from './horizon';
 
 /** The level, said in two or three words: the colour is never the only signal. */
 // Versatile Thermostat's presets and the reasons it stops by itself, in the person's words.
@@ -505,20 +506,21 @@ export function details(v:View,config:Config):TemplateResult[] {
   return out;
 }
 
-export interface CardState {why:boolean;tilesOpen:boolean;detailsOpen:boolean;toggle:(k:'why'|'tilesOpen'|'detailsOpen')=>void;uid:string;configure?:()=>void}
+export interface CardState {why:boolean;tilesOpen:boolean;detailsOpen:boolean;horizonAlt?:boolean;toggle:(k:'why'|'tilesOpen'|'detailsOpen'|'horizonAlt')=>void;uid:string;configure?:()=>void}
 /** The « i » panel: needs, constraints and how complete the picture is, one line each. */
 export function whyLines(v:View):TemplateResult {
   const a=v.assessment;
   return html`<p><b>Besoins</b> · ${a.needs.length?a.needs.map(n=>needLabels[n]??n).join(', '):'aucun parmi les mesures connues'}</p><p><b>Contraintes</b> · ${a.constraints.length?a.constraints.map(c=>constraintLabels[c]??c).join(', '):'aucune confirmée'}</p><p><b>Bilan</b> · ${coverageText(v)}</p>`;
 }
 /** Hero shared by the room and home cards: name, « i », level pill, the gesture, the disk, then the scale. */
-export function hero(o:{name:string;level:Level;slides:Slide[];scaleLabel:string;scale:TemplateResult;st:CardState;why:TemplateResult;compact?:boolean;still?:boolean;small?:boolean;after?:TemplateResult|typeof nothing}):TemplateResult {
+export function hero(o:{name:string;level:Level;slides:Slide[];scaleLabel:string;scale:TemplateResult;st:CardState;why:TemplateResult;compact?:boolean;still?:boolean;small?:boolean;after?:TemplateResult|typeof nothing;graph?:TemplateResult|typeof nothing}):TemplateResult {
   const many=o.slides.length>1;
   return html`<div class=${'nc-hero'+(o.small?' nc-compact':'')}>
     <div class="nc-top"><h2>${o.name}</h2><button class="nw-info" aria-label="Pourquoi ce conseil ?" aria-expanded=${o.st.why} aria-controls=${o.st.uid+'-why'} @click=${()=>o.st.toggle('why')}>${icon('info')}</button><span class="nw-chip nc-level">${many?`${o.slides.length} conseils`:o.slides[0]?.learned?html`<span class="nc-learned">${icon('flask')}${o.slides[0].pill}</span>`:o.slides[0]?.pill??pills[o.level]}</span></div>
     <niak-advice-ticker .slides=${o.slides} .still=${!!o.still}></niak-advice-ticker>
     <div class="nc-why" id=${o.st.uid+'-why'} ?hidden=${!o.st.why}>${o.why}</div>
     ${o.compact?nothing:html`<div class="nc-sec nw-glass"><div class="nw-label">${o.scaleLabel}</div>${o.scale}</div>`}
+    ${o.graph??nothing}
     ${o.after??nothing}
   </div>`;
 }
@@ -568,6 +570,10 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
   const box=factBox(v,partners);
   const detailList=html`<ul class="nc-list">${details(v,config)}</ul>${st.configure?html`<button class="nw-badge nc-configure" @click=${st.configure}>${icon('settings')}Configurer cette pièce</button>`:nothing}`;
   const scaleBox=sc?html`<div class="nc-sec nw-glass"><div class="nw-label">Température</div>${sc}</div>`:nothing;
+  // « Prochaines heures » (engine/horizon.py): under the scale, the banner's subject first, the other one behind a tab.
+  const hum=f?.humidity,season=f?.season;
+  const graph=config.show_horizon===false?nothing:horizonBox(f?.horizon??[],{subjects:config.horizon_subjects,second:!!st.horizonAlt,onTab:()=>st.toggle('horizonAlt'),
+    plage:s=>s==='humidity'?(hum?.minimum!=null&&hum?.maximum!=null?[hum.minimum,hum.maximum]:null):(season?[season.minimum,season.maximum]:null)});
   if(format==='mini'){
     const values=chipValues(v,config.mini_values??['temperature']),temp=values.find(c=>c.ic==='temp');
     return html`<ha-card class="nc-c nc-line-card" data-level=${top}><div class="nc-disk" data-disk=${all[0]?.disk}>${icon(all[0]?.disk??'check')}</div>
@@ -581,7 +587,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
   }
   if(format==='tile'||format==='intermediate'){
     const blocks=config.tile_blocks??TILE_BLOCKS;
-    const body=blocks.map(b=>b==='scale'?scaleBox:b==='measures'?(list.length?grid:nothing):html`<div class="nc-tile-details"><div class="nw-label">Détails</div>${detailList}</div>`);
+    const body=blocks.map(b=>b==='scale'?scaleBox:b==='horizon'?graph:b==='measures'?(list.length?grid:nothing):html`<div class="nc-tile-details"><div class="nw-label">Détails</div>${detailList}</div>`);
     const chips=st.tilesOpen?nothing:chipRow([...chipValues(v,config.tile_chips??CHIPS),...partners.flatMap(p=>chipValues(p,['temperature']).map(c=>({...c,text:p.title+' '+c.text})))]);
     return html`<ha-card class="nc-c" data-level=${top} ?data-starting=${!!v.starting}>
       ${hero({name,level:top,slides:all,scaleLabel:'',scale:html``,st,why:whyLines(v),compact:true,small:true,still,after:chips})}
@@ -592,7 +598,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
   const measures=list.length&&config.show_measures!==false;
   const body=measures||config.show_details!==false;
   return html`<ha-card class="nc-c" data-level=${top} ?data-starting=${!!v.starting}>
-    ${hero({name,level:top,slides:all,scaleLabel:'Température',scale:sc??html``,st,why:whyLines(v),compact:!sc,still})}
+    ${hero({name,level:top,slides:all,scaleLabel:'Température',scale:sc??html``,st,why:whyLines(v),compact:!sc,still,graph})}
     ${box}
     ${!body?nothing:html`<div class="nc-body">
       ${measures?fold({label:'Mesures',summary,open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tiles',body:grid,keep:watched.map(t=>tile(t,soft))}):nothing}
