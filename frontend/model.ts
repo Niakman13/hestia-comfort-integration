@@ -13,7 +13,7 @@ export interface Candidate {
 }
 export interface Spec {entity_id:string;adapter:string;block_from?:number}
 export interface OpeningMeta {exposure:string|null;azimuth?:number|null;kind:string;sheltered:boolean;shutter?:'none'|'manual'|'connected';cover_entity?:string;auto_entity?:string;override_entity?:string;width?:number;height?:number;overhang_depth?:number;overhang_gap?:number}
-export interface EvolutionConfig {voc_threshold?:{value:number;unit:string};glazing_factor?:number;presence_delay_minutes?:number}
+export interface EvolutionConfig {voc_threshold?:{value:number;unit:string};glazing_factor?:number;presence_delay_minutes?:number;voc_delay_minutes?:number;voc_pause_minutes?:number}
 export interface RoomConfig {presence?:string[];evolution?:EvolutionConfig;floor_id?:string|null;area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean;heated?:boolean;thermostat_reference?:boolean;windows_unmeasured?:boolean;persons?:string[];open_to?:string[]}
 export interface Room {entry_id:string;title:string;loaded:boolean;config:RoomConfig}
 export interface Area {floor_id?:string|null;area_id:string;name:string;outdoor:boolean}

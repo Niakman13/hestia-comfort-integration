@@ -301,7 +301,10 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         # below it the precaution is checked, like an unconfigured one would not block.
         pollution = daily_air.value
     from .evolution import air_features, features, _shade
-    air_detail = air_features(readings, settings, context)
+    # The VOC's own state at the last update: its margin and how long it has stood above (engine/voc.py).
+    previous_air = (previous.features.get("air") or {}) if previous else {}
+    air_detail = air_features(readings, settings, {**context, "now": now, "voc_was_high": previous_air.get("voc_status") == "high",
+                                                   "voc_above_since": previous_air.get("voc_above_since")})
     old = previous.needs if previous else ()
     hot = ti is not None and ti > settings.maximum - (settings.temperature_hysteresis if "cool" in old else 0)
     cold = heated and ti is not None and ti < settings.minimum + (settings.temperature_hysteresis if "heat" in old else 0)
