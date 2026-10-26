@@ -50,7 +50,6 @@ export function advice(v:View):Advice {
   const humidity=v.assessment.features?.humidity,label=humidityLabel(v);
   if(label&&humidity?.status&&v.assessment.reason!=='shared_volume'&&['calm','neutral'].includes(v.assessment.level)&&!unreadable(v)
       &&v.assessment.action!=='fermer'&&!v.assessment.needs.some(need=>need!=='dry'&&need!=='precool'&&(need!=='heat'||!coldSettled(v.assessment)))){
-    if(humidity.mould)return {...out,pill:'Murs à surveiller',disk:'drop',level:'neutral'};
     if(humidity.status==='normal'&&out.pill==='Trop humide')return {...out,pill:undefined,disk:'check',level:v.assessment.level};
     // Out of range with nothing better to do: « Au mieux », in blue; « À savoir » says what and why.
     if(humidity.status==='low'||humidity.status==='high')return {...out,pill:'Au mieux',disk:'drop',level:'calm'};
@@ -131,7 +130,7 @@ function gesture(v:View):Advice {
     // A measure named beside « Rien à faire » reads as « do something »: with nothing better to do the pill says
     // « Au mieux », in blue, and « À savoir » says what is out and why. Only a room clearly cold with no heating
     // known keeps « Trop frais »: someone could warm it, Niak cannot tell who.
-    const unsettled=a.needs.includes('heat')&&!coldSettled(a),first=unsettled?'heat':a.needs[0];
+    const unsettled=a.needs.includes('heat')&&!coldSettled(a),first=unsettled?'heat':a.needs.includes('dry')?'dry':a.needs[0];
     return {title:'Rien à faire',line:opened?html`Ouverte ou fermée, ${b('cela ne change rien')}`:a.reason==='opening_blocked'?html`Aérer ${b('n’est pas possible')} pour l’instant`
       :winterWarm?html`Ouvrir la ${b('refroidirait trop vite')} en hiver`:html`Ouvrir ${b('n’apporterait rien')} pour l’instant`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined,
       // The pill names what is out, never « plage »: that word is the temperature's range alone.
@@ -178,6 +177,8 @@ function gesture(v:View):Advice {
     case 'exchange_harmful': return {title:'Refermez',line:html`L’air du dehors ${b(a.temperature_delta!==null&&a.temperature_delta>0?'réchauffe la pièce':'refroidit la pièce')}`,disk:'shut'};
     case 'rehumidification_risk': return {title:'Refermez',line:incoming!=null?water:html`L’air du dehors ${b('est plus humide')}`,disk:'shut'};
     // A cold room asks for a gesture only when someone is home and the heating is off.
+    case 'warm_walls': {const w=a.features?.warm_walls;
+      return {title:'Chauffez un peu plus',line:w?html`Visez ${b(deg(w.target))} : des murs plus chauds ne moisissent pas`:html`Des murs plus chauds ${b('ne moisissent pas')}`,disk:'heat',cap:'Risque de moisissure'};}
     case 'heat_needed': return a.action==='fermer'?{title:'Refermez',line:html`Pièce fraîche : ${b(deg(ti))}`,disk:'shut'}
       :{title:'Rallumez le chauffage',line:html`${b(deg(ti))}, sous votre plage`,disk:'heat',cap:'Le chauffage est coupé'};
     case 'sun_entering': return {title:'Fermez côté soleil',line:html`Le soleil ${b('chauffe la pièce')}`,disk:'shut'};
@@ -350,8 +351,12 @@ export function facts(v:View):Fact[] {
     out.push({ic:'open',title:'Dernière aération',text:`${what}${f(last.before)} → ${f(last.after)}${u}${last.predicted!=null?` (prévu ${f(last.predicted)}${u})`:''}`});}
   const l=learning(v);if(l)out.push({...l,topic:l.topic??'learning'});
   // By priority: the sort is stable, lines of one rank keep the order they are said in.
-  return oneHumidity(out,hum?.mould?9:hum?.degree??0).sort((x,y)=>rank(x)-rank(y)).slice(0,4);
+    // Damp walls under « Rien à faire », nothing at work: a tip rather than a fatality.
+  const tip=!!hum?.mould&&['calm','neutral'].includes(a.level)&&air?.ventilation?.on!==true;
+  return oneHumidity(out,hum?.mould?9:hum?.degree??0,tip).sort((x,y)=>rank(x)-rank(y)).slice(0,4);
 }
+/** The ventilation drying the room, and how long the humidity has stood: words the humidity line keeps. */
+const REMEDY='la VMC l’assèche',LASTING='depuis plusieurs heures';
 /** Why airing does not help the humidity, in a few words that follow its state: « Air humide · depuis plusieurs
  * heures, aérer ne gagnerait presque rien ». */
 const HUMID_WHY:[RegExp,string|((m:RegExpMatchArray)=>string)][]=[
@@ -366,18 +371,31 @@ const HUMID_WHY:[RegExp,string|((m:RegExpMatchArray)=>string)][]=[
   [/^plus humide ici qu’à côté : (.*)$/,m=>`plus humide qu’à côté : ${m[1]}`],
   [/^(au-dessus|sous) de votre plage depuis plusieurs heures/,'depuis plusieurs heures'],
   [/^(au-dessus|sous) de votre plage$/,''],
+  [/^en marche, elle aide à assécher/,REMEDY],
 ];
-const humidLine=(f:Fact)=>TOPICS[f.title]==='humidity'||(f.title==='Aération'&&typeof f.text==='string'&&/humidit|plus sec/.test(f.text));
+/** A line about the humidity: its state, its risk, why airing does not help, or the ventilation drying it. */
+const humidLine=(f:Fact)=>TOPICS[f.title]==='humidity'||(typeof f.text==='string'&&((f.title==='Aération'&&/humidit|plus sec/.test(f.text))||(f.title==='VMC'&&/assécher/.test(f.text))));
+/** Damp walls with no gesture nor remedy: what the person can still do, instead of a fatality. */
+const MOULD_TIP='ne séchez pas de linge ici, écartez les meubles du mur';
 /** One line for the humidity: its risk or its state first, then why airing does not help, never two lines
- * about the same thing. The line is keyed so rooms sharing one air say it once, from the most humid. */
-function oneHumidity(out:Fact[],weight:number):Fact[] {
+ * about the same thing. A running ventilation is the answer and says so; damp walls with nothing to do get a tip.
+ * The line is keyed so rooms sharing one air say it once, from the most humid. */
+function oneHumidity(out:Fact[],weight:number,tip:boolean):Fact[] {
   const lines=out.filter(humidLine);
-  if(lines.length<2)return out.map(f=>humidLine(f)?{...f,key:'humidity',weight}:f);
+  if(!lines.length)return out;
   const head=lines.find(f=>f.title==='Humidité élevée')??lines.find(f=>f.key==='humidity')??lines[0];
   const short=(f:Fact)=>{const t=typeof f.text==='string'?f.text:'';for(const [re,to] of HUMID_WHY){const m=t.match(re);if(m)return typeof to==='string'?to:to(m);}return t;};
   // The head's own state words step aside for the reason when there is one: « Air humide » already says it is out.
-  const rest=lines.filter(f=>f!==head).map(short).filter(Boolean),own=head.title==='Humidité élevée'?String(head.text):short(head);
-  const text=[own,...rest].filter(Boolean).filter((t,i,all)=>all.indexOf(t)===i).join(', ')||String(head.text);
+  const own=head.title==='Humidité élevée'?String(head.text):short(head);
+  let rest=lines.filter(f=>f!==head).map(short).filter(Boolean);
+  // Said alone, the line keeps its own words.
+  if(!rest.length&&!tip)return out.map(f=>f===head?{...f,key:'humidity',weight}:f);
+  // The ventilation at work is the answer: why airing would not help is no longer worth saying.
+  if(rest.includes(REMEDY))rest=rest.filter(t=>t===LASTING||t===REMEDY);
+  const parts=[own,...rest].filter(Boolean).filter((t,i,all)=>all.indexOf(t)===i);
+  const text=tip&&head.title==='Humidité élevée'&&!rest.includes(REMEDY)
+    ?`${parts.filter(t=>t==='risque de moisissure'||t===LASTING).join(', ')} : ${MOULD_TIP}`
+    :parts.join(', ')||String(head.text);
   return out.filter(f=>!humidLine(f)||f===head).map(f=>f===head?{...head,text,key:'humidity',weight}:f);
 }
 /** The « À savoir » box, under the advice; nothing when there is nothing to know. */
@@ -387,20 +405,30 @@ const TOPICS:Record<string,string>={'Humidité':'humidity','Air sec':'humidity',
   'Pièce fraîche':'heating','Un peu frais':'heating','Pièce chaude':'heating','Soleil':'sun','Fenêtres':'windows','Autres fenêtres':'windows','Fenêtre ouverte':'windows',
   'Aération':'windows','Aération d’hiver':'windows','Pièce vide':'household','Nuit':'household','Purificateur':'equipment','VMC':'equipment',
   'Cette nuit':'forecast','Dernière aération':'learning'};
-export function factBox(v:View,partners:View[]=[],config:Config={type:'custom:niak-comfort-card'}):TemplateResult|typeof nothing {
-  if(config.show_insights===false)return nothing;
+/** The « À savoir » lines of a card, rooms sharing one air merged, by priority. */
+export function factList(v:View,partners:View[]=[],config:Config={type:'custom:niak-comfort-card'}):Fact[] {
+  if(config.show_insights===false)return [];
   const kept=new Set<string>(config.insight_topics??INSIGHT_TOPICS);
   // One card for one air: « Même air » goes without saying, and a line said by two rooms is said once.
   // The card's room cannot be read: its banner sends to « Mesures », the other rooms' lines would explain no advice.
-  if(unreadable(v))return nothing;
+  if(unreadable(v))return [];
   // A line without a known topic (learning, the same air) follows « learning ».
   // A line of one kind (the humidity, the cold) is said once, by the room where it is strongest, named after it.
   const all=[v,...partners].flatMap(r=>facts(r).map(f=>({...f,room:r.title}))).filter(f=>kept.has(TOPICS[f.title]??f.topic??'learning'));
   const strongest=new Map<string,Fact>();
   for(const f of all)if(f.key&&(!strongest.has(f.key)||(f.weight??0)>(strongest.get(f.key)!.weight??0)))strongest.set(f.key,f);
-  const seen=new Set<string>(),list=all.filter(f=>!f.key||strongest.get(f.key)===f)
+  // The humidity line of the most humid room takes the reasons the other rooms gave: it is one air.
+  const hum=strongest.get('humidity'),joined=new Map<Fact,Fact>();
+  if(hum&&typeof hum.text==='string'){const parts=hum.text.split(', ');
+    for(const f of all)if(f.key==='humidity'&&f!==hum&&typeof f.text==='string')for(const p of f.text.split(', '))
+      if(!parts.includes(p)&&!/^(au-dessus|sous) de votre plage|^risque de moisissure|^revient vers/.test(p))parts.push(p);
+    joined.set(hum,{...hum,text:(parts.length>1?parts.filter(p=>!/^(au-dessus|sous) de votre plage$/.test(p)):parts).join(', ')});}
+  const seen=new Set<string>(),list=all.filter(f=>!f.key||strongest.get(f.key)===f).map(f=>joined.get(f)??f)
     .filter(f=>(!partners.length||f.title!=='Même air')&&!seen.has(f.title)&&!!seen.add(f.title))
     .sort((x,y)=>rank(x)-rank(y)).slice(0,config.insight_max??4);
+  return list;
+}
+export function factBox(v:View,partners:View[]=[],config:Config={type:'custom:niak-comfort-card'},list=factList(v,partners,config)):TemplateResult|typeof nothing {
   // The first line is what counts most: set apart, and a risk in the « to watch » colour.
   return list.length?html`<div class="nc-facts"><div class="nw-label">À savoir</div><ul>${list.map((f,i)=>html`<li class=${(i===0&&list.length>1?'key':'')+(rank(f)===1?' risk':'')}>${icon(f.ic)}<span><b>${f.title}</b> · ${partners.length&&f.key==='humidity'&&f.room?`${f.room}, `:''}${f.text}</span></li>`)}</ul></div>`:nothing;
 }
@@ -663,7 +691,9 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
   const watched=[...own.map(t=>named(t,v.title)),...others.flatMap(o=>o.list.map(t=>named(t,o.title)))].filter(t=>(t.out&&!t.remedy)||tileClass(t).includes(' mute'));
   const grid=others.length?html`<div class="nw-label nc-room-label">${v.title}</div><div class="nc-tiles">${own.map(t=>tile(t,soft))}</div>${others.map(o=>o.list.length?html`<div class="nw-label nc-room-label">${o.title}</div><div class="nc-tiles">${o.list.map(t=>tile(t,soft))}</div>`:nothing)}`
     :html`<div class="nc-tiles">${list.map(t=>tile(t,soft))}</div>`;
-  const box=factBox(v,partners,config);
+  const known=factList(v,partners,config),box=factBox(v,partners,config,known);
+  // « Au mieux »: the disk shows what « À savoir » names first, whichever room of the shared air it comes from.
+  if(all.length===1&&all[0].pill==='Au mieux'&&known[0])all[0]={...all[0],disk:known[0].key==='humidity'?'drop':known[0].key==='cold'?'temp':all[0].disk};
   const detailList=html`<ul class="nc-list">${details(v,config)}</ul>${st.configure?html`<button class="nw-badge nc-configure" @click=${st.configure}>${icon('settings')}Configurer cette pièce</button>`:nothing}`;
   const scaleBox=sc?html`<div class="nc-sec nw-glass"><div class="nw-label">Température</div>${sc}</div>`:nothing;
   // « Prochaines heures » (engine/horizon.py): under the scale, the banner's subject first, the other one behind a tab.
@@ -755,14 +785,17 @@ export function needs(v:View,includeSlight=true):string[] {
   // The temperature is the tile's own figure, just above: the words alone.
   if(a.needs.includes('cool'))out.push('trop chaud');
   // A little cool, like slightly humid, is no room to watch on the home card.
-  const slight=!!a.features?.warmth?.slight;
-  if(a.needs.includes('heat')&&(includeSlight||!slight))out.push(slight?'un peu frais':'trop frais');
+  const slight=!!a.features?.warmth?.slight,cold=a.needs.includes('heat')&&(includeSlight||!slight)?(slight?'un peu frais':'trop frais'):null;
+  // A cold the heating or a chosen preset takes care of is said after what nothing takes care of.
+  const settled=coldSettled(a);
+  if(cold&&!settled)out.push(cold);
   const humidity=humidityLabel(v),degree=a.features?.humidity?.degree;
   if(humidity&&(degree!==undefined?degree>=(includeSlight?1:2):a.needs.includes('dry')))out.push(h!==null?`${number(h)} % ${humidity.toLowerCase()}`:humidity.toLowerCase());
   if(air?.co2_status==='high')out.push(c!==null?`${number(c)} ppm de CO₂`:'CO₂ élevé');
   if(air?.pm25_status==='high'&&air?.pm25_treated!==true)out.push(pm!==null?`${number(pm)} particules élevées`:'particules élevées');
   if(air?.voc_status==='high')out.push(voc!==null?`${number(voc)} COV élevés`:'COV élevés');
   if((a.openings??[]).some(x=>x.flags.length>0&&x.open===true))out.push('fenêtre à refermer');
+  if(cold&&settled)out.push(cold);
   return out;
 }
 

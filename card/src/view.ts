@@ -48,6 +48,7 @@ export const reasons:Record<string,[string,string]> = {
   drying_slow:['Aérer assèche peu ici','Les aérations passées de cette pièce ont peu fait baisser l’humidité : l’humidité y revient vite ou l’air s’y renouvelle mal.'],
   exchange_harmful:['Refermez les fenêtres','La comparaison dedans/dehors montre un échange thermique défavorable au confort de cette pièce.'],
   cooling_unavailable:['Attendez un air plus frais','La pièce a besoin de fraîcheur, mais ouvrir maintenant ne fournit pas un échange suffisamment favorable.'],
+  warm_walls:['Chauffez un peu plus','Les murs plus chauds ne moisissent pas : un ou deux degrés de plus font passer l’air contre le mur froid sous le seuil de la moisissure. Le chauffage ne retire pas d’eau, il garde les murs assez chauds.'],
   heat_needed:['Préservez la chaleur','La température intérieure est sous votre repère. Le chauffage reste responsable de sa réponse thermique.'],
   drying_unavailable:['L’humidité reste à surveiller','Le besoin existe, mais un bénéfice d’assèchement par l’extérieur n’est pas confirmé.'],
   incomplete_data:['Les mesures restent à vérifier','Certaines informations sont manquantes ou périmées. Aucun chiffre de remplacement ne complète le bilan.'],
