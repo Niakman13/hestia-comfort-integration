@@ -17,9 +17,19 @@ export type ScaleMark = typeof SCALE_MARKS[number];
 export const CHIPS = ['temperature','humidity','co2'] as const;
 export type Chip = typeof CHIPS[number];
 /** What an unfolded tile shows, in this order. */
-export const TILE_BLOCKS = ['scale','measures','details'] as const;
+export const TILE_BLOCKS = ['scale','horizon','measures','details'] as const;
 export type TileBlock = typeof TILE_BLOCKS[number];
 /** A long press (a tap on mini and alert): the full card in a window, a dashboard page, or nothing. */
+/** Topics of « À savoir », and lines of « Détails techniques »: the card shows those kept, in its own order. */
+export const INSIGHT_TOPICS = ['humidity','heating','sun','windows','equipment','household','forecast','learning'] as const;
+export type InsightTopic = typeof INSIGHT_TOPICS[number];
+export const DETAIL_ROWS = ['range','slot','windows','shutters','people','drying','trend','sensors'] as const;
+export type DetailRow = typeof DETAIL_ROWS[number];
+/** Subjects of the « Prochaines heures » graph. */
+export const HORIZON_SUBJECTS = ['temperature','humidity'] as const;
+export type HorizonSubject = typeof HORIZON_SUBJECTS[number];
+export interface Horizon {subject:HorizonSubject;kind:'cool'|'air'|'sun'|'dry';unit:'°C'|'%';start:string;step_minutes:number;base:number[];gesture:number[]|null;
+  bands:string[][];extra:string[][];result:Record<string,string|number|null>}
 export const HOLD_ACTIONS = ['popup','page','none'] as const;
 export type HoldAction = typeof HOLD_ACTIONS[number];
 export const moduleLabels:Record<Module,string>={windows:'Fenêtres',air:'Qualité de l’air',temperature:'Température',humidity:'Humidité',shutters:'Soleil et volets',coordination:'Chauffage'};
@@ -30,6 +40,10 @@ export interface Config {
   show_scale?: boolean; show_measures?: boolean; show_details?: boolean; measures_open?: boolean; details_open?: boolean; rotate?: boolean;
   banner_blocks?: BannerBlock[]; scale_marks?: ScaleMark[]; tile_chips?: Chip[]; tile_blocks?: TileBlock[]; mini_values?: Chip[];
   hold_action?: HoldAction; hold_path?: string;
+  /** The « Prochaines heures » graph in the banner, and its subjects. */
+  show_horizon?: boolean; horizon_subjects?: HorizonSubject[];
+  /** « À savoir » and « Détails techniques »: shown or not, which topics and lines, how many lines. */
+  show_insights?: boolean; insight_topics?: InsightTopic[]; insight_max?: number; detail_rows?: DetailRow[];
 }
 /** A list setting: only known values, each once, in the given order. */
 function list<T extends string>(value:unknown,known:readonly T[],name:string):T[]|undefined{
@@ -65,6 +79,7 @@ export interface Features {
  thermostat?:{name:string;window:boolean;preset:string|null;target:number|null;reference:number|null}|null;
  people?:{home:string[];away:string[]}|null;
  household?:{away_open:boolean;empty_room:boolean;sleeping:boolean;alarm:{name:string;state:string;armed:boolean}|null}|null;
+ horizon?:Horizon[];
  night?:{windows:{start:string;end:string}[];minimum:{time:string;temperature:number}|null;peak:{time:string;outdoor:number;shut:number;aired:number}|null;gain:number;worth?:boolean;humid:boolean}|null;
  drying?:{minutes:number;now:number;after:number;gain:number;tau:number;openings:number;later:{minutes:number;now:number;after:number;gain:number;time:string}|null}|null;
  trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string};
@@ -116,7 +131,10 @@ export function cleanConfig(input:Config):Config {
   if(input.modules && (!Array.isArray(input.modules) || input.modules.some(m=>!MODULES.includes(m)))) throw new Error('Rubrique inconnue.');
   hold(input);
   const lists={banner_blocks:list(input.banner_blocks,BANNER_BLOCKS,'bandeau'),scale_marks:list(input.scale_marks,SCALE_MARKS,'échelle'),
-    tile_chips:list(input.tile_chips,CHIPS,'pastilles'),tile_blocks:list(input.tile_blocks,TILE_BLOCKS,'tuile dépliée'),mini_values:list(input.mini_values,CHIPS,'ligne')};
+    tile_chips:list(input.tile_chips,CHIPS,'pastilles'),tile_blocks:list(input.tile_blocks,TILE_BLOCKS,'tuile dépliée'),mini_values:list(input.mini_values,CHIPS,'ligne'),
+    horizon_subjects:list(input.horizon_subjects,HORIZON_SUBJECTS,'sujets du graphique'),insight_topics:list(input.insight_topics,INSIGHT_TOPICS,'sujets À savoir'),
+    detail_rows:list(input.detail_rows,DETAIL_ROWS,'lignes des détails')};
+  if(input.insight_max!==undefined&&!(Number.isInteger(input.insight_max)&&input.insight_max>=1&&input.insight_max<=8))throw new Error('Réglage « lignes À savoir » invalide : de 1 à 8.');
   return {...input,...Object.fromEntries(Object.entries(lists).filter(([,v])=>v!==undefined)), format:input.format??'tile', modules:[...new Set(input.modules??MODULES)]};
 }
 

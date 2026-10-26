@@ -56,7 +56,7 @@ def arbitrate(own: dict, partners: list[tuple[str, dict]]) -> dict:
     # Each room keeps its own needs: its tiles show what its own sensors measure.
     keep = ("action", "level", "constraints", "rain_soon_minutes", "temperature_delta", "slot", "open_first")
     shared = {k: other[k] for k in keep if k in other}
-    picked = {k: other.get("features", {}).get(k) for k in ("drying", "ventilation", "rain_ahead", "humidity", "air", "warmth", "learned")}
+    picked = {k: other.get("features", {}).get(k) for k in ("drying", "ventilation", "rain_ahead", "humidity", "air", "warmth", "learned", "horizon")}
     features = {**own.get("features", {}), "volume": {"lead": title, "reason": other["reason"], "action": other["action"],
                                                       "assessment": {**shared, "reason": other["reason"], "features": picked}}}
     return {**own, **shared, "reason": "shared_volume", "features": features}

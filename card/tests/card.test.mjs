@@ -460,3 +460,20 @@ test('the season changes what the card says',()=>{
   w.assessment={...w.assessment,reason:'drying_possible',action:'ouvrir',level:'action',needs:['dry']};
   assert.ok(lines(w).some(l=>l.startsWith('Aération d’hiver')),lines(w).join(' | '));
 });
+
+test('the four sections are settings of their own: À savoir topics and count, detail lines, the graph',async()=>{
+  const {factBox,details}=await import(pathToFileURL(join(temp,'views/room.mjs')));
+  const c=cleanConfig({type:'custom:niak-comfort-card',insight_topics:['sun'],insight_max:2,detail_rows:['range'],horizon_subjects:['humidity'],show_horizon:false});
+  assert.deepEqual([c.insight_topics,c.insight_max,c.detail_rows,c.horizon_subjects,c.show_horizon],[['sun'],2,['range'],['humidity'],false]);
+  assert.throws(()=>cleanConfig({type:'custom:niak-comfort-card',insight_topics:['weather']}),/À savoir/);
+  assert.throws(()=>cleanConfig({type:'custom:niak-comfort-card',insight_max:0}),/de 1 à 8/);
+  const v=fresh();v.assessment={...v.assessment,features:{...(v.assessment.features??{}),season:{minimum:19,maximum:23,heated:true,known:true,name:'autumn'},
+    benefits:[{kind:'sun_warms',openings:[],watts:300,keep_shut:true}],humidity:{status:'high',degree:2,lasting:true,measured:70}}};
+  const text=r=>JSON.stringify(r);
+  assert.match(text(factBox(v,[],cleanConfig({type:'custom:niak-comfort-card',insight_topics:['sun']}))),/Soleil/);
+  assert.doesNotMatch(text(factBox(v,[],cleanConfig({type:'custom:niak-comfort-card',insight_topics:['sun']}))),/Humidité/);
+  // Hidden: nothing is drawn (Lit's « nothing », not a template).
+  assert.equal(factBox(v,[],cleanConfig({type:'custom:niak-comfort-card',show_insights:false})).strings,undefined);
+  assert.equal(details(v,cleanConfig({type:'custom:niak-comfort-card',detail_rows:[]})).length,0);
+  assert.ok(text(details(v,cleanConfig({type:'custom:niak-comfort-card',detail_rows:['range']}))).includes('Votre plage de confort'));
+});

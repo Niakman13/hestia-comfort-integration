@@ -1,3 +1,21 @@
+## 1.7.0 — Le graphique « Prochaines heures », une carte réglable section par section
+
+**En bref**
+
+- **Le graphique « Prochaines heures »**, sous l’échelle de température : la pièce sans le geste conseillé (pointillé gris) et avec (en couleur), et une frise qui dit quand. Il change de sujet avec le conseil : rafraîchir la nuit en été (« demain 16 h : 25,5 °C au lieu de 28,6 »), aérer sans perdre la chaleur en hiver (« −0,8 °C, revenu vers 17 h »), laisser le soleil réchauffer (« inutile de chauffer »), assécher (« 57 % au lieu de 65 % »). Deux onglets, Température et Humidité, quand les deux ont quelque chose à montrer.
+- **L’éditeur de la carte suit ses quatre sections**, numérotées dans le même ordre que l’affichage : 1 Bandeau conseil, 2 À savoir, 3 Mesures, 4 Détails techniques, puis Apparence et Appui long.
+- **À savoir et Détails techniques se règlent** : afficher ou non, les sujets ou les lignes gardés, le nombre de lignes d’À savoir.
+- La tuile garde son principe (le bandeau conseil, puis une partie qui se déplie) et peut afficher le graphique une fois dépliée.
+
+### Améliorations
+
+- « Remèdes en cours » devient « Équipements en marche » ; « Plus tard » devient « Meilleur moment plus tard ».
+- Le graphique est calculé par le jumeau de chaque pièce ; un thermostat qui chauffe ou se repose est simulé comme tenant sa consigne.
+
+### Après la mise à jour
+
+- Redémarrez Home Assistant, puis rechargez la page. Vos cartes gardent leurs réglages ; les nouveaux sont activés par défaut.
+
 ## 1.6.0 — Les personnes de chaque pièce, l’alarme, « un peu frais »
 
 **En bref**
