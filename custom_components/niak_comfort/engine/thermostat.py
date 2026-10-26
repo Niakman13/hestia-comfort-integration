@@ -3,7 +3,8 @@
 Any climate entity gives its mode and, often, what it is doing. A Versatile Thermostat says much more, and Niak reads
 it when the room's heating is one (its platform, never its name):
 
-- its comfort temperature, which can stand as the room's minimum: the person set it once, there;
+- its set point (comfort, eco, frost protection…, whatever its preset), which can stand as the room's minimum: the
+  person chose it there, and a room at 18 °C in eco at 17 °C is not « too cool »;
 - why it is off (by hand, an open window it detected, its own start-stop, a central mode, a power cut-off…): only
   an « off by hand » is the person's to undo, the others resume by themselves;
 - its preset (eco, frost protection, away): the heating runs, aiming lower on purpose;
@@ -80,6 +81,8 @@ def lowered(thermostat):
 
 
 def reference(thermostat, maximum):
-    """The thermostat's comfort temperature, when it can stand as the room's minimum; else None."""
-    comfort = (thermostat or {}).get("comfort")
-    return comfort if comfort is not None and 5 <= comfort < maximum else None
+    """The thermostat's set point (its comfort temperature when it gives none), when it can stand as the room's
+    minimum; else None. Eco or frost protection lower it on purpose: the room is then expected cooler."""
+    thermostat = thermostat or {}
+    target = thermostat.get("target") if thermostat.get("target") is not None else thermostat.get("comfort")
+    return target if target is not None and 5 <= target < maximum else None

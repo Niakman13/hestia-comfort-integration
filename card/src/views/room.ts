@@ -246,7 +246,8 @@ export function facts(v:View):Fact[] {
   if(a.reason==='exchange_harmful'&&a.needs.includes('dry'))
     out.push({ic:'drop',title:'Humidité',text:gain!=null&&gain<4?`l’aération ne la baisserait que ${gain<1.5?'d’un point à peine':`de ${Math.round(gain)} points`}`:'l’aération ne la ferait pas assez baisser'});
   if(a.reason==='heat_needed'&&a.action!=='fermer'&&a.level!=='action')
-    out.push({ic:'temp',title:'Pièce fraîche',text:w?.occupied===false?'maison vide : pas besoin de chauffer'
+    out.push({ic:'temp',title:'Pièce fraîche',text:w?.outdoor_warms?'l’air du dehors, plus chaud, la réchauffe : vous pouvez laisser ouvert'
+      :w?.occupied===false?'maison vide : pas besoin de chauffer'
       :w?.thermostat?.lowered?`thermostat en ${presetWord(w.thermostat.preset)}${w.thermostat.target!=null?` : ${deg(w.thermostat.target)} visés`:''}`
       :w?.thermostat?.off_reason&&w.thermostat.off_reason!=='manual'?`chauffage arrêté par le thermostat (${offWords[w.thermostat.off_reason]??'automatique'}), il repartira seul`
       :w?.heating==='on'?'le chauffage s’en charge':w?.warming?`${deg(ti)}, elle se réchauffe d’elle-même`
