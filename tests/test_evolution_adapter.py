@@ -85,7 +85,8 @@ class EvolutionAdapterTests(AdapterFixture):
         self.assertFalse(apply_air_references(self.hass, self.entry))
         self.assertNotIn('voc_threshold', self.entry.options['evolution'])
         self.hass.states.async_set(item.entity_id, '144', {'state_class': 'measurement'})
-        config = self.config(evolution={'voc_threshold': {'value': 150, 'unit': ''}})
+        # Without delay, so that the second reading is judged at once (engine/voc.py).
+        config = self.config(evolution={'voc_threshold': {'value': 150, 'unit': ''}, 'voc_delay_minutes': 0})
         config['sources']['voc'] = item.entity_id
         cleaned, _ = self.service.validate(config)
         coordinator = self.coordinator(cleaned)
