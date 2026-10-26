@@ -28,6 +28,11 @@ const paths:Record<string,string>={
   mute:'<path d="M3 3l18 18M8.6 16.4a5 5 0 0 1 6.8 0M5.2 12.9a9.9 9.9 0 0 1 4.6-2.6M18.8 12.9a10 10 0 0 0-2.3-1.6M2 9.3a15 15 0 0 1 4.4-2.7M22 9.3A15 15 0 0 0 11 5.6M12 20h.01"/>',
   shut:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M17 12H8m3-3-3 3 3 3"/>',
   pm:'<circle cx="7" cy="8" r="1.4"/><circle cx="14" cy="6" r="1.1"/><circle cx="18" cy="11" r="1.4"/><circle cx="10" cy="14" r="1.1"/><circle cx="16" cy="17" r="1.3"/><circle cx="7" cy="19" r="1"/>',
+  // Pill marks: as good as it gets (a half-filled circle), a chance to take, a gesture to make, something to check.
+  best:'<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor"/>',
+  spark:'<path d="M10 3.5l1.6 4.4L16 9.5l-4.4 1.6L10 15.5l-1.6-4.4L4 9.5l4.4-1.6Z"/><path d="M18 14v6M15 17h6"/>',
+  hand:'<path d="M8 13V4.5a1.5 1.5 0 0 1 3 0V12m0-1.5a1.5 1.5 0 0 1 3 0V12m0-1a1.5 1.5 0 0 1 3 0v1.5m0-.5a1.5 1.5 0 0 1 3 0V16a6 6 0 0 1-6 6h-1.8a6 6 0 0 1-5-2.7L3.5 14a1.5 1.5 0 0 1 2.5-1.6L8 14"/>',
+  help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/>',
   flask:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/>',
   vmc:'<path d="M4 7h11a3 3 0 1 0-3-3M4 12h15a3 3 0 1 1-3 3M4 17h7"/><path d="M19 4v4m-2-2h4"/>',
   fan:'<circle cx="12" cy="12" r="2"/><path d="M12 10c-1-4 0-7 3-7 2 0 2 3-1 7m-2 4c1 4 0 7-3 7-2 0-2-3 1-7m2-2c4-1 7 0 7 3 0 2-3 2-7-1m-4 0c-4 1-7 0-7-3 0-2 3-2 7 1"/>'

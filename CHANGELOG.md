@@ -1,3 +1,23 @@
+## 1.7.9 — Chaque état a son allure
+
+**En bref**
+
+- Chaque pastille porte une icône, et le bandeau s’anime différemment selon l’état : on reconnaît l’état d’un coup d’œil.
+
+### Améliorations
+
+- **Une icône dans chaque pastille** : ✓ Tout va bien, demi-cercle Au mieux, étincelle À saisir, main Geste conseillé, triangle Attention, point d’interrogation À vérifier, fiole Conseil optimisé.
+- **L’anneau autour du rond, un par état** : il respire quand tout va bien, tourne en demi-anneau pour « Au mieux », passe en comète pour « À saisir », envoie des ondes pour un geste, bat deux fois pour une alerte, en pointillés pour « À vérifier ». Plus épais et plus visible qu’avant.
+- **La lumière du bandeau** : plus diffuse, calée sur le bord droit, et animée au rythme de l’anneau.
+
+### Corrections
+
+- **« Mon logement », tuile Salon · Cuisine** : elle reprend les mesures des deux pièces, l’humidité de la plus humide d’abord, comme « À savoir ».
+
+### Après la mise à jour
+
+- Rechargez la page (ou videz le cache de l’application mobile) pour voir la nouvelle carte.
+
 ## 1.7.8 — Des murs humides, jamais une fatalité
 
 **En bref**
