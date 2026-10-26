@@ -15,7 +15,8 @@ banner's. Everything is an estimate, drawn to show a trend, not a decimal.
 Each subject says whether it is `needed`: what the gesture changes must be seen on the drawing. Shown from SHOW, kept
 down to KEEP while the advice stays the same, so that a graph does not come and go on a few hundredths. A « trend »
 (the room's temperature without doing anything) always comes last, never needed: for a card that keeps its graph.
-The sun is needed only when the advice is about heating; otherwise it is the forecast such a card shows first.
+The sun is needed only when the advice is about heating and the sun comes within SOON hours: at night, tomorrow's sun
+answers nothing yet. Otherwise it is the forecast such a card shows first.
 """
 from datetime import datetime, timedelta
 
@@ -36,6 +37,8 @@ AIR_REASONS = ("air_needed", "short_air_change", "optional_air_change")
 # kept down to the second while the advice stays the same.
 SHOW = {"cool": 0.4, "air": 0.4, "sun": 0.5, "dry": 3.0}
 KEEP = {"cool": 0.2, "air": 0.2, "sun": 0.3, "dry": 1.5}
+# Hours within which the sun must start warming for its graph to answer the heating now.
+SOON = 3
 
 
 def _r(x, n=1):
@@ -207,7 +210,7 @@ def build(assessment, model, current, hours, now, *, minimum, mass=None, sun=Non
     kept = {(p.get("kind"), p.get("advice")) for p in previous or () if p.get("needed")}
     for s in out:
         s["advice"] = advice
-        s["needed"] = ((s["kind"] != "sun" or heating)
+        s["needed"] = ((s["kind"] != "sun" or heating and datetime.fromisoformat(s["bands"][0][0]) <= now + timedelta(hours=SOON))
                        and _change(s, start) >= (KEEP if (s["kind"], advice) in kept else SHOW)[s["kind"]])
     out.append({**trend(model, start, series, mass=mass, sun=sun, heated=heated), "advice": advice, "needed": False})
     return out

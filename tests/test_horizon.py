@@ -97,6 +97,17 @@ class Horizon(unittest.TestCase):
         self.assertEqual((heat[0]["kind"], heat[0]["needed"]), ("sun", True))
         self.assertEqual((damp[0]["kind"], damp[0]["needed"]), ("sun", False))
 
+    def test_tomorrows_sun_answers_nothing_at_night(self):
+        # 26 October, 21 h 22 at home: a cool room, the sun only from 8 h tomorrow.
+        now = datetime(2026, 10, 26, 21, 22, tzinfo=timezone(timedelta(hours=1)))
+        out = horizon.build({"reason": "heat_needed", "action": "ok", "needs": ["heat"], "features": {"season": {"group": "between"}}},
+                            MODEL, {"ti": 19.5, "hi": 55, "te": 9.7}, forecast(now, 14, 6), now, minimum=19,
+                            sun=lambda when, hour: 2 * sun(when, hour))
+        sunny = [s for s in out if s["kind"] == "sun"]
+        self.assertTrue(sunny)
+        self.assertFalse(sunny[0]["needed"])
+        self.assertFalse(any(s["needed"] for s in out))
+
     def test_nothing_without_forecast_or_measure(self):
         now = datetime(2026, 7, 14, 18, tzinfo=timezone.utc)
         self.assertEqual(horizon.build({"reason": "cooling_possible", "needs": ["cool"]}, MODEL, {"ti": 27, "hi": 50}, [], now, minimum=20), [])
