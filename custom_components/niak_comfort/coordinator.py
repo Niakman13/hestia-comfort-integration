@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, LEARNING_REFRESH_SECONDS, OPEN_DEBOUNCE_SECONDS, SEASON_REFRESH_SECONDS, SOURCES, STARTUP_GRACE_SECONDS, VIEW_VERSION
 from .engine.assessment import Opening, Settings, Sun, assess
-from .engine import feedback, habits, horizon, learning, night, people, sunlight, thermostat as thermostats, twin, voc as vocs
+from .engine import airflow, feedback, habits, horizon, learning, night, people, sunlight, thermostat as thermostats, twin, voc as vocs
 from .engine.volume import arbitrate
 from .engine.sources import normalize, Reading
 from .configuration import DATA_CONFIG
@@ -66,6 +66,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self._season_failed = False
         # What airing really does in this room, learned from its past openings (engine/learning.py).
         self.drying_model = learning.fit([])
+        # How fast each combination of openings renews the air, from the CO₂ (engine/airflow.py).
+        self.flow_model = {}
         self._learning_due = None
         self._learning_failed = False
         self._learning_store = Store(hass, 1, f"{DOMAIN}.learning.{entry.entry_id}")
@@ -234,7 +236,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 # The season: Niak Weather's when it is the exterior source, else a season sensor chosen in « Extérieur ».
                 "season_name": self.season_name,
                 "heated": self.config.get("heated", True), "outdoor_mean_7d": self.season[1],
-                "indoor_day_range": self.day_range, "drying_model": self.drying_model,
+                "indoor_day_range": self.day_range, "drying_model": self.drying_model, "flows": self.flow_model,
                 "humidity_floor_3h": self.humidity_floor,
                 "humidity_ceiling_3h": self.humidity_ceiling,
                 "opening_minutes": {e: minutes(e, self.opened_since, "on") for e in self.windows},
@@ -574,30 +576,37 @@ class ComfortCoordinator(DataUpdateCoordinator):
         """Refit the room's airing model from the stored openings plus the recorder's recent history."""
         stored = await self._learning_store.async_load() or {}
         episodes = stored.get("episodes") if isinstance(stored.get("episodes"), list) else []
+        flows = stored.get("flows") if isinstance(stored.get("flows"), list) else []
         keys = ("indoor_temperature", "indoor_humidity", "outdoor_temperature", "outdoor_humidity")
         sources = {k: self._source_entity(k) for k in keys}
+        co2 = self.sources.get("co2")
         # The partner rooms' windows air this room too: their openings teach it as well.
         windows = self.windows
-        if windows and all(sources.values()) and "recorder" in self.hass.config.components:
+        humidity = all(sources.values())
+        if windows and (humidity or co2) and "recorder" in self.hass.config.components:
             try:
                 from homeassistant.components.recorder import get_instance, history
                 states = await get_instance(self.hass).async_add_executor_job(
                     history.get_significant_states, self.hass, now - timedelta(days=10), now,
-                    [*windows, *sources.values()], None, True, False, False, True)
+                    [*windows, *(v for v in sources.values() if v), *([co2] if co2 else [])], None, True, False, False, True)
                 points = lambda entity_id: self._points(states, entity_id)
                 contacts = {e: [(row.last_changed, {"on": True, "off": False}.get(row.state)) for row in states.get(e, [])] for e in windows}
-                fresh = await self.hass.async_add_executor_job(learning.episodes, contacts, *(points(sources[k]) for k in keys))
-                episodes = learning.merge(episodes, fresh, now)
-                await self._learning_store.async_save({"episodes": episodes})
+                if humidity:
+                    fresh = await self.hass.async_add_executor_job(learning.episodes, contacts, *(points(sources[k]) for k in keys))
+                    episodes = learning.merge(episodes, fresh, now)
+                if co2:
+                    fresh = await self.hass.async_add_executor_job(airflow.flows, contacts, points(co2))
+                    flows = airflow.merge(flows, fresh, now)
+                await self._learning_store.async_save({"episodes": episodes, "flows": flows})
             except Exception:  # the room then keeps what it learned before, or the default model
                 if not self._learning_failed:
                     self._learning_failed = True
                     self.logger.warning("Past openings could not be read for %s", self.config.get("name"), exc_info=True)
-        model = learning.fit(episodes)
+        model, flow_model = learning.fit(episodes), airflow.fit(flows)
         # The twin only observes: the next periodic refresh shows it, no extra one that would delay a sensor change.
         await self._learn_twin(now)
-        if model != self.drying_model:
-            self.drying_model = model
+        if model != self.drying_model or flow_model != self.flow_model:
+            self.drying_model, self.flow_model = model, flow_model
             await self.async_request_refresh()
 
     def _sun_history(self, states, entity_id):

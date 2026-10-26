@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Mapping
 
 from .sources import Reading
-from .wind import DRIVEN_RAIN_GUST, crossing as wind_crossing, open_first, side as wind_side
+from .wind import DRIVEN_RAIN_GUST, GUSTY, crossing as wind_crossing, open_first, plan as airflow_plan, side as wind_side
 from .outlook import IMMINENT, rain_timing, slot as next_slot
 from . import learning, thermostat as thermostats
 
@@ -420,6 +420,13 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     rain_measured = "rain" in readings and readings["rain"].usable
     imminent = (soon is not None and not all_sheltered
                 and (soon <= IMMINENT if precise else not rain_measured and soon <= 60))
+    # Which openings to leave shut when choosing where the air goes through: one the rain reaches (now or
+    # within the hour), one facing strong gusts, one letting the sun in while the room is too hot.
+    wet_hour = value("rain") is True or (soon is not None and soon <= 60)
+    for d in details:
+        d["avoid"] = ("rain" if wet_hour and rained_on(d["entity_id"])
+                      else "gust" if d["wind_side"] == "windward" and gust is not None and gust >= GUSTY
+                      else "sun" if hot and d["sun_wm2"] is not None and d["sun_wm2"] >= settings.sun_facade else None)
     # The storm and the orange vigilance are forecasts. When Niak Weather's own station measures the rain
     # and the gusts here, it has the last word: dry, calm and no rain within the hour, they only shorten
     # the airing. Without such a station, or with a red vigilance, the forecast still keeps everything shut.
@@ -542,7 +549,8 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
                                 "off_reason": thermostat.get("off_reason"), "lowered": thermostats.lowered(thermostat),
                                 "reference": comfort}
     heating = (value("heating") or "unknown") if "heating" in readings else "not_configured"
-    first = tuple(open_first(details)) if action == "ouvrir" else ()
+    flows = context.get("flows") or {}
+    first = tuple(open_first(details, flows)) if action == "ouvrir" else ()
     coming = next_slot(outlook.get("hours") or [], now, ti, hot=hot or precool, cool_now=cool, margin=settings.cooling_delta) if now else None
     # A banner speaks only when it brings something: a gesture now, a gesture to undo, a likely wrong reflex
     # (opening when it is hotter outside), a precise later time, or another remedy such as the ventilation.
@@ -584,6 +592,8 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     extended = features(readings, settings, context, openings, sun, details,
                         needs, action, reason, now, ai, ae, air_detail)
     extended["season"] = {**season, "heated": heated}
+    # Where the air should go through: the card says it under the advice, only while airing is asked.
+    extended["airflow"] = airflow_plan(details, flows)
     extended["drying"] = drying
     extended["benefits"] = _benefits(details, openings, settings, ti, hot, cold, heated, te, group)
     # Within the heating tolerance a room is « a little cool », not « too cool »: the card says it gently.
