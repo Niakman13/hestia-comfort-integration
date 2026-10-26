@@ -1,3 +1,14 @@
+## 1.5.2 — Le thermostat en éco compte, la fenêtre qui réchauffe reste ouverte
+
+**En bref**
+
+- **La consigne de Versatile Thermostat sert de minimum**, quel que soit son préréglage : en éco à 17 °C, une pièce à 18 °C n’est plus « trop fraîche » ; en hors-gel, non plus. Avant, seule sa température confort comptait.
+- **Plus de « Refermez » quand l’air du dehors réchauffe la pièce.** Une pièce trop fraîche, fenêtre ouverte, avec un dehors plus chaud : Niak dit que vous pouvez laisser ouvert.
+
+### Après la mise à jour
+
+- Redémarrez Home Assistant, puis rechargez la page. Si la case « Prendre la consigne du thermostat comme minimum » est décochée dans l’onglet Chauffage d’une pièce, c’est le minimum de la pièce qui reste utilisé.
+
 ## 1.5.1 — Vos pièces lisibles sur petit écran
 
 **En bref**

@@ -112,7 +112,7 @@ Les deux briques partagent le panneau **Niak** et la même charte. L’**Accueil
 
 Le chauffage d’une pièce est un [Versatile Thermostat](https://github.com/jmcollin78/versatile_thermostat) ? Niak le reconnaît tout seul, dès que vous le choisissez dans l’onglet **Chauffage** :
 
-- sa température confort peut servir de minimum à la pièce : une seule consigne à régler, sur le thermostat ;
+- sa consigne sert de minimum à la pièce : en éco à 17 °C, une pièce à 18 °C n’est pas « trop fraîche » ;
 - Niak sait pourquoi il est arrêté. Seul un arrêt à la main donne « Rallumez le chauffage ». Arrêté par une fenêtre ouverte ou par lui-même, il repartira seul : la carte l’explique ;
 - en éco, hors-gel ou absence, une pièce plus fraîche est voulue : Niak ne demande rien ;
 - la fenêtre ouverte qu’il détecte est signalée, même sans contact sur la fenêtre.
