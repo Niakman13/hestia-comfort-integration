@@ -210,6 +210,10 @@ class Configuration:
         thermostat_reference = payload.get("thermostat_reference", True)
         if not isinstance(thermostat_reference, bool):
             raise ValueError("« Minimum repris du thermostat » doit être oui ou non.")
+        # No contact on the windows, on purpose (a garage, a room that is never aired): not suggested again.
+        windows_unmeasured = payload.get("windows_unmeasured", False)
+        if not isinstance(windows_unmeasured, bool):
+            raise ValueError("« Pas de contact, c’est voulu » doit être oui ou non.")
         # Rooms with no wall between them (a salon open onto its kitchen) share one air.
         open_to = payload.get("open_to", [])
         known = {e.entry_id for e in self.entries()}
@@ -283,7 +287,8 @@ class Configuration:
         cleaned = {"name": name.strip(), "area_id": area_id, "floor_id": floor_id, "sources": cleaned_sources,
                    "windows": list(dict.fromkeys(windows)), "openings": cleaned_openings, "settings": settings,
                    "presence": list(dict.fromkeys(presence)), "evolution": cleaned_evolution, "use_home": not legacy,
-                   "air_reference_version": AIR_REFERENCE_VERSION, "heated": heated, "thermostat_reference": thermostat_reference, "open_to": list(dict.fromkeys(open_to))}
+                   "air_reference_version": AIR_REFERENCE_VERSION, "heated": heated, "thermostat_reference": thermostat_reference,
+                   "windows_unmeasured": windows_unmeasured and not windows, "open_to": list(dict.fromkeys(open_to))}
         return cleaned, warnings
 
     @staticmethod
