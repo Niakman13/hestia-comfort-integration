@@ -190,7 +190,8 @@ class EvolutionAdapterTests(AdapterFixture):
         with patch('custom_components.niak_comfort.coordinator.dt_util.utcnow', return_value=self.now + timedelta(minutes=12)):
             context = coord._context(self.now + timedelta(minutes=12), {})
         self.assertEqual(context['opening_minutes']['binary_sensor.w'], 12)
-        self.assertEqual(context['presence_off_minutes']['binary_sensor.occupied'], 12)
+        # Read from Home Assistant's own last change (right after a restart too): to the second.
+        self.assertAlmostEqual(context['presence_off_minutes']['binary_sensor.occupied'], 12, delta=0.02)
         self.assertIsNone(context['presence_off_minutes']['binary_sensor.motion'])
         with patch.object(coord, 'async_request_refresh'):
             await event('binary_sensor.w', 'unavailable', 'on')

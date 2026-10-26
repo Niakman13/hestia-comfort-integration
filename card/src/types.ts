@@ -48,7 +48,7 @@ export interface Reading {
 export interface Features {
  shutters?:{entity_id:string;mode:'none'|'manual'|'connected';position:number|null;state:string|null;advice:'close'|'open'|null;message:string;shade_fraction:number|null;shade_model:'geometry'|'simple'|'unknown';manual_override:boolean|null;automatic:boolean|null;
   cover?:string|null;driver?:'adaptive_cover_pro'|null;sun_front?:boolean|null;target?:number|null;sun_start?:string|null;sun_end?:string|null;soon?:boolean;driving?:boolean;off?:'disabled'|'auto'|'tracking'|null;detection?:boolean|null;climate?:boolean|null;reason?:string|null;override_end?:string|null}[];
- presence?:{state:'occupied'|'empty'|'unknown'|'not_configured';message:string};
+ presence?:{state:'occupied'|'empty'|'leaving'|'unknown'|'not_configured';message:string;minutes?:number;delay?:number};
  air?:{co2_status?:'high'|'ok'|'unknown'|'not_configured';pm25_status:'high'|'ok'|'unknown'|'not_configured';voc_status:'high'|'ok'|'uninterpreted'|'unknown'|'not_configured';voc_unit:string|null;purifier:{on:boolean|null;speed:number|null};pm25_treated?:boolean;ventilation?:{on:boolean|null;boost?:boolean}|null;coverage:string;message:string};
  ventilation?:{opened_minutes:number|null;duration_minutes:{min:number;max:number}|null;message:string;capacity:number|null};
  humidity?:{dew_point:number|null;incoming_relative:number|null;glass_temperature:number|null;condensation_risk:boolean|null;message:string;
@@ -61,8 +61,10 @@ export interface Features {
  learned?:{now:number;after:number;minutes:number;measure:'humidity'|'temperature'|'co2'|'voc';openings:number;days:number;precision:{temperature:number;humidity:number};closing?:boolean}|null;
  /** What the sun on the windows does for the room now (engine/assessment.py, _benefits). */ benefits?:{kind:'sun_warms'|'sun_heats';openings:string[];watts:number;keep_shut?:boolean}[];
  volume?:{lead:string;reason:string;action:string;assessment?:Partial<Assessment>&{reason:string};observations?:Record<string,Reading>};
- warmth?:{occupied:boolean|null;heating:'on'|'off'|null;chilly_since?:string|null;tolerance?:number;warming?:boolean;outdoor_warms?:boolean;thermostat?:{name:string;preset:string|null;target:number|null;off_reason:string|null;lowered:boolean;reference:number|null}}|null;
+ warmth?:{occupied:boolean|null;heating:'on'|'off'|null;chilly_since?:string|null;tolerance?:number;warming?:boolean;outdoor_warms?:boolean;slight?:boolean;thermostat?:{name:string;preset:string|null;target:number|null;off_reason:string|null;lowered:boolean;reference:number|null}}|null;
  thermostat?:{name:string;window:boolean;preset:string|null;target:number|null;reference:number|null}|null;
+ people?:{home:string[];away:string[]}|null;
+ household?:{away_open:boolean;empty_room:boolean;sleeping:boolean;alarm:{name:string;state:string;armed:boolean}|null}|null;
  night?:{windows:{start:string;end:string}[];minimum:{time:string;temperature:number}|null;peak:{time:string;outdoor:number;shut:number;aired:number}|null;gain:number;worth?:boolean;humid:boolean}|null;
  drying?:{minutes:number;now:number;after:number;gain:number;tau:number;openings:number;later:{minutes:number;now:number;after:number;gain:number;time:string}|null}|null;
  trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string};

@@ -62,6 +62,17 @@ class Diagnostics(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result["states"]["source:co2"]["missing"])
         self.assertIn("binary_sensor.w", result["states"]["window:binary_sensor.w"]["entity_id"])
 
+    async def test_the_alarm_setting_is_kept_apart(self):
+        config = await get_configuration(self.hass)
+        before = config.revision()
+        snapshot = await config.set_alarm("alarm_control_panel.maison")
+        self.assertEqual(snapshot["home"]["alarm"], "alarm_control_panel.maison")
+        # Choosing the alarm never blocks a room being edited at the same time.
+        self.assertEqual(config.revision(), before)
+        self.assertEqual((await config.set_alarm(""))["home"]["alarm"], "")
+        with self.assertRaises(ValueError):
+            await config.set_alarm("light.salon")
+
     async def test_coordinates_are_removed(self):
         from custom_components.niak_comfort.diagnostics import TO_REDACT
         from homeassistant.components.diagnostics import async_redact_data

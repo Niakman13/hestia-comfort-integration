@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from homeassistant.util import dt as dt_util
 
 from . import cover_link, weather_link
-from .engine import thermostat as thermostats
+from .engine import people, thermostat as thermostats
 from .configuration import get_configuration
 from homeassistant.helpers import entity_registry as er
 
@@ -67,6 +67,8 @@ class Facts:
     free_areas: list = field(default_factory=list)
     """Home Assistant rooms with a thermometer that no Niak room follows: (area_id, name)."""
     version: str = ""
+    alarm: str = ""
+    """The home's alarm as read: « Alarmo · désarmée », "" without one."""
 
 
 def ago(minutes):
@@ -172,7 +174,9 @@ def report(f):
         {"name": thermostats.NAME, "level": "ok" if vt else "none", "role": "Consigne confort, raison d’un arrêt, présets, pente",
          "text": f"{_plural(len(vt), 'pièce')} · " + ", ".join(vt) if vt else "aucun chauffage reconnu"},
         {"name": cover_link.NAME, "level": "ok" if acp else "none", "role": "Volets pilotés avec le soleil",
-         "text": f"{_plural(len(acp), 'pièce')} · " + ", ".join(acp) if acp else "aucun volet reconnu"}]
+         "text": f"{_plural(len(acp), 'pièce')} · " + ", ".join(acp) if acp else "aucun volet reconnu"},
+        {"name": people.NAME, "level": "ok" if f.alarm else "none", "role": "Maison vide, nuit, fenêtre ouverte alarme armée",
+         "text": f.alarm or "aucune alarme (Réglages généraux)"}]
     versions = [{"level": "ok", "text": f"Intégration {f.version}", "why": "avec sa carte"},
                 {"level": "ok", "text": f"Relié à Niak Weather · {f.weather}", "why": "l’extérieur vient de sa station et de ses prévisions"} if f.weather else
                 {"level": "none", "text": "Pas relié à Niak Weather", "why": "installé : il peut remplir l’extérieur" if f.weather_installed else "non installé"}]
@@ -269,5 +273,11 @@ async def facts(hass, version):
     link = weather_link.status(hass)
     weather = next((p["title"] for p in link.get("places", []) if p["entry_id"] == service.home.get("weather")), "")
     free = [(a["area_id"], a["name"]) for a in overview(hass, used) if isinstance(a["suggestions"].get("indoor_temperature"), str)]
-    return Facts(rooms=rooms, exterior=exterior, configured=bool(service.home.get("configured")), weather=weather,
+    # The alarm as the rooms read it (engine/people.py): the one chosen in the general settings, else Alarmo.
+    coordinator = next((c for e in service.entries() if (c := getattr(e, "runtime_data", None)) is not None and hasattr(c, "_alarm")), None)
+    found = coordinator._alarm() if coordinator is not None else None
+    states = {"disarmed": "désarmée", "armed_away": "absence", "armed_home": "à la maison", "armed_night": "nuit",
+              "armed_vacation": "vacances", "armed_custom_bypass": "personnalisée", "triggered": "déclenchée"}
+    alarm = f"{found['name']} · {states.get(found['state'], found['state'])}" if found else ""
+    return Facts(alarm=alarm, rooms=rooms, exterior=exterior, configured=bool(service.home.get("configured")), weather=weather,
                  weather_installed=bool(link.get("installed") and link.get("places")), free_areas=free, version=version)

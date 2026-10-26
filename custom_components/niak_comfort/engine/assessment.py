@@ -520,6 +520,12 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     # An open window that neither helps nor harms is neutral: the person may keep it or close it.
     if opened and reason in ("within_comfort", "drying_slow", "drying_unavailable", "drying_later", "humid_outdoor"):
         action, reason = "ok", "open_neutral"
+    # The alarm armed with a window open (engine/people.py): away or on holiday, nobody will close it; at night, unless
+    # it is the window the person leaves open on purpose to sleep cool. Rain and gusts keep their own words.
+    alarm = context.get("alarm") if isinstance(context.get("alarm"), Mapping) else None
+    if (opened and alarm and (alarm.get("away") or (alarm.get("night") and not context.get("intended_open")))
+            and reason not in ("rain_open_windows", "gust_open_windows")):
+        action, reason, level = "fermer", "alarm_open", "urgent" if alarm.get("away") else "action"
     # A cold room speaks only when it points at something: someone at home and the heating switched off.
     occupied = context.get("occupied")
     if not isinstance(occupied, bool) and thermostat:
@@ -577,8 +583,20 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     extended["season"] = {**season, "heated": heated}
     extended["drying"] = drying
     extended["benefits"] = _benefits(details, openings, settings, ti, hot, cold, heated, te, group)
+    # Within the heating tolerance a room is « a little cool », not « too cool »: the card says it gently.
+    warmth["slight"] = ti is not None and ti >= settings.minimum - settings.heating_tolerance
     extended["warmth"] = warmth if cold else None
     # The window a Versatile Thermostat saw open, worth saying when no contact of the room says it.
+    # Who the room is for and what the alarm says, for the card's « À savoir » (engine/people.py).
+    found = context.get("people") if isinstance(context.get("people"), Mapping) else None
+    extended["people"] = {"home": list(found.get("home") or []), "away": list(found.get("away") or [])} if found else None
+    extended["household"] = {
+        # A window left open with nobody (of this room) at home: nobody will think of it.
+        "away_open": opened and warmth["occupied"] is False and reason != "alarm_open",
+        # Nobody in the room right now, someone at home: the moment for a long airing.
+        "empty_room": action == "ouvrir" and (extended.get("presence") or {}).get("state") == "empty" and warmth["occupied"] is not False,
+        "sleeping": bool(alarm and alarm.get("night")),
+        "alarm": {"name": alarm.get("name"), "state": alarm.get("state"), "armed": alarm.get("armed")} if alarm else None}
     extended["thermostat"] = ({"name": thermostat.get("name"), "window": thermostat.get("window") is True and not opened,
                                "preset": thermostat.get("preset"), "target": thermostat.get("target"), "reference": comfort}
                               if thermostat else None)

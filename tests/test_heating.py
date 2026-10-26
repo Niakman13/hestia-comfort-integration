@@ -70,6 +70,17 @@ class HeatingAdvice(unittest.TestCase):
         readings = {k: Reading(v, "valid", "sensor.x") for k, v in values.items()}
         self.assertEqual(assess(readings, SETTINGS, None, {}, None, {}, NOW, context={"heated": True, "occupied": True}).action, "fermer")
 
+    def test_within_tolerance_is_a_little_cool(self):
+        self.assertTrue(run(19.4).features["warmth"]["slight"])
+        self.assertFalse(run(18.5).features["warmth"]["slight"])
+
+    def test_nobody_seen_for_a_few_minutes_is_said(self):
+        from engine.evolution import _presence
+        readings = {"presence:s": Reading(False, "valid", "binary_sensor.s", detail="occupancy")}
+        self.assertEqual(_presence(readings, {"presence_off_minutes": {"s": 4}})["state"], "leaving")
+        self.assertEqual(_presence(readings, {"presence_off_minutes": {"s": 6}})["state"], "empty")
+        self.assertEqual(_presence(readings, {"presence_off_minutes": {"s": None}})["state"], "unknown")
+
     def test_tolerance_is_bounded(self):
         with self.assertRaises(ValueError):
             Settings(heating_tolerance=-1)
