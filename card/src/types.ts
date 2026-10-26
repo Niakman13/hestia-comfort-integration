@@ -20,6 +20,11 @@ export type Chip = typeof CHIPS[number];
 export const TILE_BLOCKS = ['scale','horizon','measures','details'] as const;
 export type TileBlock = typeof TILE_BLOCKS[number];
 /** A long press (a tap on mini and alert): the full card in a window, a dashboard page, or nothing. */
+/** Topics of « À savoir », and lines of « Détails techniques »: the card shows those kept, in its own order. */
+export const INSIGHT_TOPICS = ['humidity','heating','sun','windows','equipment','household','forecast','learning'] as const;
+export type InsightTopic = typeof INSIGHT_TOPICS[number];
+export const DETAIL_ROWS = ['range','slot','windows','shutters','people','drying','trend','sensors'] as const;
+export type DetailRow = typeof DETAIL_ROWS[number];
 /** Subjects of the « Prochaines heures » graph. */
 export const HORIZON_SUBJECTS = ['temperature','humidity'] as const;
 export type HorizonSubject = typeof HORIZON_SUBJECTS[number];
@@ -37,6 +42,8 @@ export interface Config {
   hold_action?: HoldAction; hold_path?: string;
   /** The « Prochaines heures » graph in the banner, and its subjects. */
   show_horizon?: boolean; horizon_subjects?: HorizonSubject[];
+  /** « À savoir » and « Détails techniques »: shown or not, which topics and lines, how many lines. */
+  show_insights?: boolean; insight_topics?: InsightTopic[]; insight_max?: number; detail_rows?: DetailRow[];
 }
 /** A list setting: only known values, each once, in the given order. */
 function list<T extends string>(value:unknown,known:readonly T[],name:string):T[]|undefined{
@@ -125,7 +132,9 @@ export function cleanConfig(input:Config):Config {
   hold(input);
   const lists={banner_blocks:list(input.banner_blocks,BANNER_BLOCKS,'bandeau'),scale_marks:list(input.scale_marks,SCALE_MARKS,'échelle'),
     tile_chips:list(input.tile_chips,CHIPS,'pastilles'),tile_blocks:list(input.tile_blocks,TILE_BLOCKS,'tuile dépliée'),mini_values:list(input.mini_values,CHIPS,'ligne'),
-    horizon_subjects:list(input.horizon_subjects,HORIZON_SUBJECTS,'sujets du graphique')};
+    horizon_subjects:list(input.horizon_subjects,HORIZON_SUBJECTS,'sujets du graphique'),insight_topics:list(input.insight_topics,INSIGHT_TOPICS,'sujets À savoir'),
+    detail_rows:list(input.detail_rows,DETAIL_ROWS,'lignes des détails')};
+  if(input.insight_max!==undefined&&!(Number.isInteger(input.insight_max)&&input.insight_max>=1&&input.insight_max<=8))throw new Error('Réglage « lignes À savoir » invalide : de 1 à 8.');
   return {...input,...Object.fromEntries(Object.entries(lists).filter(([,v])=>v!==undefined)), format:input.format??'tile', modules:[...new Set(input.modules??MODULES)]};
 }
 

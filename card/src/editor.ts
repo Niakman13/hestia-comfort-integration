@@ -1,6 +1,6 @@
 import {LitElement,html,css,nothing} from 'lit';
 import {property,state} from 'lit/decorators.js';
-import {cleanConfig,cleanHomeConfig,MODULES,moduleLabels,SCALE_MARKS,CHIPS,TILE_BLOCKS,homeAction,type Config,type HomeConfig,type HomeAssistant,type Entry} from './types';
+import {cleanConfig,cleanHomeConfig,MODULES,moduleLabels,SCALE_MARKS,CHIPS,TILE_BLOCKS,HORIZON_SUBJECTS,INSIGHT_TOPICS,DETAIL_ROWS,homeAction,type Config,type HomeConfig,type HomeAssistant,type Entry} from './types';
 
 /* The editors are built like Niak Weather's: the room (or title) and the format on top, then folding groups that
    change with the format. The theme follows Home Assistant: it is no longer offered. */
@@ -9,14 +9,23 @@ const toggle=(name:string)=>({name,selector:{boolean:{}}});
 const group=(title:string,icon:string,schema:unknown[],expanded=false)=>({type:'expandable',name:'',title,icon,flatten:true,expanded,schema});
 const choices=(name:string,options:[string,string][])=>({name,selector:{select:{multiple:true,reorder:true,mode:'list',options:options.map(([value,label])=>({value,label}))}}});
 const dropdown=(name:string,options:[string,string][])=>({name,required:true,selector:{select:{mode:'dropdown',options:options.map(([value,label])=>({value,label}))}}});
-const look=()=>group('Visuel et performance','mdi:palette-outline',[toggle('animations'),toggle('glass_effect')],true);
+const look=(expanded=true)=>group('Apparence','mdi:palette-outline',[toggle('animations'),toggle('glass_effect')],expanded);
 /** On a full card, the full card in a window would show itself again: only a page, or nothing. */
-const hold=(action:string,full=false)=>group('Fonctionnalités','mdi:tune-variant',[
+const hold=(action:string,full=false)=>group('Appui long','mdi:gesture-tap-hold',[
   dropdown('hold_action',full?[['none','Rien'],['page','Ouvrir une page']]:[['popup','Ouvrir la carte complète en fenêtre'],['page','Ouvrir une page'],['none','Rien']]),
   ...(action==='page'?[{name:'hold_path',selector:{text:{}}}]:[])]);
 const chipOptions:[string,string][]=[['temperature','Température'],['humidity','Humidité'],['co2','CO₂']];
 const markOptions:[string,string][]=[['band','Votre plage'],['day','Min–max 24 h'],['out','Dehors']];
-const bannerOptions:[string,string][]=[['remedies','Remèdes en cours (purificateur, VMC)'],['later','Plus tard (meilleur moment)']];
+const bannerOptions:[string,string][]=[['remedies','Équipements en marche (purificateur, VMC)'],['later','Meilleur moment plus tard']];
+const horizonOptions:[string,string][]=[['temperature','Température'],['humidity','Humidité']];
+const topicOptions:[string,string][]=[['humidity','Humidité'],['heating','Chauffage'],['sun','Soleil'],['windows','Fenêtres et aération'],['equipment','Équipements (purificateur, VMC)'],
+  ['household','Personnes et alarme'],['forecast','Prévisions (cette nuit)'],['learning','Apprentissage (dernière aération)']];
+const detailOptions:[string,string][]=[['range','Plage de confort'],['slot','Créneau conseillé'],['windows','Fenêtres'],['shutters','Volets'],['people','Présence, personnes, alarme'],
+  ['drying','Séchage et buée'],['trend','Tendance'],['sensors','Capteurs et sources']];
+/** The four sections of the card, in its order: the same number in the editor and on the card. */
+const banner=(expanded=true)=>group('1 · Bandeau conseil','mdi:numeric-1-circle',[toggle('rotate'),choices('banner_blocks',bannerOptions),choices('scale_marks',markOptions),toggle('show_horizon'),choices('horizon_subjects',horizonOptions)],expanded);
+const insights=()=>group('2 · À savoir','mdi:numeric-2-circle',[toggle('show_insights'),choices('insight_topics',topicOptions),{name:'insight_max',selector:{number:{min:1,max:8,mode:'slider'}}}]);
+const details=()=>group('4 · Détails techniques','mdi:numeric-4-circle',[toggle('show_details'),choices('detail_rows',detailOptions),toggle('details_open')]);
 /** One choice per air: rooms open onto each other are offered once, as « Salon · Cuisine ». A card already set on one of
     them keeps its room as the value, so that nothing moves. */
 export function roomChoices(entries:Entry[],current?:string):{value:string;label:string}[] {
@@ -33,13 +42,17 @@ export function roomChoices(entries:Entry[],current?:string):{value:string;label
 }
 const labels:Record<string,string>={entry_id:'Pièce',title:'Titre facultatif',format:'Format',animations:'Animations',glass_effect:'Effet verre dépoli',
   rotate:'Faire défiler les conseils',banner_blocks:'Contenu du bandeau',scale_marks:'Repères de l’échelle',modules:'Rubriques',measures_open:'Mesures dépliées au départ',
-  show_details:'Section Détails',details_open:'Détails dépliés au départ',tile_chips:'Pastilles de la tuile repliée',tile_blocks:'Contenu de la tuile dépliée',
+  show_details:'Afficher la section',details_open:'Dépliés au départ',show_measures:'Afficher la section',show_insights:'Afficher la section',
+  show_horizon:'Graphique « Prochaines heures »',horizon_subjects:'Sujets du graphique',insight_topics:'Sujets',insight_max:'Lignes au plus',detail_rows:'Lignes',tile_chips:'Pastilles de la tuile repliée',tile_blocks:'Contenu de la tuile dépliée',
   mini_values:'Valeurs de la ligne',hold_action:'Appui long',hold_path:'Page à ouvrir',show_scale:'Échelle des pièces',show_rooms:'Section Pièces',rooms_open:'Pièces dépliées au départ',
   list_order:'Ordre des pièces'};
 const helpers:Record<string,string>={
   animations:'Coupées, la lumière et l’anneau restent fixes et les conseils ne défilent plus seuls.',
   glass_effect:'Le flou demande beaucoup de ressources : à couper sur un appareil lent. Coupé, le verre devient plus opaque.',
   rotate:'Toutes les 4,5 s ; décoché, ils changent d’un appui.',
+  show_horizon:'Sous l’échelle : la pièce sans le geste et avec, et quand le faire. Seulement quand il aide.',
+  horizon_subjects:'Deux sujets : un onglet chacun, celui du conseil d’abord.',insight_topics:'Ce qui explique le conseil, sous le bandeau. Faites glisser pour l’ordre de préférence.',
+  detail_rows:'Pour comprendre et vérifier. Tout décocher vide la section.',
   banner_blocks:'Le conseil du moment reste toujours. Cochez ce qui défile après lui, dans l’ordre.',
   scale_marks:'Tout décocher retire l’échelle.',modules:'Tout décocher retire la section ; faites glisser pour l’ordre.',
   measures_open:'Repliées, les mesures à surveiller restent visibles.',
@@ -81,7 +94,7 @@ export class ComfortEditor extends LitElement {
     const c=this.config!,f=c.format??'tile',action=c.hold_action??(c.hold_path?'page':'popup');
     const rooms=this.entries&&this.entries.length>1?[{name:'entry_id',selector:{select:{mode:'dropdown',options:roomChoices(this.entries,c.entry_id)}}}]:[];
     const format={name:'format',selector:{select:{mode:'list',options:[
-      {value:'full',label:'Complète : bandeau, échelle, mesures et détails'},{value:'tile',label:'Tuile : le conseil et ses pastilles, se déplie d’un appui'},
+      {value:'full',label:'Complète : bandeau conseil, À savoir, mesures et détails'},{value:'tile',label:'Tuile : le conseil et ses pastilles, se déplie d’un appui'},
       {value:'intermediate',label:'Tuile dépliée : la même, ouverte au départ'},{value:'mini',label:'Mini : une ligne, le conseil et la température'},
       {value:'measures',label:'Mesures : les tuiles de la pièce, sans conseil'},{value:'alert',label:'Alerte : visible seulement quand un geste est conseillé'}]}}};
     const head=[...rooms,{name:'title',selector:{text:{}}},format];
@@ -89,15 +102,13 @@ export class ComfortEditor extends LitElement {
     if(f==='mini')return [...head,look(),group('Contenu de la ligne','mdi:view-list-outline',[choices('mini_values',chipOptions)],true),hold(action)];
     if(f==='alert')return [...head,look(),group('Bandeau','mdi:view-day-outline',[choices('banner_blocks',bannerOptions),toggle('rotate')],true),hold(action)];
     if(f==='measures')return [...head,look(),group('Contenu','mdi:view-grid-outline',[rubriques,choices('scale_marks',markOptions)],true),hold(action)];
-    if(f==='tile'||f==='intermediate')return [...head,look(),
-      group('Tuile repliée','mdi:view-day-outline',[choices('tile_chips',chipOptions),choices('banner_blocks',bannerOptions),toggle('rotate')],true),
-      group('Tuile dépliée','mdi:view-grid-outline',[choices('tile_blocks',[['scale','Échelle de température'],['measures','Mesures'],['details','Détails']]),rubriques,choices('scale_marks',markOptions)]),
-      hold(action)];
-    return [...head,look(),
-      group('Bandeau','mdi:view-day-outline',[choices('banner_blocks',bannerOptions),toggle('rotate')],true),
-      group('Échelle de température','mdi:thermometer',[choices('scale_marks',markOptions)]),
-      group('Mesures','mdi:view-grid-outline',[rubriques,toggle('measures_open')]),
-      group('Détails','mdi:text-box-outline',[toggle('show_details'),toggle('details_open')])];
+    // The tile keeps its spirit: the advice and its chips, then what unfolds; each section keeps its own settings.
+    if(f==='tile'||f==='intermediate')return [...head,
+      group('Tuile : bandeau et partie dépliable','mdi:view-day-outline',[choices('tile_chips',chipOptions),choices('tile_blocks',[['scale','Échelle de température'],['horizon','Graphique « Prochaines heures »'],['measures','Mesures'],['details','Détails techniques']])],true),
+      banner(false),insights(),group('3 · Mesures','mdi:numeric-3-circle',[rubriques]),details(),look(false),hold(action)];
+    return [...head,banner(),insights(),
+      group('3 · Mesures','mdi:numeric-3-circle',[toggle('show_measures'),rubriques,toggle('measures_open')]),
+      details(),look(false)];
   }
   private changed(e:CustomEvent<{value:Record<string,unknown>}>){
     e.stopPropagation();if(!this.config)return;
@@ -105,12 +116,13 @@ export class ComfortEditor extends LitElement {
     // The scale needs the temperature module; the lists replace the older on/off switches they cover.
     if(Array.isArray(v.modules))next.modules=[...(v.modules as string[]),...((this.config.modules??MODULES).includes('temperature')?['temperature']:[])];
     if('scale_marks' in v)delete next.show_scale;
-    if('modules' in v)delete next.show_measures;
+    if('modules' in v&&!('show_measures' in v))delete next.show_measures;
     this.config=cleanConfig(tidy(next,this.config as unknown as Record<string,unknown>,this.defaults(this.config)) as unknown as Config);
     this.dispatchEvent(new CustomEvent('config-changed',{detail:{config:this.config},bubbles:true,composed:true}));
   }
   private defaults(c:Config):Record<string,unknown>{
-    return {animations:true,glass_effect:true,rotate:true,show_details:true,details_open:false,measures_open:false,
+    return {animations:true,glass_effect:true,rotate:true,show_details:true,details_open:false,measures_open:false,show_measures:true,
+      show_horizon:true,horizon_subjects:[...HORIZON_SUBJECTS],show_insights:true,insight_topics:[...INSIGHT_TOPICS],insight_max:4,detail_rows:[...DETAIL_ROWS],
       banner_blocks:['remedies','later'],tile_chips:[...CHIPS],tile_blocks:[...TILE_BLOCKS],mini_values:['temperature'],hold_action:c.hold_path?'page':'popup',
       scale_marks:c.show_scale===false||c.format==='measures'?[]:[...SCALE_MARKS]};
   }
@@ -118,7 +130,7 @@ export class ComfortEditor extends LitElement {
     if(!this.config||!this.hass)return nothing;
     const c=this.config;
     const data={...this.defaults(c),hold_action:c.hold_action??(c.hold_path?'page':'popup'),
-      ...c,scale_marks:c.scale_marks??(c.show_scale===false||c.format==='measures'?[]:[...SCALE_MARKS]),modules:c.show_measures===false?[]:(c.modules??MODULES).filter(m=>m!=='temperature')};
+      ...c,scale_marks:c.scale_marks??(c.show_scale===false||c.format==='measures'?[]:[...SCALE_MARKS]),modules:(c.modules??MODULES).filter(m=>m!=='temperature')};
     const one=this.entries?.length===1?this.entries[0]:this.entries?.find(e=>e.entry_id===c.entry_id);
     return html`${this.entries===null?html`<p class="note warn">L’intégration Niak Confort ne répond pas : vérifiez qu’elle est installée et chargée.</p>`
       :this.entries?.length===0?html`<p class="note warn">Aucune pièce : ouvrez <a href="/niak/confort" @click=${follow}>Niak Confort</a> dans la barre latérale pour en ajouter une.</p>`
