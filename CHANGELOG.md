@@ -1,3 +1,26 @@
+## 1.7.8 — Des murs humides, jamais une fatalité
+
+**En bref**
+
+- Risque de moisissure : la carte dit ce qui s’en occupe, ou ce que vous pouvez faire.
+- Nouveau geste « Chauffez un peu plus » quand des murs plus chauds suffisent à écarter la moisissure.
+
+### Nouveautés
+
+- **« Chauffez un peu plus »** : quand aérer et la VMC n’aident pas, un ou deux degrés de plus réchauffent les murs froids et font passer l’air qui les touche sous le seuil de la moisissure. Le chauffage n’assèche pas, il garde les murs assez chauds. Demandé seulement pour un risque net, en journée, jamais contre un thermostat en éco ou hors-gel, ni quand la VMC tourne.
+
+### Améliorations
+
+- **Plus de « Murs à surveiller »** : la VMC en marche donne « Au mieux » et « risque de moisissure, la VMC l’assèche » ; sans rien à faire, la ligne donne un conseil (ne pas sécher de linge dans la pièce, écarter les meubles du mur).
+- **« Mon logement »** : « Au mieux » en bleu au lieu de « 5 à surveiller » à côté de « Rien à faire ».
+- **Le disque** montre le sujet de la première ligne d’« À savoir ».
+- **Tuiles des pièces** : un froid déjà pris en charge passe après les autres mesures.
+
+### Corrections
+
+- **Salon · Cuisine** : la ligne d’humidité reprend aussi la raison donnée par l’autre pièce.
+- **Plus de doublon VMC** : « VMC · en marche » ne répète plus l’humidité.
+
 ## 1.7.7 — Une seule ligne pour l’humidité
 
 **En bref**

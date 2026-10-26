@@ -84,6 +84,7 @@ export interface Features {
  household?:{away_open:boolean;empty_room:boolean;sleeping:boolean;alarm:{name:string;state:string;armed:boolean}|null}|null;
  horizon?:Horizon[];
  night?:{windows:{start:string;end:string}[];minimum:{time:string;temperature:number}|null;peak:{time:string;outdoor:number;shut:number;aired:number}|null;gain:number;worth?:boolean;humid:boolean}|null;
+ warm_walls?:{degrees:number;target:number;surface:number;after:number}|null;
  drying?:{minutes:number;now:number;after:number;gain:number;tau:number;openings:number;later:{minutes:number;now:number;after:number;gain:number;time:string}|null}|null;
  trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string};
  season?:{known:boolean;weight:number|null;outdoor_mean:number|null;minimum:number;maximum:number;heated:boolean;
