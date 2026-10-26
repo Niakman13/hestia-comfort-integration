@@ -89,6 +89,9 @@ export interface Features {
  season?:{known:boolean;weight:number|null;outdoor_mean:number|null;minimum:number;maximum:number;heated:boolean;
    /** The home's season when known (Niak Weather's, or a season sensor): it sets the rules of the advice. */ name?:string|null;group?:'summer'|'between'|'winter'|null};
  day_range?:{min:number;max:number}|null;
+ /** Where the air goes through best (engine/wind.py, plan): what to open, what already helps, what to leave shut. */
+ airflow?:{open:string[];keep:string[];path:'wind'|'opposite'|'two_sides'|'one_side';into:string|null;faster:number|null;learned:number;
+   avoid:{entity_id:string;why:'rain'|'gust'|'sun'}[]}|null;
 }
 export interface Assessment {
   features?:Features;

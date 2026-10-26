@@ -514,3 +514,17 @@ test('the graph shows when the gesture changes something, or always with the tre
   assert.deepEqual(folding.values.slice(0,3),['','true',true]);
   assert.match(text(folding),/en aérant/);
 });
+test('where to open is said under the advice, only while airing is asked',()=>{
+  const v=fresh();v.names={ouest:'Fenêtre Ouest',cuisine:'Fenêtre Cuisine',sd:'Porte-fenêtre SD'};
+  v.observations={...v.observations,co2:{value:1300,quality:'valid',source:'sensor.co2'}};
+  const plan={open:['ouest','cuisine'],keep:[],path:'opposite',into:null,faster:null,learned:0,avoid:[{entity_id:'sd',why:'rain'}]};
+  v.assessment={...v.assessment,action:'ouvrir',level:'action',reason:'air_needed',needs:['air'],constraints:[],missing:[],features:{...v.assessment.features,airflow:plan}};
+  const said=()=>facts(v).map(f=>f.title+' · '+f.text);
+  assert.deepEqual(said().slice(0,2),['Ouvrez Fenêtre Ouest et Fenêtre Cuisine · l’air traverse de part en part','Pas Porte-fenêtre SD · la pluie y entrerait']);
+  // Already open: complete it, with the learned speed once known.
+  v.assessment.features.airflow={...plan,open:['ouest'],keep:['cuisine'],faster:2,learned:4,avoid:[]};
+  assert.equal(said()[0],'Ouvrez aussi Fenêtre Ouest · l’air traverse de part en part · 2 fois plus rapide (d’après 4 aérations)');
+  // Nothing asked: nothing said, the banner stays the only gesture.
+  v.assessment={...v.assessment,action:'ok',level:'calm',reason:'within_comfort',needs:[]};
+  assert.equal(said().some(t=>t.startsWith('Ouvrez')),false);
+});

@@ -1,9 +1,19 @@
-## 1.7.3 — Le graphique suit le conseil
+## 1.7.3 — Le graphique suit le conseil, les bonnes fenêtres à ouvrir
 
 **En bref**
 
 - Le graphique « Prochaines heures » n’apparaît plus que s’il montre ce que le conseil change.
 - Nouveau réglage pour le garder toujours visible.
+- « À savoir » dit quelles fenêtres ouvrir pour que l’air traverse.
+
+### Nouveautés
+
+- **Les bonnes fenêtres à ouvrir.** Quand il faut aérer, « À savoir » nomme les ouvrants : « Ouvrez Fenêtre Ouest et Fenêtre Cuisine · l’air traverse de part en part ».
+  - Choix selon le vent, les façades opposées et la taille des ouvrants.
+  - Une fenêtre où la pluie entrerait, face aux rafales ou au soleil en été est écartée : « Pas Fenêtre Ouest · la pluie y entrerait ».
+  - Déjà ouvert ? La carte complète : « Ouvrez aussi Fenêtre Ouest ».
+- **Appris chez vous.** Chaque aération mesure à quelle vitesse le CO₂ baisse, pour chaque combinaison de fenêtres. Après 3 aérations, la carte préfère ce qu’elle a mesuré : « 2 fois plus rapide (d’après 4 aérations) ».
+- Le bandeau ne change pas.
 
 ### Améliorations
 
