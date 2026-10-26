@@ -119,6 +119,11 @@ Le chauffage d’une pièce est un [Versatile Thermostat](https://github.com/jmc
 
 Sans Versatile Thermostat, « Rallumez le chauffage » attend que la pièce soit nettement sous son minimum (1 °C par défaut, réglable) depuis 30 minutes. Niak ne commande rien. Il faut Niak Confort 1.5.0 ou plus récent.
 
+## Avec Alarmo et vos personnes
+
+- [Alarmo](https://github.com/nielsfaber/alarmo) est reconnu tout seul (ou choisissez une autre alarme dans **Réglages généraux**). Armée en absence, la maison est vide et une fenêtre ouverte devient urgente ; en mode nuit, elle est signalée.
+- Dans l’onglet **Présence** de chaque pièce, cochez les personnes à qui elle sert : la chambre de quelqu’un qui est parti compte comme vide.
+
 ## Avec Adaptive Cover Pro
 
 Vos volets sont pilotés par [Adaptive Cover Pro](https://github.com/jrhubott/adaptive-cover-pro) ? Niak le reconnaît tout seul, dès que vous choisissez le volet d’une fenêtre :

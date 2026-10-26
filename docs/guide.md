@@ -143,7 +143,11 @@ Des détecteurs de présence ou de mouvement, facultatifs.
 
 Une pièce vide adapte ses conseils. Son suivi continue : une fenêtre ouverte reste signalée.
 
-Un détecteur de mouvement silencieux ne prouve pas que la pièce est vide. Délai avant de la considérer vide : 5 minutes par défaut.
+Un détecteur de mouvement silencieux ne prouve pas que la pièce est vide. Délai avant de la considérer vide : 5 minutes par défaut. Pendant ce délai, la carte dit « personne depuis 3 min ».
+
+**Personnes de la pièce** : cochez les personnes de Home Assistant à qui sert la pièce. Une pour une chambre, plusieurs pour une pièce commune. La pièce compte comme vide quand elles sont toutes absentes, même si d’autres sont à la maison : pas de « Rallumez le chauffage » dans la chambre de quelqu’un qui est parti, et un avertissement si sa fenêtre est restée ouverte. Sans case cochée, toute la maison compte.
+
+**Alarme** (Réglages généraux) : Alarmo est reconnu tout seul ; vous pouvez choisir une autre alarme, ou aucune. Armée en absence ou en vacances, la maison est vide, et une fenêtre ouverte devient urgente : « Refermez ». En mode nuit, une fenêtre ouverte est signalée, sauf celle que vous avez dit laisser ouverte exprès pour dormir au frais.
 
 ### Chauffage
 
