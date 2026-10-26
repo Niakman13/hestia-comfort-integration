@@ -73,3 +73,6 @@ main.wide{max-width:1280px}
 .ex-row.own .ex-sensor select{min-height:40px}.ex-sensor .warning,.ex-sensor .provenance{margin:4px 0 0}.ex-caution{margin-top:16px}
 @media(max-width:600px){.ex-rows{grid-template-columns:minmax(0,1fr) auto}.ex-sensor{grid-column:1/-1;grid-row:2}}
 .ac-line{display:grid;grid-template-columns:minmax(120px,200px) minmax(0,1fr) auto;gap:4px 16px;align-items:center;padding:8px 0;border-top:1px solid var(--nc-border)}.ac-line:first-child{border-top:0}@media(max-width:600px){.ac-line{grid-template-columns:1fr auto}.ac-line .hint{grid-column:1/-1;grid-row:2}}
+
+/* Following the HA theme: some themes give divider-color the page background (Nordic), so outlines come from the socle's --nk-border and frames from its card surface. */
+:host([data-appearance=ha]){--nc-border:var(--nk-border);--nc-frame:var(--nk-surface)}
