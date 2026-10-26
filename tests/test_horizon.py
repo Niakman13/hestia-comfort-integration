@@ -44,12 +44,17 @@ class Horizon(unittest.TestCase):
         self.assertGreater(a["result"]["drop"], 0.2)
         self.assertIsNotNone(a["result"]["back"])
 
-    def test_the_sun_warming_a_cool_room_is_drawn_without_a_gesture(self):
+    def test_the_sun_warming_a_cool_room_is_drawn_with_and_without_the_sun(self):
         now = datetime(2026, 4, 10, 8, tzinfo=timezone(timedelta(hours=2)))
         out = horizon.build({"reason": "heat_needed", "action": "ok", "needs": ["heat"], "features": {"warmth": {"warming": True}}},
                             MODEL, {"ti": 19.0, "hi": 55, "te": 8}, forecast(now, 11, 5), now, minimum=19, sun=sun)
-        self.assertEqual((out[0]["kind"], out[0]["gesture"]), ("sun", None))
-        self.assertGreater(out[0]["result"]["top"], 19.3)
+        s = out[0]
+        self.assertEqual(s["kind"], "sun")
+        self.assertGreater(s["result"]["top"], 19.3)
+        # Two curves: the room in the shade (base) and with the sun (gesture); the gap is the sun's.
+        self.assertEqual(len(s["base"]), len(s["gesture"]))
+        self.assertAlmostEqual(max(g - b for g, b in zip(s["gesture"], s["base"])), s["result"]["gain"], delta=0.06)
+        self.assertGreater(s["result"]["gain"], 0)
 
     def test_drying_comes_first_and_lowers_the_humidity(self):
         now = datetime(2026, 10, 26, 15, tzinfo=timezone(timedelta(hours=1)))
@@ -107,6 +112,17 @@ class Horizon(unittest.TestCase):
         self.assertTrue(sunny)
         self.assertFalse(sunny[0]["needed"])
         self.assertFalse(any(s["needed"] for s in out))
+
+    def test_a_sun_that_brings_almost_nothing_is_not_drawn(self):
+        # The Salon, 27 October: sheltered French windows, the sun brings 0.1 °C; the rise is the milder day outside.
+        now = datetime(2026, 4, 10, 8, tzinfo=timezone(timedelta(hours=2)))
+        sheltered = {**MODEL, "thermal": {**MODEL["thermal"], "b": 0.02}}
+        start, hours = {"ti": 19.0, "hi": 55, "te": 8}, forecast(now, 16, 6)
+        drawn = horizon.sunny(sheltered, start, horizon.night._series(hours, now, 24), mass=None, sun=sun, heated=0.0)
+        self.assertLess(drawn["result"]["gain"], horizon.KEEP["sun"])
+        out = horizon.build({"reason": "heat_needed", "action": "ok", "needs": ["heat"], "features": {}},
+                            sheltered, start, hours, now, minimum=19, sun=sun)
+        self.assertEqual([s["kind"] for s in out], ["trend"])
 
     def test_nothing_without_forecast_or_measure(self):
         now = datetime(2026, 7, 14, 18, tzinfo=timezone.utc)

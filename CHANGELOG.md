@@ -1,16 +1,19 @@
-## 1.7.4 — Le graphique dit quand
+## 1.7.4 — Le soleil montré tel qu’il est
 
 **En bref**
 
-- Le soleil de demain ne s’affiche plus le soir comme un conseil.
+- Le graphique du soleil compare la pièce sans soleil et avec le soleil : l’écart est ce qu’il apporte.
 - Le graphique montre où est « maintenant ».
+
+### Améliorations
+
+- **Deux courbes pour le soleil** : « sans soleil » en pointillés, « avec le soleil » en couleur, et la phrase « +1,4 °C grâce au soleil vers 17 h ».
+- **Un soleil qui n’apporte presque rien n’est plus dessiné** (moins de 0,3 °C), même en mode « Toujours » : la pièce qui se réchauffe parce que la journée est douce n’est plus attribuée au soleil.
+- **« maintenant » sous le premier point** de la courbe : elle se lit comme ce qui arrive, pas comme le passé. Les heures du lendemain disent « demain ».
 
 ### Corrections
 
-- **Le soir, plus de « le soleil va réchauffer la pièce ».** Le graphique du soleil n’est utile que si le soleil arrive dans les 3 heures. Sinon il ne s’affiche qu’en mode « Toujours », titré « soleil demain 8 h », sans « inutile de chauffer ».
-- **« maintenant » sous le premier point** de la courbe : elle se lit comme ce qui arrive, pas comme le passé.
-- Les heures du lendemain disent « demain » (« au plus haut 20,2 °C vers demain 18 h 30 »).
-- La phrase du soleil ne répète plus deux fois la même température.
+- **Le soir, plus de « le soleil va réchauffer la pièce ».** Le soleil n’est un conseil que s’il arrive dans les 3 heures. Sinon il ne s’affiche qu’en mode « Toujours », titré « soleil demain 8 h », sans « inutile de chauffer ».
 
 ### Après la mise à jour
 

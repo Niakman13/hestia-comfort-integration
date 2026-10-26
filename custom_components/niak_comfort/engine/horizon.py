@@ -6,7 +6,8 @@ follows the advice of the moment:
 - « cool »: a hot room, summer nights. Shut against opened by NADIR's rule (engine/night.py): when to open, the
   coolness left for tomorrow's peak, the sunny hours to keep shut;
 - « air »: an airing asked while it is cold outside. What the room loses, and when it is back, thanks to its walls;
-- « sun »: a cool room the sun will warm by itself. Only the forecast curve: no gesture, a reason not to heat;
+- « sun »: a cool room the sun will warm by itself. The room without the sun and with it: what the sun brings, a reason
+  not to heat;
 - « dry »: a damp room. The humidity without airing and with the airing advised, now or at the better moment.
 
 Two subjects at most: the temperature (one kind at a time, the season decides) and the humidity. The first one is the
@@ -130,8 +131,12 @@ def sunny(model, start, series, *, mass, sun, heated, minimum=None):
         return None
     after = [r for r in base if r["time"] > top["time"]]
     low = min(after, key=lambda r: r["ti"]) if after else None
-    return _shape("temperature", "sun", base, None, "ti", warm[:1], (),
+    # The same room in the shade: the gap between the two curves is what the sun brings.
+    shade = _simulate(model, start, series, mass=mass, sun=None, opened=lambda t: 0.0, heated=heated)
+    most = max(range(len(base)), key=lambda i: base[i]["ti"] - shade[i]["ti"])
+    return _shape("temperature", "sun", shade, base, "ti", warm[:1], (),
                   {"top": _r(top["ti"]), "top_time": top["time"].isoformat(),
+                   "gain": _r(base[most]["ti"] - shade[most]["ti"]), "gain_time": base[most]["time"].isoformat(),
                    # A room under its minimum: the sun spares the heating; otherwise it only warms.
                    "cold": minimum is not None and start["ti"] < minimum,
                    "night": _r(low["ti"]) if low else None, "night_time": low["time"].isoformat() if low else None})
@@ -159,7 +164,7 @@ def trend(model, start, series, *, mass, sun, heated):
 def _change(subject, start):
     """What the gesture changes on the drawing, in the subject's unit."""
     r = subject["result"]
-    return {"cool": lambda: r.get("gain"), "air": lambda: r.get("drop"), "sun": lambda: r["top"] - start["ti"],
+    return {"cool": lambda: r.get("gain"), "air": lambda: r.get("drop"), "sun": lambda: r.get("gain"),
             "dry": lambda: r["without"] - r["with"]}[subject["kind"]]() or 0.0
 
 
@@ -203,6 +208,9 @@ def build(assessment, model, current, hours, now, *, minimum, mass=None, sun=Non
         later = drying.get("later") or {}
         at = datetime.fromisoformat(later["time"]) if shown == "drying_later" and later.get("time") else now
         humidity = dry(model, start, series, mass=mass, sun=sun, heated=heated, at=at, minutes=int(drying["minutes"]))
+    # A sun that brings almost nothing is not drawn at all: two curves on top of each other say nothing.
+    if temperature and temperature["kind"] == "sun" and temperature["result"]["gain"] < KEEP["sun"]:
+        temperature = None
     out = [s for s in (temperature, humidity) if s]
     if humidity and shown in DRY_REASONS:
         out = [humidity] + [s for s in out if s is not humidity]
