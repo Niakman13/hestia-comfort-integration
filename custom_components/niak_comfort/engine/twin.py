@@ -4,7 +4,7 @@ Every half hour of the past is one sample: the indoor temperature and water cont
 the sun on the station, how long a window stood open and how long the heating ran. Two small models are
 fitted on them, pulled toward an ordinary room while little is known:
 
-- temperature: ΔTi = a·(Te−Ti) + b·sun + c·heating + d·open·(Te−Ti) + f·far·(Te−Ti) + x·(Tb−Ti) + e
+- temperature: ΔTi = a·(Te−Ti) + b·sun + c·heating + d·open·(Te−Ti) + f·far·(Te−Ti) + x·(Tb−Ti) + z·(Tm−Ti) + e
 - water:       ΔW  = n·(We−W) + m·open·(We−W) + k·far·(We−W) + y·(Wb−W) + g
 
 `a` gives the room's inertia, `b` what the sun brings, `d` what an open window adds, `e` the steady
@@ -13,6 +13,9 @@ gains of the household, `n` the air that leaks in with every window shut, `g` th
 for the kitchen): `f` and `k` say how much less, or more, they reach this room's sensor than its own windows.
 `Tb` and `Wb` are the temperature and water of that other room, as measured there: `x` and `y` say how fast the two
 airs mix. Each room keeps its own measures; what the other one weighs here is learned, never set by hand.
+`Tm` is the walls, floors and furniture (the « mass », after NADIR's two-node model): it follows the air slowly, over
+MASS_HOURS, and gives back what it stored. `z` says how strongly: a short airing cools the air, not the mass, and the
+room warms back once shut; a whole night cools the mass too. `z` starts at zero: until it is learned, nothing changes.
 The twin only observes: nothing here decides an advice.
 """
 from bisect import bisect_right
@@ -26,7 +29,9 @@ KEEP_DAYS = 30
 # Before the twin speaks: three days of samples.
 READY_SAMPLES = 144
 # An ordinary room, the prior every fit is pulled toward while samples are few.
-PRIOR_T = {"a": HOURS / 30, "b": 0.0, "c": 0.0, "d": 0.3, "e": 0.0, "f": 0.0, "x": 0.0}
+PRIOR_T = {"a": HOURS / 30, "b": 0.0, "c": 0.0, "d": 0.3, "e": 0.0, "f": 0.0, "x": 0.0, "z": 0.0}
+# Hours for the mass to follow the air (NADIR: 2 to 5 h, from EN ISO 13790's heat capacities): its time constant.
+MASS_HOURS = 3.0
 PRIOR_W = {"n": HOURS / 3, "m": 0.3, "g": 0.0, "k": 0.0, "y": 0.0}
 # Weight of the prior, in samples: one day of half hours.
 PRIOR_STRENGTH = 48
@@ -188,10 +193,27 @@ def _beside(r):
     return (r[11], r[12]) if len(r) > 12 and isinstance(r[11], (int, float)) and isinstance(r[12], (int, float)) else None
 
 
-def _thermal_x(r):
+def mass_after(mass, ti):
+    """The mass half an hour later: a slow follower of the air."""
+    return mass + (ti - mass) * HOURS / MASS_HOURS
+
+
+def _masses(rows):
+    """The mass under each sample, followed from the first one; a gap in the samples starts it again."""
+    out, mass, last, air = [], None, None, None
+    for r in rows:
+        when = datetime.fromisoformat(r[0])
+        mass = r[1] if mass is None or when - last != STEP else mass_after(mass, air)
+        out.append(mass)
+        air, last = r[1], when
+    return out
+
+
+def _thermal_x(r, mass=None):
     _, ti, _, te, _, sun, opened, heated = r[:8]
     b = _beside(r)
-    return [te - ti, sun, heated, opened * (te - ti), 1.0, _far(r) * (te - ti), b[0] - ti if b else 0.0]
+    return [te - ti, sun, heated, opened * (te - ti), 1.0, _far(r) * (te - ti), b[0] - ti if b else 0.0,
+            (mass if mass is not None else ti) - ti]
 
 
 def _water_x(r):
@@ -204,7 +226,15 @@ def _water_x(r):
 def fit(rows):
     """The twin's coefficients, with the number of samples they rest on."""
     pairs = list(_pairs(rows or []))
-    thermal = _solve([(_thermal_x(r), s[1] - r[1]) for r, s in pairs], PRIOR_T, PRIOR_STRENGTH)
+    masses = dict(zip((r[0] for r in rows or []), _masses(rows or [])))
+    data = [(_thermal_x(r, masses.get(r[0])), s[1] - r[1]) for r, s in pairs]
+    thermal = _solve(data, PRIOR_T, PRIOR_STRENGTH)
+    # The mass pulls the air toward itself, never away, at most half the gap in half an hour. Out of these bounds, the
+    # other coefficients are fitted again with the mass held at its bound, so that they do not carry its noise.
+    held = min(0.5, max(0.0, thermal["z"]))
+    if held != thermal["z"]:
+        others = {k: v for k, v in PRIOR_T.items() if k != "z"}
+        thermal = {**_solve([(x[:-1], y - held * x[-1]) for x, y in data], others, PRIOR_STRENGTH), "z": held}
     water = _solve([(_water_x(r), absolute(s[1], s[2]) - absolute(r[1], r[2])) for r, s in pairs], PRIOR_W, PRIOR_STRENGTH)
     # Keep the coefficients physical: a room follows the outside, never runs away from it.
     thermal["a"] = min(1.0, max(HOURS / 500, thermal["a"]))
@@ -250,15 +280,17 @@ def air_after(air, value, minutes, opened=1.0):
     return air["base"] + (value - air["base"]) * (1 - share) ** steps + air["g"] * steps
 
 
-def step(model, ti, hi, te, he, sun=0.0, opened=0.0, heated=0.0, far=0.0, beside=None):
+def step(model, ti, hi, te, he, sun=0.0, opened=0.0, heated=0.0, far=0.0, beside=None, mass=None):
     """The room half an hour later, from now and the coming inputs; `far`: only the other room's windows open;
-    `beside`: (temperature, humidity) measured in the room sharing its air."""
+    `beside`: (temperature, humidity) measured in the room sharing its air; `mass`: the walls' temperature (`mass_after`
+    follows it), the air's own when unknown."""
     t, w = model["thermal"], model["water"]
     gap = te - ti
     water, outside = absolute(ti, hi), absolute(te, he)
     mixing_t = t.get("x", 0.0) * (beside[0] - ti) if beside else 0.0
     mixing_w = w.get("y", 0.0) * (absolute(*beside) - water) if beside else 0.0
-    nti = ti + t["a"] * gap + t["b"] * sun + t["c"] * heated + (t["d"] * opened + t.get("f", 0.0) * far) * gap + mixing_t + t["e"]
+    stored = t.get("z", 0.0) * (mass - ti) if mass is not None else 0.0
+    nti = ti + t["a"] * gap + t["b"] * sun + t["c"] * heated + (t["d"] * opened + t.get("f", 0.0) * far) * gap + mixing_t + stored + t["e"]
     nw = max(0.1, water + (w["n"] + w["m"] * opened + w.get("k", 0.0) * far) * (outside - water) + mixing_w + w["g"])
     return nti, min(100.0, nw / absolute(nti, 100) * 100)
 
@@ -279,12 +311,16 @@ def replay(model, rows, hours=24):
     if len(recent) < MIN_REPLAYED * (count + 1):
         return None
     ti, hi = recent[0][1], recent[0][2]
+    # The mass starts where the measures left it, then follows the simulated air.
+    mass = dict(zip((r[0] for r in rows), _masses(rows))).get(recent[0][0], ti)
     curve, errors_t, errors_h = [], [], []
     for row, nxt in zip(recent, recent[1:]):
         if datetime.fromisoformat(nxt[0]) - datetime.fromisoformat(row[0]) != STEP:
-            ti, hi = nxt[1], nxt[2]
+            ti, hi, mass = nxt[1], nxt[2], nxt[1]
             continue
-        ti, hi = step(model, ti, hi, row[3], row[4], row[5], row[6], row[7], _far(row), _beside(row))
+        before = ti
+        ti, hi = step(model, ti, hi, row[3], row[4], row[5], row[6], row[7], _far(row), _beside(row), mass)
+        mass = mass_after(mass, before)
         curve.append({"time": nxt[0], "temperature": round(ti, 1), "measured_temperature": nxt[1],
                       "humidity": round(hi), "measured_humidity": round(nxt[2])})
         errors_t.append(abs(ti - nxt[1]))
@@ -324,7 +360,9 @@ def summary(rows, now, current=None):
     ready = model["samples"] >= READY_SAMPLES
     result = {"version": 1, "status": "ready" if ready else "learning", "samples": model["samples"], "days": days,
               "open_samples": model["open_samples"], "model": model, "room": describe(model) if ready else None,
-              "precision": replay(model, rows) if ready else None, "next_hour": None, "computed_at": now.isoformat()}
+              "precision": replay(model, rows) if ready else None, "next_hour": None, "computed_at": now.isoformat(),
+              # The walls' temperature at the last sample, for what the twin predicts from now.
+              "mass": round(_masses(rows)[-1], 2) if rows else None}
     result["next_hour"] = next_hour(result, current)
     return result
 
@@ -454,7 +492,7 @@ def _learned(assessment, twin, current=None, openings=0):
     # « Refermez »: what the open window takes from the room in half an hour, as this room has learned it.
     if closing and ready["temperature"] and model and current and None not in (current.get(k) for k in ("ti", "hi", "te", "he")):
         after, _ = step(model, current["ti"], current["hi"], current["te"], current["he"], current.get("sun", 0.0), 1.0,
-                        current.get("heated", 0.0), beside=current.get("beside"))
+                        current.get("heated", 0.0), beside=current.get("beside"), mass=twin.get("mass"))
         if abs(after - current["ti"]) >= 0.2:
             return {"now": round(current["ti"], 1), "after": round(after, 1), "minutes": int(HOURS * 60), "measure": "temperature",
                     "openings": openings, "closing": True, **basis}
@@ -474,7 +512,7 @@ def _learned(assessment, twin, current=None, openings=0):
     if (reason == "cooling_possible" and ready["temperature"] and model and current
             and None not in (current.get(k) for k in ("ti", "hi", "te", "he"))):
         after, _ = step(model, current["ti"], current["hi"], current["te"], current["he"], current.get("sun", 0.0), 1.0, 0.0,
-                        beside=current.get("beside"))
+                        beside=current.get("beside"), mass=twin.get("mass"))
         if after < current["ti"] - 0.2:
             return {"now": round(current["ti"], 1), "after": round(after, 1), "minutes": int(HOURS * 60), "measure": "temperature",
                     "openings": openings, **basis}
@@ -486,7 +524,10 @@ def next_hour(twin, current):
     if not twin or twin.get("status") != "ready" or not current or None in (current.get(k) for k in ("ti", "hi", "te", "he")):
         return None
     ti, hi = current["ti"], current["hi"]
+    mass = twin.get("mass")
     for _ in range(2):
+        before = ti
         ti, hi = step(twin["model"], ti, hi, current["te"], current["he"], current.get("sun", 0.0), current.get("opened", 0.0),
-                      current.get("heated", 0.0), current.get("far", 0.0), current.get("beside"))
+                      current.get("heated", 0.0), current.get("far", 0.0), current.get("beside"), mass)
+        mass = mass_after(mass, before) if mass is not None else None
     return {"temperature": round(ti, 1), "humidity": round(hi)}

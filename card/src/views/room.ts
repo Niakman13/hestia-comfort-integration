@@ -251,6 +251,10 @@ export function facts(v:View):Fact[] {
       :w?.thermostat?.off_reason&&w.thermostat.off_reason!=='manual'?`chauffage arrêté par le thermostat (${offWords[w.thermostat.off_reason]??'automatique'}), il repartira seul`
       :w?.heating==='on'?'le chauffage s’en charge':w?.warming?`${deg(ti)}, elle se réchauffe d’elle-même`
       :w?.heating==='off'?`${deg(ti)}, un peu sous votre plage · chauffage coupé`:`${deg(ti)}, sous votre plage`});
+  // Tonight, simulated on the room's twin (after NADIR): the hours to open and what it leaves for tomorrow's peak.
+  const plan=f?.night,warm=a.needs.includes('cool')||a.needs.includes('precool')||['cooling_possible','precool_possible','precool_later','cooling_unavailable'].includes(a.reason);
+  if(plan?.worth&&warm&&plan.windows.length){const w0=plan.windows[0];
+    out.push({ic:'clock',title:'Cette nuit',text:`ouvrez de ${hour(w0.start)} à ${hour(w0.end)} · ${number(plan.gain)} °C de mieux demain au plus chaud${plan.humid?' · air humide':''}`});}
   // A window no contact of the room watches, seen open by the thermostat (its temperature drop).
   if(f?.thermostat?.window)out.push({ic:'window',title:'Fenêtre ouverte',text:`vue par ${f.thermostat.name}`});
   // Words for everyone: the risk and where it comes from, never a percentage against a wall.
