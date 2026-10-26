@@ -23,7 +23,8 @@ Un thermomètre donne un chiffre. Il ne dit pas s’il faut ouvrir la fenêtre.
 
 Niak Confort compare dedans et dehors, et répond aux questions de tous les jours :
 
-- **Il fait chaud** : faut-il ouvrir maintenant, ce soir, ou garder fermé ?
+- **Il fait chaud** : faut-il ouvrir maintenant, ce soir, ou garder fermé ? Et combien gagnerez-vous demain ?
+- **Il fait frais** : faut-il vraiment rallumer le chauffage, ou est-ce juste un degré de moins ?
 - **C’est humide** : aérer va-t-il vraiment assécher la pièce ? Combien de temps ?
 - **L’air est lourd** : le CO₂ monte, c’est le moment d’aérer.
 - **Il pleut, le vent souffle** : quelle fenêtre refermer ?
@@ -36,7 +37,7 @@ Toute la famille lit la même carte. Elle ne parle que quand un geste aide vraim
 
 - Home Assistant **2026.10** ou plus récent.
 - Un thermomètre dans chaque pièce à suivre. C’est le seul capteur obligatoire.
-- En plus, si vous en avez : humidité, CO₂, contacts de fenêtres, thermostat, VMC, purificateur, volets (Adaptive Cover Pro reconnu tout seul), présence.
+- En plus, si vous en avez : humidité, CO₂, contacts de fenêtres, thermostat (Versatile Thermostat reconnu tout seul), VMC, purificateur, volets (Adaptive Cover Pro reconnu tout seul), présence.
 - Pour l’extérieur : [Niak Weather](https://github.com/Niakman13/niak-weather-integration) (conseillé) ou vos propres capteurs.
 
 ## Installation
@@ -89,7 +90,7 @@ Tout se règle dans le panneau **Niak** de la barre latérale, onglet **Confort*
 
 ![Le panneau Niak, onglet Confort : l’accueil, avec chaque pièce, ses mesures et son apprentissage](docs/images/niak-comfort-panneau.png)
 
-- **Vue d’ensemble** : l’état du logement, ce qui reste à régler, puis **Vos pièces** : les mesures de chacune, son apprentissage et un bouton **Modifier**. **Ajouter une pièce** se fait sur place.
+- **Vue d’ensemble** : l’état du logement, ce qui reste à régler, puis **Vos pièces** : les mesures de chacune, son apprentissage et un bouton **Modifier**. **Ajouter une pièce** se fait sur place. La section **Extensions** montre ce que Niak a reconnu (Niak Weather, Versatile Thermostat, Adaptive Cover Pro) et dans quelles pièces.
 - **Réglages généraux** : l’extérieur, commun à toutes les pièces. Avec Niak Weather, ses mesures sont seulement affichées.
 - Une pièce se règle en six onglets : Température, Ouvertures, Air intérieur, Présence, Chauffage, La pièce.
 
@@ -101,10 +102,22 @@ Niak Confort fonctionne seul. Avec [Niak Weather](https://github.com/Niakman13/n
 
 - l’extérieur se règle en un clic : la station de votre lieu Weather ;
 - il anticipe : « Refermez avant la pluie », « Ouvrez vers 22 h », rafraîchir la nuit avant une journée chaude ;
+- il prévoit la nuit quand une pièce a chaud : « Cette nuit : ouvrez de 22 h à 7 h · 1,8 °C de mieux demain au plus chaud ». Il tient compte des murs, qui gardent la fraîcheur, et du soleil qui entre quand on relève les volets. Une idée inspirée de [NADIR](https://github.com/solal3105/NADIR2), de Solal Gendrin ;
 - il tient compte des vigilances et des orages ;
 - l’air du dehors suit la source choisie dans Weather (Atmo France ou une station WAQI). Si Atmo France tombe en panne, Confort garde l’indice du jour. Il faut Niak Weather 2.5.7 ou plus récent.
 
 Les deux briques partagent le panneau **Niak** et la même charte. L’**Accueil Niak** montre l’état de chacune.
+
+## Avec Versatile Thermostat
+
+Le chauffage d’une pièce est un [Versatile Thermostat](https://github.com/jmcollin78/versatile_thermostat) ? Niak le reconnaît tout seul, dès que vous le choisissez dans l’onglet **Chauffage** :
+
+- sa température confort peut servir de minimum à la pièce : une seule consigne à régler, sur le thermostat ;
+- Niak sait pourquoi il est arrêté. Seul un arrêt à la main donne « Rallumez le chauffage ». Arrêté par une fenêtre ouverte ou par lui-même, il repartira seul : la carte l’explique ;
+- en éco, hors-gel ou absence, une pièce plus fraîche est voulue : Niak ne demande rien ;
+- la fenêtre ouverte qu’il détecte est signalée, même sans contact sur la fenêtre.
+
+Sans Versatile Thermostat, « Rallumez le chauffage » attend que la pièce soit nettement sous son minimum (1 °C par défaut, réglable) depuis 30 minutes. Niak ne commande rien. Il faut Niak Confort 1.5.0 ou plus récent.
 
 ## Avec Adaptive Cover Pro
 
