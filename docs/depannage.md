@@ -145,6 +145,13 @@ Ouvrez un ticket sur [GitHub](https://github.com/Niakman13/niak-comfort-integrat
 - les versions de Home Assistant, Niak Confort et Niak Weather ;
 - la pièce concernée et ce que dit la carte ;
 - une capture de **Détails** ;
+- le **fichier de diagnostic** de la pièce (ci-dessous) ;
 - les lignes des journaux qui contiennent « niak ».
 
 Retirez vos informations personnelles avant d’envoyer.
+
+### Le fichier de diagnostic
+
+**Paramètres → Appareils et services → Niak Comfort**, puis, sur la ligne de la pièce, **⋮ → Télécharger les diagnostics**. Glissez le fichier dans le ticket.
+
+Il contient ce que Niak calcule pour la pièce : le conseil tel que la carte le reçoit, les mesures lues, l’état brut de chaque capteur choisi (et du thermostat), ce que la pièce a appris et les premières heures de prévision. Les coordonnées de la maison sont retirées. Les noms des capteurs restent : relisez-le si certains vous semblent trop personnels.

@@ -7,6 +7,7 @@
 
 ### Améliorations
 
+- **Télécharger les diagnostics** : Paramètres → Appareils et services → Niak Comfort → ⋮ sur une pièce. Un fichier à joindre à un ticket : le conseil tel que la carte le reçoit, l’état brut des capteurs et du thermostat, ce que la pièce a appris, les premières heures de prévision. Les coordonnées de la maison sont retirées.
 - **La jauge de température montre toujours votre plage.** La barre se colore : bleu sous la plage (trop frais), vert dans la plage, orange au-dessus (trop chaud). Le min–max des 24 h devient un trait fin à deux extrémités, posé dessus sans la cacher.
 
 ### Corrections
