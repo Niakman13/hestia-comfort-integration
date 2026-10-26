@@ -15,15 +15,14 @@ const hold=(action:string,full=false)=>group('Appui long','mdi:gesture-tap-hold'
   dropdown('hold_action',full?[['none','Rien'],['page','Ouvrir une page']]:[['popup','Ouvrir la carte complète en fenêtre'],['page','Ouvrir une page'],['none','Rien']]),
   ...(action==='page'?[{name:'hold_path',selector:{text:{}}}]:[])]);
 const chipOptions:[string,string][]=[['temperature','Température'],['humidity','Humidité'],['co2','CO₂']];
-const markOptions:[string,string][]=[['band','Votre plage'],['day','Min–max 24 h'],['out','Dehors']];
-const bannerOptions:[string,string][]=[['remedies','Équipements en marche (purificateur, VMC)'],['later','Meilleur moment plus tard']];
-const horizonOptions:[string,string][]=[['temperature','Température'],['humidity','Humidité']];
 const topicOptions:[string,string][]=[['humidity','Humidité'],['heating','Chauffage'],['sun','Soleil'],['windows','Fenêtres et aération'],['equipment','Équipements (purificateur, VMC)'],
   ['household','Personnes et alarme'],['forecast','Prévisions (cette nuit)'],['learning','Apprentissage (dernière aération)']];
 const detailOptions:[string,string][]=[['range','Plage de confort'],['slot','Créneau conseillé'],['windows','Fenêtres'],['shutters','Volets'],['people','Présence, personnes, alarme'],
   ['drying','Séchage et buée'],['trend','Tendance'],['sensors','Capteurs et sources']];
 /** The four sections of the card, in its order: the same number in the editor and on the card. */
-const banner=(expanded=true)=>group('1 · Bandeau conseil','mdi:numeric-1-circle',[toggle('rotate'),choices('banner_blocks',bannerOptions),choices('scale_marks',markOptions),toggle('show_horizon'),choices('horizon_subjects',horizonOptions)],expanded);
+// The advice itself is the card: it is never switched off. The scale and the graph are shown or not, nothing more.
+const scaleToggle={name:'show_scale',title:'Échelle de température',selector:{boolean:{}}};
+const banner=(expanded=true)=>group('1 · Bandeau conseil','mdi:numeric-1-circle',[toggle('rotate'),scaleToggle,toggle('show_horizon')],expanded);
 const insights=()=>group('2 · À savoir','mdi:numeric-2-circle',[toggle('show_insights'),choices('insight_topics',topicOptions),{name:'insight_max',selector:{number:{min:1,max:8,mode:'slider'}}}]);
 const details=()=>group('4 · Détails techniques','mdi:numeric-4-circle',[toggle('show_details'),choices('detail_rows',detailOptions),toggle('details_open')]);
 /** One choice per air: rooms open onto each other are offered once, as « Salon · Cuisine ». A card already set on one of
@@ -100,8 +99,8 @@ export class ComfortEditor extends LitElement {
     const head=[...rooms,{name:'title',selector:{text:{}}},format];
     const rubriques=choices('modules',MODULES.filter(m=>m!=='temperature').map(m=>[m,moduleLabels[m]]));
     if(f==='mini')return [...head,look(),group('Contenu de la ligne','mdi:view-list-outline',[choices('mini_values',chipOptions)],true),hold(action)];
-    if(f==='alert')return [...head,look(),group('Bandeau','mdi:view-day-outline',[choices('banner_blocks',bannerOptions),toggle('rotate')],true),hold(action)];
-    if(f==='measures')return [...head,look(),group('Contenu','mdi:view-grid-outline',[rubriques,choices('scale_marks',markOptions)],true),hold(action)];
+    if(f==='alert')return [...head,look(),group('Bandeau','mdi:view-day-outline',[toggle('rotate')],true),hold(action)];
+    if(f==='measures')return [...head,look(),group('Contenu','mdi:view-grid-outline',[rubriques,scaleToggle],true),hold(action)];
     // The tile keeps its spirit: the advice and its chips, then what unfolds; each section keeps its own settings.
     if(f==='tile'||f==='intermediate')return [...head,
       group('Tuile : bandeau et partie dépliable','mdi:view-day-outline',[choices('tile_chips',chipOptions),choices('tile_blocks',[['scale','Échelle de température'],['horizon','Graphique « Prochaines heures »'],['measures','Mesures'],['details','Détails techniques']])],true),
@@ -116,6 +115,8 @@ export class ComfortEditor extends LitElement {
     // The scale needs the temperature module; the lists replace the older on/off switches they cover.
     if(Array.isArray(v.modules))next.modules=[...(v.modules as string[]),...((this.config.modules??MODULES).includes('temperature')?['temperature']:[])];
     if('scale_marks' in v)delete next.show_scale;
+    // The scale is now shown or not: the switch replaces a list of marks kept from before.
+    if('show_scale' in v)delete next.scale_marks;
     if('modules' in v&&!('show_measures' in v))delete next.show_measures;
     this.config=cleanConfig(tidy(next,this.config as unknown as Record<string,unknown>,this.defaults(this.config)) as unknown as Config);
     this.dispatchEvent(new CustomEvent('config-changed',{detail:{config:this.config},bubbles:true,composed:true}));
@@ -130,7 +131,7 @@ export class ComfortEditor extends LitElement {
     if(!this.config||!this.hass)return nothing;
     const c=this.config;
     const data={...this.defaults(c),hold_action:c.hold_action??(c.hold_path?'page':'popup'),
-      ...c,scale_marks:c.scale_marks??(c.show_scale===false||c.format==='measures'?[]:[...SCALE_MARKS]),modules:(c.modules??MODULES).filter(m=>m!=='temperature')};
+      ...c,show_scale:c.show_scale??!(c.scale_marks?.length===0||(c.scale_marks===undefined&&c.format==='measures')),modules:(c.modules??MODULES).filter(m=>m!=='temperature')};
     const one=this.entries?.length===1?this.entries[0]:this.entries?.find(e=>e.entry_id===c.entry_id);
     return html`${this.entries===null?html`<p class="note warn">L’intégration Niak Confort ne répond pas : vérifiez qu’elle est installée et chargée.</p>`
       :this.entries?.length===0?html`<p class="note warn">Aucune pièce : ouvrez <a href="/niak/confort" @click=${follow}>Niak Confort</a> dans la barre latérale pour en ajouter une.</p>`
