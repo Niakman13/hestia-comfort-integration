@@ -1,3 +1,21 @@
+## 1.7.6 — « Au mieux » et un « À savoir » par ordre d’importance
+
+**En bref**
+
+- Quand une mesure sort de votre plage sans que rien ne puisse l’améliorer, la pastille dit « Au mieux », en bleu, au lieu de nommer le problème.
+- « À savoir » commence par ce qui compte le plus, et le met en évidence.
+
+### Améliorations
+
+- **Nouvelle pastille « Au mieux »** : « Rien à faire » ne s’affiche plus à côté de « Air humide » ou « Légèrement humide ». L’humidité est dite dans « À savoir » (« Air humide · au-dessus de votre plage »), avec la raison juste en dessous. « Tout va bien » reste pour une pièce entièrement dans sa plage.
+- **« À savoir » par ordre d’importance** : où ouvrir, puis un risque (moisissure, en jaune), puis ce qui sort de votre plage, puis pourquoi rien de mieux n’est possible, les appareils en marche, et enfin la dernière aération. La première ligne est mise en avant.
+- **Un froid déjà pris en charge passe après** un problème laissé seul (ici l’humidité).
+- **« Murs à surveiller » reste dans la pastille** : c’est un risque pour le logement.
+
+### Corrections
+
+- **Salon · Cuisine** : une seule ligne d’humidité, celle de la pièce la plus humide, nommée (« Air humide · Cuisine »), comme sa tuile.
+
 ## 1.7.5 — Une pièce fraîche dit vrai
 
 **En bref**
