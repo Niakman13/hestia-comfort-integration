@@ -76,3 +76,4 @@ main.wide{max-width:1280px}
 
 /* Following the HA theme: some themes give divider-color the page background (Nordic), so outlines come from the socle's --nk-border and frames from its card surface. */
 :host([data-appearance=ha]){--nc-border:var(--nk-border);--nc-frame:var(--nk-surface)}
+.ac-ext{display:block;font-weight:400;margin:2px 0 0}
