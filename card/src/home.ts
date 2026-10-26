@@ -5,7 +5,7 @@ import charte from './ui/niak-charte.css';
 import roomStyle from './ui/room.css';
 import {html as h2} from 'lit';
 import {isView,number,numeric} from './view';
-import {advice,needs,scale,fold,hero,tileSummary,pills,moreInfo,type CardState,type Advice,type Slide} from './views/room';
+import {advice,needs,coldSettled,scale,fold,hero,tileSummary,pills,moreInfo,type CardState,type Advice,type Slide} from './views/room';
 import {cleanHomeConfig,homeAction,type Connection,type HomeAssistant,type HomeConfig,type HomeFormat,type Unsubscribe,type View,type Level} from './types';
 import {icon} from './ui/icons';
 
@@ -86,15 +86,29 @@ export class NiakComfortHomeCard extends LitElement {
       const group=this.rooms.filter(x=>x.entry_id===r.entry_id||(r.volume??[]).some(p=>p.entry_id===x.entry_id));
       const lead=group.find(x=>x.title===r.volume_name?.split(' · ')[0])??r;
       group.forEach(x=>hidden.add(x.entry_id));
+      if(group.length>1)this.groups.set(lead.entry_id,group);
       out.push(group.length>1?{...lead,title:lead.volume_name??lead.title}:r);
     }
     return out;
+  }
+  /** Rooms sharing one air, by the room that leads their tile. */
+  private groups=new Map<string,View[]>();
+  /** What a tile says is out, for one room or for rooms sharing one air: like « À savoir », the humidity of the most
+   * humid room first, once, and a cold the heating takes care of last. */
+  private tileNeeds(r:View):string[]{
+    const group=this.groups.get(r.entry_id);
+    if(!group)return needs(r);
+    const deg=(x:View)=>x.assessment.features?.humidity?.degree??0,humid=/ (légèrement |très )?(humide|sec)$|trop humide$/;
+    const all=[...group].sort((x,y)=>deg(y)-deg(x)).flatMap(x=>needs(x)),cold=/^(un peu|trop) frais$/;
+    const settled=group.every(x=>coldSettled(x.assessment));
+    const one=all.filter((n,i)=>all.indexOf(n)===i).filter((n,i,list)=>!humid.test(n)||list.findIndex(m=>humid.test(m))===i);
+    return settled?[...one.filter(n=>!cold.test(n)),...one.filter(n=>cold.test(n))]:one;
   }
   private roomTile(r:View){
     const t=numeric(r.observations.indoor_temperature),a=r.assessment,lvl=a.level as Level,unheated=a.features?.season?.heated===false;
     const note=t===null?'mesure indisponible':['action','urgent'].includes(lvl)?advice(r).title.toLowerCase():unheated?'non chauffée':'dans votre plage';
     // Like the room card: what is out of range is always said; the orange frame only with a gesture to make.
-    const out=['action','urgent'].includes(lvl),need=t===null?[]:needs(r);
+    const out=['action','urgent'].includes(lvl),need=t===null?[]:this.tileNeeds(r);
     return h2`<button class=${'nc-tile'+(out?' out':need.length?' out soft':'')} data-level=${unheated&&!out?'neutral':lvl} @click=${(e:Event)=>{const id=r.observations.indoor_temperature?.source;if(id)moreInfo(e,id);else this.open(r);}} title=${'Détails : '+r.title}><div class="nc-tile-h"><span class="nw-label">${r.title}</span></div><b>${number(t)}<small>°C</small></b><em>${need.length?h2`<niak-note-ticker .notes=${need} .still=${this.config?.animations===false||this.config?.rotate===false}></niak-note-ticker>`:note}</em></button>`;
   }
   private details(h:Home){
