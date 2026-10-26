@@ -1,6 +1,6 @@
 import {html,nothing,LitElement,type TemplateResult} from 'lit';
 import {property,state} from 'lit/decorators.js';
-import {SCALE_MARKS,CHIPS,TILE_BLOCKS,type Config,type View,type Level,type Format,type BannerBlock,type Chip} from '../types';
+import {SCALE_MARKS,CHIPS,TILE_BLOCKS,DETAIL_ROWS,INSIGHT_TOPICS,type Config,type View,type Level,type Format,type BannerBlock,type Chip} from '../types';
 import {numeric,number,heatingLabels,coverageText,windFrom,sourceLabel,needs as needLabels,constraintLabels,shortWhy} from '../view';
 import {icon} from '../ui/icons';
 import {horizonBox} from './horizon';
@@ -308,11 +308,20 @@ export function facts(v:View):Fact[] {
   return out.slice(0,4);
 }
 /** The « À savoir » box, under the advice; nothing when there is nothing to know. */
-export function factBox(v:View,partners:View[]=[]):TemplateResult|typeof nothing {
+/** The topic of an « À savoir » line, from its title: what the card's settings keep or leave out. */
+const TOPICS:Record<string,string>={'Humidité':'humidity','Air sec':'humidity','Humidité élevée':'humidity','Air humide dehors':'humidity','Vapeur':'humidity',
+  'Pièce fraîche':'heating','Pièce chaude':'heating','Soleil':'sun','Fenêtres':'windows','Autres fenêtres':'windows','Fenêtre ouverte':'windows',
+  'Aération':'windows','Aération d’hiver':'windows','Pièce vide':'household','Nuit':'household','Purificateur':'equipment','VMC':'equipment',
+  'Cette nuit':'forecast','Dernière aération':'learning'};
+export function factBox(v:View,partners:View[]=[],config:Config={type:'custom:niak-comfort-card'}):TemplateResult|typeof nothing {
+  if(config.show_insights===false)return nothing;
+  const kept=new Set<string>(config.insight_topics??INSIGHT_TOPICS);
   // One card for one air: « Même air » goes without saying, and a line said by two rooms is said once.
   // The card's room cannot be read: its banner sends to « Mesures », the other rooms' lines would explain no advice.
   if(unreadable(v))return nothing;
-  const seen=new Set<string>(),list=[v,...partners].flatMap(r=>facts(r)).filter(f=>(!partners.length||f.title!=='Même air')&&!seen.has(f.title)&&!!seen.add(f.title)).slice(0,4);
+  // A line without a known topic (learning, the same air) follows « learning ».
+  const seen=new Set<string>(),list=[v,...partners].flatMap(r=>facts(r)).filter(f=>kept.has(TOPICS[f.title]??'learning'))
+    .filter(f=>(!partners.length||f.title!=='Même air')&&!seen.has(f.title)&&!!seen.add(f.title)).slice(0,config.insight_max??4);
   return list.length?html`<div class="nc-facts"><div class="nw-label">À savoir</div><ul>${list.map(f=>html`<li>${icon(f.ic)}<span><b>${f.title}</b> · ${f.text}</span></li>`)}</ul></div>`:nothing;
 }
 /** Why the room that leads a shared air asks for its gesture, after its name. */
@@ -477,32 +486,34 @@ const tileBody=(t:Tile)=>html`<div class="nc-tile-h"><span class="nc-ic">${icon(
 const row=(t:string,x:string)=>html`<li><b>${t}</b><span> · ${x}</span></li>`;
 /** One short line per fact: the long explanations of 0.9 become « title · fact ». */
 export function details(v:View,config:Config):TemplateResult[] {
+  // Each line has its key: the « Détails techniques » section shows those the card keeps (config.detail_rows).
+  const rows=new Set<string>(config.detail_rows??DETAIL_ROWS),add=(key:string,t:string,x:string)=>{if(rows.has(key))out.push(row(t,x));};
   const a=v.assessment,f=a.features,mods=new Set(config.modules??[]),out:TemplateResult[]=[];
   const season=f?.season;
-  if(season)out.push(row('Votre plage de confort',`${number(season.minimum)} à ${number(season.maximum)} °C${!season.heated?' · pièce non chauffée':''}${season.name?' · '+(SEASON_NAMES[season.name]??season.name):season.known?(season.weight===0?' · hiver':season.weight===1?' · été':' · entre-saisons'):' · saison non calculée'}`));
-  if(a.action==='ouvrir'&&a.open_first?.length)out.push(row('Ouvrez d’abord',a.open_first.map(id=>v.names?.[id]??id).join(' et ')));
+  if(season)add('range','Votre plage de confort',`${number(season.minimum)} à ${number(season.maximum)} °C${!season.heated?' · pièce non chauffée':''}${season.name?' · '+(SEASON_NAMES[season.name]??season.name):season.known?(season.weight===0?' · hiver':season.weight===1?' · été':' · entre-saisons'):' · saison non calculée'}`);
+  if(a.action==='ouvrir'&&a.open_first?.length)add('windows','Ouvrez d’abord',a.open_first.map(id=>v.names?.[id]??id).join(' et '));
   // Only a complete slot is said: an hour and a temperature, never « NaN h ».
   const slotOk=!!a.slot&&typeof a.slot.temperature==='number'&&!Number.isNaN(new Date(a.slot.time).getTime());
-  if(slotOk)out.push(row(a.slot!.kind==='open'?'Ouverture possible':'Fermeture conseillée',`${hour(a.slot!.time)} · ${number(a.slot!.temperature)} °C${a.slot!.wind_bearing!=null?' · '+windFrom(a.slot!.wind_bearing):''}`));
+  if(slotOk)add('slot',a.slot!.kind==='open'?'Ouverture possible':'Fermeture conseillée',`${hour(a.slot!.time)} · ${number(a.slot!.temperature)} °C${a.slot!.wind_bearing!=null?' · '+windFrom(a.slot!.wind_bearing):''}`);
   const silent=a.missing.filter(k=>!!v.observations[k]);
-  if(silent.length)out.push(row('Ne répond pas',silent.map(k=>sourceLabel(v,k)).join(', ')));
-  if(a.unverified?.length&&a.action!=='fermer')out.push(row('Sans capteur',a.unverified.map(k=>k==='rain'?'pluie':'qualité de l’air dehors').join(', ')));
+  if(silent.length)add('sensors','Ne répond pas',silent.map(k=>sourceLabel(v,k)).join(', '));
+  if(a.unverified?.length&&a.action!=='fermer')add('sensors','Sans capteur',a.unverified.map(k=>k==='rain'?'pluie':'qualité de l’air dehors').join(', '));
   const vent=f?.ventilation;
-  if(mods.has('windows')&&vent){if(vent.opened_minutes!=null)out.push(row('Ouvert depuis',`${number(vent.opened_minutes)} min`));}
+  if(mods.has('windows')&&vent){if(vent.opened_minutes!=null)add('windows','Ouvert depuis',`${number(vent.opened_minutes)} min`);}
   if(mods.has('shutters'))for(const s of f?.shutters??[]){if(s.mode==='none'||(!s.advice&&!s.manual_override&&s.position==null))continue;
     const from=clock(s.sun_start),to=clock(s.sun_end);
     // In plain words: who sets it, where it stands, when the sun comes. Adaptive Cover Pro's own wording is left out.
-    out.push(row(v.names?.[s.entity_id]??'Volet',[s.manual_override?'réglé à la main':s.advice==='close'?'à fermer':s.advice==='open'?'à ouvrir':s.driver&&(s.driving??s.automatic===true)?'piloté par Adaptive Cover Pro':'rien à faire',s.driver&&s.detection===false?'reprise à la main non détectée':'',s.driver&&s.climate===false?'mode climat coupé':'',
-      s.position!=null?`ouvert à ${number(s.position)} %`:'',s.driver&&s.target!=null&&s.target!==s.position?`visé ${number(s.target)} %`:'',from&&to?`soleil de ${from} à ${to}`:''].filter(Boolean).join(' · ')));}
-  if(f?.people&&(f.people.home.length||f.people.away.length))out.push(row('Personnes',[f.people.home.length?`${f.people.home.join(', ')} à la maison`:'',f.people.away.length?`${f.people.away.join(', ')} ${f.people.away.length>1?'absents':'absent'}`:''].filter(Boolean).join(' · ')));
-  if(f?.household?.alarm)out.push(row('Alarme',`${f.household.alarm.name} · ${({disarmed:'désarmée',armed_away:'absence',armed_home:'à la maison',armed_night:'nuit',armed_vacation:'vacances'} as Record<string,string>)[f.household.alarm.state]??f.household.alarm.state}`));
-  if(mods.has('air')&&f?.presence&&f.presence.state!=='not_configured')out.push(row('Présence',{occupied:'quelqu’un est là',empty:'pièce vide',leaving:`personne depuis ${f.presence.minutes??0} min (vide après ${f.presence.delay??5} min)`,unknown:'inconnue'}[f.presence.state]??''));
+    add('shutters',v.names?.[s.entity_id]??'Volet',[s.manual_override?'réglé à la main':s.advice==='close'?'à fermer':s.advice==='open'?'à ouvrir':s.driver&&(s.driving??s.automatic===true)?'piloté par Adaptive Cover Pro':'rien à faire',s.driver&&s.detection===false?'reprise à la main non détectée':'',s.driver&&s.climate===false?'mode climat coupé':'',
+      s.position!=null?`ouvert à ${number(s.position)} %`:'',s.driver&&s.target!=null&&s.target!==s.position?`visé ${number(s.target)} %`:'',from&&to?`soleil de ${from} à ${to}`:''].filter(Boolean).join(' · '));}
+  if(f?.people&&(f.people.home.length||f.people.away.length))add('people','Personnes',[f.people.home.length?`${f.people.home.join(', ')} à la maison`:'',f.people.away.length?`${f.people.away.join(', ')} ${f.people.away.length>1?'absents':'absent'}`:''].filter(Boolean).join(' · '));
+  if(f?.household?.alarm)add('people','Alarme',`${f.household.alarm.name} · ${({disarmed:'désarmée',armed_away:'absence',armed_home:'à la maison',armed_night:'nuit',armed_vacation:'vacances'} as Record<string,string>)[f.household.alarm.state]??f.household.alarm.state}`);
+  if(mods.has('air')&&f?.presence&&f.presence.state!=='not_configured')add('people','Présence',{occupied:'quelqu’un est là',empty:'pièce vide',leaving:`personne depuis ${f.presence.minutes??0} min (vide après ${f.presence.delay??5} min)`,unknown:'inconnue'}[f.presence.state]??'');
   // Where the drying promise comes from: this room's own airings, or an ordinary room until one is seen.
-  if(mods.has('humidity')&&f?.drying)out.push(row('Séchage',f.drying.openings?`appris sur ${f.drying.openings} aération${f.drying.openings>1?'s':''}`:'estimé, aucune aération observée'));
-  if(mods.has('humidity')&&f?.humidity&&f.humidity.condensation_risk!==null)out.push(row('Buée',f.humidity.condensation_risk?'risque estimé':'aucun risque estimé'));
+  if(mods.has('humidity')&&f?.drying)add('drying','Séchage',f.drying.openings?`appris sur ${f.drying.openings} aération${f.drying.openings>1?'s':''}`:'estimé, aucune aération observée');
+  if(mods.has('humidity')&&f?.humidity&&f.humidity.condensation_risk!==null)add('drying','Buée',f.humidity.condensation_risk?'risque estimé':'aucun risque estimé');
   const tr=f?.trends;
-  if(mods.has('temperature')&&tr&&(tr.indoor!=null||tr.outdoor!=null))out.push(row('Tendance',[tr.indoor!=null?`dedans ${tr.indoor>0?'+':''}${number(tr.indoor)} °C/h`:'',tr.outdoor!=null?`dehors ${tr.outdoor>0?'+':''}${number(tr.outdoor)} °C/h`:''].filter(Boolean).join(', ')));
-  if(!silent.length)out.push(row('Sources',coverageText(v)));
+  if(mods.has('temperature')&&tr&&(tr.indoor!=null||tr.outdoor!=null))add('trend','Tendance',[tr.indoor!=null?`dedans ${tr.indoor>0?'+':''}${number(tr.indoor)} °C/h`:'',tr.outdoor!=null?`dehors ${tr.outdoor>0?'+':''}${number(tr.outdoor)} °C/h`:''].filter(Boolean).join(', '));
+  if(!silent.length)add('sensors','Sources',coverageText(v));
   return out;
 }
 
@@ -567,7 +578,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
   const watched=[...own.map(t=>named(t,v.title)),...others.flatMap(o=>o.list.map(t=>named(t,o.title)))].filter(t=>(t.out&&!t.remedy)||tileClass(t).includes(' mute'));
   const grid=others.length?html`<div class="nw-label nc-room-label">${v.title}</div><div class="nc-tiles">${own.map(t=>tile(t,soft))}</div>${others.map(o=>o.list.length?html`<div class="nw-label nc-room-label">${o.title}</div><div class="nc-tiles">${o.list.map(t=>tile(t,soft))}</div>`:nothing)}`
     :html`<div class="nc-tiles">${list.map(t=>tile(t,soft))}</div>`;
-  const box=factBox(v,partners);
+  const box=factBox(v,partners,config);
   const detailList=html`<ul class="nc-list">${details(v,config)}</ul>${st.configure?html`<button class="nw-badge nc-configure" @click=${st.configure}>${icon('settings')}Configurer cette pièce</button>`:nothing}`;
   const scaleBox=sc?html`<div class="nc-sec nw-glass"><div class="nw-label">Température</div>${sc}</div>`:nothing;
   // « Prochaines heures » (engine/horizon.py): under the scale, the banner's subject first, the other one behind a tab.
