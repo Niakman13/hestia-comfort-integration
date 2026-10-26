@@ -58,6 +58,10 @@ class HeatingAdvice(unittest.TestCase):
         first = run(17, heating="heating")
         self.assertIn(run(17, first, NOW + timedelta(hours=1), heating="heating").level, ("calm", "neutral"))
 
+    def test_unknown_presence_still_asks_to_heat(self):
+        first = run(17, occupied=None)
+        self.assertEqual(run(17, first, NOW + timedelta(minutes=31), occupied=None).level, "action")
+
     def test_a_window_letting_in_warmer_air_is_not_closed(self):
         # 18.2 °C inside, 20.3 °C outside, window open: the outdoor air warms the room.
         values = {"indoor_temperature": 18.2, "outdoor_temperature": 20.3, "indoor_humidity": 60, "outdoor_humidity": 40,

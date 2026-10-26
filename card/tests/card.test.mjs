@@ -253,6 +253,27 @@ test('the banner carries a gesture or « Rien à faire »; what is worth knowing
   v.assessment={...v.assessment,reason:'within_comfort',features:{...v.assessment.features,air:{co2_status:'ok',pm25_status:'ok',voc_status:'ok',voc_unit:null,purifier:{on:true,speed:40},ventilation:{on:true,boost:false},coverage:'',message:''}}};
   assert.equal(slides(v).length,1);assert.deepEqual(facts(v).map(f=>f.title),['Purificateur','VMC']);
 });
+test('a cool room the heating takes care of is no problem on the banner, only in « À savoir »',()=>{
+  // 26 Oct., Chambre P at 18.7 °C for 19 °C, thermostat in comfort: « Un peu frais » beside « Rien à faire » read as « heat it ».
+  const v=fresh();
+  v.assessment={...v.assessment,reason:'heat_needed',level:'calm',action:'ok',needs:['heat'],constraints:[],
+    features:{...v.assessment.features,humidity:undefined,warmth:{occupied:true,heating:'on',slight:true}}};
+  let a=advice(v);
+  assert.equal(a.title,'Rien à faire');assert.equal(a.pill,undefined);assert.equal(a.disk,'check');
+  assert.equal(slides(v)[0].pill,'Tout va bien');
+  assert.deepEqual(facts(v).map(f=>f.title+' · '+plain(f.text)),['Un peu frais · le chauffage s’en charge']);
+  // Damp walls remain the room's problem: the pill names it, never the cold.
+  v.assessment.features.humidity={status:'high',degree:2,dew_point:null,incoming_relative:null,glass_temperature:null,condensation_risk:null,message:'',surface:88,mould:true,excess:0.2,source:'outside',reachable:75};
+  v.assessment.needs=['heat','dry'];
+  a=advice(v);assert.equal(a.title,'Rien à faire');assert.equal(a.pill,'Murs à surveiller');
+  // Beyond the tolerance with the heating off, the engine asks the gesture: no more « Rien à faire ».
+  v.assessment={...v.assessment,level:'action',features:{...v.assessment.features,humidity:undefined,warmth:{occupied:true,heating:'off',slight:false}}};
+  assert.equal(advice(v).title,'Rallumez le chauffage');
+  // Clearly cold with no heating known (a towel rail not yet linked): « Tout va bien » would be wrong.
+  v.assessment={...v.assessment,level:'calm',needs:['heat'],features:{...v.assessment.features,warmth:{occupied:true,heating:null,slight:false}}};
+  assert.equal(advice(v).pill,'Trop frais');
+  v.assessment.features.warmth.slight=true;assert.equal(advice(v).pill,undefined);
+});
 test('every banner title is a gesture or « Rien à faire »',()=>{
   const v=fresh(),GESTURE=/^(Aérez|Ouvrez|Refermez|Fermez|Gardez fermé|Lancez la VMC|Laissez ouvert|Rallumez le chauffage|Adaptez les volets|Aération en cours|Encore \d+ min|Vous pouvez refermer|Renouvelez|Vérifiez|Rien à faire|Mesures (absentes|en chargement)|Bilan partiel)/;
   const reasons=['within_comfort','rain_open_windows','opening_blocked','verify_exterior','air_needed','cooling_possible','drying_possible','exchange_harmful','cooling_unavailable','heat_needed','drying_unavailable','drying_later','drying_slow','ventilation_possible','incomplete_data','optional_air_change','gust_open_windows','short_air_change','sun_entering','rain_soon','precool_possible','precool_later','shared_volume','humid_outdoor','open_neutral','rehumidification_risk','shutter_protection'];
