@@ -10,6 +10,12 @@ import {horizonBox} from './horizon';
 const presetWord=(p:string|null)=>!p?'mode réduit':p.includes('frost')?'hors-gel':p.includes('away')?'absence':p.includes('eco')?'éco':p;
 const offWords:Record<string,string>={window:'fenêtre ouverte',auto_start_stop:'arrêt automatique',sleep:'veille',safety:'sécurité',central_mode:'mode central',inhibition:'délestage'};
 
+/** The banner's mood, which sets the ring and the light: « Au mieux » is calm, but not « Tout va bien ». */
+export const mood=(s:{level:Level;pill?:string}|undefined,level:Level)=>s?.pill==='Au mieux'?'best':s?.level??level;
+/** Each pill carries its mark, so states read apart without relying on colour alone. */
+const PILL_MARKS:Record<string,string>={'Tout va bien':'check','Au mieux':'best','Conseil optimisé':'flask','Trop frais':'temp','Démarrage':'clock','Capteurs muets':'mute','Un capteur muet':'mute','Plus tard':'clock'};
+const LEVEL_MARKS:Record<string,string>={calm:'check',benefit:'spark',action:'hand',urgent:'alert',neutral:'help'};
+export const pillMark=(pill:string,level:Level,learned=false)=>html`<span class="nc-mark">${icon(learned?'flask':PILL_MARKS[pill]??LEVEL_MARKS[level]??'info')}${pill}</span>`;
 export const pills:Record<Level,string>={calm:'Tout va bien',benefit:'À saisir',action:'Geste conseillé',urgent:'Attention',neutral:'À vérifier'};
 const hour=(iso:string)=>{const h=new Date(iso).getHours();return h===0?'minuit':h===12?'midi':h+' h';};
 /** « 15 h 20 », to the five minutes: when to shut before a coming rain. */
@@ -33,7 +39,7 @@ const NEED_DISKS:Record<string,string>={dry:'drop',heat:'temp',cool:'temp',air:'
 /** A cool room that asks no gesture is no problem to the person: the heating takes care of it, nobody is home, the
  * outdoor air or the room itself warms it, or it is within the tolerance. Only a room clearly cold with no heating
  * known keeps its « Trop frais »: Niak cannot say who warms it, and « Tout va bien » would be wrong. */
-const coldSettled=(a:View['assessment'])=>{const w=a.features?.warmth;
+export const coldSettled=(a:View['assessment'])=>{const w=a.features?.warmth;
   return !w||w.slight||w.heating!=null||!!w.thermostat||w.occupied===false||!!w.outdoor_warms||!!w.warming;};
 const SEASON_NAMES:Record<string,string>={spring:'printemps',summer:'été',autumn:'automne',winter:'hiver'};
 export function humidityLabel(v:View):string|null {
@@ -639,8 +645,8 @@ export function whyLines(v:View):TemplateResult {
 /** Hero shared by the room and home cards: name, « i », level pill, the gesture, the disk, then the scale. */
 export function hero(o:{name:string;level:Level;slides:Slide[];scaleLabel:string;scale:TemplateResult;st:CardState;why:TemplateResult;compact?:boolean;still?:boolean;small?:boolean;after?:TemplateResult|typeof nothing;graph?:TemplateResult|typeof nothing}):TemplateResult {
   const many=o.slides.length>1;
-  return html`<div class=${'nc-hero'+(o.small?' nc-compact':'')}>
-    <div class="nc-top"><h2>${o.name}</h2><button class="nw-info" aria-label="Pourquoi ce conseil ?" aria-expanded=${o.st.why} aria-controls=${o.st.uid+'-why'} @click=${()=>o.st.toggle('why')}>${icon('info')}</button><span class="nw-chip nc-level">${many?`${o.slides.length} conseils`:o.slides[0]?.learned?html`<span class="nc-learned">${icon('flask')}${o.slides[0].pill}</span>`:o.slides[0]?.pill??pills[o.level]}</span></div>
+  return html`<div class=${'nc-hero'+(o.small?' nc-compact':'')} data-mood=${mood(o.slides[0],o.level)}>
+    <div class="nc-top"><h2>${o.name}</h2><button class="nw-info" aria-label="Pourquoi ce conseil ?" aria-expanded=${o.st.why} aria-controls=${o.st.uid+'-why'} @click=${()=>o.st.toggle('why')}>${icon('info')}</button><span class="nw-chip nc-level">${many?`${o.slides.length} conseils`:pillMark(o.slides[0]?.pill??pills[o.level],o.slides[0]?.level??o.level,!!o.slides[0]?.learned)}</span></div>
     <niak-advice-ticker .slides=${o.slides} .still=${!!o.still}></niak-advice-ticker>
     <div class="nc-why" id=${o.st.uid+'-why'} ?hidden=${!o.st.why}>${o.why}</div>
     ${o.compact?nothing:html`<div class="nc-sec nw-glass"><div class="nw-label">${o.scaleLabel}</div>${o.scale}</div>`}
@@ -702,7 +708,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
     plage:s=>s==='humidity'?(hum?.minimum!=null&&hum?.maximum!=null?[hum.minimum,hum.maximum]:null):(season?[season.minimum,season.maximum]:null)});
   if(format==='mini'){
     const values=chipValues(v,config.mini_values??['temperature']),temp=values.find(c=>c.ic==='temp');
-    return html`<ha-card class="nc-c nc-line-card" data-level=${top}><div class="nc-disk" data-disk=${all[0]?.disk}>${icon(all[0]?.disk??'check')}</div>
+    return html`<ha-card class="nc-c nc-line-card" data-level=${top} data-mood=${mood(all[0],top)}><div class="nc-disk" data-disk=${all[0]?.disk}>${icon(all[0]?.disk??'check')}</div>
       <div class="nc-line-text"><span>${name}</span><b>${all[0]?.title}</b></div>${chipRow(values.filter(c=>c!==temp))}${temp?html`<span class="nc-line-value">${temp.text.replace(' °C','')}<small> °C</small></span>`:nothing}</ha-card>`;
   }
   if(format==='measures')
@@ -769,9 +775,9 @@ export class NiakAdviceTicker extends LitElement {
         <div class="nc-tk-head"><span class="nw-label">${many?'Conseils':list[0]?.pill&&list[0].level==='neutral'?'État':['action','urgent'].includes(list[0]?.level)?'Action à faire':'Conseil'}</span>${many?html`<span class="nc-tk-count">${i+1} sur ${list.length}</span>
           <span class="nc-bars">${list.map((s,k)=>html`<button type="button" aria-label=${`Conseil ${k+1} : ${s.title}`} aria-current=${k===i?'true':'false'} data-level=${s.level} class=${k<i?'done':k===i?(this.paused||this.calm?'done':'on'):''} @click=${()=>this.go(k)}><i></i></button>`)}</span>`:nothing}</div>
         <div class="nc-stack" aria-live=${this.paused?'polite':'off'}>${list.map((s,k)=>html`<div class=${'nc-slide'+(k===i?' on':k===this.previous?' out':'')} aria-hidden=${k===i?'false':'true'}>
-          ${many?html`<span class="nw-chip nc-slide-pill" data-level=${s.level}>${s.learned?html`<span class="nc-learned">${icon('flask')}${s.pill}</span>`:s.pill}</span>`:nothing}<p class="nc-advice">${s.title}</p>${s.line?html`<p class="nc-line">${s.line}</p>`:nothing}</div>`)}</div>
+          ${many?html`<span class="nw-chip nc-slide-pill" data-level=${s.level}>${pillMark(s.pill,s.level,!!s.learned)}</span>`:nothing}<p class="nc-advice">${s.title}</p>${s.line?html`<p class="nc-line">${s.line}</p>`:nothing}</div>`)}</div>
       </div>
-      <div class="nc-diskwrap nc-stack" aria-hidden="true">${list.map((s,k)=>html`<div class=${'nc-slide nc-diskslide'+(k===i?' on':k===this.previous?' out':'')} data-level=${s.level} ?data-learned=${!!s.learned}><div class="nc-disk" data-disk=${s.disk}>${icon(s.disk)}</div>${s.cap?html`<div class="nc-cap">${s.cap}</div>`:nothing}</div>`)}</div>
+      <div class="nc-diskwrap nc-stack" aria-hidden="true">${list.map((s,k)=>html`<div class=${'nc-slide nc-diskslide'+(k===i?' on':k===this.previous?' out':'')} data-level=${s.level} data-mood=${mood(s,s.level)} ?data-learned=${!!s.learned}><div class="nc-disk" data-disk=${s.disk}>${icon(s.disk)}</div>${s.cap?html`<div class="nc-cap">${s.cap}</div>`:nothing}</div>`)}</div>
     </div>`;
   }
 }
