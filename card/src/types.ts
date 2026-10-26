@@ -63,6 +63,7 @@ export interface Features {
  volume?:{lead:string;reason:string;action:string;assessment?:Partial<Assessment>&{reason:string};observations?:Record<string,Reading>};
  warmth?:{occupied:boolean|null;heating:'on'|'off'|null;chilly_since?:string|null;tolerance?:number;warming?:boolean;thermostat?:{name:string;preset:string|null;target:number|null;off_reason:string|null;lowered:boolean;reference:number|null}}|null;
  thermostat?:{name:string;window:boolean;preset:string|null;target:number|null;reference:number|null}|null;
+ night?:{windows:{start:string;end:string}[];minimum:{time:string;temperature:number}|null;peak:{time:string;outdoor:number;shut:number;aired:number}|null;gain:number;worth?:boolean;humid:boolean}|null;
  drying?:{minutes:number;now:number;after:number;gain:number;tau:number;openings:number;later:{minutes:number;now:number;after:number;gain:number;time:string}|null}|null;
  trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string};
  season?:{known:boolean;weight:number|null;outdoor_mean:number|null;minimum:number;maximum:number;heated:boolean;

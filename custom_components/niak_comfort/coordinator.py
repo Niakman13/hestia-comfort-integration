@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, LEARNING_REFRESH_SECONDS, OPEN_DEBOUNCE_SECONDS, SEASON_REFRESH_SECONDS, SOURCES, STARTUP_GRACE_SECONDS, VIEW_VERSION
 from .engine.assessment import Opening, Settings, Sun, assess
-from .engine import feedback, habits, learning, sunlight, thermostat as thermostats, twin
+from .engine import feedback, habits, learning, night, sunlight, thermostat as thermostats, twin
 from .engine.volume import arbitrate
 from .engine.sources import normalize, Reading
 from .configuration import DATA_CONFIG
@@ -355,6 +355,11 @@ class ComfortCoordinator(DataUpdateCoordinator):
         # The room's own learning, once optimal, gives the advised gesture its predicted result.
         summary = feedback.summarize(self.feedback, now)
         own.setdefault("features", {})["learned"] = twin.learned_advice(own, self.twin, current, (self.drying_model or {}).get("openings", 0), summary)
+        # Tonight, simulated on the room's own twin (engine/night.py): when opening cools, what it leaves for tomorrow.
+        learned_twin = self.twin or {}
+        own["features"]["night"] = night.plan(learned_twin.get("model") if learned_twin.get("status") == "ready" else None,
+                                              current, outlook.get("hours") or [], now, minimum=self.settings.minimum,
+                                              mass=learned_twin.get("mass"), sun=self._sun_ahead())
         assessment = self._settle(own)
         self._track(assessment, current, now)
         learned = self.twin or {}
@@ -790,6 +795,18 @@ class ComfortCoordinator(DataUpdateCoordinator):
         sun = self._sun()
         light = solar or 0.0
         return (twin.on_facades(light, sun.elevation, sun.azimuth, self._facades()) if sun else light) / 1000
+
+    def _sun_ahead(self):
+        """The sun on the room's windows at a forecast time, in kW/m² as the twin learned it: the clear sky, on the
+        station's own scale, times what the forecast sky lets through."""
+        latitude, longitude, facades = self.hass.config.latitude, self.hass.config.longitude, self._facades()
+        scale = (self.sun_shade or {}).get("scale") or 1.0
+        def at(when, hour):
+            elevation, azimuth = twin.sun_position(when, latitude, longitude)
+            sky = sunlight.sky_factor(hour)
+            light = sunlight.clear_sky(when, latitude, longitude) * scale * (1.0 if sky is None else sky)
+            return (twin.on_facades(light, elevation, azimuth, facades) if facades else light) / 1000
+        return at
 
     def _sun(self):
         state = self.hass.states.get("sun.sun")
