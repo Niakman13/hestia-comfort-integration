@@ -52,8 +52,9 @@ def _simulate(model, start, series, *, mass, sun, opened, heated):
 def _shape(subject, kind, rows_base, rows_gesture, key, bands=(), extra=(), result=None):
     unit = "%" if key == "hi" else "°C"
     return {"subject": subject, "kind": kind, "unit": unit, "start": rows_base[0]["time"].isoformat(), "step_minutes": 30,
-            "base": [_r(r[key]) for r in rows_base],
-            "gesture": [_r(r[key]) for r in rows_gesture] if rows_gesture else None,
+            # Two decimals for the temperature: a smooth curve, not steps of a tenth.
+            "base": [_r(r[key], 2 if key == "ti" else 1) for r in rows_base],
+            "gesture": [_r(r[key], 2 if key == "ti" else 1) for r in rows_gesture] if rows_gesture else None,
             "bands": [[a.isoformat(), b.isoformat()] for a, b in bands], "extra": [[a.isoformat(), b.isoformat()] for a, b in extra],
             "result": result or {}}
 
@@ -105,7 +106,7 @@ def air(model, start, series, *, mass, sun, heated, at, minutes):
                   {"at": at.isoformat(), "minutes": minutes, "drop": _r(gaps[deepest]), "back": back.isoformat() if back else None})
 
 
-def sunny(model, start, series, *, mass, sun, heated):
+def sunny(model, start, series, *, mass, sun, heated, minimum=None):
     base = _simulate(model, start, series, mass=mass, sun=sun, opened=lambda t: 0.0, heated=heated)
     warm = _spans(base, lambda r: r["light"] >= SUNNY)
     if not warm:
@@ -119,6 +120,8 @@ def sunny(model, start, series, *, mass, sun, heated):
     low = min(after, key=lambda r: r["ti"]) if after else None
     return _shape("temperature", "sun", base, None, "ti", warm[:1], (),
                   {"top": _r(top["ti"]), "top_time": top["time"].isoformat(),
+                   # A room under its minimum: the sun spares the heating; otherwise it only warms.
+                   "cold": minimum is not None and start["ti"] < minimum,
                    "night": _r(low["ti"]) if low else None, "night_time": low["time"].isoformat() if low else None})
 
 
@@ -163,7 +166,7 @@ def build(assessment, model, current, hours, now, *, minimum, mass=None, sun=Non
                               minutes=int(span.get("max") or (5 if shown == "short_air_change" else 10)))
     if temperature is None and ("heat" in needs or (features.get("warmth") or {}).get("warming")
                                 or (features.get("season") or {}).get("group") == "between"):
-        temperature = sunny(model, start, series, mass=mass, sun=sun, heated=heated)
+        temperature = sunny(model, start, series, mass=mass, sun=sun, heated=heated, minimum=minimum)
     # The humidity: an airing to dry, now or at the better moment.
     humidity = None
     drying = features.get("drying") or {}
