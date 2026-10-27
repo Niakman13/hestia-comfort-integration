@@ -1,3 +1,53 @@
+## 1.7.16 — Le bilan du logement, un hub refait, des conseils qui disent vrai
+
+Tout ce qui est nouveau depuis la 1.6.0.
+
+**En bref**
+
+- **Le bilan du logement** : une note de confort de A à E pour le logement et pour chaque pièce, sur douze mois, selon la norme européenne EN 16798-1.
+- **Un hub refait** : un accueil Confort à lire, et des Réglages généraux complets, avec vos pièces et les extensions.
+- **Le graphique « Prochaines heures »** : la pièce sans le geste conseillé et avec, pour voir ce qu’il change.
+- **Des conseils plus justes** : pas d’aération la nuit ni quand attendre suffit, et un « À savoir » qui ne se contredit plus.
+
+### Nouveautés
+
+- **Bilan du logement**, dans le menu de gauche du hub, sous « Accueil » : la note du logement, la chaleur, l’humidité et l’air en graphiques, puis la fiche de chaque pièce (mois par mois, journée type l’hiver et l’été).
+- **Conseils du bilan** : chauffer une pièce restée trop froide, faire tourner la VMC ou aérer une pièce trop humide, ouvrir la nuit après un été chaud. Rien quand tout va bien.
+- **Carte « Niak Confort · bilan »** : en résumé ou complète, pour toute la famille.
+- **Extensions dans les Réglages généraux** : Niak Weather, Versatile Thermostat, Adaptive Cover Pro et Alarmo, chacune avec son utilité. Elle est liée, à lier (bouton « Lier ») ou à installer avec HACS. Celles que Confort ne lit pas encore peuvent être demandées en un appui.
+- **Versions et liens** sur l’accueil, comme dans Niak Weather, avec un bouton « Soutenez mon travail ».
+- **Graphique « Prochaines heures »** sous l’échelle : rafraîchir la nuit en été, aérer sans perdre la chaleur en hiver, laisser le soleil réchauffer, assécher. Il n’apparaît que quand le geste change vraiment la pièce, ou toujours si vous le choisissez.
+- **Les bonnes fenêtres à ouvrir** dans « À savoir », selon le vent, les façades et la taille des ouvrants. Une fenêtre où la pluie entrerait est écartée. Après 3 aérations, la carte préfère ce qu’elle a mesuré.
+- **« Ouvrez pour réchauffer »** quand il fait nettement plus doux dehors qu’une pièce fraîche.
+- **« Chauffez un peu plus »** quand des murs plus chauds suffisent à écarter la moisissure.
+- **« Rallumez le chauffage »** pour une pièce nettement froide, chauffage coupé, même sans détecteur de présence.
+
+### Améliorations
+
+- **Un accueil Confort à lire** : tout ce qui se modifie est dans Réglages généraux. Une pièce s’ouvre sur son bilan.
+- **Niak Weather recommandé** : le choix dit pourquoi les conseils sont meilleurs avec lui.
+- **Le menu du hub** : le logo Niak en tête, et « Vue d’ensemble » devient « Accueil ».
+- **Pas d’« Aérez » en pleine nuit** : la carte attend le réveil et dit à partir de quelle heure aérer.
+- **Aérer seulement si c’est mieux qu’attendre** : chaque pièce apprend à quelle vitesse elle sèche seule, fenêtres fermées.
+- **Une durée d’aération apprise** pièce par pièce, qui s’arrête dès que la pièce revient dans sa plage.
+- **Nouvelle pastille « Au mieux »**, en bleu, quand rien ne peut améliorer une mesure : plus de « Rien à faire » à côté d’un problème.
+- **« À savoir » par ordre d’importance**, la première ligne en avant, une seule ligne pour l’humidité.
+- **Une icône dans chaque pastille** et un anneau animé différent selon l’état : on reconnaît l’état d’un coup d’œil.
+- **Le soleil montré tel qu’il est** : sans soleil et avec, et seulement s’il arrive dans les 3 heures.
+- **COV plus calmes** : la carte juge la moyenne des 10 dernières minutes et laisse 45 minutes après une aération.
+- **L’éditeur de la carte suit ses quatre sections** : Bandeau conseil, À savoir, Mesures, Détails techniques.
+
+### Corrections
+
+- **Le degré d’humidité** reste dit sous « Lancez la VMC » ou « Aérez » : « Très humide », et non plus seulement « Humidité ».
+- **Les pièces au même air** (Salon · Cuisine) disent la même chose, avec la ligne de la plus humide.
+- **Plus de phrases opposées** dans « À savoir », ni de doublon VMC ou humidité.
+- **L’interrupteur « Échelle de température »** se coupe enfin.
+
+### Après la mise à jour
+
+- Redémarrez Home Assistant, puis rechargez la page (ou videz le cache de l’application mobile). Vos cartes gardent leurs réglages.
+
 ## 1.7.15 — Le bon degré d’humidité sous un conseil
 
 **En bref**
