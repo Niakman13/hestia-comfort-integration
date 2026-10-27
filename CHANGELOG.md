@@ -1,3 +1,27 @@
+## 1.7.11 — Le bilan du logement
+
+**En bref**
+
+- Une note de confort pour le logement et pour chaque pièce, de A à E, sur les douze derniers mois.
+- Elle suit la norme européenne EN 16798-1 : chaleur, humidité et air.
+- Des conseils seulement pour un problème qui dure, et une carte pour toute la famille.
+
+### Nouveautés
+
+- **Bilan du logement dans le hub** : un bouton sur l’accueil Confort ouvre la note du logement, un graphique par thème (chaleur, humidité, air) et la liste des pièces.
+- **La fiche de chaque pièce** : sa note, sa température mois par mois face à la zone de confort, une journée type l’hiver et l’été, son humidité et son CO₂ heure par heure.
+- **Des conseils mesurés** : chauffer une pièce restée sous 18 °C, faire tourner la VMC ou aérer une pièce au-dessus de 70 % d’humidité, ouvrir la nuit après un été chaud. Rien quand tout va bien.
+- **Carte « Niak Confort · bilan »** : en résumé (la note, les thèmes et le conseil le plus important) ou complète. Un appui ouvre le bilan entier, pour toute la famille.
+
+### À savoir
+
+- Il faut deux semaines de mesures pour noter un thème. Une pièce sans capteur de CO₂ n’est pas notée sur l’air, une pièce non chauffée pas sur la chaleur.
+- L’énergie viendra plus tard.
+
+### Après la mise à jour
+
+- Rechargez la page (ou videz le cache de l’application mobile) pour voir la nouvelle carte.
+
 ## 1.7.10 — Aérer quand ça sert vraiment
 
 **En bref**

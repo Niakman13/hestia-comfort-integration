@@ -1,5 +1,8 @@
+import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
-await build({entryPoints:['panel.ts'],bundle:true,format:'esm',target:'es2022',minify:true,
+// The review shared with the card (../card/src/review.ts) uses this package's Lit: one copy in the bundle.
+const lit={lit:fileURLToPath(new URL('./node_modules/lit',import.meta.url))};
+await build({entryPoints:['panel.ts'],bundle:true,format:'esm',target:'es2022',minify:true,alias:lit,
   outfile:'../custom_components/niak_comfort/frontend/panel.js',legalComments:'none',loader:{'.css':'text'}});
 // Shared « Niak » panel (socle), copied from niak-ecosysteme/socle/ by its copier.sh.
 await build({entryPoints:['socle/shell.ts'],bundle:true,format:'esm',target:'es2022',minify:true,
