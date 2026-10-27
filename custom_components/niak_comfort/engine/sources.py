@@ -103,3 +103,16 @@ def normalize(kind: str, value: object, unit: str | None = None, *,
     if kind == "voc":
         canonical_unit = unit
     return Reading(result, "valid", source, stamp, unit=canonical_unit)
+
+
+# A heating indicator (a valve, a relay, a « work state »): the words that say it runs, or that it rests.
+INDICATOR_RUNNING = ("on", "heating", "heat", "open", "opened", "true", "active", "running")
+INDICATOR_RESTING = ("off", "idle", "close", "closed", "false", "inactive", "stopped", "standby")
+
+
+def indicator_state(value: object) -> str | None:
+    """« heating » or « idle » from what an indicator says; None for anything else, never guessed."""
+    if isinstance(value, bool):
+        return "heating" if value else "idle"
+    word = str(value).strip().casefold() if value is not None else ""
+    return "heating" if word in INDICATOR_RUNNING else "idle" if word in INDICATOR_RESTING else None

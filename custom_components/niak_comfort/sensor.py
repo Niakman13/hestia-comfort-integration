@@ -76,6 +76,12 @@ class ComfortSensor(VerdictEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self):
+        if self.name_key == "heating_action":
+            # Where the state comes from: the thermostat's own action, or the indicator chosen beside it.
+            seen = (self.coordinator.data.get("observations") or {}).get("heating") or {}
+            source = {"indicator": "indicateur", "hvac_action": "hvac_action", "hvac_mode": "mode"}.get(seen.get("detail"))
+            indicator = self.coordinator.sources.get("heating_indicator")
+            return {"source": source, **({"indicateur": indicator} if indicator else {})} if seen else None
         if self.name_key == "reason":
             result = self.coordinator.data["assessment"]
             return {k: result[k] for k in ("needs", "constraints", "partial", "missing")}
