@@ -1,3 +1,13 @@
+## 1.7.15 — Le bon degré d’humidité sous un conseil
+
+**En bref**
+
+- Sous « Lancez la VMC » ou « Aérez », « À savoir » dit maintenant à quel point la pièce est humide.
+
+### Corrections
+
+- **Degré d’humidité** : une chambre à 78 % sous « Lancez la VMC » affichait seulement « Humidité ». Elle affiche « Très humide », comme sous sa mesure, et le conseil ne change pas.
+
 ## 1.7.14 — Un accueil à lire, des réglages complets
 
 **En bref**
