@@ -8,7 +8,7 @@ import {build} from 'esbuild';
 const root=new URL('../',import.meta.url),temp=await mkdtemp(join(tmpdir(),'niak-comfort-card-'));
 await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts','src/views/room.ts','src/views/horizon.ts','src/editor.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
   bundle:true,platform:'node',format:'esm',outExtension:{'.js':'.mjs'},logLevel:'silent'});
-const {cleanConfig,cleanHomeConfig,homeAction}=await import(pathToFileURL(join(temp,'types.mjs')));
+const {cleanConfig,cleanHomeConfig,homeAction,cleanReviewConfig}=await import(pathToFileURL(join(temp,'types.mjs')));
 const {isView,numeric,summary,readingStatus,coverageText,windFrom,evolutionLines,co2Metric,solarMetric}=await import(pathToFileURL(join(temp,'view.mjs')));
 const {LiveView}=await import(pathToFileURL(join(temp,'live.mjs')));
 const {roomChoices}=await import(pathToFileURL(join(temp,'editor.mjs')));
@@ -620,4 +620,10 @@ test('one air never says « refermer » and « laisser ouvert », nor « refroid
   assert.match(said,/Fenêtre ouverte · elle ne fait presque pas baisser l’humidité/);
   const flat=t=>t==null?'':typeof t!=='object'?String(t):t.strings?t.strings.map((x,i)=>x+(i<t.values.length?flat(t.values[i]):'')).join(''):'';
   assert.match(flat(advice(salon).line),/réchauffe la pièce/);
+});
+test('the review card is a summary unless « full » is chosen, its title trimmed',()=>{
+  assert.deepEqual(cleanReviewConfig({type:'custom:niak-comfort-review-card'}),{type:'custom:niak-comfort-review-card',format:'summary'});
+  assert.deepEqual(cleanReviewConfig({type:'custom:niak-comfort-review-card',format:'full',title:'  Maison  '}),{type:'custom:niak-comfort-review-card',format:'full',title:'Maison'});
+  assert.equal(cleanReviewConfig({type:'custom:niak-comfort-review-card',format:'grand',title:' '}).format,'summary');
+  assert.throws(()=>cleanReviewConfig({type:'custom:niak-comfort-card'}));
 });

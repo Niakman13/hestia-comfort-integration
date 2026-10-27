@@ -18,6 +18,7 @@ def async_setup_websocket(hass):
     websocket_api.async_register_command(hass, ws_entries)
     websocket_api.async_register_command(hass, ws_subscribe)
     websocket_api.async_register_command(hass, ws_home_subscribe)
+    websocket_api.async_register_command(hass, ws_review)
     for command in (ws_configuration, ws_discover, ws_overview, ws_weather, ws_validate, ws_save, ws_remove):
         websocket_api.async_register_command(hass, command)
 
@@ -134,6 +135,19 @@ def ws_view(hass, connection, msg):
         connection.send_error(msg["id"], "not_found", "Pièce Niak Comfort non chargée")
         return
     connection.send_result(msg["id"], entry.runtime_data.data)
+
+
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/review"})
+@websocket_api.async_response
+async def ws_review(hass, connection, msg):
+    """The comfort review of the home over the past year (review_source.py)."""
+    from .review_source import async_review
+    try:
+        result = await async_review(hass)
+    except Exception as err:  # the recorder may be missing or busy: the page says so instead of hanging
+        connection.send_error(msg["id"], "not_available", str(err))
+    else:
+        connection.send_result(msg["id"], result)
 
 
 from .configuration import get_configuration
