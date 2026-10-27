@@ -79,6 +79,8 @@
           "drying_unavailable": "Drying unavailable",
           "drying_later": "Drying later",
           "drying_slow": "Little drying here",
+          "drying_night": "Airing in the morning",
+          "drying_alone": "Drying by itself",
           "ventilation_possible": "Ventilation can dry",
           "warm_walls": "Warm the walls",
           "incomplete_data": "Incomplete information",

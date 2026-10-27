@@ -28,7 +28,7 @@ EQUIPMENT = ("none", "ventilation_off", "heating_off_home", "heating_off_away", 
 WINDOW_MODEL = {"ordinary": None, "renews_little": {"tau": 170.0, "residual": 1.5, "rebound": 0.4, "openings": 10}}
 # What the card shows as « Rien à faire » (card/src/views/room.ts, advice()): the banner only carries gestures,
 # the rest is said under it, in « À savoir ».
-CARD_QUIET = ("drying_unavailable", "drying_slow", "opening_blocked", "cooling_unavailable", "precool_later")
+CARD_QUIET = ("drying_unavailable", "drying_slow", "drying_night", "drying_alone", "opening_blocked", "cooling_unavailable", "precool_later")
 
 
 def nothing_to_do(a):

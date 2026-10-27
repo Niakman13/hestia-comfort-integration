@@ -295,6 +295,24 @@ test('« Au mieux » under « Rien à faire »: « À savoir » says first what 
     features:{...s.assessment.features,humidity:{status:'high',degree:2,lasting:false,measured:65,reachable:70},warmth:{occupied:true,heating:'on',slight:true,thermostat:{name:'Versatile Thermostat',preset:'frost',target:14,off_reason:null,lowered:true,reference:20}}}};
   assert.deepEqual(facts(s).map(f=>f.title+' · '+plain(f.text)),['Air humide · aérer refroidirait une pièce déjà fraîche','Un peu frais · thermostat en hors-gel : 14 °C visés']);
 });
+test('a room damp in the night waits for the morning: no « Aérez » at midnight',()=>{
+  // Chambre P, 27 Oct. 00:13: « Aérez 60 min » while everyone slept; the humidity came down alone by 3 h.
+  const v=fresh();v.observations.indoor_humidity={value:80,quality:'valid',source:'sensor.h'};
+  v.assessment={...v.assessment,reason:'drying_night',action:'attendre',level:'calm',needs:['dry'],constraints:[],
+    features:{...v.assessment.features,warmth:null,drying:{minutes:60,now:80,after:74,gain:6,tau:75,openings:6,morning:8,later:null},
+      humidity:{status:'high',degree:3,lasting:false,measured:80,reachable:70}}};
+  assert.equal(advice(v).title,'Rien à faire');assert.equal(plain(advice(v).line),'La nuit, aérez plutôt au réveil');
+  assert.equal(slides(v)[0].pill,'Au mieux');
+  assert.deepEqual(facts(v).map(f=>f.title+' · '+plain(f.text)),['Très humide · dès 8 h, si l’humidité reste haute']);
+});
+test('a room shedding its water by itself is not told to air',()=>{
+  const v=fresh();v.observations.indoor_humidity={value:80,quality:'valid',source:'sensor.h'};
+  v.assessment={...v.assessment,reason:'drying_alone',action:'attendre',level:'calm',needs:['dry'],constraints:[],
+    features:{...v.assessment.features,warmth:null,drying:{minutes:45,now:80,after:75,gain:5,tau:45,openings:6,alone:77,net:2,later:null},
+      humidity:{status:'high',degree:3,lasting:false,measured:80,reachable:70}}};
+  assert.equal(advice(v).title,'Rien à faire');assert.equal(plain(advice(v).line),'Elle sèche d’elle-même, fenêtres fermées');
+  assert.ok(facts(v).some(f=>plain(f.text)==='redescend seule : environ 77 % dans 45 min'),JSON.stringify(facts(v).map(f=>f.title+' · '+plain(f.text))));
+});
 test('damp walls: a remedy at work, a gesture, or a tip, never a fatality',()=>{
   const lines=v=>facts(v).map(f=>f.title+' · '+plain(f.text));
   const v=fresh();v.observations.indoor_humidity={value:68,quality:'valid',source:'sensor.h'};
@@ -311,7 +329,7 @@ test('damp walls: a remedy at work, a gesture, or a tip, never a fatality',()=>{
 });
 test('every banner title is a gesture or « Rien à faire »',()=>{
   const v=fresh(),GESTURE=/^(Aérez|Ouvrez|Refermez|Fermez|Gardez fermé|Lancez la VMC|Laissez ouvert|Rallumez le chauffage|Chauffez un peu plus|Adaptez les volets|Aération en cours|Encore \d+ min|Vous pouvez refermer|Renouvelez|Vérifiez|Rien à faire|Mesures (absentes|en chargement)|Bilan partiel)/;
-  const reasons=['within_comfort','rain_open_windows','opening_blocked','verify_exterior','air_needed','cooling_possible','drying_possible','exchange_harmful','cooling_unavailable','heat_needed','drying_unavailable','drying_later','drying_slow','ventilation_possible','incomplete_data','optional_air_change','gust_open_windows','short_air_change','sun_entering','rain_soon','precool_possible','precool_later','shared_volume','warm_walls','humid_outdoor','open_neutral','rehumidification_risk','shutter_protection'];
+  const reasons=['within_comfort','rain_open_windows','opening_blocked','verify_exterior','air_needed','cooling_possible','drying_possible','exchange_harmful','cooling_unavailable','heat_needed','drying_unavailable','drying_later','drying_slow','drying_night','drying_alone','ventilation_possible','incomplete_data','optional_air_change','gust_open_windows','short_air_change','sun_entering','rain_soon','precool_possible','precool_later','shared_volume','warm_walls','humid_outdoor','open_neutral','rehumidification_risk','shutter_protection'];
   for(const reason of reasons)for(const action of ['ok','ouvrir','fermer','attendre'])for(const level of ['calm','benefit','action','urgent','neutral']){
     v.assessment={...v.assessment,reason,action,level,features:{...v.assessment.features,warmth:{occupied:true,heating:'off'},humidity:{dew_point:null,incoming_relative:null,glass_temperature:null,condensation_risk:null,message:'',surface:90,mould:true,excess:2,source:'inside',reachable:70}}};
     const t=advice(v).title;assert.match(t,GESTURE,`${reason}/${action}/${level} → ${t}`);

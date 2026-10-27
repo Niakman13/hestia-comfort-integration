@@ -13,7 +13,7 @@ DESCRIPTIONS = (
     SensorEntityDescription(key="reason", translation_key="reason", device_class=SensorDeviceClass.ENUM,
                             options=["within_comfort", "rain_open_windows", "opening_blocked", "verify_exterior",
                                      "air_needed", "cooling_possible", "drying_possible", "exchange_harmful",
-                                     "cooling_unavailable", "heat_needed", "drying_unavailable", "drying_later", "drying_slow", "ventilation_possible", "incomplete_data", "optional_air_change",
+                                     "cooling_unavailable", "heat_needed", "drying_unavailable", "drying_later", "drying_slow", "drying_night", "drying_alone", "ventilation_possible", "incomplete_data", "optional_air_change",
                                      "gust_open_windows", "short_air_change", "sun_entering", "rain_soon", "precool_possible", "precool_later", "shared_volume", "humid_outdoor", "open_neutral", "rehumidification_risk", "alarm_open", "warm_walls"]),
     SensorEntityDescription(key="heating_action", translation_key="heating_action", device_class=SensorDeviceClass.ENUM,
                             options=["heating", "idle", "off", "cooling", "unknown", "not_configured"]),

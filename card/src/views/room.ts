@@ -27,7 +27,7 @@ export interface Advice {title:string;line:TemplateResult|string;disk:string;cap
   /** Learned on this room by its twin: the basis, said under the gesture (« d'après 31 aérations »). */ learned?:string;
   /** A state that is not advice (sensors loading or silent) brings its own words and colour. */ pill?:string;level?:Level}
 /** Reasons that only say « keep closed »: the engine lowers them to calm when nothing is open and no reflex is at stake. */
-const QUIET=['drying_unavailable','drying_slow','opening_blocked','cooling_unavailable','precool_later'];
+const QUIET=['drying_unavailable','drying_slow','drying_night','drying_alone','opening_blocked','cooling_unavailable','precool_later'];
 /** The banner: the gesture in a few words, then why in one line. The full explanation stays behind « i ». */
 /** The room cannot be read: its temperature or three sensors silent. The banner then says so, and nothing that
  * supposes an advice (a result, an airing) is said under it. One or two late secondary sensors leave the advice. */
@@ -138,6 +138,8 @@ function gesture(v:View):Advice {
     // known keeps « Trop frais »: someone could warm it, Niak cannot tell who.
     const unsettled=a.needs.includes('heat')&&!coldSettled(a),first=unsettled?'heat':a.needs.includes('dry')?'dry':a.needs[0];
     return {title:'Rien à faire',line:opened?html`Ouverte ou fermée, ${b('cela ne change rien')}`:a.reason==='opening_blocked'?html`Aérer ${b('n’est pas possible')} pour l’instant`
+      :a.reason==='drying_night'?html`La nuit, ${b('aérez plutôt au réveil')}`
+      :a.reason==='drying_alone'?html`Elle ${b('sèche d’elle-même')}, fenêtres fermées`
       :winterWarm?html`Ouvrir la ${b('refroidirait trop vite')} en hiver`:html`Ouvrir ${b('n’apporterait rien')} pour l’instant`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined,
       // The pill names what is out, never « plage »: that word is the temperature's range alone.
       ...(a.needs.length?{pill:unsettled?NEED_PILLS.heat:'Au mieux',level:(unsettled?'neutral':'calm') as Level,...(opened?{}:{disk:NEED_DISKS[first]??'info'})}:{})};}
@@ -324,6 +326,8 @@ export function facts(v:View):Fact[] {
   if(hum?.source==='outside'&&!hum.mould)out.push({ic:'drop',title:'Air humide dehors',text:['ouvrir','ok'].includes(a.action)&&['action','urgent','benefit'].includes(a.level)?'l’humidité restera la même':'aérer ne ferait pas baisser l’humidité'});
   else if(a.reason==='drying_unavailable')out.push({ic:'open',title:'Aération',text:'n’aiderait pas, l’air du dehors n’est pas plus sec'});
   else if(a.reason==='drying_slow')out.push({ic:'open',title:'Aération',text:'ferait à peine baisser l’humidité'});
+  else if(a.reason==='drying_alone'&&f?.drying?.alone!=null)out.push({ic:'drop',title:'Humidité',text:`redescend seule : environ ${Math.round(f.drying.alone)} % dans ${f.drying.minutes} min`});
+  else if(a.reason==='drying_night')out.push({ic:'clock',title:'Aération',text:f?.drying?.morning!=null?`dès ${f.drying.morning} h, si l’humidité reste haute`:'au réveil, si l’humidité reste haute'});
   if(hum?.local)out.push({ic:'drop',title:'Vapeur',text:'plus humide ici qu’à côté : cuisson ou douche'});
   if(air?.purifier?.on===true)out.push({ic:'fan',title:'Purificateur',text:'en marche, il filtre l’air'});
   if(air?.ventilation?.on===true)out.push({ic:'vmc',title:'VMC',text:a.needs.includes('dry')?'en marche, elle aide à assécher':'en marche'});

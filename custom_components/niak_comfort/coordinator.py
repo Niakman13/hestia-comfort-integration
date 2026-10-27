@@ -65,7 +65,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.humidity_ceiling = None
         self._season_failed = False
         # What airing really does in this room, learned from its past openings (engine/learning.py).
-        self.drying_model = learning.fit([])
+        self.drying_model = {**learning.fit([]), **learning.settling([])}
         # How fast each combination of openings renews the air, from the CO₂ (engine/airflow.py).
         self.flow_model = {}
         self._learning_due = None
@@ -577,6 +577,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         stored = await self._learning_store.async_load() or {}
         episodes = stored.get("episodes") if isinstance(stored.get("episodes"), list) else []
         flows = stored.get("flows") if isinstance(stored.get("flows"), list) else []
+        shed = stored.get("peaks") if isinstance(stored.get("peaks"), list) else []
         keys = ("indoor_temperature", "indoor_humidity", "outdoor_temperature", "outdoor_humidity")
         sources = {k: self._source_entity(k) for k in keys}
         co2 = self.sources.get("co2")
@@ -594,15 +595,18 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 if humidity:
                     fresh = await self.hass.async_add_executor_job(learning.episodes, contacts, *(points(sources[k]) for k in keys))
                     episodes = learning.merge(episodes, fresh, now)
+                    # The peaks of water the room sheds by itself, windows shut: what waiting brings.
+                    fresh = await self.hass.async_add_executor_job(learning.peaks, contacts, *(points(sources[k]) for k in keys))
+                    shed = learning.merge(shed, fresh, now)[-learning.KEEP_PEAKS:]
                 if co2:
                     fresh = await self.hass.async_add_executor_job(airflow.flows, contacts, points(co2))
                     flows = airflow.merge(flows, fresh, now)
-                await self._learning_store.async_save({"episodes": episodes, "flows": flows})
+                await self._learning_store.async_save({"episodes": episodes, "flows": flows, "peaks": shed})
             except Exception:  # the room then keeps what it learned before, or the default model
                 if not self._learning_failed:
                     self._learning_failed = True
                     self.logger.warning("Past openings could not be read for %s", self.config.get("name"), exc_info=True)
-        model, flow_model = learning.fit(episodes), airflow.fit(flows)
+        model, flow_model = {**learning.fit(episodes), **learning.settling(shed)}, airflow.fit(flows)
         # The twin only observes: the next periodic refresh shows it, no extra one that would delay a sensor change.
         await self._learn_twin(now)
         if model != self.drying_model or flow_model != self.flow_model:

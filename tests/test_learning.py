@@ -69,7 +69,84 @@ class LearningTests(unittest.TestCase):
         slow = learning.outcome({"tau": 165, "residual": 2.0, "rebound": 0.37}, 20.2, ai, ae)
         self.assertLess(theoretical, 55)
         self.assertGreater(slow["after"], 72)
-        self.assertEqual(slow["minutes"], 60)
+        # Five more minutes bring under half a point from the start: the airing would stop at once.
+        self.assertEqual(slow["minutes"], 10)
+
+
+class FirstHourTests(unittest.TestCase):
+    def test_a_window_forgotten_all_day_teaches_only_its_first_hour(self):
+        """Chambre P, 17 October: open eleven hours under a humid sky, it outweighed every real airing."""
+        long = learning.episodes(*room(tau=60, residual=1.5, openings=1, minutes=660))[0]
+        short = learning.episodes(*room(tau=60, residual=1.5, openings=1, minutes=60))[0]
+        self.assertEqual(long["n"], short["n"])
+        self.assertEqual(long["minutes"], 660)
+
+
+def shower_days(days=4, left=0.6):
+    """A room 20 °C, 3 g/m³ above an outdoor air of 12 °C 80 %, shut; each evening a shower adds 3 g/m³ that then
+    fades, `left` of it after two hours."""
+    outdoor = learning.absolute(12.0, 80.0)
+    rate = -math.log(left) / 120
+    humidity, start = [], T0 - timedelta(days=1)
+    for minute in range(0, (days + 1) * 24 * 60, 15):
+        when = start + timedelta(minutes=minute)
+        since = (minute - 21 * 60) % (24 * 60)
+        surplus = 3.0 * math.exp(-rate * since) if minute >= 21 * 60 and since < 12 * 60 else 0.0
+        humidity.append((when, (outdoor + 3.0 + surplus) / SATURATED_20 * 100))
+    shut = {"binary_sensor.window": [(start, False)]}
+    return shut, [(start, 20.0)], humidity, [(start, 12.0)], [(start, 80.0)]
+
+
+class SheddingTests(unittest.TestCase):
+    """What the room does by itself, windows shut: an airing is judged against waiting."""
+    def test_the_room_learns_how_fast_it_sheds_a_peak(self):
+        found = learning.peaks(*shower_days(left=0.6))
+        self.assertGreaterEqual(len(found), 3)
+        model = learning.settling(found)
+        self.assertAlmostEqual(model["usual"], 3.0, delta=0.2)
+        self.assertAlmostEqual(model["settle"], -120 / math.log(0.6), delta=25)
+
+    def test_nothing_is_assumed_before_three_peaks(self):
+        self.assertIsNone(learning.settling(learning.peaks(*shower_days(days=1)))["settle"])
+        self.assertEqual(learning.alone({**learning.DEFAULT}, 20.0, 15.0, 9.0, 45), 0.0)
+
+    def test_an_airing_is_judged_against_waiting(self):
+        """Chambre P, 26 October 23 h: a shower next door, 83 %; down to 72 % by 3 h, windows shut."""
+        model = {"tau": 45.0, "residual": 1.0, "rebound": 0.3, "openings": 6}
+        values = {"indoor_temperature": 20.0, "outdoor_temperature": 12.0, "indoor_humidity": 80.0,
+                  "outdoor_humidity": 80.0, "window:fen": False}
+        readings = {k: Reading(v, "valid", "fictitious") for k, v in values.items()}
+        quick = {**model, "settle": 40.0, "usual": 2.0, "peaks": 5}
+        result = assess(readings, context={"drying_model": quick})
+        self.assertEqual((result.action, result.reason), ("attendre", "drying_alone"))
+        self.assertLess(result.features["drying"]["alone"], 80.0)
+        self.assertLess(result.features["drying"]["net"], learning.MIN_GAIN)
+        # A room that keeps its water when shut is still told to air.
+        slow = {**model, "settle": 900.0, "usual": 2.0, "peaks": 5}
+        self.assertEqual(assess(readings, context={"drying_model": slow}).reason, "drying_possible")
+
+    def test_an_airing_asked_for_is_not_withdrawn_for_a_tenth_of_a_point(self):
+        model = {"tau": 45.0, "residual": 1.0, "rebound": 0.3, "openings": 6, "settle": 300.0, "usual": 2.0, "peaks": 5}
+        values = {"indoor_temperature": 20.0, "indoor_humidity": 78.0, "outdoor_temperature": 12.0, "window:fen": False}
+        reading = lambda h: {k: Reading(v, "valid", "fictitious") for k, v in {**values, "outdoor_humidity": h}.items()}
+        context = {"drying_model": model}
+        # The outdoor humidity at which the net gain falls under five points, found by stepping up.
+        outdoor = next(h / 10 for h in range(800, 1000) if assess(reading(h / 10), context=context).reason != "drying_possible")
+        asked = assess(reading(outdoor - 0.5), context=context)
+        self.assertEqual(asked.reason, "drying_possible")
+        self.assertEqual(assess(reading(outdoor), previous=asked, context=context).reason, "drying_possible")
+        self.assertNotEqual(assess(reading(outdoor), context=context).reason, "drying_possible")
+
+
+    def test_the_airing_stops_once_back_in_range_or_when_it_brings_next_to_nothing(self):
+        model = {"tau": 45.0, "residual": 1.0, "rebound": 0.3}
+        water, outdoor = learning.absolute(20.0, 74.0), learning.absolute(12.0, 80.0)
+        back = learning.airing_minutes(model, 20.0, water, outdoor, target=70.0)
+        knee = learning.airing_minutes(model, 20.0, water, outdoor)
+        self.assertLess(back, knee)
+        self.assertLessEqual(learning.outcome(model, 20.0, water, outdoor, target=70.0)["after"], 70.0)
+        # Past the knee, five more minutes bring under half a point.
+        self.assertLess(learning._gain(model, 20.0, water, outdoor, knee + 5) - learning._gain(model, 20.0, water, outdoor, knee), learning.KNEE)
 
 
 def wet_room(model=None, opened=False, hours=None, now=None):
@@ -88,7 +165,7 @@ class DryingAdviceTests(unittest.TestCase):
         result = wet_room()
         self.assertEqual((result.action, result.reason), ("ouvrir", "drying_possible"))
         self.assertGreaterEqual(result.features["drying"]["gain"], learning.MIN_GAIN)
-        self.assertEqual(result.features["ventilation"]["duration_minutes"], {"min": 35, "max": 45})
+        self.assertEqual(result.features["ventilation"]["duration_minutes"], {"min": 40, "max": 50})
 
     def test_a_room_that_barely_dries_is_not_told_to_open(self):
         result = wet_room(SLOW)
@@ -135,6 +212,26 @@ class DryingAdviceTests(unittest.TestCase):
         for h in hours:
             h["temperature"] = 12.0 if not 1 <= datetime.fromisoformat(h["time"]).astimezone(paris).hour < 6 else 4.0
         self.assertIsNone(learning.best_moment(model, 20.0, 13.0, 8.5, hours, now, zone=paris))
+
+    def test_a_room_damp_after_midnight_waits_for_the_morning(self):
+        """Chambre P, 27 October 00:13: « Aérez 60 min », 80 → 74 %; by 3 h it was down to 72 % by itself, shut."""
+        from zoneinfo import ZoneInfo
+        paris = ZoneInfo("Europe/Paris")
+        values = {"indoor_temperature": 20.5, "outdoor_temperature": 8.6, "indoor_humidity": 80.0,
+                  "outdoor_humidity": 88.0, "window:fen": False}
+        readings = {k: Reading(v, "valid", "fictitious") for k, v in values.items()}
+        model = {"tau": 75.0, "residual": 1.0, "rebound": 0.3, "openings": 6}
+        context = {"drying_model": model, "zone": paris, "season_name": "autumn"}
+        night = assess(readings, context=context, now=datetime(2026, 10, 26, 23, 13, tzinfo=timezone.utc))
+        self.assertEqual((night.action, night.reason), ("attendre", "drying_night"))
+        self.assertEqual(night.features["drying"]["morning"], 8)
+        self.assertIn("dry", night.needs)
+        # The same room in the afternoon is told to air.
+        day = assess(readings, context=context, now=datetime(2026, 10, 27, 14, 0, tzinfo=timezone.utc))
+        self.assertEqual((day.action, day.reason), ("ouvrir", "drying_possible"))
+        # A window already open at night keeps its own advice.
+        opened = {**readings, "window:fen": Reading(True, "valid", "fictitious")}
+        self.assertNotEqual(assess(opened, context=context, now=datetime(2026, 10, 26, 23, 13, tzinfo=timezone.utc)).reason, "drying_night")
 
     def test_a_forecast_far_from_the_station_announces_no_better_hour(self):
         now = datetime(2026, 10, 17, 14, 0, tzinfo=timezone.utc)
