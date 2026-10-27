@@ -14,6 +14,10 @@
 - L’apprentissage du chauffage suit l’indicateur : une pièce dont le thermostat ne dit pas s’il chauffe peut enfin atteindre « Optimal ».
 - Le guide explique comment « Chauffage observé » est calculé.
 
+### Corrections
+
+- Le graphique en anneau « Air » du Bilan du logement s’affiche en entier : il sortait de son cadre pendant son animation.
+
 ## 1.7.19 — Le graphique « Prochaines heures » enfin visible, un hub plus fluide
 
 **En bref**

@@ -215,7 +215,9 @@ export class ComfortReview extends LitElement {
  }
  private donut(parts:number[]){
   let at=0;const r=40,c=2*Math.PI*r,colors=[BLUE,AMBER_LIGHT,AMBER];
-  return svg`<svg viewBox="0 0 100 100" style="width:110px" role="img" aria-label="Répartition du temps selon la qualité de l’air">${parts.map((p,i)=>{const seg=svg`<circle class="ring" cx="50" cy="50" r=${r} fill="none" stroke=${colors[i]} stroke-width="14" stroke-dasharray=${`${c*p/100} ${c}`} stroke-dashoffset=${-c*at/100} transform="rotate(-90 50 50)"/>`;at+=p;return seg;})}</svg>`;
+    // Each part starts at the top by its offset (a quarter turn back), not by a rotate attribute: the animation turns the
+  // whole group, and a CSS rotation would replace the attribute and swing the parts around another centre.
+  return svg`<svg viewBox="0 0 100 100" style="width:110px;flex:none" role="img" aria-label="Répartition du temps selon la qualité de l’air"><g class="ring">${parts.map((p,i)=>{const seg=svg`<circle cx="50" cy="50" r=${r} fill="none" stroke=${colors[i]} stroke-width="14" stroke-dasharray=${`${c*p/100} ${c}`} stroke-dashoffset=${c/4-c*at/100}/>`;at+=p;return seg;})}</g></svg>`;
  }
  private energyPanel(){
   return html`<div class="panel"><h2><span>Énergie</span><span class="letter none">sans note</span></h2><div class="headline">Bientôt</div><div class="muted small">La consommation du chauffage, comparée à la météo de chaque mois.</div></div>`;
