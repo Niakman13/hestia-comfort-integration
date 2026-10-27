@@ -79,6 +79,8 @@
           "drying_unavailable": "Assèchement indisponible",
           "drying_later": "Assécher plus tard",
           "drying_slow": "Aérer assèche peu ici",
+          "drying_night": "Aérer au réveil",
+          "drying_alone": "Sèche d’elle-même",
           "ventilation_possible": "La VMC peut assécher",
           "warm_walls": "Chauffez un peu plus",
           "incomplete_data": "Information incomplète",
