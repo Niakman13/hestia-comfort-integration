@@ -12,6 +12,7 @@ Puis ouvrez **Confort → Accueil**. Quand quelque chose est à régler, l’enc
 - [La qualité de l’air](#la-qualité-de-lair)
 - [Un conseil semble faux](#un-conseil-semble-faux)
 - [Volets et Adaptive Cover Pro](#volets-et-adaptive-cover-pro)
+- [Le bilan n’a pas encore de note](#le-bilan-na-pas-encore-de-note)
 - [Les journaux](#les-journaux)
 - [Signaler un problème](#signaler-un-problème)
 
@@ -69,6 +70,8 @@ La carte est fournie par l’intégration : rien à installer à part.
 
 Une fois relié, l’encadré **Extensions** de l’Accueil indique Niak Weather « liée », et **Versions et liens** le cite dans ses liaisons. Weather affiche aussi « Relié à Niak Confort ».
 
+**La liaison s’est coupée toute seule** : elle se règle des deux côtés. Un interrupteur éteint dans Niak Weather (**Réglages → Extensions → Niak Confort**), ou **Vos propres capteurs** choisi dans Confort, la coupe des deux côtés. Rallumez-la depuis l’un ou l’autre.
+
 **Une mesure du dehors à changer** : avec Niak Weather, elles sont reprises de sa station et ne se choisissent pas dans Confort. Changez la station dans Niak Weather, ou choisissez **Vos propres capteurs** dans Réglages généraux.
 
 **Pas d’anticipation** (« Refermez avant la pluie », « Aérez vers 22 h ») : elle vient des prévisions de Niak Weather.
@@ -98,7 +101,10 @@ Vérifiez aussi les réglages de la pièce :
 - **l’exposition** des fenêtres : elle décide du soleil et de la pluie ;
 - **abrité** : une fenêtre abritée peut rester ouverte sous la pluie ;
 - **votre plage** de température et le seuil d’humidité ;
-- **Pièce non chauffée**, si la pièce n’a pas de chauffage.
+- **Pièce chauffée** (onglet Chauffage), à éteindre si la pièce n’a pas de chauffage ;
+- les **Extensions** des Réglages généraux : une extension coupée n’est lue dans aucune pièce.
+
+Une pastille **« Au mieux »** n’est pas une erreur : une mesure sort de votre plage, mais aucun geste ne ferait mieux. « À savoir » dit pourquoi.
 
 « **Rien à faire** » alors qu’il fait chaud ? Dehors n’est pas plus frais, ou ouvrir n’aiderait pas. Niak ne parle que pour un geste utile.
 
@@ -117,6 +123,14 @@ La durée d’aération change ? La pièce apprend. Les premiers jours, elle res
 **Niak vous demande de fermer le volet** : Adaptive Cover Pro ne le pilote pas en ce moment, et le soleil arrive sur une pièce trop chaude.
 
 Le mode climat ou une autre fonction d’Adaptive Cover Pro est indisponible ? Niak l’ignore : ce n’est pas un capteur en panne.
+
+## Le bilan n’a pas encore de note
+
+**« Pas encore de note »** ou **« pas encore assez de mesures »** : il faut deux semaines de mesures pour noter un thème. Le bilan se remplit seul.
+
+Le bilan lit les statistiques à long terme de Home Assistant. Un capteur sans statistiques (sans `state_class: measurement`) ne compte pas : ses mois passés restent vides.
+
+**« Le bilan n’a pas pu être chargé »** : vérifiez que l’enregistreur de Home Assistant est actif, puis rechargez la page.
 
 ## Les journaux
 
