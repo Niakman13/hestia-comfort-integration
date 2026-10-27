@@ -217,6 +217,25 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         with self.assertRaises(ValueError):
             self.service.validate({'sources': {}, 'weather': 'gone'}, home=True)
 
+    async def test_niak_weather_link_set_from_either_side_is_one_link(self):
+        """Niak Weather's settings link or unlink through Confort's interface: the home then says the same on both sides."""
+        from custom_components.niak_comfort.api import NiakComfortApi
+        from custom_components.niak_comfort.configuration import DATA_CONFIG
+        self.register('sensor.gw_out', 'temperature', area='exterieur')
+        self.link_weather({'temperature': 'sensor.gw_out'})
+        self.hass.data[DATA_CONFIG] = self.service
+        api = NiakComfortApi(self.hass)
+        self.assertIsNone(api.weather())
+        self.assertEqual(await api.set_weather('nw1'), 'nw1')
+        self.assertEqual(self.service.snapshot()['home']['weather'], 'nw1')
+        self.assertEqual(self.service.home['sources']['outdoor_temperature']['entity_id'], 'sensor.gw_out')
+        # Turned off from Niak Weather: Confort keeps the sensors as its own, as « Vos propres capteurs » would.
+        self.assertIsNone(await api.set_weather(None))
+        self.assertIsNone(self.service.snapshot()['home']['weather'])
+        self.assertEqual(self.service.home['sources']['outdoor_temperature']['entity_id'], 'sensor.gw_out')
+        with self.assertRaises(ValueError):
+            await api.set_weather('gone')
+
     async def test_niak_weather_air_without_an_entity_is_kept(self):
         """Niak Weather 2.5.7 gives its air through api.air() (here a WAQI station): taking its station must keep it."""
         self.register('sensor.gw_out', 'temperature', area='exterieur')

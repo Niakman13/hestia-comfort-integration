@@ -391,6 +391,22 @@ class Configuration:
                     await self.hass.config_entries.async_reload(entry.entry_id)
             return self.snapshot()
 
+    def weather(self):
+        """The Niak Weather place that gives the outdoor to every room, or None: the one link both bricks show."""
+        return self.home.get("weather") if self.home.get("configured") else None
+
+    async def set_weather(self, entry_id):
+        """Links the outdoor to a Niak Weather place (its measures replace the others), or unlinks it (the sensors stay,
+        Niak Weather's air is dropped), as « Niak Weather » or « Vos propres capteurs » then Enregistrer would."""
+        if entry_id == self.weather():
+            return self.snapshot()
+        sources = (self.weather_proposal(entry_id)["sources"] if entry_id
+                   else {k: v for k, v in self.home_sources().items() if v.get("adapter") != "niak_air"})
+        payload = {"sources": sources, "weather": entry_id}
+        # Choosing the link is choosing its sensors: their roles need no second confirmation.
+        _, warnings = self.validate(payload, home=True)
+        return await self.save(payload, self.revision(), home=True, acknowledged=[w["key"] + ":" + w["entity_id"] for w in warnings])
+
     async def answer(self, entry_id, key, value):
         """Keeps the person's answer to a learning question (« yes », « no », « unknown »)."""
         if value not in ("yes", "no", "unknown") or not isinstance(key, str) or not key:
