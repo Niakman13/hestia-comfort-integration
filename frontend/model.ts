@@ -38,7 +38,7 @@ export interface Twins {version:1;rooms:{entry_id:string;title:string;twin:Twin;
  /** Where the station's sun sensor is shaded, learned (engine/sunlight.py): azimuths by 10°. */ sun_shade?:{scale:number;shaded:number[];sunny_days:number}|null}[]}
 export interface HealthLine {level:Level;text:string;why:string;target?:Target|null}
 export interface Health {level:'ok'|'action';summary:string;tips_summary:string;rooms_summary:string;todo:HealthLine[];tips:HealthLine[];
- sources:{label:string;level:Level;text:string}[];sensors?:{answering:number;total:number};extensions?:Extension[];others?:{key:string;name:string;use:string}[];columns:string[];rooms:{entry_id:string;title:string;cells:{level:Level;text:string}[]}[];versions:HealthLine[]}
+ sources:{label:string;level:Level;text:string}[];sensors?:{answering:number;total:number};extensions?:Extension[];others?:{key:string;name:string;use:string}[];socle?:string;columns:string[];rooms:{entry_id:string;title:string;cells:{level:Level;text:string}[]}[];versions:HealthLine[]}
 export interface Hass {callWS<T>(msg:Record<string,unknown>):Promise<T>;user?:{is_admin:boolean};themes?:{darkMode?:boolean};connection?:unknown;states?:Record<string,{state:string;attributes?:Record<string,unknown>}>}
 export const warningText:Record<string,string>={
  alias:'Cette entité recopie une autre mesure. Vérifiez sa provenance ci-dessous.',

@@ -156,9 +156,10 @@ export class ComfortSetup extends LitElement {
   const bricks=(h.extensions??[]).filter(x=>x.official&&x.state==='linked').map(x=>x.name);
   const row=(label:string,text:string)=>html`<div class="ac-row"><b>${label}</b><span>${text}</span></div>`;
   const repo='https://github.com/Niakman13/niak-comfort-integration';
-  return frame('Versions et liens',html`<div class="ac-meta"><div>${row('Intégration',version||'Version non reçue')}${row('Carte',version?version+' · fournie par l’intégration':'—')}${row('API','niak_comfort_api v1')}${row('Liaisons',bricks.length?bricks.join(' · '):'Aucune brique reliée')}</div>
+  return frame('Versions et liens',html`<div class="ac-meta"><div>${row('Intégration',version||'Version non reçue')}${row('Carte',version||'Version non reçue')}${row('API','niak_comfort_api v1')}${row('Socle commun',h.socle||'Version non reçue')}${row('Liaisons',bricks.length?bricks.join(' · '):'Aucune brique reliée')}</div>
    <nav class="ac-links" aria-label="Liens utiles"><a href="/config/integrations/integration/niak_comfort">Intégration Home Assistant</a><a href="/config/logs">Journaux Home Assistant</a>
-    <a href=${repo+'#readme'} target="_blank" rel="noreferrer">Documentation</a><a href=${repo+'/releases'} target="_blank" rel="noreferrer">Versions publiées</a><a href=${repo+'/issues'} target="_blank" rel="noreferrer">Signaler un problème</a></nav></div>`);}
+    <a href=${repo+'#readme'} target="_blank" rel="noreferrer">Documentation</a><a href=${repo+'/releases'} target="_blank" rel="noreferrer">Versions publiées</a><a href=${repo+'/issues'} target="_blank" rel="noreferrer">Signaler un problème</a>
+    <a class="ac-support" href="https://paypal.me/frankblemont" target="_blank" rel="noreferrer">Soutenez mon travail</a></nav></div>`);}
  /** The state of each extension, in one word; linking and installing are in the general settings. */
  private extensionsSummary(){const h=this.health!;
   return frame('Extensions',html`${(h.extensions??[]).map(x=>html`<div class="ac-row"><b>${x.name}</b><span class=${'tw-pill '+extState[x.state][1]}>${extState[x.state][0]}</span></div>`)}`);}

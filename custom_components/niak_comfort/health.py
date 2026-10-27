@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from homeassistant.util import dt as dt_util
 
 from . import cover_link, weather_link
+from .socle import SOCLE_VERSION
 from .engine import people, thermostat as thermostats
 from .configuration import get_configuration
 from homeassistant.helpers import entity_registry as er
@@ -191,7 +192,7 @@ def report(f):
     return {"level": "action" if todo else "ok", "sensors": sensors, "summary": _plural(len(todo), "point") + " à régler" if todo else "Tout est suivi",
             "tips_summary": _plural(len(tips), "réglage") + " à améliorer" if tips else "",
             "rooms_summary": _plural(len(f.rooms), "pièce suivie", "pièces suivies"),
-            "todo": todo, "tips": tips, "sources": sources, "extensions": extensions, "others": others, "columns": [label for _, label in COLUMNS], "rooms": rooms, "versions": versions}
+            "todo": todo, "tips": tips, "sources": sources, "extensions": extensions, "others": others, "socle": ".".join(map(str, SOCLE_VERSION)), "columns": [label for _, label in COLUMNS], "rooms": rooms, "versions": versions}
 
 
 EXTENSIONS = (
