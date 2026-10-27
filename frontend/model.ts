@@ -17,7 +17,7 @@ export interface EvolutionConfig {voc_threshold?:{value:number;unit:string};glaz
 export interface RoomConfig {presence?:string[];evolution?:EvolutionConfig;floor_id?:string|null;area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean;heated?:boolean;thermostat_reference?:boolean;windows_unmeasured?:boolean;persons?:string[];open_to?:string[]}
 export interface Room {entry_id:string;title:string;loaded:boolean;config:RoomConfig}
 export interface Area {floor_id?:string|null;area_id:string;name:string;outdoor:boolean}
-export interface Snapshot {version:1;revision:string;floors?:{floor_id:string;name:string;level:number|null}[];areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null;alarm?:string|null};niak_weather?:{installed:boolean;places:{entry_id:string;title:string}[]};integrations?:{atmofrance?:boolean}}
+export interface Snapshot {version:1;revision:string;floors?:{floor_id:string;name:string;level:number|null}[];areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null;alarm?:string|null;disabled?:string[]};niak_weather?:{installed:boolean;places:{entry_id:string;title:string}[]};integrations?:{atmofrance?:boolean}}
 export interface Discovery {version:1;revision:string;candidates:Record<string,Candidate[]>;suggestions:Record<string,string|string[]>;drivers?:Record<string,Driver>}
 export interface DriverSignal {entity_id:string;name:string;on:boolean}
 export interface Driver {name:string;auto:string|null;override:string|null;signals?:Partial<Record<'enabled'|'auto'|'tracking'|'detection'|'override'|'sun'|'climate',DriverSignal|null>>;azimuth?:number|null;exposure?:string|null;width?:number|null;height?:number|null}
@@ -128,7 +128,7 @@ export function changedAdvanced(settings:Record<string,number>):number{return Ob
 // One source in a list chosen by integration: its name, what it gives, and how to install it when missing.
 export interface Choice {value:string;label:string;hint:string;available:boolean;missing?:string;url?:string;badge?:string}
 /** An integration Confort reads (health.py EXTENSIONS): linked, installed but not used, or missing. */
-export interface Extension {key:string;name:string;official:boolean;state:'linked'|'found'|'missing';level:Level;role:string;use:string;without:string;url:string;text:string;rooms:string[]}
+export interface Extension {key:string;name:string;official:boolean;state:'linked'|'found'|'missing'|'off';level:Level;role:string;use:string;without:string;url:string;text:string;rooms:string[]}
 export const links={atmofrance:'https://github.com/sebcaps/atmofrance',niak_weather:'https://github.com/Niakman13/niak-weather-integration'};
 // The integration behind an outdoor air quality source.
 export function airSource(spec?:Spec):string{return !spec?'none':spec.adapter==='atmo_daily'?'atmo':spec.adapter==='niak_index'?'niak':'other';}

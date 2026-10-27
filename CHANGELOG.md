@@ -1,3 +1,66 @@
+## 1.7.18 — Le bilan du logement, des entités qui disent ce que dit la carte, un hub refait
+
+Tout ce qui est nouveau depuis la 1.6.0.
+
+**En bref**
+
+- **Le bilan du logement** : une note de confort de A à E pour le logement et pour chaque pièce, sur douze mois, selon la norme européenne EN 16798-1.
+- **Des entités qui disent ce que dit la carte** : même conseil, même pastille, même couleur, prêtes pour vos automatisations (VMC, LED, fenêtres).
+- **Un hub refait** : un accueil Confort à lire, et des Réglages généraux complets, avec vos pièces et les extensions.
+- **Des conseils plus justes** : le graphique « Prochaines heures », pas d’aération la nuit ni quand attendre suffit, un « À savoir » qui ne se contredit plus.
+
+### Nouveautés
+
+- **Bilan du logement**, dans le menu de gauche du hub, sous « Accueil » : la note du logement, la chaleur, l’humidité et l’air en graphiques, puis la fiche de chaque pièce (mois par mois, journée type l’hiver et l’été).
+- **Conseils du bilan** : chauffer une pièce restée trop froide, faire tourner la VMC ou aérer une pièce trop humide, ouvrir la nuit après un été chaud. Rien quand tout va bien.
+- **Carte « Niak Confort · bilan »** : en résumé ou complète, pour toute la famille.
+- **Nouvelles entités** pour chaque pièce :
+  - **Conseil** : le titre de la carte (« Rien à faire », « Aérez 10 min », « Lancez la VMC »…).
+  - **État** : la pastille de la carte (Tout va bien, Au mieux, Geste conseillé…).
+  - **Couleur** : la couleur de la carte, prête pour une lumière.
+  - **Oui/non** : Geste à faire, Aération conseillée, Fenêtres à refermer, VMC conseillée, Trop humide.
+  - **Humidité** et **Apprentissage**.
+- **Mon logement** : le geste le plus important, sa couleur, et le nombre de pièces qui demandent un geste.
+- **Un seul appareil « Salon · Cuisine »** pour les pièces au même air, avec leur conseil commun.
+- **Extensions dans les Réglages généraux** : Niak Weather, Versatile Thermostat, Adaptive Cover Pro et Alarmo, chacune avec son utilité et un interrupteur pour l’activer ou la couper.
+- **Versions et liens** sur l’accueil, comme dans Niak Weather, avec un bouton « Soutenez mon travail ».
+- **Graphique « Prochaines heures »** sous l’échelle : la pièce sans le geste conseillé et avec, pour voir ce qu’il change.
+- **Les bonnes fenêtres à ouvrir** dans « À savoir », selon le vent, les façades et la taille des ouvrants. Une fenêtre où la pluie entrerait est écartée.
+- **« Ouvrez pour réchauffer »** quand il fait nettement plus doux dehors qu’une pièce fraîche.
+- **« Chauffez un peu plus »** quand des murs plus chauds suffisent à écarter la moisissure.
+- **« Rallumez le chauffage »** pour une pièce nettement froide, chauffage coupé.
+
+### Améliorations
+
+- **Un accueil Confort à lire** : tout ce qui se modifie est dans Réglages généraux. Une pièce s’ouvre sur son bilan.
+- **Une extension coupée** n’est plus lue dans aucune pièce, et les réglages des pièces le disent. Pour Alarmo, plus de liste à choisir : il est trouvé tout seul.
+- **VMC conseillée** reste allumée tant que la VMC assèche une pièce encore humide : une automatisation ne la coupe pas trop tôt.
+- **Le menu du hub** : le logo Niak en tête, et « Vue d’ensemble » devient « Accueil ».
+- **Pas d’« Aérez » en pleine nuit** : la carte attend le réveil et dit à partir de quelle heure aérer.
+- **Aérer seulement si c’est mieux qu’attendre**, avec une durée d’aération apprise pièce par pièce.
+- **Nouvelle pastille « Au mieux »**, en bleu, quand rien ne peut améliorer une mesure.
+- **« À savoir » par ordre d’importance**, une seule ligne pour l’humidité.
+- **Une icône dans chaque pastille** et un anneau animé différent selon l’état.
+- **Le soleil montré tel qu’il est**, et seulement s’il arrive dans les 3 heures.
+- **COV plus calmes** : la carte juge la moyenne des 10 dernières minutes.
+- **L’éditeur de la carte suit ses quatre sections** : Bandeau conseil, À savoir, Mesures, Détails techniques.
+- Le guide donne des exemples de LED aux couleurs de la carte et de VMC qui suit le conseil.
+
+### Corrections
+
+- **Salon · Cuisine** : l’encart Salon montrait deux appareils, il n’en reste qu’un. Les mesures du Salon y gardent leur nom d’entité et leur historique.
+- **Le degré d’humidité** reste dit sous « Lancez la VMC » ou « Aérez » : « Très humide », et non plus seulement « Humidité ».
+- **Les pièces au même air** disent la même chose, avec la ligne de la plus humide.
+- **Plus de phrases opposées** dans « À savoir », ni de doublon VMC ou humidité.
+- **L’interrupteur « Échelle de température »** se coupe enfin.
+- **Plus de page fugace** en passant d’une page du menu à une autre.
+
+### Après la mise à jour
+
+- Redémarrez Home Assistant, puis rechargez la page (ou videz le cache de l’application mobile). Vos cartes gardent leurs réglages.
+- **Situation** et **Geste** sont retirées : dans vos automatisations, remplacez-les par **État** et **Conseil** (ou les oui/non).
+- Salon et Cuisine n’ont plus leur propre Conseil : il est sur l’appareil « Salon · Cuisine ».
+
 ## 1.7.17 — Un seul appareil pour Salon · Cuisine
 
 **En bref**
