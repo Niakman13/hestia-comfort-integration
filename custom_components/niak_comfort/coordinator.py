@@ -532,9 +532,15 @@ class ComfortCoordinator(DataUpdateCoordinator):
             # The card writes the leading room's advice with its own measures (its CO₂, its humidity).
             partner = next(p for p in self.partners if p["title"] == lead)
             entry = self.hass.config_entries.async_get_entry(partner["entry_id"])
-            data = getattr(getattr(entry, "runtime_data", None), "data", None) or {}
+            leader = getattr(entry, "runtime_data", None)
+            data = getattr(leader, "data", None) or {}
             settled["features"]["volume"]["observations"] = {k: v for k, v in data.get("observations", {}).items()
                                                              if not k.startswith(("shutter", "cover"))}
+            # « Prochaines heures » follows the advice too: drawn on the leading room, for its gesture. This room's own
+            # graph answers its own advice, which the card no longer shows.
+            led = ((getattr(leader, "own", None) or {}).get("features") or {}).get("horizon")
+            if led is not None:
+                settled["features"] = {**settled["features"], "horizon": led}
         return settled
 
     def _outdoor_entity(self):

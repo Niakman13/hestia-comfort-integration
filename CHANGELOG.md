@@ -17,6 +17,7 @@
 ### Corrections
 
 - Le graphique en anneau « Air » du Bilan du logement s’affiche en entier : il sortait de son cadre pendant son animation.
+- Pour des pièces au même air, le graphique « Prochaines heures » suit le conseil commun : la carte montrait celui de l’autre pièce.
 
 ## 1.7.19 — Le graphique « Prochaines heures » enfin visible, un hub plus fluide
 
