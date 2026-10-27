@@ -12,7 +12,7 @@ const {cleanConfig,cleanHomeConfig,homeAction}=await import(pathToFileURL(join(t
 const {isView,numeric,summary,readingStatus,coverageText,windFrom,evolutionLines,co2Metric,solarMetric}=await import(pathToFileURL(join(temp,'view.mjs')));
 const {LiveView}=await import(pathToFileURL(join(temp,'live.mjs')));
 const {roomChoices}=await import(pathToFileURL(join(temp,'editor.mjs')));
-const {outsideGaps,advice,slides,roomCard,facts}=await import(pathToFileURL(join(temp,'views/room.mjs')));
+const {outsideGaps,advice,slides,roomCard,facts,factList}=await import(pathToFileURL(join(temp,'views/room.mjs')));
 const fixtures=JSON.parse(await readFile(new URL('../preview/card-fixtures.json',import.meta.url),'utf8'));
 const fresh=()=>({...structuredClone(fixtures[0].view),computed_at:new Date().toISOString()});
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
@@ -329,7 +329,7 @@ test('damp walls: a remedy at work, a gesture, or a tip, never a fatality',()=>{
 });
 test('every banner title is a gesture or « Rien à faire »',()=>{
   const v=fresh(),GESTURE=/^(Aérez|Ouvrez|Refermez|Fermez|Gardez fermé|Lancez la VMC|Laissez ouvert|Rallumez le chauffage|Chauffez un peu plus|Adaptez les volets|Aération en cours|Encore \d+ min|Vous pouvez refermer|Renouvelez|Vérifiez|Rien à faire|Mesures (absentes|en chargement)|Bilan partiel)/;
-  const reasons=['within_comfort','rain_open_windows','opening_blocked','verify_exterior','air_needed','cooling_possible','drying_possible','exchange_harmful','cooling_unavailable','heat_needed','drying_unavailable','drying_later','drying_slow','drying_night','drying_alone','ventilation_possible','incomplete_data','optional_air_change','gust_open_windows','short_air_change','sun_entering','rain_soon','precool_possible','precool_later','shared_volume','warm_walls','humid_outdoor','open_neutral','rehumidification_risk','shutter_protection'];
+  const reasons=['within_comfort','rain_open_windows','opening_blocked','verify_exterior','air_needed','cooling_possible','warming_possible','drying_possible','exchange_harmful','cooling_unavailable','heat_needed','drying_unavailable','drying_later','drying_slow','drying_night','drying_alone','ventilation_possible','incomplete_data','optional_air_change','gust_open_windows','short_air_change','sun_entering','rain_soon','precool_possible','precool_later','shared_volume','warm_walls','humid_outdoor','open_neutral','rehumidification_risk','shutter_protection'];
   for(const reason of reasons)for(const action of ['ok','ouvrir','fermer','attendre'])for(const level of ['calm','benefit','action','urgent','neutral']){
     v.assessment={...v.assessment,reason,action,level,features:{...v.assessment.features,warmth:{occupied:true,heating:'off'},humidity:{dew_point:null,incoming_relative:null,glass_temperature:null,condensation_risk:null,message:'',surface:90,mould:true,excess:2,source:'inside',reachable:70}}};
     const t=advice(v).title;assert.match(t,GESTURE,`${reason}/${action}/${level} → ${t}`);
@@ -604,4 +604,20 @@ test('where to open is said under the advice, only while airing is asked',()=>{
   // Nothing asked: nothing said, the banner stays the only gesture.
   v.assessment={...v.assessment,action:'ok',level:'calm',reason:'within_comfort',needs:[]};
   assert.equal(said().some(t=>t.startsWith('Ouvrez')),false);
+});
+
+test('one air never says « refermer » and « laisser ouvert », nor « refroidirait » with a milder outside (27 October)',()=>{
+  // Salon 20,3 °C open, Cuisine 19,6 °C open and a little cool, 22,3 °C outside: the open window warms them.
+  const room=(title,ti,hi,reason,needs,features)=>{const v=fresh();v.title=title;
+    v.observations={...v.observations,indoor_temperature:{value:ti,quality:'valid',source:'sensor.t'},indoor_humidity:{value:hi,quality:'valid',source:'sensor.h'},
+      outdoor_temperature:{value:22.3,quality:'valid',source:'sensor.te'},'window:binary_sensor.c':{value:true,quality:'valid',source:'binary_sensor.c'}};
+    v.assessment={...v.assessment,action:'ok',level:'calm',reason,needs,missing:[],constraints:[],temperature_delta:22.3-ti,features:{air:{co2_status:'ok',pm25_status:'ok',voc_status:'ok'},...features}};return v;};
+  const salon=room('Salon',20.3,61,'open_neutral',['dry'],{open_warms:true,humidity:{status:'high',degree:1,measured:61,trend:'stable'}});
+  const kitchen=room('Cuisine',19.6,68,'heat_needed',['heat','dry'],{humidity:{status:'high',degree:2,measured:68,trend:'improving'},
+    warmth:{occupied:true,heating:'on',slight:true,outdoor_warms:true,warming:true}});
+  const said=factList(salon,[kitchen]).map(f=>`${f.title} · ${f.text}`).join(' | ');
+  assert.doesNotMatch(said,/refermer/);assert.doesNotMatch(said,/refroidirait/);
+  assert.match(said,/Fenêtre ouverte · elle ne fait presque pas baisser l’humidité/);
+  const flat=t=>t==null?'':typeof t!=='object'?String(t):t.strings?t.strings.map((x,i)=>x+(i<t.values.length?flat(t.values[i]):'')).join(''):'';
+  assert.match(flat(advice(salon).line),/réchauffe la pièce/);
 });

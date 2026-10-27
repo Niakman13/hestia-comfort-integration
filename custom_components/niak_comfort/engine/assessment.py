@@ -468,12 +468,21 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     checked = (rain is False or ("rain" not in readings and rain is None)) and pollution is not True
     thermal_known = ti is not None and te is not None
     optional_wet_exchange = ai is not None and ae is not None and ae > ai + 1
-    # Drying never justifies opening a cold room, nor a hot one to a hotter outside.
+    # Drying never justifies opening a cold room to a colder outside, nor a hot one to a hotter outside.
+    # A warmer outside warms a cold room while it dries: then opening helps twice. Rooms of one air are warmed
+    # through their common windows: judged on the air's mean temperature, so that both rooms tell one story.
+    warms = te is not None and hti is not None and te - hti > 0.5
+    chill = cold and not warms
     heat_in = hot and delta is not None and delta > 0
     # In winter a room is not cooled by opening: a hot room says to turn the heating down (card, « À savoir »).
-    useful = air or ((hot or precool) and cool and group != "winter" and not optional_wet_exchange) or (wet and worth and not cold and not heat_in and not asleep)
+    useful = air or ((hot or precool) and cool and group != "winter" and not optional_wet_exchange) or (wet and worth and not chill and not heat_in and not asleep)
+    # A cold room and a clearly milder outside, as clearly as cooling asks, while someone home is up:
+    # the outdoor air warms it for free.
+    warming = (cold and delta is not None and delta >= settings.cooling_delta and awake_now
+               and context.get("occupied") is not False)
+    useful = useful or warming
     # A constraint speaks only where opening would have helped: a cold room under the rain needs no « keep closed ».
-    wants_open = air or ((hot or precool) and cool) or (wet and dry and not cold and not heat_in and not asleep)
+    wants_open = air or warming or ((hot or precool) and cool) or (wet and dry and not chill and not heat_in and not asleep)
     opportunities = tuple(k for k, active in (("cool", cool and not optional_wet_exchange), ("dry", dry),
         ("air", co2 is not None and co2 >= settings.co2_potential)) if active) if not hard and not soft else ()
     missing = tuple(sorted(k for k in ({k for k, r in readings.items() if r.source and not r.usable
@@ -503,19 +512,20 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     elif opened and not air and delta is not None and ((hot and delta > 0.5) or (cold and delta < -0.5)):
         # A room already out of its range and an open window that pushes it further: no drying justifies it.
         action, reason, level = "fermer", "exchange_harmful", "action"
-    elif soft and (air or (wet and dry and not cold and not heat_in and not asleep)):
+    elif soft and (air or (wet and dry and not chill and not heat_in and not asleep)):
         # Heating on or frost outside: a short airing still clears stale air or the steam of a shower or a meal.
         action, reason = ("ok" if opened else "ouvrir"), "short_air_change"
     elif soft and opened:
         action, reason, level = "fermer", "opening_blocked", "action"
-    elif soft and wants_open and not cold:
+    elif soft and wants_open and not chill:
         action, reason = "attendre", "opening_blocked"
     elif useful:
         if not checked or not thermal_known:
             action, reason = "unknown", "verify_exterior"
         else:
             action, reason = ("ok" if opened else "ouvrir"), ("air_needed" if air else "cooling_possible" if hot and cool and group != "winter"
-                                                             else "precool_possible" if precool and cool else "drying_possible")
+                                                             else "precool_possible" if precool and cool
+                                                             else "drying_possible" if wet and worth and not chill else "warming_possible")
     elif opened and delta is not None and ((ti >= (settings.minimum + settings.maximum) / 2 and delta > 0.5)
                                           or (heated and ti <= settings.minimum + 1 and delta < -0.5)):
         action, reason = "fermer", "exchange_harmful"
@@ -608,7 +618,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         warming = (isinstance(coming, (int, float)) and not isinstance(coming, bool) and ti is not None
                    and coming >= ti + WARMING)
         warmth.update(chilly_since=chilly_since, tolerance=settings.heating_tolerance, warming=warming,
-                      outdoor_warms=opened and delta is not None and delta > 0.5)
+                      outdoor_warms=opened and warms)
         # Only a heating switched off by hand is the person's to switch back on: a window, the thermostat's own
         # start-stop or a central mode resume by themselves, and an eco or frost preset aims lower on purpose.
         theirs = not thermostat or (thermostat.get("off_reason") in (None, "manual") and not thermostats.lowered(thermostat))
@@ -641,6 +651,8 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     # Where the air should go through: the card says it under the advice, only while airing is asked.
     extended["airflow"] = airflow_plan(details, flows)
     extended["drying"] = drying
+    # An open window letting warmer air into a room under the middle of its range: it does something, it warms.
+    extended["open_warms"] = bool(opened and warms and ti is not None and ti < (settings.minimum + settings.maximum) / 2)
     extended["warm_walls"] = warm_walls
     extended["benefits"] = _benefits(details, openings, settings, ti, hot, cold, heated, te, group)
     # Within the heating tolerance a room is « a little cool », not « too cool »: the card says it gently.

@@ -68,8 +68,8 @@ class HeatingAdvice(unittest.TestCase):
                   "heating": "off", "window:w": True}
         readings = {k: Reading(v, "valid", "sensor.x") for k, v in values.items()}
         a = assess(readings, SETTINGS, None, {}, None, {}, NOW, context={"heated": True, "occupied": True})
-        self.assertEqual((a.action, a.reason), ("ok", "heat_needed"))
-        self.assertTrue(a.features["warmth"]["outdoor_warms"])
+        # Two degrees milder outside: the open window is the gesture, kept open.
+        self.assertEqual((a.action, a.reason), ("ok", "warming_possible"))
         values["outdoor_temperature"] = 12
         readings = {k: Reading(v, "valid", "sensor.x") for k, v in values.items()}
         self.assertEqual(assess(readings, SETTINGS, None, {}, None, {}, NOW, context={"heated": True, "occupied": True}).action, "fermer")

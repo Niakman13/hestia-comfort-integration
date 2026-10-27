@@ -1,3 +1,31 @@
+## 1.7.12 — Un « À savoir » qui ne se contredit plus
+
+**En bref**
+
+- « À savoir » ne dit plus deux choses opposées : plus de « vous pouvez refermer » à côté de « vous pouvez laisser ouvert ».
+- Quand il fait nettement plus doux dehors, une pièce fraîche reçoit « Ouvrez pour réchauffer ».
+
+### Nouveautés
+
+- **« Ouvrez pour réchauffer »** : une pièce sous votre plage, avec un air nettement plus doux dehors, de jour et quelqu’un à la maison. Fenêtre déjà ouverte : « Laissez ouvert · L’air du dehors, plus doux, réchauffe la pièce ».
+
+### Améliorations
+
+- **Une pièce fraîche et humide peut être aérée** quand l’air du dehors est plus doux : l’aération la réchauffe et l’assèche à la fois.
+- **Les pièces qui partagent le même air** (Salon · Cuisine) jugent l’effet de la fenêtre sur leur température commune : elles disent la même chose.
+- **Une vérification de toutes les situations** : plus de 30 000 cartes produites par le vrai moteur sont relues à chaque changement, à la recherche de phrases qui se contredisent.
+
+### Corrections
+
+- **« Aérer refroidirait une pièce déjà fraîche »** ne s’affiche plus quand il fait plus doux dehors.
+- **« Ouverte ou fermée, cela ne change rien »** ne s’affiche plus quand la fenêtre ouverte réchauffe la pièce.
+- **« Aérez » pour le CO₂** n’est plus suivi de « aérer refroidirait » sur la ligne d’humidité.
+- **La ligne d’humidité** ne répète plus deux fois la même raison.
+
+### Après la mise à jour
+
+- Rechargez la page (ou videz le cache de l’application mobile) pour voir la nouvelle carte.
+
 ## 1.7.10 — Aérer quand ça sert vraiment
 
 **En bref**
