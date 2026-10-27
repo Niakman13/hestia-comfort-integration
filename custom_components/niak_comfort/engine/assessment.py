@@ -28,13 +28,14 @@ MOULD_MINUTES = 60
 VENTILATION_DELTA = 0.8
 # Humidity points an already open window must still take off to be worth keeping open.
 OPEN_GAIN = 3.0
+DRYING_HYSTERESIS = 1.0
 # A room under its range with the heating off is first said in « À savoir »; « Rallumez » comes only once it has been
 # below the range by more than the room's tolerance for this long, and its twin does not see it warming by itself.
 HEAT_MINUTES = 30
 # Degrees the twin must see the room gain within the hour for it to be warming by itself (the sun, a neighbour's heat).
 WARMING = 0.3
 # Reasons that only say « do not open »: with nothing open, they bring nothing and stay off the banner.
-QUIET_REASONS = ("open_neutral", "humid_outdoor", "drying_unavailable", "drying_slow", "opening_blocked", "heat_needed", "cooling_unavailable", "precool_later")
+QUIET_REASONS = ("open_neutral", "humid_outdoor", "drying_unavailable", "drying_slow", "drying_night", "drying_alone", "opening_blocked", "heat_needed", "cooling_unavailable", "precool_later")
 # The air against the cold wall from which « Chauffez un peu plus » is worth asking: a clear risk, not the threshold.
 WARM_WALL_SURFACE = 82.0
 # Reasons that leave damp walls without a remedy: « Chauffez un peu plus » may then be asked.
@@ -358,11 +359,14 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     # Pre-cooling (template « prérefroidir »): at night, when tomorrow is announced well above the comfort range.
     tomorrow_max = outlook.get("tomorrow_max")
     night = sun is not None and sun.elevation < 0
-    # The summer evening airing that stores coolness: only until bedtime, never in the middle of the night.
-    if night and now is not None:
+    # The season's waking hours (engine/learning.py awake): nobody is asked to open in the middle of the night.
+    awake_now, morning = True, None
+    if now is not None:
         start, until = learning.awake(context.get("season_name"))
         clock = now.astimezone(context["zone"]) if context.get("zone") else now
-        night = start <= clock.hour < until
+        awake_now, morning = start <= clock.hour < until, start
+    # The summer evening airing that stores coolness: only until bedtime, never in the middle of the night.
+    night = night and awake_now
     precool = (not hot and not cold and not wet and night and ti is not None and isinstance(tomorrow_max, (int, float))
                and tomorrow_max >= settings.maximum + 3 and ti > settings.minimum + 2)
     needs = tuple(k for k, active in (("air", air), ("cool", hot), ("heat", cold), ("dry", wet), ("precool", precool)) if active)
@@ -376,13 +380,28 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         model = (volume or {}).get("drying_model") or context.get("drying_model")
         model = model if isinstance(model, Mapping) and all(isinstance(model.get(k), (int, float)) for k in ("tau", "residual", "rebound")) else {**learning.DEFAULT, "openings": 0}
         # In winter a short, brisk airing dries without chilling the walls: what ten minutes would bring.
-        short = WINTER_AIRING if group == "winter" else None
-        drying = {**learning.outcome(model, hti, ai, ae, short), "tau": model["tau"], "openings": model.get("openings", 0),
+        # A window already open keeps the airing it was given to its end: judged over the room's whole time constant.
+        short = WINTER_AIRING if group == "winter" else learning.minutes(model) if opened else None
+        # Otherwise until the room is back in its range, or until more minutes would bring next to nothing.
+        drying = {**learning.outcome(model, hti, ai, ae, short, target=settings.humidity_high), "tau": model["tau"], "openings": model.get("openings", 0),
                   "later": learning.best_moment(model, hti, ai, ae, outlook.get("hours"), now, zone=context.get("zone"), season=context.get("season_name"),
                                                 duration=short) if now and not opened else None}
     # Before opening, an airing must be worth it; once open, it must still bring something to stay open.
     # In winter ten minutes bring less, and are worth repeating: three points are enough to ask for it.
-    worth = drying is not None and drying["gain"] >= (OPEN_GAIN if opened else WINTER_GAIN if group == "winter" else learning.MIN_GAIN)
+    # Judged against waiting: what the room sheds by itself, windows shut (engine/learning.py alone), is no gain.
+    least = OPEN_GAIN if opened else WINTER_GAIN if group == "winter" else learning.MIN_GAIN
+    # An airing already asked for is not withdrawn for a tenth of a point: one point of margin.
+    if previous is not None and previous.reason == "drying_possible" and not opened:
+        least -= DRYING_HYSTERESIS
+    worth = drying is not None and drying["net"] >= least
+    # Worth it against now, not against waiting: the room gets there by itself, at least half of the way.
+    shedding = (drying is not None and not opened and not worth and drying["gain"] >= least
+                and drying["gain"] - drying["net"] >= drying["gain"] / 2)
+    # Drying waits for the morning: a room damp in the night (sleep, a late shower) often dries back by itself, and
+    # nobody gets up to air it. An open window keeps its own advice.
+    asleep = wet and not awake_now and not opened
+    if asleep and drying is not None:
+        drying["morning"] = morning
     windy = gust is not None and gust > settings.gust_max
     frost = te is not None and te <= settings.frost
     heating_running = value("heating") == "heating"
@@ -452,9 +471,9 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     # Drying never justifies opening a cold room, nor a hot one to a hotter outside.
     heat_in = hot and delta is not None and delta > 0
     # In winter a room is not cooled by opening: a hot room says to turn the heating down (card, « À savoir »).
-    useful = air or ((hot or precool) and cool and group != "winter" and not optional_wet_exchange) or (wet and worth and not cold and not heat_in)
+    useful = air or ((hot or precool) and cool and group != "winter" and not optional_wet_exchange) or (wet and worth and not cold and not heat_in and not asleep)
     # A constraint speaks only where opening would have helped: a cold room under the rain needs no « keep closed ».
-    wants_open = air or ((hot or precool) and cool) or (wet and dry and not cold and not heat_in)
+    wants_open = air or ((hot or precool) and cool) or (wet and dry and not cold and not heat_in and not asleep)
     opportunities = tuple(k for k, active in (("cool", cool and not optional_wet_exchange), ("dry", dry),
         ("air", co2 is not None and co2 >= settings.co2_potential)) if active) if not hard and not soft else ()
     missing = tuple(sorted(k for k in ({k for k, r in readings.items() if r.source and not r.usable
@@ -484,7 +503,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     elif opened and not air and delta is not None and ((hot and delta > 0.5) or (cold and delta < -0.5)):
         # A room already out of its range and an open window that pushes it further: no drying justifies it.
         action, reason, level = "fermer", "exchange_harmful", "action"
-    elif soft and (air or (wet and dry and not cold and not heat_in)):
+    elif soft and (air or (wet and dry and not cold and not heat_in and not asleep)):
         # Heating on or frost outside: a short airing still clears stale air or the steam of a shower or a meal.
         action, reason = ("ok" if opened else "ouvrir"), "short_air_change"
     elif soft and opened:
@@ -510,6 +529,10 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         action, reason = ("fermer" if opened and (delta is None or delta <= 0) else "ok"), "heat_needed"
     elif wet and drying and drying["later"]:
         action, reason = "attendre", "drying_later"
+    elif asleep and worth:
+        action, reason = "attendre", "drying_night"
+    elif wet and shedding:
+        action, reason = "attendre", "drying_alone"
     elif wet and drying:
         action, reason = "attendre", "drying_slow"
     elif wet:
@@ -597,10 +620,6 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     # Asked only when it is enough to pass under the threshold, the room staying a degree under its maximum; for a
     # clear risk, not one at the threshold; in waking hours; never against a thermostat lowered on purpose.
     warm_walls = None
-    awake_now = True
-    if now is not None:
-        start, until = learning.awake(context.get("season_name"))
-        awake_now = start <= (now.astimezone(context["zone"]) if context.get("zone") else now).hour < until
     if (mould and surface is not None and surface >= WARM_WALL_SURFACE and awake_now and not thermostats.lowered(thermostat) and ai is not None and te is not None and ti is not None and heated
             and "heating" in readings and occupied is not False and action != "fermer"
             and level not in ("action", "urgent", "benefit") and reason in WARM_WALL_REASONS
