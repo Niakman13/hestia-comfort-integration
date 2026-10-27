@@ -6,6 +6,7 @@ Niak Confort dit, pour chaque pièce, quoi faire et pourquoi. Ce guide explique 
 - [L’extérieur](#lextérieur)
 - [Les pièces](#les-pièces)
 - [Lire les conseils](#lire-les-conseils)
+- [Le bilan du logement](#le-bilan-du-logement)
 - [Fenêtres, chauffage, VMC, purificateur, volets](#fenêtres-chauffage-vmc-purificateur-volets)
 - [Chaque pièce apprend](#chaque-pièce-apprend)
 - [Pour vos automatisations](#pour-vos-automatisations)
@@ -42,6 +43,8 @@ Confort reprend alors, sans rien à choisir :
 
 Les mesures sont seulement affichées, avec leur valeur du moment. Pour en changer : changez la station dans Niak Weather, ou choisissez **Vos propres capteurs**.
 
+**La liaison se règle des deux côtés.** Dans Niak Weather 2.9.0 ou plus récent, **Réglages → Extensions → Niak Confort** : un interrupteur relie le lieu à Confort. Choisir **Vos propres capteurs** dans Confort la coupe aussi côté Weather. Les deux disent toujours la même chose. Coupée, Confort garde les capteurs du dehors comme les siens, sans l’air de Niak Weather.
+
 L’air du dehors suit la source choisie dans Niak Weather : Atmo France ou une station WAQI. Changez-la dans Weather : Confort suit. Il faut Niak Weather 2.5.7 ou plus récent. Dans Confort, seul le niveau de prudence se règle. Pour ne pas tenir compte de l’air, désactivez la qualité de l’air dans Niak Weather.
 
 ### Avec vos propres capteurs
@@ -65,9 +68,13 @@ Une mesure absente reste inconnue : Niak conseille quand même et le dit sur la 
 
 ## Les pièces
 
-L’accueil Confort (**Accueil**) se lit seulement : vos pièces et leur apprentissage, l’état des extensions, les versions et les liens utiles. Appuyez sur une pièce pour voir son bilan.
+Le menu de gauche de l’onglet **Confort** a trois pages :
 
-Tout ce qui se modifie est dans **Réglages généraux** : **Modifier** ouvre les réglages d’une pièce ; **Ajouter une pièce** propose vos pièces Home Assistant pas encore suivies, ou une pièce libre. La rubrique **Extensions** dit pour chacune à quoi elle sert, et si elle est liée, à lier ou à installer.
+- **Accueil** se lit seulement : vos pièces et leur apprentissage, l’état des extensions, les versions et les liens utiles. Appuyez sur une pièce pour voir son bilan.
+- **Bilan du logement** : la note de confort sur douze mois ([plus bas](#le-bilan-du-logement)).
+- **Réglages généraux** : tout ce qui se modifie. **Modifier** ouvre les réglages d’une pièce ; **Ajouter une pièce** propose vos pièces Home Assistant pas encore suivies, ou une pièce libre.
+
+La rubrique **Extensions** des Réglages généraux présente Niak Weather, Versatile Thermostat, Adaptive Cover Pro et Alarmo. Chacune dit à quoi elle sert, si elle est liée, à lier ou à installer, et a un interrupteur. Coupée, une extension n’est lue dans aucune pièce, et les réglages des pièces le disent. Les extensions trouvées que Confort ne lit pas encore peuvent être demandées en un clic.
 
 ![Les réglages d’une pièce : l’onglet Ouvertures](images/niak-comfort-reglages.png)
 
@@ -149,13 +156,13 @@ Un détecteur de mouvement silencieux ne prouve pas que la pièce est vide. Dél
 
 **Personnes de la pièce** : cochez les personnes de Home Assistant à qui sert la pièce. Une pour une chambre, plusieurs pour une pièce commune. La pièce compte comme vide quand elles sont toutes absentes, même si d’autres sont à la maison : pas de « Rallumez le chauffage » dans la chambre de quelqu’un qui est parti, et un avertissement si sa fenêtre est restée ouverte. Sans case cochée, toute la maison compte.
 
-**Alarme** (Réglages généraux) : Alarmo est reconnu tout seul ; vous pouvez choisir une autre alarme, ou aucune. Armée en absence ou en vacances, la maison est vide, et une fenêtre ouverte devient urgente : « Refermez ». En mode nuit, une fenêtre ouverte est signalée, sauf celle que vous avez dit laisser ouverte exprès pour dormir au frais.
+**Alarme** : Alarmo est reconnu tout seul. Pour ne pas en tenir compte, coupez-le dans **Réglages généraux → Extensions**. Armée en absence ou en vacances, la maison est vide, et une fenêtre ouverte devient urgente : « Refermez ». En mode nuit, une fenêtre ouverte est signalée, sauf celle que vous avez dit laisser ouverte exprès pour dormir au frais.
 
 ### Chauffage
 
-Le thermostat ou la vanne de la pièce.
+**Pièce chauffée**, en tête de l’onglet : éteint, Niak ne conseille jamais de réchauffer la pièce et ne lit pas son chauffage. Le thermostat et ses réglages s’effacent ; ils sont gardés si vous le rallumez.
 
-Niak sait alors si le chauffage tourne. Il évite de conseiller d’ouvrir pendant qu’il chauffe.
+Ensuite, le thermostat ou la vanne de la pièce. Niak sait alors si le chauffage tourne. Il évite de conseiller d’ouvrir pendant qu’il chauffe.
 
 **Quand conseiller de rallumer** : sous le minimum de la pièce, Niak le dit d’abord dans « À savoir ». « Rallumez le chauffage » n’apparaît que si la pièce reste plus bas que la **tolérance** (1 °C par défaut, de 0 à 5 °C) pendant 30 minutes, avec quelqu’un à la maison et le chauffage coupé, et qu’elle ne se réchauffe pas d’elle-même (le soleil, par exemple).
 
@@ -188,7 +195,6 @@ Il ne commande rien.
 
 - Le nom de la pièce et sa pièce Home Assistant.
 - L’étage : repris de Home Assistant, ou à choisir pour une pièce libre.
-- **Pièce non chauffée** : Niak ne conseille jamais de la réchauffer.
 - **Même air** : cochez les pièces ouvertes sur celle-ci, sans mur ni porte entre elles (un salon ouvert sur sa cuisine). Leurs fenêtres comptent pour les deux, elles n’ont qu’une carte, et jamais deux gestes contraires.
 - Les réglages avancés, facultatifs : rafales (45 km/h), gel (1 °C), soleil sur une façade (250 W/m²), faible lumière (100 lux), ancienneté des mesures (3 h).
 
@@ -210,6 +216,7 @@ Un capteur à vérifier demande une confirmation. Elle est retenue ensuite.
 | Couleur | Étiquette | Sens |
 | --- | --- | --- |
 | Bleu | Tout va bien | Rien à faire |
+| Bleu | Au mieux | Une mesure hors de votre plage, mais aucun geste ne ferait mieux ; « À savoir » dit pourquoi |
 | Vert | À saisir | Un bénéfice, souvent plus tard : « Aérez vers 23 h » |
 | Orange | Geste conseillé | Un geste utile maintenant |
 | Rouge | Attention | Urgent : « Fermez, il pleut » |
@@ -217,7 +224,13 @@ Un capteur à vérifier demande une confirmation. Elle est retenue ensuite.
 
 Niak ne parle que pour un geste qui aide. Sinon : « Rien à faire ».
 
-**Dessous, « À savoir »** : ce qui est utile à savoir, sans geste à faire. Une idée par ligne : risque de moisissure sur les murs froids, air humide dehors, même air qu’une autre pièce, VMC en marche, résultat de la dernière aération (« humidité 76 → 70 % »).
+- **Aérer seulement si c’est mieux qu’attendre** : la durée d’aération est apprise pièce par pièce.
+- **Pas d’« Aérez » en pleine nuit** : la carte attend le réveil et dit à partir de quelle heure aérer.
+- **« Ouvrez pour réchauffer »** quand il fait nettement plus doux dehors qu’une pièce fraîche.
+- **« Chauffez un peu plus »** quand des murs plus chauds suffisent à écarter la moisissure.
+- **« Rallumez le chauffage »** pour une pièce nettement froide, chauffage coupé ([Chauffage](#chauffage)).
+
+**Dessous, « À savoir »** : ce qui est utile à savoir, sans geste à faire, le plus important d’abord. Une idée par ligne : risque de moisissure sur les murs froids, air humide dehors, même air qu’une autre pièce, VMC en marche, résultat de la dernière aération (« humidité 76 → 70 % »). Il dit aussi les bonnes fenêtres à ouvrir, selon le vent, les façades et la taille des ouvrants ; une fenêtre où la pluie entrerait est écartée.
 
 Plusieurs conseils ? Ils défilent, le plus important d’abord. Un appui passe au suivant.
 
@@ -268,6 +281,8 @@ Carte d’une pièce :
 
 Carte du logement : complète, tuile, liste des pièces, mini ou alerte.
 
+Carte du bilan : résumé (la note, les thèmes et le conseil le plus important ; un appui ouvre le bilan complet) ou complet.
+
 Un appui long sur une tuile ouvre la carte complète en fenêtre, une page de votre choix, ou rien. Sur mini et alerte, un simple appui suffit.
 
 Ensuite, les réglages suivent les quatre sections de la carte, numérotées dans le même ordre :
@@ -282,6 +297,30 @@ Puis l’apparence (animations, verre dépoli) et l’appui long. Pour une tuile
 **Le graphique « Prochaines heures »**, sous l’échelle : la pièce sans le geste conseillé (en pointillé gris) et avec (en couleur), une frise qui dit quand. Son sujet suit le conseil : rafraîchir la nuit en été, aérer sans perdre la chaleur en hiver, laisser le soleil réchauffer, assécher. Quand la température et l’humidité ont chacune quelque chose à montrer, deux onglets : celui du conseil d’abord. Il n’apparaît que quand il aide ; c’est une tendance, pas une mesure.
 
 La carte suit le thème de Home Assistant, clair ou sombre.
+
+## Le bilan du logement
+
+Le bilan dit si le logement a été confortable sur les **douze derniers mois**. Il est dans le menu de gauche de l’onglet **Confort**, sous **Accueil**, et sur la carte **Niak Confort · bilan**.
+
+**La note, de A à E**, pour le logement et pour chaque pièce. Chaque heure est classée selon la norme européenne EN 16798-1 et reçoit des points : 100 en confort élevé, 75 en confort normal, 50 en confort modéré, 0 en dehors. La note est la moyenne, de 0 à 100 :
+
+| Note | Points |
+| --- | --- |
+| A | 85 et plus |
+| B | 70 à 84 |
+| C | 55 à 69 |
+| D | 40 à 54 |
+| E | moins de 40 |
+
+Une pièce est notée sur ce qu’elle mesure, le logement sur la moyenne de ses pièces. Il faut deux semaines de mesures pour noter un thème.
+
+**Trois thèmes** : la chaleur, l’humidité et l’air, chacun avec sa note et ses graphiques. Une phrase résume le logement : « confortable toute l’année », « un peu frais l’hiver », ou son point faible.
+
+**La fiche d’une pièce** : sa note mois par mois, et sa journée type l’hiver et l’été.
+
+**Nos conseils** n’apparaissent que pour un problème qui dure : chauffer une pièce restée trop froide, faire tourner la VMC ou aérer une pièce trop humide, ouvrir la nuit après un été chaud. Rien quand tout va bien.
+
+Le bilan lit l’historique de Home Assistant : les statistiques à long terme gardent les mois passés.
 
 ## Fenêtres, chauffage, VMC, purificateur, volets
 

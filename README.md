@@ -62,10 +62,11 @@ Rien n’est enregistré avant **Enregistrer**. [Le guide pas à pas](docs/guide
 
 ## Les cartes
 
-Deux cartes à choisir dans **Ajouter une carte** :
+Trois cartes à choisir dans **Ajouter une carte** :
 
 - **Niak Confort** : une pièce. Son conseil, sa température dans votre plage, ses mesures. Formats : complète, tuile, tuile dépliée, mini, mesures, alerte (visible seulement quand un geste est conseillé).
 - **Niak Confort · logement** : toutes les pièces. Les conseils qui comptent, la température de chaque pièce, l’air qui traverse. Formats : complète, tuile, liste des pièces, mini, alerte.
+- **Niak Confort · bilan** : la note du logement sur douze mois. Formats : résumé (un appui ouvre le bilan complet) ou complet.
 
 Comme pour Niak Weather, un appui long sur une tuile (un appui sur mini et alerte) ouvre la carte complète en fenêtre, une page de votre choix, ou rien. Sur la carte logement complète ou en liste, l’appui long peut ouvrir une page, par exemple votre page Maison.
 
@@ -75,14 +76,28 @@ Deux pièces sans mur entre elles (un salon ouvert sur sa cuisine) partagent leu
 
 La couleur dit s’il y a quelque chose à faire :
 
-- **bleu** : tout va bien ;
+- **bleu** : tout va bien, ou « Au mieux » quand aucun geste ne peut faire mieux ;
 - **vert** : un bénéfice à saisir (« Aérez vers 23 h ») ;
 - **orange** : un geste conseillé maintenant ;
 - **rouge** : urgent (la pluie entre).
 
 ![Quatre pièces : tout va bien, aérer plus tard, lancer la VMC, fermer car il pleut](docs/images/niak-comfort-situations.png)
 
+Sous l’échelle, le graphique **« Prochaines heures »** montre la pièce sans le geste conseillé et avec : vous voyez ce qu’il change.
+
+Niak ne conseille d’aérer que si c’est mieux qu’attendre, et jamais en pleine nuit : il dit à partir de quelle heure.
+
 Un appui sur une mesure ouvre son historique dans Home Assistant. [Lire les conseils](docs/guide.md#lire-les-conseils).
+
+## Le bilan du logement
+
+Une note de confort de **A à E**, pour le logement et pour chaque pièce, sur les douze derniers mois. Elle suit la norme européenne EN 16798-1.
+
+- La chaleur, l’humidité et l’air, en graphiques.
+- La fiche de chaque pièce : mois par mois, une journée type l’hiver et l’été.
+- Des conseils seulement s’il y a un problème qui dure : chauffer une pièce restée trop froide, faire tourner la VMC, ouvrir la nuit après un été chaud.
+
+Il est dans le panneau **Niak**, onglet **Confort**, sous **Accueil**. La carte **Niak Confort · bilan** le montre à toute la famille. Il faut deux semaines de mesures pour noter un thème. [Le bilan en détail](docs/guide.md#le-bilan-du-logement).
 
 ## Le panneau Niak
 
@@ -90,8 +105,9 @@ Tout se règle dans le panneau **Niak** de la barre latérale, onglet **Confort*
 
 ![Le panneau Niak, onglet Confort : l’accueil, avec chaque pièce, ses mesures et son apprentissage](docs/images/niak-comfort-panneau.png)
 
-- **Accueil** : à lire seulement. L’état du logement, ce qui reste à régler, l’apprentissage de chaque pièce, l’état des extensions, puis **Versions et liens**.
-- **Réglages généraux** : tout ce qui se modifie. Les pièces (**Modifier**, **Ajouter une pièce**), Niak Weather ou vos propres capteurs pour le dehors, puis les **extensions tierces** (Versatile Thermostat, Adaptive Cover Pro, Alarmo) : liée, à lier ou à installer, avec l’utilité de chacune. Les extensions trouvées que Confort ne lit pas encore peuvent être demandées en un clic.
+- **Accueil** : à lire seulement. L’état du logement, ce qui reste à régler, l’apprentissage de chaque pièce, l’état des extensions, puis **Versions et liens**. Une pièce s’ouvre sur son bilan.
+- **Bilan du logement** : la note et la fiche de chaque pièce.
+- **Réglages généraux** : tout ce qui se modifie. Les pièces (**Modifier**, **Ajouter une pièce**), Niak Weather ou vos propres capteurs pour le dehors, puis les **extensions** : Niak Weather, Versatile Thermostat, Adaptive Cover Pro et Alarmo. Chacune dit à quoi elle sert et a un interrupteur pour l’activer ou la couper. Coupée, elle n’est lue dans aucune pièce. Les extensions trouvées que Confort ne lit pas encore peuvent être demandées en un clic.
 - Une pièce se règle en six onglets : Température, Ouvertures, Air intérieur, Présence, Chauffage, La pièce.
 
 Chaque réglage a son aide. Les seuils sont expliqués avec leurs sources ([les repères](docs/SEUILS.md)).
@@ -106,6 +122,8 @@ Niak Confort fonctionne seul. Avec [Niak Weather](https://github.com/Niakman13/n
 - il tient compte des vigilances et des orages ;
 - l’air du dehors suit la source choisie dans Weather (Atmo France ou une station WAQI). Si Atmo France tombe en panne, Confort garde l’indice du jour. Il faut Niak Weather 2.5.7 ou plus récent.
 
+La liaison se règle des deux côtés, et les deux disent toujours la même chose : dans Niak Weather 2.9.0 ou plus récent, **Réglages → Extensions → Niak Confort** ; dans Confort, **Réglages généraux**. Coupée d’un côté, elle l’est des deux.
+
 Les deux briques partagent le panneau **Niak** et la même charte. L’**Accueil Niak** montre l’état de chacune.
 
 ## Avec Versatile Thermostat
@@ -117,11 +135,13 @@ Le chauffage d’une pièce est un [Versatile Thermostat](https://github.com/jmc
 - en éco, hors-gel ou absence, une pièce plus fraîche est voulue : Niak ne demande rien ;
 - la fenêtre ouverte qu’il détecte est signalée, même sans contact sur la fenêtre.
 
+Un autre thermostat ne dit pas s’il chauffe ? Choisissez son **indicateur de chauffe** (vanne, relais, état de marche) dans l’onglet **Chauffage** : l’apprentissage du chauffage peut alors aller jusqu’au bout.
+
 Sans Versatile Thermostat, « Rallumez le chauffage » attend que la pièce soit nettement sous son minimum (1 °C par défaut, réglable) depuis 30 minutes. Niak ne commande rien. Il faut Niak Confort 1.5.0 ou plus récent.
 
 ## Avec Alarmo et vos personnes
 
-- [Alarmo](https://github.com/nielsfaber/alarmo) est reconnu tout seul (ou choisissez une autre alarme dans **Réglages généraux**). Armée en absence, la maison est vide et une fenêtre ouverte devient urgente ; en mode nuit, elle est signalée.
+- [Alarmo](https://github.com/nielsfaber/alarmo) est reconnu tout seul. Pour ne pas en tenir compte, coupez-le dans **Réglages généraux → Extensions**. Armée en absence, la maison est vide et une fenêtre ouverte devient urgente ; en mode nuit, elle est signalée.
 - Dans l’onglet **Présence** de chaque pièce, cochez les personnes à qui elle sert : la chambre de quelqu’un qui est parti compte comme vide.
 
 ## Avec Adaptive Cover Pro
@@ -155,7 +175,7 @@ Par exemple : des LED aux couleurs de la carte, ou la VMC qui suit le conseil. [
 
 | Page | Ce qu’elle explique |
 | --- | --- |
-| [Guide d’utilisation](docs/guide.md) | Premiers pas, extérieur, pièces, lire les conseils, équipements, apprentissage, entités |
+| [Guide d’utilisation](docs/guide.md) | Premiers pas, extérieur, pièces, lire les conseils, bilan du logement, équipements, apprentissage, entités |
 | [Dépannage](docs/depannage.md) | « Ne répond pas », carte invisible, sources, Niak Weather, volets, journaux |
 | [Les repères](docs/SEUILS.md) | CO₂, particules, humidité, COV : les seuils proposés et leurs sources |
 | [Notes techniques](docs/dev/README.md) | Pour les développeurs : tests, interfaces, notes de conception |
