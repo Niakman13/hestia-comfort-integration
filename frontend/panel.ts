@@ -2,6 +2,7 @@ import {LitElement,html,unsafeCSS,nothing,type PropertyValues} from 'lit';
 import {customElement,property,state} from 'lit/decorators.js';
 import {live} from 'lit/directives/live.js';
 import styles from './styles.css';
+import './review';
 import {frame,hubStyles,modernStyles,hubIcon,helpTip,defaultValue} from './socle/ui';
 import {labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,stages,intros,outdoorGroups,changedAdvanced,advancedDefaults,airSource,airChoices,exteriorChoices,airReferenceDefaults,vocPreset,thresholdSources,type Choice,type Area,type Candidate,type Discovery,type Health,type HealthLine,type Target,type Snapshot,type Hass,type Room,type RoomConfig,type Spec,type Twins,type Twin,type Progress,seasonNames} from './model';
 /** « Intégration 1.2.5 » → Intégration · 1.2.5 ; « Relié à Niak Weather · Gardanne » → Niak Weather · relié, Gardanne. */
@@ -65,7 +66,9 @@ export class ComfortSetup extends LitElement {
  @state() private healthError='';
  private healthGeneration=0;
  // The tab opens on the home's technical state; « Modifier » leads to the rooms.
- @state() private page:'health'|'rooms'='health';
+ @state() private page:'health'|'rooms'|'review'='health';
+ // The comfort review (review.ts): the home's dashboard, or one room's sheet.
+ @state() private reviewRoom?:string;
  @state() private adding=false;
  @state() private weatherAir:{provider:string;index:number|null;label:string|null}|null=null;
  @state() private weatherSeason:string|null=null;
@@ -145,6 +148,7 @@ export class ComfortSetup extends LitElement {
   const versions=h.versions.filter(l=>!(weatherShown&&l.level==='ok'&&l.text.includes('Niak Weather')));
   return html`<div class="ac-top"><div><h1>Confort</h1>
     <p class="ac-state"><span class=${'hl-dot '+(h.level==='ok'?'ok':'bad')}></span><b>${h.level==='ok'?'Tout fonctionne':h.summary}</b><span class="muted"> · ${h.rooms_summary}</span></p></div>
+   <div class="ac-actions"><button @click=${()=>this.path('bilan')}>Bilan du logement</button></div>
 </div>
   <div class="ac-kpis">${kpi(`${answering} / ${configured}`,'capteurs qui répondent',answering===configured?'ok':'bad')}
    ${kpi(`${known} / ${t.length||h.rooms.length}`,'pièces observées à 100 %',t.length&&known===t.length?'ok':'')}
@@ -269,14 +273,14 @@ export class ComfortSetup extends LitElement {
    ${legend?html`<p class="tw-legend"><span class="measured">mesurée</span><span class="replayed">rejouée par le jumeau</span></p>`:nothing}`;
  }
  private message(e:unknown){return typeof e==='object'&&e&&'message' in e?String(e.message):'La connexion est indisponible. Réessayez sans quitter votre brouillon.';}
- private path(path:string){if(!this.isConnected)return;const full='/'+path.replace(/^\//,'');this.routeHandled=full==='/'?'':full;const key=path.split('/')[0];if(key==='pieces'||!key)this.page=key==='pieces'?'rooms':'health';history.pushState(null,'','/niak/confort'+(path?'/'+path:''));window.dispatchEvent(new CustomEvent('location-changed'));}
+ private path(path:string){if(!this.isConnected)return;const full='/'+path.replace(/^\//,'');this.routeHandled=full==='/'?'':full;const [key,sub]=path.split('/');if(key==='bilan'){this.page='review';this.reviewRoom=sub;}else if(key==='pieces'||!key)this.page=key==='pieces'?'rooms':'health';history.pushState(null,'','/niak/confort'+(path?'/'+path:''));window.dispatchEvent(new CustomEvent('location-changed'));}
  private remember(){if(this.workspaceKey&&(this.draft||this.exteriorDraft))this.drafts.set(this.workspaceKey,{draft:this.draft,exteriorDraft:this.exteriorDraft,discovery:this.discovery,entryId:this.entryId,stage:this.stage,revision:this.revision,acknowledged:this.acknowledged,proposed:this.proposed,search:this.search,weatherEntry:this.weatherEntry});}
  private async followRoute(){
   const path=this.route?.path??'';if(this.routeHandled===path)return;this.routeHandled=path;const generation=++this.workspaceGeneration;this.remember();
   const [id,section]=path.split('/').filter(Boolean);const key=id??'';
   this.workspaceKey=key;this.draft=undefined;this.exteriorDraft=undefined;this.discovery=undefined;this.entryId=undefined;this.preview=undefined;this.error='';this.saved='';this.confirmDiscard=false;this.confirmRemove=false;
   // The tab opens on its technical home; « pieces » is the list of rooms to set.
-  this.page=key==='pieces'?'rooms':'health';if(key==='pieces')return;
+  this.page=key==='pieces'?'rooms':key==='bilan'?'review':'health';this.reviewRoom=key==='bilan'?section:undefined;if(key==='pieces'||key==='bilan')return;
   const cached=this.drafts.get(key);
   if(cached){Object.assign(this,cached);this.stage=roomSections.find(x=>x.path===section)?.stage??(section==='recapitulatif'?5:cached.stage);return;}
   if(id==='apercu'&&this.snapshot?.rooms.some(r=>r.entry_id===section)){this.preview=section;this.previewEdited=true;return;}
@@ -636,8 +640,8 @@ export class ComfortSetup extends LitElement {
   const editing=!!(this.draft||this.exteriorDraft);
   // Inside the shared « Niak » panel, its header and tabs replace this one.
   const header=this.hasAttribute('embedded')?nothing:html`<header><button aria-label="Ouvrir le menu Home Assistant" @click=${()=>this.menu()}><span class="menu-icon"></span></button><strong>Niak Confort</strong></header>`;
-  return html`${header}<main class=${this.page==='health'&&!editing&&!this.preview&&this.snapshot?.rooms.length?'wide':''}>${this.confirmDiscard?html`<section class="notice" role="alertdialog" aria-label="Abandonner le brouillon"><h2>Quitter sans enregistrer ?</h2><p>Vos choix de cette page seront perdus.</p><div class="actions"><button @click=${()=>this.confirmDiscard=false}>Continuer la configuration</button><button @click=${()=>this.discard()}>Quitter sans enregistrer</button></div></section>`:nothing}
+  return html`${header}<main class=${(this.page==='health'||this.page==='review')&&!editing&&!this.preview&&this.snapshot?.rooms.length?'wide':''}>${this.confirmDiscard?html`<section class="notice" role="alertdialog" aria-label="Abandonner le brouillon"><h2>Quitter sans enregistrer ?</h2><p>Vos choix de cette page seront perdus.</p><div class="actions"><button @click=${()=>this.confirmDiscard=false}>Continuer la configuration</button><button @click=${()=>this.discard()}>Quitter sans enregistrer</button></div></section>`:nothing}
    ${!editing?html`${this.errorBlock()}${this.error&&!this.snapshot?html`<button @click=${()=>this.load()}>Réessayer</button>`:nothing}`:nothing}${this.saved?html`<p class="notice success" role="status">${this.saved}</p>`:nothing}${this.busy&&!this.snapshot?html`<p class="loading" role="status">Chargement de votre logement…</p>`:nothing}
-   ${this.snapshot?(this.exteriorDraft?this.exterior():this.draft?this.wizard():this.preview?this.previewScreen():this.page==='health'&&this.snapshot.rooms.length?this.healthScreen():this.home()):nothing}${this.busy&&this.snapshot?html`<p class="busy" role="status">Un instant…</p>`:nothing}</main>`;
+   ${this.snapshot?(this.exteriorDraft?this.exterior():this.draft?this.wizard():this.preview?this.previewScreen():this.page==='review'?html`<niak-comfort-review .hass=${this.hass} .room=${this.reviewRoom} @review-navigate=${(e:CustomEvent<string>)=>this.path(e.detail)}></niak-comfort-review>`:this.page==='health'&&this.snapshot.rooms.length?this.healthScreen():this.home()):nothing}${this.busy&&this.snapshot?html`<p class="busy" role="status">Un instant…</p>`:nothing}</main>`;
  }
 }
