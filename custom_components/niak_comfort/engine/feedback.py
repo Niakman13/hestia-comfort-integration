@@ -36,7 +36,7 @@ def measure(assessment):
     air = features.get("air") or {}
     if reason in ("drying_possible", "ventilation_possible"):
         return "humidity"
-    if reason in ("cooling_possible", "precool_possible"):
+    if reason in ("cooling_possible", "precool_possible", "warming_possible"):
         return "temperature"
     if reason in ("air_needed", "short_air_change", "optional_air_change"):
         return "co2" if air.get("co2_status") == "high" else "voc" if air.get("voc_status") == "high" else None
