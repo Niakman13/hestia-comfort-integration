@@ -65,7 +65,7 @@ Une mesure absente reste inconnue : Niak conseille quand même et le dit sur la 
 
 ## Les pièces
 
-L’accueil Confort (**Vue d’ensemble**) liste vos pièces : leurs mesures, leur apprentissage et un bouton **Modifier**, qui ouvre les réglages de la pièce. **Ajouter une pièce** propose vos pièces Home Assistant pas encore suivies, ou une pièce libre.
+L’accueil Confort (**Accueil**) liste vos pièces : leurs mesures, leur apprentissage et un bouton **Modifier**, qui ouvre les réglages de la pièce. **Ajouter une pièce** propose vos pièces Home Assistant pas encore suivies, ou une pièce libre.
 
 ![Les réglages d’une pièce : l’onglet Ouvertures](images/niak-comfort-reglages.png)
 

@@ -149,7 +149,6 @@ export class ComfortSetup extends LitElement {
   const versions=h.versions.filter(l=>!(weatherShown&&l.level==='ok'&&l.text.includes('Niak Weather')));
   return html`<div class="ac-top"><div><h1>Confort</h1>
     <p class="ac-state"><span class=${'hl-dot '+(h.level==='ok'?'ok':'bad')}></span><b>${h.level==='ok'?'Tout fonctionne':h.summary}</b><span class="muted"> · ${h.rooms_summary}</span></p></div>
-   <div class="ac-actions"><button @click=${()=>this.path('bilan')}>Bilan du logement</button></div>
 </div>
   <div class="ac-kpis">${kpi(`${answering} / ${configured}`,'capteurs qui répondent',answering===configured?'ok':'bad')}
    ${kpi(`${known} / ${t.length||h.rooms.length}`,'pièces observées à 100 %',t.length&&known===t.length?'ok':'')}
@@ -609,7 +608,7 @@ export class ComfortSetup extends LitElement {
    <dt>Extérieur</dt><dd>${home.configured?exteriorSummary(home.sources):'À configurer depuis Mon logement'}</dd></dl>`)}
    ${this.confirmBlock()}`;}
  private errorBlock(){return this.error?html`<p class="notice error" role="alert">${this.error}</p>`:nothing;}
- private wizard(){const d=this.draft!,section=roomSections.find(x=>x.stage===this.stage);return html`<div class="workspace-head"><button class="link" @click=${()=>this.cancel()}>← Vue d’ensemble Confort</button><h1 tabindex="-1">Configurer ${d.name||'la pièce'}</h1><p class="step-count">${d.area_id?'Pièce Home Assistant : '+this.areaName(d.area_id):'Pièce libre'} · Les réglages de cette pièce</p></div>
+ private wizard(){const d=this.draft!,section=roomSections.find(x=>x.stage===this.stage);return html`<div class="workspace-head"><button class="link" @click=${()=>this.cancel()}>← Accueil Confort</button><h1 tabindex="-1">Configurer ${d.name||'la pièce'}</h1><p class="step-count">${d.area_id?'Pièce Home Assistant : '+this.areaName(d.area_id):'Pièce libre'} · Les réglages de cette pièce</p></div>
   <nav class="room-menu" aria-label="Réglages de la pièce">${[roomSections.slice(0,3),roomSections.slice(3)].map(row=>html`<div class="room-menu-row">${row.map(x=>html`<button aria-label=${x.title} title=${x.title} aria-current=${x.stage===this.stage?'page':nothing} @click=${()=>this.go(x.stage)}>${hubIcon(x.icon)}<span>${x.label}</span></button>`)}</div>`)}</nav>
   <div class="room-content-head"><h2>${section?.title??'Récapitulatif'}</h2></div>${this.intro(String(this.stage))}
   ${this.stage===0?[...indoor,'illuminance'].map(key=>this.field(key)):this.stage===1?html`${this.field('windows')}${this.draft&&!this.draft.windows.length?html`<label class="check"><input type="checkbox" .checked=${this.draft.windows_unmeasured===true} @change=${(e:Event)=>this.draft={...this.draft!,windows_unmeasured:(e.target as HTMLInputElement).checked}}>Pas de contact de fenêtre ici, c’est voulu : ne plus le suggérer</label>`:nothing}`:this.stage===2?this.airPresence():this.stage===6?html`${this.field('presence')}${this.personsBlock()}`:this.stage===3?this.field('heating'):this.stage===4?this.preferences():this.summary()}

@@ -1,3 +1,19 @@
+## 1.7.13 — Le bilan dans le menu
+
+**En bref**
+
+- « Bilan du logement » est dans le menu de gauche, sous l’accueil de Confort.
+- Le bilan s’anime à l’ouverture.
+
+### Améliorations
+
+- **Menu de gauche** : « Vue d’ensemble » s’appelle désormais « Accueil », pour Confort comme pour Weather. Le bouton « Bilan du logement » quitte le haut de l’accueil pour le menu.
+- **Bilan animé** : les barres montent, les courbes se tracent, la note et les panneaux apparaissent en douceur. Rien ne bouge si votre appareil demande de réduire les animations.
+
+### Après la mise à jour
+
+- Rechargez la page (ou videz le cache de l’application mobile) pour voir le nouveau menu.
+
 ## 1.7.12 — Un « À savoir » qui ne se contredit plus
 
 **En bref**
