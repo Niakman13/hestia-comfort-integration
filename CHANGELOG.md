@@ -1,3 +1,15 @@
+## 1.7.17 — Un seul appareil pour Salon · Cuisine
+
+**En bref**
+
+- Dans Home Assistant, la pièce où vous avez coché « Même air » ne montre plus qu’un appareil : « Salon · Cuisine ».
+
+### Corrections
+
+- **Salon · Cuisine** : l’encart Salon montrait deux appareils, « Salon » et « Salon · Cuisine ». Il n’en reste qu’un, « Salon · Cuisine ».
+- Les mesures propres au Salon y passent sous les noms « Humidité · Salon », « Apprentissage · Salon »… Elles gardent leur nom d’entité et leur historique.
+- La Cuisine garde son propre appareil.
+
 ## 1.7.16 — Des entités qui disent ce que dit la carte
 
 **En bref**
