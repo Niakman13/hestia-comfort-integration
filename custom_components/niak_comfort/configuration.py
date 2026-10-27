@@ -18,6 +18,9 @@ from .air_references import AIR_DEFAULTS, AIR_REFERENCE_VERSION
 DATA_CONFIG = DOMAIN + "_configuration"
 
 
+# The third-party integrations a person can turn off in the general settings.
+SWITCHABLE = ("versatile_thermostat", "adaptive_cover_pro", "alarmo")
+
 class Configuration:
     def __init__(self, hass):
         self.hass = hass
@@ -61,7 +64,7 @@ class Configuration:
             entries.append({"entry_id": e.entry_id, "title": e.title, "loaded": e.state.value == "loaded", "config": config, "floor": room_floor(self.hass, config)})
         areas = [{"area_id": a.id, "name": a.name, "floor_id": a.floor_id, "outdoor": a.name.strip().casefold() in OUTDOOR_AREAS}
                  for a in ar.async_get(self.hass).areas.values()]
-        return {"version": 1, "revision": self.revision(), "home": {"sources": self.home_sources(), "configured": bool(self.home.get("configured")), "acknowledged": self.home.get("acknowledged", []), "weather": self.home.get("weather"), "alarm": self.home.get("alarm")}, "niak_weather": weather_link.status(self.hass), "integrations": {"atmofrance": bool(self.hass.config_entries.async_entries("atmofrance"))}, "rooms": entries, "floors": floor_catalog(self.hass), "areas": sorted(areas, key=lambda a: (a["name"].casefold() != "salon", a["name"].casefold()))}
+        return {"version": 1, "revision": self.revision(), "home": {"sources": self.home_sources(), "configured": bool(self.home.get("configured")), "acknowledged": self.home.get("acknowledged", []), "weather": self.home.get("weather"), "alarm": self.home.get("alarm"), "disabled": list(self.home.get("disabled") or [])}, "niak_weather": weather_link.status(self.hass), "integrations": {"atmofrance": bool(self.hass.config_entries.async_entries("atmofrance"))}, "rooms": entries, "floors": floor_catalog(self.hass), "areas": sorted(areas, key=lambda a: (a["name"].casefold() != "salon", a["name"].casefold()))}
 
     def discover(self, area_id=None, entry_id=None):
         if area_id and not ar.async_get(self.hass).async_get_area(area_id):
@@ -366,6 +369,22 @@ class Configuration:
             raise ValueError("Choisissez une alarme de Home Assistant.")
         async with self.lock:
             self.home = {**self.home, "alarm": value}
+            await self.store.async_save(self.home)
+            for entry in self.entries():
+                if entry.state.value == "loaded":
+                    await self.hass.config_entries.async_reload(entry.entry_id)
+            return self.snapshot()
+
+    async def set_extension(self, key, enabled):
+        """Uses a third-party integration or not, for every room: Alarmo found by itself or no alarm; the others listed when off."""
+        if key not in SWITCHABLE:
+            raise ValueError("Extension inconnue.")
+        async with self.lock:
+            if key == "alarmo":
+                self.home = {**self.home, "alarm": None if enabled else ""}
+            else:
+                off = [k for k in self.home.get("disabled") or [] if k != key] + ([] if enabled else [key])
+                self.home = {**self.home, "disabled": off}
             await self.store.async_save(self.home)
             for entry in self.entries():
                 if entry.state.value == "loaded":

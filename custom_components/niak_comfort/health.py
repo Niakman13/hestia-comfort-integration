@@ -72,6 +72,8 @@ class Facts:
     """The home's alarm as read: « Alarmo · désarmée », "" without one."""
     installed: frozenset = frozenset()
     """The integrations of EXTENSIONS and OTHERS that Home Assistant has loaded."""
+    disabled: frozenset = frozenset()
+    """The extensions turned off in the general settings."""
 
 
 def ago(minutes):
@@ -176,9 +178,9 @@ def report(f):
     extensions = []
     for ext in EXTENSIONS:
         found = linked[ext["key"]]
-        state = "linked" if found else "found" if installed.get(ext["key"], ext["key"] in f.installed) else "missing"
+        state = "off" if ext["key"] in f.disabled else "linked" if found else "found" if installed.get(ext["key"], ext["key"] in f.installed) else "missing"
         text = (f"relié · {f.weather}" if ext["key"] == "niak_weather" else f.alarm if ext["key"] == people.PLATFORM
-                else f"{_plural(len(found), 'pièce')} · " + ", ".join(found)) if found else ext[state]
+                else f"{_plural(len(found), 'pièce')} · " + ", ".join(found)) if found and state != "off" else "désactivée" if state == "off" else ext[state]
         extensions.append({**{k: ext[k] for k in ("key", "name", "official", "role", "use", "without", "url")},
                            "state": state, "level": "ok" if found else "none", "text": text, "rooms": found if ext["key"] in (thermostats.PLATFORM, "adaptive_cover_pro") else []})
     # Installed integrations Confort does not read yet: shown so that the person can ask for them.
@@ -264,6 +266,8 @@ async def facts(hass, version):
     local_entries = {}
     for entity in er.async_get(hass).entities.values():
         local_entries.setdefault(effective_area(hass, entity), []).append(entity)
+    # Alarmo off is no alarm; the others are listed by key.
+    disabled = set(service.home.get("disabled") or []) | ({people.PLATFORM} if service.home.get("alarm") == "" else set())
     for entry in service.entries():
         config = {**entry.data, **entry.options}
         sources, windows = config.get("sources", {}), config.get("windows", [])
@@ -271,7 +275,7 @@ async def facts(hass, version):
         coordinator = getattr(entry, "runtime_data", None)
         room.shared = coordinator.inherited() if hasattr(coordinator, "inherited") else {}
         heating = er.async_get(hass).async_get(sources["heating"]) if sources.get("heating") else None
-        room.thermostat = bool(heating and heating.platform == thermostats.PLATFORM)
+        room.thermostat = bool(heating and heating.platform == thermostats.PLATFORM and thermostats.PLATFORM not in disabled)
         room.driven_covers = sum(1 for w in windows if w in (getattr(coordinator, "drivers", None) or {}))
         room.windows_intended = config.get("windows_unmeasured") is True
         room.sensors = [_sensor(hass, key, sources[key], now) for key in ("indoor_temperature", "indoor_humidity", "co2", "heating", "illuminance", "pm25", "voc", "purifier", "ventilation", "ventilation_boost") if sources.get(key)]
@@ -319,5 +323,5 @@ async def facts(hass, version):
     loaded = getattr(getattr(hass, "config", None), "components", None) or set()
     # The original Adaptive Cover is read like the Pro one.
     installed = {d for d in DOMAINS if d in loaded} | ({"adaptive_cover_pro"} if any(p in loaded for p in cover_link.PLATFORMS) else set())
-    return Facts(alarm=alarm, installed=frozenset(installed), rooms=rooms, exterior=exterior, configured=bool(service.home.get("configured")), weather=weather,
+    return Facts(alarm=alarm, installed=frozenset(installed), disabled=frozenset(disabled), rooms=rooms, exterior=exterior, configured=bool(service.home.get("configured")), weather=weather,
                  weather_installed=bool(link.get("installed") and link.get("places")), free_areas=free, version=version)

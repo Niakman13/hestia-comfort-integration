@@ -59,6 +59,11 @@ class HealthTests(unittest.TestCase):
         self.assertEqual([o["name"] for o in r["others"]], ["Better Thermostat"])
         self.assertRegex(r["socle"], r"^1\.\d+$")
 
+    def test_an_extension_turned_off_says_so(self):
+        r = report(Facts(rooms=[room()], installed=frozenset({"adaptive_cover_pro", "alarmo"}), disabled=frozenset({"adaptive_cover_pro", "alarmo"})))
+        ext = {e["key"]: e for e in r["extensions"]}
+        self.assertEqual([(ext[k]["state"], ext[k]["text"]) for k in ("adaptive_cover_pro", "alarmo")], [("off", "désactivée")] * 2)
+
     def test_weather_installed_but_not_linked_is_found(self):
         r = report(Facts(weather_installed=True, alarm="Alarmo · désarmée", installed=frozenset({"alarmo"})))
         ext = {e["key"]: e for e in r["extensions"]}
