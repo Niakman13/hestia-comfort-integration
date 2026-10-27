@@ -8,6 +8,7 @@ import {icon} from './ui/icons';
 import {roomCard,asking,type CardState} from './views/room';
 import {LiveView} from './live';
 import './editor';
+import './review-card';
 import './home';
 
 let instances=0;

@@ -2,7 +2,8 @@ import {LitElement,html,unsafeCSS,nothing,type PropertyValues} from 'lit';
 import {customElement,property,state} from 'lit/decorators.js';
 import {live} from 'lit/directives/live.js';
 import styles from './styles.css';
-import './review';
+// The comfort review is shared with its Lovelace card (card/src/review.ts).
+import '../card/src/review';
 import {frame,hubStyles,modernStyles,hubIcon,helpTip,defaultValue} from './socle/ui';
 import {labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,stages,intros,outdoorGroups,changedAdvanced,advancedDefaults,airSource,airChoices,exteriorChoices,airReferenceDefaults,vocPreset,thresholdSources,type Choice,type Area,type Candidate,type Discovery,type Health,type HealthLine,type Target,type Snapshot,type Hass,type Room,type RoomConfig,type Spec,type Twins,type Twin,type Progress,seasonNames} from './model';
 /** « Intégration 1.2.5 » → Intégration · 1.2.5 ; « Relié à Niak Weather · Gardanne » → Niak Weather · relié, Gardanne. */
