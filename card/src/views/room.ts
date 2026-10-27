@@ -288,8 +288,10 @@ export function facts(v:View):Fact[] {
   if(hum?.status==='low')out.push({ic:'drop',title:humLabel&&hum.degree?humLabel:'Air sec',key:'humidity',weight:hum.degree??0,text:hum.reachable!=null&&hum.measured!=null
     ?hum.reachable<hum.measured?'aérer assécherait davantage la pièce':hum.reachable>hum.measured?'l’air extérieur pourrait augmenter l’humidité ; le conseil tient aussi compte de la température':'aérer ne changerait pas l’humidité'
     :'effet de l’aération inconnu sans mesure extérieure'});
-  if(!humOut&&hum?.trend==='improving'&&hum.degree)out.push({ic:'drop',title:'Humidité',text:'revient vers votre plage'});
-  else if(!humOut&&hum?.lasting&&hum.degree)out.push({ic:'clock',title:'Humidité',text:hum.status==='low'?'sous votre plage depuis plusieurs heures':'au-dessus de votre plage depuis plusieurs heures'});
+  // Under a drying gesture the line keeps the degree too: « Très humide » at 78 %, as the measure tile says.
+  const humTitle=hum?.status==='high'&&humLabel?humLabel:'Humidité';
+  if(!humOut&&hum?.trend==='improving'&&hum.degree)out.push({ic:'drop',title:humTitle,text:'revient vers votre plage'});
+  else if(!humOut&&hum?.lasting&&hum.degree)out.push({ic:'clock',title:humTitle,text:hum.status==='low'?'sous votre plage depuis plusieurs heures':'au-dessus de votre plage depuis plusieurs heures'});
   if(a.reason==='shared_volume'&&vol)out.push({ic:'home',title:'Même air',text:`conseil commun avec : ${vol.lead}`});
   // An open window that warms the room is no window to close: the banner says it warms, this line only the humidity.
   if(a.reason==='open_neutral'&&!(f?.open_warms&&!a.needs.includes('dry')))out.push({ic:'open',title:'Fenêtre ouverte',

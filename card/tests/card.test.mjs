@@ -212,6 +212,10 @@ test('the drying advice speaks of what this room really gains, how long, and whe
   v.assessment={...v.assessment,reason:'ventilation_possible',level:'action',features:{...v.assessment.features,drying:{...drying,after:74,gain:2},air:{...(v.assessment.features?.air??{}),ventilation:{on:false,boost:false}}}};
   // Never the losing remedy's numbers under « Lancez la VMC » (20 Oct.: « 85 → 85 % seulement »).
   a=advice(v);assert.equal(a.title,'Lancez la VMC');assert.match(plain(a.line),/la fenêtre la baisse à peine/);assert.doesNotMatch(plain(a.line),/→/);
+  // Chambre P, 27 Oct.: 78 % under « Lancez la VMC » keeps its degree in « À savoir », not a bare « Humidité ».
+  v.assessment.features.humidity={...(v.assessment.features.humidity??{}),status:'high',degree:3,lasting:true};
+  const humid=facts(v).find(f=>/au-dessus de votre plage/.test(plain(f.text)));
+  assert.equal(humid?.title,'Très humide');
 });
 test('the weather’s own humidity and a coming rain are said plainly',()=>{
   const v=fresh();
