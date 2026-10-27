@@ -1,3 +1,24 @@
+## 1.7.20 — Un indicateur de chauffe pour les thermostats muets
+
+**En bref**
+
+- **Indicateur de chauffe** : un thermostat qui ne dit pas s’il chauffe peut s’appuyer sur sa vanne, son relais ou son état de marche (demande de hellmer1234, issue #12).
+
+### Nouveautés
+
+- **Indicateur de chauffe**, dans l’onglet Chauffage d’une pièce, sous le thermostat. Facultatif. Un capteur oui/non, un `input_boolean` ou un capteur qui dit `heating`, `open`, `on` ou `idle`, `close`, `off`.
+- « Chauffage observé » porte un attribut **source** : `indicateur`, `hvac_action` ou `mode`.
+
+### Améliorations
+
+- L’apprentissage du chauffage suit l’indicateur : une pièce dont le thermostat ne dit pas s’il chauffe peut enfin atteindre « Optimal ».
+- Le guide explique comment « Chauffage observé » est calculé.
+
+### Corrections
+
+- Le graphique en anneau « Air » du Bilan du logement s’affiche en entier : il sortait de son cadre pendant son animation.
+- Pour des pièces au même air, le graphique « Prochaines heures » suit le conseil commun : la carte montrait celui de l’autre pièce.
+
 ## 1.7.19 — Le graphique « Prochaines heures » enfin visible, un hub plus fluide
 
 **En bref**

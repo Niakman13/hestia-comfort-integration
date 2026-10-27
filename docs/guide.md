@@ -161,6 +161,19 @@ Niak sait alors si le chauffage tourne. Il évite de conseiller d’ouvrir penda
 
 Un thermostat qui ne dit pas ce qu’il fait (sans « action » dans Home Assistant) est au moins lu « coupé » quand son mode est arrêt.
 
+**Indicateur de chauffe** (facultatif) : pour un thermostat qui ne dit pas s’il chauffe, choisissez ce qui le dit à sa place : une vanne, un relais, un état de marche. Un capteur oui/non, un `input_boolean` ou un capteur qui dit `heating`, `open`, `on` (en marche) ou `idle`, `close`, `off` (au repos) conviennent. Il peut venir d’un autre appareil que le thermostat.
+
+« Chauffage observé » se lit alors dans cet ordre :
+
+| Situation | Chauffage observé |
+|---|---|
+| Thermostat indisponible | Inconnu |
+| Thermostat en mode arrêt | Arrêté |
+| Indicateur en marche / au repos | Chauffe en cours / Au repos |
+| Indicateur muet ou absent | l’action du thermostat (`hvac_action`), sinon Inconnu |
+
+L’attribut `source` de « Chauffage observé » dit d’où vient l’état : `indicateur`, `hvac_action` ou `mode`. L’apprentissage du chauffage suit aussi l’indicateur.
+
 **Avec Versatile Thermostat**, reconnu tout seul, l’onglet montre ses consignes et propose de prendre sa **consigne comme minimum** de la pièce (coché par défaut) : le minimum suit ce que le thermostat vise, en confort ou en éco. Une pièce à 18 °C quand il vise 17 °C en éco n’est donc pas « trop fraîche ». Le hors-gel protège sans être un confort : la température confort reste alors le minimum, mais Niak ne demande pas de rallumer. Niak lit aussi :
 
 - pourquoi il est arrêté : seul un arrêt à la main appelle « Rallumez ». Arrêté par une fenêtre ouverte, par son arrêt automatique, un mode central ou un délestage, il repartira seul : la carte l’explique ;
@@ -391,7 +404,7 @@ Les entités disent **exactement ce que dit la carte** : même conseil, même pa
 | **Couleur** | La couleur de la carte, en `#rrggbb`. En attributs : `rgb_color`, et `hs_color` saturée pour une lumière |
 | **Humidité** | Dans votre plage · Légèrement humide · Air humide · Très humide · (et sec) |
 | **Apprentissage** | En % |
-| **Chauffage observé** | Chauffe en cours · Au repos · Arrêté · Rafraîchit · Inconnu · Non configuré |
+| **Chauffage observé** | Chauffe en cours · Au repos · Arrêté · Rafraîchit · Inconnu · Non configuré (attribut `source` : indicateur, hvac_action ou mode) |
 | **Geste à faire** | Oui quand la carte demande un geste maintenant |
 | **Aération conseillée** | Oui quand la carte dit d’ouvrir |
 | **Fenêtres à refermer** | Oui quand la carte dit de refermer |

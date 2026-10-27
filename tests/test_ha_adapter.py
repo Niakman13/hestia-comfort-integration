@@ -60,6 +60,43 @@ class AdapterTests(AdapterFixture):
         data = await coordinator._async_update_data()
         self.assertEqual((data["observations"]["heating_mode"]["value"], data["observations"]["heating_mode"]["detail"]), ("frost", "preset"))
 
+    async def test_a_heating_indicator_says_when_a_silent_thermostat_runs(self):
+        # Issue #12: a MOES thermostat in « heat » without hvac_action, its valve open from 03:15 to 08:46.
+        self.hass.states.async_set("climate.test", "heat", {})
+        self.hass.states.async_set("binary_sensor.vanne", "on")
+        self.entry.data["sources"]["heating_indicator"] = "binary_sensor.vanne"
+        coordinator = ComfortCoordinator(self.hass, self.entry)
+        heating = lambda data: (data["observations"]["heating"]["value"], data["observations"]["heating"]["detail"], data["assessment"]["heating_action"])
+        self.assertEqual(heating(await coordinator._async_update_data()), ("heating", "indicator", "heating"))
+        self.hass.states.async_set("binary_sensor.vanne", "off")
+        self.assertEqual(heating(await coordinator._async_update_data()), ("idle", "indicator", "idle"))
+        # Off is off, whatever the valve says; unavailable is unknown.
+        self.hass.states.async_set("binary_sensor.vanne", "on")
+        self.hass.states.async_set("climate.test", "off", {})
+        self.assertEqual(heating(await coordinator._async_update_data()), ("off", "hvac_mode", "off"))
+        self.hass.states.async_set("climate.test", "unavailable", {})
+        self.assertEqual((await coordinator._async_update_data())["assessment"]["heating_action"], "unknown")
+        # A silent indicator leaves the thermostat's own action, then nothing.
+        self.hass.states.async_set("climate.test", "heat", {"hvac_action": "idle"})
+        self.hass.states.async_set("binary_sensor.vanne", "unavailable")
+        self.assertEqual(heating(await coordinator._async_update_data()), ("idle", "hvac_action", "idle"))
+        self.hass.states.async_set("climate.test", "heat", {})
+        self.assertEqual((await coordinator._async_update_data())["assessment"]["heating_action"], "unknown")
+        # A « work state » sensor speaks words.
+        self.hass.states.async_set("sensor.work_state", "heating", {"options": ["idle", "heating"]})
+        self.entry.data["sources"]["heating_indicator"] = "sensor.work_state"
+        coordinator = ComfortCoordinator(self.hass, self.entry)
+        self.assertEqual(heating(await coordinator._async_update_data()), ("heating", "indicator", "heating"))
+
+    async def test_the_heating_action_says_its_source(self):
+        from types import SimpleNamespace
+        self.hass.states.async_set("binary_sensor.vanne", "on")
+        self.entry.data["sources"]["heating_indicator"] = "binary_sensor.vanne"
+        coordinator = ComfortCoordinator(self.hass, self.entry)
+        coordinator.data = await coordinator._async_update_data()
+        sensor = SimpleNamespace(coordinator=coordinator, name_key="heating_action")
+        self.assertEqual(ComfortSensor.extra_state_attributes.fget(sensor), {"source": "indicateur", "indicateur": "binary_sensor.vanne"})
+
     async def test_an_unchanged_value_is_current_when_its_device_just_spoke(self):
         from types import SimpleNamespace
         coordinator = ComfortCoordinator(self.hass, self.entry)

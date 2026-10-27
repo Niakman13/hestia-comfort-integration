@@ -19,7 +19,7 @@ SOURCES = {
     "indoor_temperature": "temperature", "outdoor_temperature": "temperature",
     "indoor_humidity": "humidity", "outdoor_humidity": "humidity", "co2": "co2",
     "illuminance": "illuminance", "pm25": "pm25", "voc": "voc", "purifier": "purifier", "ventilation": "ventilation", "ventilation_boost": "ventilation",
-    "rain": "rain", "pollution": "pollution", "heating": "heating",
+    "rain": "rain", "pollution": "pollution", "heating": "heating", "heating_indicator": "heating_indicator",
     "wind_gust": "wind", "wind_bearing": "bearing", "solar": "irradiance",
 }
 # Home Assistant areas that describe the outside: offered for exterior sources, never as rooms.

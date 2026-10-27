@@ -1,4 +1,4 @@
-export const labels:Record<string,string>={season:'Saison',indoor_temperature:'Température de la pièce',indoor_humidity:'Humidité de la pièce',co2:'CO₂',pm25:'Particules fines PM2.5',voc:'Composés organiques volatils (COV)',purifier:'Purificateur',ventilation:'Ventilation (VMC)',ventilation_boost:'Vitesse rapide de la VMC (Turbo)',presence:'Présence dans la pièce',illuminance:'Luminosité',windows:'Fenêtres et portes vers l’extérieur',heating:'Chauffage',outdoor_temperature:'Température dehors',outdoor_humidity:'Humidité dehors',rain:'Pluie actuelle',wind_gust:'Rafales de vent',wind_bearing:'Direction du vent',solar:'Ensoleillement',pollution:'Qualité de l’air extérieur'};
+export const labels:Record<string,string>={season:'Saison',indoor_temperature:'Température de la pièce',indoor_humidity:'Humidité de la pièce',co2:'CO₂',pm25:'Particules fines PM2.5',voc:'Composés organiques volatils (COV)',purifier:'Purificateur',ventilation:'Ventilation (VMC)',ventilation_boost:'Vitesse rapide de la VMC (Turbo)',presence:'Présence dans la pièce',illuminance:'Luminosité',windows:'Fenêtres et portes vers l’extérieur',heating:'Chauffage',heating_indicator:'Indicateur de chauffe',outdoor_temperature:'Température dehors',outdoor_humidity:'Humidité dehors',rain:'Pluie actuelle',wind_gust:'Rafales de vent',wind_bearing:'Direction du vent',solar:'Ensoleillement',pollution:'Qualité de l’air extérieur'};
 export const indoor=['indoor_temperature','indoor_humidity'] as const;
 export const outdoor=['outdoor_temperature','outdoor_humidity','rain','wind_gust','wind_bearing','solar','pollution','season'] as const;
 export const multiple=new Set(['windows','presence']);
@@ -45,7 +45,7 @@ export const warningText:Record<string,string>={
  other_area:'La mesure ou sa source est rattachée à une autre pièce. Confirmez qu’elle représente bien celle-ci.',
  contact_role:'Ce contact peut être une porte d’appareil, de meuble ou une porte intérieure. Gardez-le seulement s’il donne sur l’extérieur.',
  derived:'Il s’agit d’une donnée calculée ou regroupée. Vérifiez ce qu’elle mesure réellement.',
- no_hvac_action:'Cet équipement dit son mode mais pas s’il chauffe réellement : Niak saura quand il est coupé, pas quand il tourne.',
+ no_hvac_action:'Cet équipement dit son mode mais pas s’il chauffe réellement : choisissez un indicateur de chauffe ci-dessous (vanne, relais, état de marche).',
  binary_meaning:'Signal avancé : « actif » doit signifier pluie ou aération déconseillée. Un diagnostic de panne ne convient pas.',
  outdoor_role:'Ce capteur n’est pas rattaché à une pièce extérieure. Vérifiez qu’il mesure bien l’air du dehors.',
  used_indoor:'Ce capteur sert déjà de mesure intérieure pour une de vos pièces : il ne mesure sans doute pas l’air du dehors.',

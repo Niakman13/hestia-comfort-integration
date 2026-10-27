@@ -5,11 +5,14 @@ from homeassistant.helpers import area_registry as ar, device_registry as dr, en
 
 from .const import OUTDOOR_AREAS, SOURCES
 from .engine import thermostat as thermostats
+from .engine.sources import INDICATOR_RESTING, INDICATOR_RUNNING
 
-INDOOR = ("indoor_temperature", "indoor_humidity", "co2", "windows", "heating", "illuminance", "pm25", "voc", "purifier", "ventilation", "ventilation_boost", "presence")
+INDOOR = ("indoor_temperature", "indoor_humidity", "co2", "windows", "heating", "heating_indicator", "illuminance", "pm25", "voc", "purifier", "ventilation", "ventilation_boost", "presence")
 OPENING_SOURCES = ("covers", "shutter_auto", "shutter_override")
 OUTDOOR = ("outdoor_temperature", "outdoor_humidity", "rain", "wind_gust", "wind_bearing", "solar", "pollution", "season")
 # A season sensor (the Season integration, or a template): its state, in English or in French.
+# The names of what says a heating runs: a valve, a relay, a work state.
+INDICATOR_WORDS = ("vanne", "valve", "work_state", "chauffe", "heating", "relais", "relay", "demand", "demande")
 SEASONS = {"spring": "spring", "printemps": "spring", "summer": "summer", "ete": "summer", "été": "summer",
            "autumn": "autumn", "fall": "autumn", "automne": "autumn", "winter": "winter", "hiver": "winter"}
 CLASSES = {"temperature": "temperature", "humidity": "humidity", "co2": "carbon_dioxide",
@@ -150,6 +153,24 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
         if domain != "climate" or not any(m in attrs.get("hvac_modes", []) for m in ("heat", "heat_cool")):
             if not include_legacy or domain != "climate":
                 return None
+    elif key == "heating_indicator":
+        # A valve, a relay or a « work state » that says when the heating runs: offered by its name or its words,
+        # an input_boolean always (a test, a template's helper).
+        label = f"{state.name} {entity_id}".casefold()
+        words = {str(w).casefold() for w in (state.state, *(attrs.get("options") or []))}
+        if domain == "input_boolean":
+            pass
+        elif domain in ("binary_sensor", "switch"):
+            if device_class not in ("heat", "running") and not any(w in label for w in INDICATOR_WORDS) and not include_legacy:
+                return None
+        elif domain == "sensor":
+            # A state without unit that speaks the indicator's words (« heating », « open »), named as one or listing them.
+            spoken = words & {*INDICATOR_RUNNING, *INDICATOR_RESTING}
+            named = any(w in label for w in INDICATOR_WORDS)
+            if (attrs.get("unit_of_measurement") or not spoken or not (named or words & {"heating", "open", "opened"})) and not include_legacy:
+                return None
+        else:
+            return None
     elif key == "rain":
         if domain == "sensor" and device_class == "precipitation_intensity" and attrs.get("unit_of_measurement") in ("mm/h", "in/h"):
             adapter = "rain_rate"
@@ -247,6 +268,9 @@ def catalog(hass, area_id=None, selected=None, indoor_ids=(), *, keys=None, entr
 def suggestions(candidates, area_id):
     result = {}
     for key in INDOOR:
+        # An indicator is the person's choice next to a thermostat: proposed in its list, never chosen for them.
+        if key == "heating_indicator":
+            continue
         items = candidates[key]
         local = [c for c in items if c["local"] and c["available"] and not c["warnings"]]
         references = [c for c in local if c["reference"]]
