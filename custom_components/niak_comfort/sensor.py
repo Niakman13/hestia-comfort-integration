@@ -1,22 +1,26 @@
-"""Small stable states for automations; rich observations stay out of Recorder."""
+"""What the card says, as states for automations; rich observations stay out of Recorder."""
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorEntityDescription
 from homeassistant.const import PERCENTAGE, UnitOfTemperature
 from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
-from .engine.assessment import ACTIONS, LEVELS
+from .engine.assessment import REASONS
+from .engine.verdict import ACTING as GESTURES_ACTING, HUMIDITY, STATES, strongest
+from .entities import HOME_SENSORS, HomeEntity, VerdictEntity, room_keys
 
-DESCRIPTIONS = (
-    SensorEntityDescription(key="level", translation_key="level", device_class=SensorDeviceClass.ENUM, options=list(LEVELS)),
-    SensorEntityDescription(key="action", translation_key="action", device_class=SensorDeviceClass.ENUM, options=list(ACTIONS)),
-    SensorEntityDescription(key="reason", translation_key="reason", device_class=SensorDeviceClass.ENUM,
-                            options=["within_comfort", "rain_open_windows", "opening_blocked", "verify_exterior",
-                                     "air_needed", "cooling_possible", "warming_possible", "drying_possible", "exchange_harmful",
-                                     "cooling_unavailable", "heat_needed", "drying_unavailable", "drying_later", "drying_slow", "drying_night", "drying_alone", "ventilation_possible", "incomplete_data", "optional_air_change",
-                                     "gust_open_windows", "short_air_change", "sun_entering", "rain_soon", "precool_possible", "precool_later", "shared_volume", "humid_outdoor", "open_neutral", "rehumidification_risk", "alarm_open", "warm_walls"]),
+DESCRIPTIONS = {d.key: d for d in (
+    # The banner's title, word for word (« Aérez 10 min »); its gesture, stable, is an attribute.
+    SensorEntityDescription(key="advice", translation_key="advice", icon="mdi:hand-wave-outline"),
+    SensorEntityDescription(key="state", translation_key="state", device_class=SensorDeviceClass.ENUM, options=sorted(set(STATES.values()))),
+    # The card's colour, for a light: hex as state, rgb_color and a saturated hs_color as attributes.
+    SensorEntityDescription(key="colour", translation_key="colour", icon="mdi:palette-outline"),
+    SensorEntityDescription(key="humidity", translation_key="humidity", device_class=SensorDeviceClass.ENUM, options=list(HUMIDITY),
+                            icon="mdi:water-percent"),
+    SensorEntityDescription(key="learning", translation_key="learning", native_unit_of_measurement=PERCENTAGE, icon="mdi:school-outline"),
     SensorEntityDescription(key="heating_action", translation_key="heating_action", device_class=SensorDeviceClass.ENUM,
                             options=["heating", "idle", "off", "cooling", "unknown", "not_configured"]),
+    # Why, in the engine's terms: for diagnosis, the card's words are in « Conseil ».
+    SensorEntityDescription(key="reason", translation_key="reason", entity_category=EntityCategory.DIAGNOSTIC,
+                            device_class=SensorDeviceClass.ENUM, options=list(REASONS), entity_registry_enabled_default=False),
     SensorEntityDescription(key="coverage", translation_key="coverage", entity_category=EntityCategory.DIAGNOSTIC,
                             device_class=SensorDeviceClass.ENUM, options=["partial", "configured_sources_available"]),
     # The twin's view of the coming hour, to lay over the real sensors in the history: off until asked for.
@@ -26,37 +30,95 @@ DESCRIPTIONS = (
     SensorEntityDescription(key="twin_humidity", translation_key="twin_humidity", entity_category=EntityCategory.DIAGNOSTIC,
                             device_class=SensorDeviceClass.HUMIDITY, native_unit_of_measurement=PERCENTAGE,
                             entity_registry_enabled_default=False),
-)
+)}
+HOME_DESCRIPTIONS = {
+    "rooms_asking": SensorEntityDescription(key="rooms_asking", icon="mdi:home-alert-outline"),
+    "advice": SensorEntityDescription(key="advice", icon="mdi:hand-wave-outline"),
+    "colour": SensorEntityDescription(key="colour", icon="mdi:palette-outline"),
+}
+
+
+def colour_attributes(verdict):
+    return {"rgb_color": verdict["rgb"], "hs_color": [verdict["hue"], 100] if verdict["hue"] is not None else None,
+            "niveau": verdict["mood"]}
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    async_add_entities(ComfortSensor(entry.runtime_data, entry, description) for description in DESCRIPTIONS)
+    if entry.data.get("home"):
+        async_add_entities(HomeSensor(entry, HOME_DESCRIPTIONS[k]) for k in HOME_SENSORS)
+        return
+    coordinator = entry.runtime_data
+    async_add_entities(ComfortSensor(coordinator, entry, key) for key in room_keys(coordinator)["sensor"])
 
 
-class ComfortSensor(CoordinatorEntity, SensorEntity):
-    _attr_has_entity_name = True
-
-    def __init__(self, coordinator, entry, description):
-        super().__init__(coordinator)
-        self.entity_description = description
-        self._attr_unique_id = f"{entry.entry_id}_{description.key}"
-        self._attr_device_info = {"identifiers": {(DOMAIN, entry.entry_id)}, "name": entry.title,
-                                  "manufacturer": "Niak", "model": "Comfort · observation",
-                                  "configuration_url": "homeassistant://niak/confort"}
+class ComfortSensor(VerdictEntity, SensorEntity):
+    def __init__(self, coordinator, entry, key):
+        super().__init__(coordinator, entry, key)
+        self.entity_description = DESCRIPTIONS[self.name_key]
 
     @property
     def native_value(self):
-        assessment = self.coordinator.data["assessment"]
-        if self.entity_description.key.startswith("twin_"):
-            coming = (self.coordinator.data.get("twin") or {}).get("next_hour") or {}
-            return coming.get(self.entity_description.key[5:])
-        if self.entity_description.key == "coverage":
+        data, key = self.coordinator.data, self.name_key
+        assessment = data["assessment"]
+        if key.startswith("twin_"):
+            coming = (data.get("twin") or {}).get("next_hour") or {}
+            return coming.get(key[5:])
+        if key == "coverage":
             return "partial" if assessment["partial"] else "configured_sources_available"
-        return assessment[self.entity_description.key]
+        if key in ("reason", "heating_action"):
+            return assessment[key]
+        if key == "learning":
+            return ((data.get("twin") or {}).get("progress") or {}).get("percent")
+        verdict = self.verdict() if self.shared else data.get("verdict")
+        if not verdict:
+            return None
+        return {"advice": verdict["title"], "state": verdict["state"], "colour": verdict["colour"], "humidity": verdict["humidity"]}[key]
 
     @property
     def extra_state_attributes(self):
-        if self.entity_description.key == "reason":
+        if self.name_key == "reason":
             result = self.coordinator.data["assessment"]
             return {k: result[k] for k in ("needs", "constraints", "partial", "missing")}
-        return None
+        if self.name_key not in ("advice", "colour"):
+            return None
+        verdict = self.verdict() if self.shared else self.coordinator.data.get("verdict")
+        if not verdict:
+            return None
+        if self.name_key == "colour":
+            return colour_attributes(verdict)
+        return {"geste": verdict["gesture"], "precision": verdict["cap"], "appris": verdict["learned"], "pastille": verdict["pill"]}
+
+
+class HomeSensor(HomeEntity, SensorEntity):
+    def __init__(self, entry, description):
+        super().__init__(entry, description.key)
+        self.entity_description = description
+        self._attr_translation_key = f"home_{description.key}"
+
+    def _first(self):
+        found = self.units()
+        best = strongest([v for _, v in found])
+        return next(((name, v) for name, v in found if v is best), (None, None))
+
+    @property
+    def native_value(self):
+        found = self.units()
+        if self.key == "rooms_asking":
+            return sum(1 for _, v in found if v["gesture"] in GESTURES_ACTING)
+        name, verdict = self._first()
+        if verdict is None:
+            return None
+        if self.key == "colour":
+            return verdict["colour"]
+        return f"{name} : {verdict['title']}" if verdict["gesture"] in GESTURES_ACTING else "Rien à faire"
+
+    @property
+    def extra_state_attributes(self):
+        name, verdict = self._first()
+        if verdict is None:
+            return None
+        if self.key == "colour":
+            return colour_attributes(verdict)
+        if self.key == "rooms_asking":
+            return {"pieces": [n for n, v in self.units() if v["gesture"] in GESTURES_ACTING]}
+        return {"piece": name, "geste": verdict["gesture"], "pastille": verdict["pill"]}

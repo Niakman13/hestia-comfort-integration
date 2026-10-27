@@ -56,6 +56,8 @@ jobs:
           python-version: "3.14"
       - run: npm run audit
         working-directory: card
+      # The entities say what the card says: the Python verdict against the card's own banner.
+      - run: python -m unittest tests.test_verdict_parity
       - run: npx playwright install --with-deps chromium firefox
         working-directory: card
       - run: npm run test:loading
