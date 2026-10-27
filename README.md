@@ -138,17 +138,18 @@ Niak ne commande toujours rien. Il faut Niak Confort 1.1.3 ou plus récent. Voir
 
 ## Pour vos automatisations
 
-Chaque pièce crée quelques entités :
+Les entités disent ce que dit la carte :
 
 | Entité | Ce qu’elle dit |
 | --- | --- |
-| **Situation** | Tout va bien, potentiel, geste conseillé, attention, information incomplète |
-| **Geste** | Ouvrir, fermer, attendre, aucun nouveau geste |
-| **Raison** | Pourquoi : pluie, CO₂, rafraîchissement possible, soleil qui entre… |
-| **Chauffage observé** | Chauffe, au repos, arrêté |
-| **Couverture des données** | Toutes les sources répondent, ou bilan partiel |
+| **Conseil** | Le titre de la carte : Rien à faire, Aérez 10 min, Lancez la VMC… |
+| **État** | La pastille : Tout va bien, Au mieux, Geste conseillé… |
+| **Couleur** | La couleur de la carte, prête pour une lumière |
+| **Geste à faire**, **Aération conseillée**, **Fenêtres à refermer**, **VMC conseillée**, **Trop humide** | Oui ou non |
 
-Par exemple : une notification quand le geste du salon passe à **Fermer**. [Le détail des entités](docs/guide.md#pour-vos-automatisations).
+Des pièces au même air (« Salon · Cuisine ») ont un seul appareil pour leur conseil. « Mon logement » donne le geste le plus important et sa couleur.
+
+Par exemple : des LED aux couleurs de la carte, ou la VMC qui suit le conseil. [Le détail des entités](docs/guide.md#pour-vos-automatisations).
 
 ## Documentation
 

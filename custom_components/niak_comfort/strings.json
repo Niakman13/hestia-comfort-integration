@@ -42,25 +42,51 @@
   },
   "entity": {
     "sensor": {
-      "level": {
-        "name": "Situation",
+      "advice": {
+        "name": "Advice"
+      },
+      "state": {
+        "name": "State",
         "state": {
           "calm": "All is well",
-          "benefit": "Opportunity detected",
+          "best": "At its best",
+          "benefit": "Opportunity",
           "action": "Action advised",
-          "urgent": "Attention required",
-          "neutral": "Incomplete information"
+          "urgent": "Attention",
+          "neutral": "To check",
+          "optimized": "Optimised advice",
+          "too_cold": "Too cool",
+          "starting": "Starting",
+          "sensors_silent": "Sensors silent",
+          "sensor_silent": "One sensor silent"
         }
       },
-      "action": {
-        "name": "Action",
+      "colour": {
+        "name": "Colour"
+      },
+      "humidity": {
+        "name": "Humidity",
         "state": {
-          "ok": "No new action",
-          "ouvrir": "Open",
-          "fermer": "Close",
-          "attendre": "Wait",
-          "unknown": "Check"
+          "normal": "Within your range",
+          "slightly_humid": "Slightly humid",
+          "humid": "Humid",
+          "very_humid": "Very humid",
+          "slightly_dry": "Slightly dry",
+          "dry": "Dry",
+          "very_dry": "Very dry"
         }
+      },
+      "learning": {
+        "name": "Learning"
+      },
+      "home_rooms_asking": {
+        "name": "Rooms asking for a gesture"
+      },
+      "home_advice": {
+        "name": "Advice"
+      },
+      "home_colour": {
+        "name": "Colour"
       },
       "reason": {
         "name": "Reason",
@@ -121,6 +147,26 @@
       },
       "twin_humidity": {
         "name": "Humidity expected in 1 h"
+      }
+    },
+    "binary_sensor": {
+      "gesture": {
+        "name": "Gesture to make"
+      },
+      "airing": {
+        "name": "Airing advised"
+      },
+      "close": {
+        "name": "Windows to close"
+      },
+      "ventilation": {
+        "name": "Ventilation advised"
+      },
+      "humid": {
+        "name": "Too humid"
+      },
+      "home_gesture": {
+        "name": "A gesture to make"
       }
     }
   }

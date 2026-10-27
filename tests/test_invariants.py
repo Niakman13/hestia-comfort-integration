@@ -12,7 +12,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "niak_comfort"))
-from engine.assessment import Opening, Settings, Sun, absolute_humidity, assess
+from engine.assessment import REASONS, Opening, Settings, Sun, absolute_humidity, assess
 from engine.sources import Reading
 from engine.volume import arbitrate
 
@@ -101,8 +101,7 @@ class EveryCombination(unittest.TestCase):
                   not (room == "cold" and equipment == "heating_off_away" and reason == "heat_needed" and act != "fermer") or level in ("calm", "neutral"), case, a)
         self.assertEqual(broken, {})
         # Every reason the engine gives is one the « Raison » sensor knows: Home Assistant refuses the others.
-        declared = (Path(__file__).resolve().parents[1] / "custom_components" / "niak_comfort" / "sensor.py").read_text()
-        self.assertEqual(sorted(r for r in seen if f'"{r}"' not in declared), [])
+        self.assertEqual(sorted(r for r in seen if r not in REASONS), [])
 
     def test_rooms_of_one_air_never_tell_two_stories(self):
         different = []
