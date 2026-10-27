@@ -25,6 +25,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 ### Améliorations
 
 - **Un accueil Confort à lire** : tout ce qui se modifie est dans Réglages généraux. Une pièce s’ouvre sur son bilan.
+- **Chaque extension tierce s’active ou se coupe** d’un interrupteur dans Réglages généraux. Coupée, Confort ne la lit plus dans aucune pièce, et les réglages des pièces le disent.
 - **Niak Weather recommandé** : le choix dit pourquoi les conseils sont meilleurs avec lui.
 - **Le menu du hub** : le logo Niak en tête, et « Vue d’ensemble » devient « Accueil ».
 - **Pas d’« Aérez » en pleine nuit** : la carte attend le réveil et dit à partir de quelle heure aérer.
@@ -43,6 +44,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 - **Les pièces au même air** (Salon · Cuisine) disent la même chose, avec la ligne de la plus humide.
 - **Plus de phrases opposées** dans « À savoir », ni de doublon VMC ou humidité.
 - **L’interrupteur « Échelle de température »** se coupe enfin.
+- **Plus de page fugace** en passant d’une page du menu à une autre : « Chargement… », puis la bonne page.
 
 ### Après la mise à jour
 

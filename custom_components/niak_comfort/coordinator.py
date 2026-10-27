@@ -398,6 +398,11 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 "names": {e: (state.name if (state := self.hass.states.get(e)) else e) for e in self.windows},
                 "starting": (now - self.started).total_seconds() < STARTUP_GRACE_SECONDS}
 
+    def _uses(self, key):
+        """False when the person turned this integration off in the general settings."""
+        home = self.home_configuration.home if self.home_configuration is not None else {}
+        return key not in (home.get("disabled") or [])
+
     def _alarm_entity(self):
         """The home's alarm panel: the one chosen in the general settings, else Alarmo found by itself; None for none."""
         chosen = (self.home_configuration.home.get("alarm") if self.home_configuration is not None else None)
@@ -487,7 +492,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         entity_id = self.sources.get("heating")
         entry = er.async_get(self.hass).async_get(entity_id) if entity_id else None
         state = self.hass.states.get(entity_id) if entity_id else None
-        if not entry or entry.platform != thermostats.PLATFORM or not state or state.state in ("unknown", "unavailable"):
+        if not self._uses(thermostats.PLATFORM) or not entry or entry.platform != thermostats.PLATFORM or not state or state.state in ("unknown", "unavailable"):
             return None
         return thermostats.read(state.state, dict(state.attributes))
 
@@ -748,7 +753,9 @@ class ComfortCoordinator(DataUpdateCoordinator):
         return home.get("weather") if home.get("configured") else None
 
     def _drivers(self):
-        """{opening: Adaptive Cover Pro's entities} for each connected cover it drives."""
+        """{opening: Adaptive Cover Pro's entities} for each connected cover it drives; none when it is turned off."""
+        if not self._uses("adaptive_cover_pro"):
+            return {}
         try:
             driven = cover_link.find_all(self.hass)
         except Exception:  # A changed Adaptive Cover Pro must never stop the room.

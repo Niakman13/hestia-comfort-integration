@@ -30,6 +30,7 @@ async def async_setup_panel(hass):
         websocket_api.async_register_command(hass, ws_twins)
         websocket_api.async_register_command(hass, ws_answer)
         websocket_api.async_register_command(hass, ws_alarm)
+        websocket_api.async_register_command(hass, ws_extension)
         hass.data[DOMAIN + "_panel_asset"] = True
     await async_register_brick(hass, {
         "domain": DOMAIN, "name": "Niak Confort", "slug": "confort", "version": VERSION,
@@ -95,6 +96,19 @@ def ws_twins(hass, connection, msg):
                       "air": [name for name, model in air.items() if model and model.get("open_samples", 0) >= 6],
                       "questions": coordinator.questions() if hasattr(coordinator, "questions") else []})
     connection.send_result(msg["id"], {"version": 1, "rooms": rooms})
+
+
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/set_extension", vol.Required("key"): str, vol.Required("enabled"): bool})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_extension(hass, connection, msg):
+    """A third-party integration used or not (general settings), for every room."""
+    try:
+        snapshot = await (await get_configuration(hass)).set_extension(msg["key"], msg["enabled"])
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid", str(err))
+        return
+    connection.send_result(msg["id"], snapshot)
 
 
 @websocket_api.websocket_command({vol.Required("type"): "niak_comfort/set_alarm", vol.Required("alarm"): vol.Any(None, str)})

@@ -73,6 +73,24 @@ class Diagnostics(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             await config.set_alarm("light.salon")
 
+    async def test_an_extension_is_turned_off_for_every_room(self):
+        """Alarmo off is no alarm, on is Alarmo found by itself; Versatile Thermostat and Adaptive Cover Pro are listed when off."""
+        config = await get_configuration(self.hass)
+        self.assertEqual((await config.set_extension("alarmo", False))["home"]["alarm"], "")
+        self.assertIsNone((await config.set_extension("alarmo", True))["home"]["alarm"])
+        self.assertEqual((await config.set_extension("versatile_thermostat", False))["home"]["disabled"], ["versatile_thermostat"])
+        self.assertEqual((await config.set_extension("adaptive_cover_pro", False))["home"]["disabled"], ["versatile_thermostat", "adaptive_cover_pro"])
+        self.assertEqual((await config.set_extension("versatile_thermostat", True))["home"]["disabled"], ["adaptive_cover_pro"])
+        with self.assertRaises(ValueError):
+            await config.set_extension("scheduler", False)
+        # Turned off, the room reads neither the thermostat's setpoints nor the covers' driver.
+        from custom_components.niak_comfort.coordinator import ComfortCoordinator
+        room = SimpleNamespace(home_configuration=config, hass=self.hass, sources={"heating": "climate.vt"}, config={"openings": {}}, logger=None)
+        room._uses = lambda key: ComfortCoordinator._uses(room, key)
+        self.assertFalse(room._uses("adaptive_cover_pro"))
+        self.assertTrue(room._uses("versatile_thermostat"))
+        self.assertEqual(ComfortCoordinator._drivers(room), {})
+
     async def test_coordinates_are_removed(self):
         from custom_components.niak_comfort.diagnostics import TO_REDACT
         from homeassistant.components.diagnostics import async_redact_data
