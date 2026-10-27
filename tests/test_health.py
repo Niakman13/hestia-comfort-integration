@@ -46,6 +46,25 @@ class HealthTests(unittest.TestCase):
         self.assertEqual(r["tips"][2]["target"], {"kind": "area", "area_id": "ete", "label": "Ajouter"})
         self.assertEqual(r["level"], "ok")
 
+    def test_extensions_linked_found_or_missing(self):
+        r = report(Facts(rooms=[room(thermostat=True)], weather="Gardanne", weather_installed=True,
+                         installed=frozenset({"versatile_thermostat", "adaptive_cover_pro", "better_thermostat"})))
+        ext = {e["key"]: e for e in r["extensions"]}
+        self.assertEqual([e["key"] for e in r["extensions"]], ["niak_weather", "versatile_thermostat", "adaptive_cover_pro", "alarmo"])
+        self.assertEqual((ext["niak_weather"]["state"], ext["niak_weather"]["official"]), ("linked", True))
+        self.assertEqual((ext["versatile_thermostat"]["state"], ext["versatile_thermostat"]["rooms"]), ("linked", ["Salon"]))
+        self.assertEqual((ext["adaptive_cover_pro"]["state"], ext["adaptive_cover_pro"]["level"]), ("found", "none"))
+        self.assertEqual((ext["alarmo"]["state"], ext["alarmo"]["text"]), ("missing", "non installée"))
+        self.assertTrue(all(e["use"] and e["without"] and e["url"].startswith("https://github.com/") for e in r["extensions"]))
+        self.assertEqual([o["name"] for o in r["others"]], ["Better Thermostat"])
+
+    def test_weather_installed_but_not_linked_is_found(self):
+        r = report(Facts(weather_installed=True, alarm="Alarmo · désarmée", installed=frozenset({"alarmo"})))
+        ext = {e["key"]: e for e in r["extensions"]}
+        self.assertEqual((ext["niak_weather"]["state"], ext["niak_weather"]["text"]), ("found", "installé, pas relié"))
+        self.assertEqual((ext["alarmo"]["state"], ext["alarmo"]["text"]), ("linked", "Alarmo · désarmée"))
+        self.assertEqual(r["others"], [])
+
     def test_ages_read_naturally(self):
         self.assertEqual([ago(0.5), ago(12), ago(300)], ["à l’instant", "il y a 12 min", "il y a 5 h"])
 

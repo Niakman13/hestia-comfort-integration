@@ -5,12 +5,13 @@ import styles from './styles.css';
 // The comfort review is shared with its Lovelace card (card/src/review.ts).
 import '../card/src/review';
 import {frame,hubStyles,modernStyles,hubIcon,helpTip,defaultValue} from './socle/ui';
-import {labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,stages,intros,outdoorGroups,changedAdvanced,advancedDefaults,airSource,airChoices,exteriorChoices,airReferenceDefaults,vocPreset,thresholdSources,type Choice,type Area,type Candidate,type Discovery,type Health,type HealthLine,type Target,type Snapshot,type Hass,type Room,type RoomConfig,type Spec,type Twins,type Twin,type Progress,seasonNames} from './model';
-/** « Intégration 1.2.5 » → Intégration · 1.2.5 ; « Relié à Niak Weather · Gardanne » → Niak Weather · relié, Gardanne. */
-function versionLine(text:string):[string,string]{
-  const weather=text.match(/Niak Weather(.*)$/);if(weather)return ['Niak Weather',(text.startsWith('Relié')?'relié':'')+weather[1].replace(/^\s*·\s*/,' · ').trim()];
-  const m=text.match(/^(\D+?)\s+(\d.*)$/);return m?[m[1],m[2]]:[text,''];
-}
+import {labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,stages,intros,outdoorGroups,changedAdvanced,advancedDefaults,airSource,airChoices,exteriorChoices,airReferenceDefaults,vocPreset,thresholdSources,type Choice,type Area,type Candidate,type Discovery,type Health,type HealthLine,type Target,type Snapshot,type Hass,type Room,type RoomConfig,type Spec,type Twins,type Twin,type Progress,type Extension,seasonNames} from './model';
+/** An extension's state in one word, and its colour: blue when linked, orange when one step is left. */
+const extState:Record<Extension['state'],[string,string]>={linked:['liée','ok'],found:['à lier','act'],missing:['non installée','']};
+const extIcon:Record<string,string>={niak_weather:'weather',versatile_thermostat:'heating',adaptive_cover_pro:'openings',alarmo:'presence'};
+/** HACS opens the repository from its GitHub address. */
+const hacsUrl=(url:string)=>{const [owner,repository]=url.replace('https://github.com/','').split('/');return `https://my.home-assistant.io/redirect/hacs_repository/?owner=${owner}&repository=${repository}&category=integration`;};
+const askUrl=(name:string,use:string)=>`https://github.com/Niakman13/niak-comfort-integration/issues/new?title=${encodeURIComponent('Lire l’extension '+name)}&body=${encodeURIComponent(`J’utilise ${name}. ${use}`)}`;
 const fr=(v:number,d=1)=>v.toLocaleString('fr-FR',{maximumFractionDigits:d,minimumFractionDigits:0});
 const days=(d:number)=>{const n=Math.max(1,Math.floor(d));return `${n} jour${n>1?'s':''}`;};
 /** Where a room's learning stands: 100 % once it has seen everything it has (engine/twin.py progress). */
@@ -124,7 +125,7 @@ export class ComfortSetup extends LitElement {
   return html`<div class="ac-top"><h1>Confort</h1></div>${this.healthError?html`<p class="notice error" role="alert">Le bilan technique n’a pas pu être chargé. ${this.healthError}</p>
    <div class="actions"><button @click=${()=>void this.loadHealth()}>Réessayer</button></div>`
    :html`<p class="muted" role="status">Chargement du bilan technique…</p>`}
-   ${frame('Vos pièces',html`${this.addBar()}<div class="ac-lines">${this.snapshot!.rooms.map(r=>html`<div class="ac-line"><b>${r.title}</b><span class="hint">${coverage(r.config)}</span>${this.editButton(r.entry_id,r.title)}</div>`)}</div>`)}`;
+   ${frame('Vos pièces',html`<div class="ac-lines">${this.snapshot!.rooms.map(r=>html`<div class="ac-line"><b>${r.title}</b><span class="hint">${coverage(r.config)}</span></div>`)}</div>`)}${this.settingsButton()}`;
  }
  private async goTo(t:Target){
   if(t.kind==='exterior')return this.editExterior();
@@ -141,12 +142,6 @@ export class ComfortSetup extends LitElement {
   const cells=h.rooms.flatMap(r=>r.cells).filter(c=>c.level!=='shared'),configured=h.sensors?.total??cells.filter(c=>c.level!=='none').length,answering=h.sensors?.answering??cells.filter(c=>c.level==='ok').length;
   const known=t.filter(r=>r.progress?.complete).length,todo=h.todo.length,tips=h.tips.length;
   const kpi=(value:string,label:string,cls='')=>html`<div class=${'ac-kpi '+cls}><b>${value}</b><span>${label}</span></div>`;
-  const row=(label:string,text:string,level:string)=>html`<div class="ac-row"><b>${label}</b><span class=${level==='ok'?'':'bad'}>${text}</span></div>`;
-  // Niak Weather already shows as the exterior source: its link line would say it twice.
-  const weatherShown=h.sources.some(x=>x.level==='ok'&&x.text.includes('Niak Weather'));
-  // The exterior and its air are set together on one screen; the rest only links Confort to the home.
-  const outside=h.sources.filter(x=>x.label!=='Chauffage'),linked=h.sources.filter(x=>x.label==='Chauffage');
-  const versions=h.versions.filter(l=>!(weatherShown&&l.level==='ok'&&l.text.includes('Niak Weather')));
   return html`<div class="ac-top"><div><h1>Confort</h1>
     <p class="ac-state"><span class=${'hl-dot '+(h.level==='ok'?'ok':'bad')}></span><b>${h.level==='ok'?'Tout fonctionne':h.summary}</b><span class="muted"> · ${h.rooms_summary}</span></p></div>
 </div>
@@ -155,30 +150,35 @@ export class ComfortSetup extends LitElement {
    ${kpi(String(todo),(todo>1?'points à régler':'point à régler')+(tips?` · ${tips} à améliorer`:''),todo?'bad':'ok')}</div>
   ${todo||tips?frame(todo?'À régler':'À améliorer',html`${h.todo.length?html`<ul class="hl-lines">${h.todo.map(l=>this.hline(l))}</ul>`:nothing}${h.tips.length?html`${todo?html`<h4 class="ac-h4">À améliorer</h4>`:nothing}<ul class="hl-lines">${h.tips.map(l=>this.hline(l))}</ul>`:nothing}`,{className:'todo'}):nothing}
   ${this.roomsBox()}
-  <div class="ac-cols">${this.learningBox()}<div>
-   ${frame('Extérieur',html`<div class="ac-bar"><p class="hint">La météo et la pollution, communes à toutes les pièces.</p><button class="ac-edit" ?disabled=${this.busy} aria-label="Modifier l’extérieur" @click=${()=>void this.goTo({kind:'exterior',label:'Extérieur'})}>Modifier</button></div>
-    ${outside.map(x=>row(x.label==='Extérieur'?'Météo':x.label,x.text,x.level))}${this.shadeRow(row)}`)}
-   ${h.extensions?.length?frame('Extensions',html`<p class="hint">Reconnues toutes seules : chacune affine les conseils là où elle sert. Aucune n’est obligatoire.</p>${h.extensions.map(x=>html`<div class="ac-row"><b>${x.name}<small class="hint ac-ext">${x.role}</small></b><span class=${x.level==='ok'?'':'muted'}>${x.text}</span></div>`)}`):nothing}
-   ${frame('Liaisons',html`${linked.map(x=>row(x.label,x.text,x.level))}${versions.map(l=>{const [label,rest]=versionLine(l.text);return row(label,rest,l.level);})}${row('Interface Maison','niak_comfort_api v1','ok')}`)}
-   ${frame('Les cartes',html`<p class="hint">Dans un tableau de bord : <strong>Ajouter une carte</strong>, puis <strong>Niak Confort</strong> pour une pièce (les pièces au même air n’en font qu’une), ou <strong>Niak Confort · logement</strong> pour la synthèse.</p>`)}
-  </div></div>`;}
+  <div class="ac-cols">${this.learningBox()}<div>${this.extensionsSummary()}</div></div>${this.versionsBox()}${this.settingsButton()}`;}
+ /** Versions and useful links, as on Niak Weather's home. */
+ private versionsBox(){const h=this.health!,version=h.versions.find(l=>l.text.startsWith('Intégration'))?.text.replace(/^Intégration\s*/,'')??'';
+  const bricks=(h.extensions??[]).filter(x=>x.official&&x.state==='linked').map(x=>x.name);
+  const row=(label:string,text:string)=>html`<div class="ac-row"><b>${label}</b><span>${text}</span></div>`;
+  const repo='https://github.com/Niakman13/niak-comfort-integration';
+  return frame('Versions et liens',html`<div class="ac-meta"><div>${row('Intégration',version||'Version non reçue')}${row('Carte',version?version+' · fournie par l’intégration':'—')}${row('API','niak_comfort_api v1')}${row('Liaisons',bricks.length?bricks.join(' · '):'Aucune brique reliée')}</div>
+   <nav class="ac-links" aria-label="Liens utiles"><a href="/config/integrations/integration/niak_comfort">Intégration Home Assistant</a><a href="/config/logs">Journaux Home Assistant</a>
+    <a href=${repo+'#readme'} target="_blank" rel="noreferrer">Documentation</a><a href=${repo+'/releases'} target="_blank" rel="noreferrer">Versions publiées</a><a href=${repo+'/issues'} target="_blank" rel="noreferrer">Signaler un problème</a></nav></div>`);}
+ /** The state of each extension, in one word; linking and installing are in the general settings. */
+ private extensionsSummary(){const h=this.health!;
+  return frame('Extensions',html`${(h.extensions??[]).map(x=>html`<div class="ac-row"><b>${x.name}</b><span class=${'tw-pill '+extState[x.state][1]}>${extState[x.state][0]}</span></div>`)}`);}
+ private settingsButton(){return html`<div class="ac-settings"><button ?disabled=${this.busy} @click=${()=>void this.editExterior()}>${hubIcon('settings')}Réglages</button></div>`;}
  /** Where the station's sun sensor is shaded, learned from its history: there the sun is estimated. */
- private shadeRow(row:(label:string,text:string,level:string)=>unknown){
+ private shadeRow(){
   const shade=(this.twins?.rooms??[]).map(r=>r.sun_shade).find(s=>s)??null;if(!shade)return nothing;
   const morning=shade.shaded.some(a=>a<180),afternoon=shade.shaded.some(a=>a>=180);
   const when=morning&&afternoon?'le matin et l’après-midi':morning?'le matin':afternoon?'l’après-midi':'';
-  return row('Ensoleillement',when?`station à l’ombre ${when} : soleil estimé`:'station dégagée','ok');
+  return html`<p class="hint">Ensoleillement : ${when?`station à l’ombre ${when}, soleil estimé`:'station dégagée'}.</p>`;
  }
  /** Each room once: what measures it, how well it is learned, and a clear way to change it or add another. */
  private roomsBox(){const h=this.health!,twins=new Map((this.twins?.rooms??[]).map(r=>[r.entry_id,r]));
   const measures=(cells:{level:string;text:string}[])=>html`<span class="ac-meas">${cells.map((c,i)=>c.level==='none'?nothing:html`<span class=${c.level}><span class="hl-dot"></span>${h.columns[i]==='Ouvrants'?c.text:c.level==='ok'?h.columns[i]:c.level==='shared'?`${h.columns[i]} · ${c.text}`:`${h.columns[i]} : ${c.text}`}</span>`)}</span>`;
-  const learning=(entry_id:string)=>{const r=twins.get(entry_id);if(!r)return html`<span class="muted">—</span>`;
+  const observed=(entry_id:string)=>{const r=twins.get(entry_id);if(!r)return html`<span class="muted">—</span>`;const st=learnState(r.twin,r.progress);return html`<span class=${'tw-pill '+st.cls}>${st.label}</span>`;};
+  // What is left to see, in words; once everything is seen, how closely the room is forecast.
+  const left=(entry_id:string)=>{const r=twins.get(entry_id);if(!r)return html`<span class="muted">—</span>`;
    const st=learnState(r.twin,r.progress),p=r.twin.precision;
-   // What is left to see, in words; once everything is seen, how closely the room is forecast.
-   // « Observé »: what Confort has seen of the room; « Conseils optimisés », in its own column, what it can promise.
-   return html`<span class=${'tw-pill '+st.cls}>${st.label}</span>
-    ${st.missing.length?html`<span class="ac-prec ac-left">${st.missing.map(m=>html`<span>${m}</span>`)}</span>`
-     :html`<span class="ac-prec">${p?`±${fr(p.temperature,p.temperature<1?2:1)} °C · ±${fr(p.humidity,0)} %`:''}</span>`}`;};
+   return st.missing.length?html`<span class="ac-prec ac-left">${st.missing.map(m=>html`<span>${m}</span>`)}</span>`
+    :html`<span class="ac-prec">${p?`tout vu · ±${fr(p.temperature,p.temperature<1?2:1)} °C · ±${fr(p.humidity,0)} %`:'tout vu'}</span>`;};
   // What the advice can already promise, measure by measure (« Conseil optimisé » on the card), or what holds it back.
   const optimised=(entry_id:string)=>{const r=twins.get(entry_id);if(!r)return html`<span class="muted">—</span>`;
    const ready=r.progress?.ready,p=r.twin.precision,seen=r.progress?.seen;if(!ready)return html`<span class="muted">—</span>`;
@@ -196,19 +196,16 @@ export class ComfortSetup extends LitElement {
    const parts=[me?.far_window_percent!=null?`fenêtres ${me.far_window_percent} %`:'',me?.mixing_percent!=null?`air ${me.mixing_percent} % par heure`:'',heat!=null?`chauffage ${Math.min(heat,100)} %`:''].filter(Boolean);
    return parts.length?html`<small class="ac-weight">Poids ici : ${parts.join(' · ')}</small>`:nothing;};
   const shared=(r:{entry_id:string;title:string})=>{const others=(this.volumeName(r.entry_id)??'').split(' · ').filter(x=>x&&x!==r.title);return others.length?html`<small>Même air que ${others.join(' et ')}</small>${weights(r,others)}`:nothing;};
-  return frame('Vos pièces',html`${this.addBar()}
-   <div class="ac-list"><div class="ac-r ac-head" aria-hidden="true"><span>Pièce</span><span>Mesures</span><span>Observé</span><span>Conseils optimisés</span><span>24 h</span><span></span></div>
-   <ul class="ac-rows" aria-label="Vos pièces">${h.rooms.map(r=>{const tw=twins.get(r.entry_id),curve=tw?.twin.precision?.curve;
-    // One room: aligned columns on a wide screen, a card with labelled blocks on a narrow one (container query).
-    return html`<li class="ac-r"><div class="ac-room"><strong>${r.title}</strong>${shared(r)}</div>
-     <div class="ac-cell ac-c1" data-label="Mesures">${measures(r.cells)}</div><div class="ac-cell ac-c2" data-label="Observé">${learning(r.entry_id)}</div>
-     <div class="ac-cell ac-c3" data-label="Conseils optimisés">${optimised(r.entry_id)}</div><div class="ac-cell ac-c4 ac-curve" data-label="24 h">${curve?this.twinCurve(curve,false):html`<span class="muted">—</span>`}</div>
-     <div class="ac-go">${this.editButton(r.entry_id,r.title)}</div></li>`;})}</ul></div>
-   <div class="ac-foot"><p class="tw-legend"><span class="measured">mesurée</span><span class="replayed">rejouée</span></p><p class="hint">Observé : ce que Confort a vu de la pièce ; Optimal quand il a tout vu. Conseils optimisés : ce qu’il prévoit assez juste pour annoncer un résultat.</p></div>`,{className:'ac-rooms'});}
- private addBar(){return html`<div class="ac-bar"><p class="hint">Modifier une pièce : ses capteurs, ses ouvrants, le même air et ses réglages.</p>
+  // Read only: a room opens its sheet in the review; changing it is in the general settings.
+  return frame('Vos pièces',html`<div class="ac-bar"><p class="hint">Appuyez sur une pièce pour voir son bilan.</p></div>
+   <div class="ac-list"><div class="ac-r ac-head" aria-hidden="true"><span>Pièce</span><span>Observé</span><span>Ce qui reste à apprendre</span><span>Conseils optimisés</span></div>
+   <ul class="ac-rows" aria-label="Vos pièces">${h.rooms.map(r=>html`<li class="ac-r"><div class="ac-room"><button class="link ac-open" @click=${()=>this.path('bilan/'+r.entry_id)}>${r.title}</button>${shared(r)}</div>
+     <div class="ac-cell ac-c1" data-label="Observé">${observed(r.entry_id)}</div><div class="ac-cell ac-c2" data-label="Ce qui reste à apprendre">${left(r.entry_id)}</div>
+     <div class="ac-cell ac-c3" data-label="Conseils optimisés">${optimised(r.entry_id)}</div></li>`)}</ul></div>
+   <div class="ac-foot"><p class="hint">Observé : ce que Confort a vu de la pièce ; Optimal quand il a tout vu. Conseils optimisés : ce qu’il prévoit assez juste pour annoncer un résultat.</p></div>`,{className:'ac-rooms'});}
+ private addBar(){return html`<div class="ac-bar"><p class="hint">Capteurs, ouvrants, même air et réglages de chaque pièce.</p>
    <button class="primary" aria-expanded=${this.adding?'true':'false'} @click=${()=>this.adding=!this.adding}>${this.adding?'Fermer':'Ajouter une pièce'}</button></div>
    ${this.adding?html`<div class="ac-add">${this.addRoom()}</div>`:nothing}`;}
- private editButton(entry_id:string,title:string){return html`<button class="ac-edit" ?disabled=${this.busy} aria-label=${'Modifier '+title} @click=${()=>void this.goTo({kind:'room',entry_id,label:title})}>Modifier</button>`;}
  /** A new room: one of the Home Assistant areas not yet followed, or a free room. */
  private addRoom(){const s=this.snapshot!,used=new Set(s.rooms.map(r=>r.config.area_id).filter((a):a is string=>!!a));const living=livingArea(s.areas,used);
   const areas=s.areas.filter(a=>!a.outdoor&&!used.has(a.area_id)&&(s.rooms.length||a!==living));
@@ -263,14 +260,6 @@ export class ComfortSetup extends LitElement {
    ${sum('evaluated')?tile(`${sum('held')} sur ${sum('evaluated')}`,'prévisions tenues'):nothing}
    ${best?tile(best.title,'la pièce qui gagne le plus à être aérée'):nothing}
    ${sum('ignored')?tile(String(sum('ignored')),sum('ignored')>1?'conseils laissés sans suite':'conseil laissé sans suite'):nothing}</div>`;
- }
- /** Measured (solid) and replayed (dashed) temperature over the last 24 hours. */
- private twinCurve(curve:{temperature:number;measured_temperature:number}[],legend=true){
-  if(curve.length<2)return nothing;
-  const all=curve.flatMap(c=>[c.temperature,c.measured_temperature]),lo=Math.min(...all)-0.2,hi=Math.max(...all)+0.2,w=240,h=48;
-  const line=(k:'temperature'|'measured_temperature')=>curve.map((c,i)=>`${(i/(curve.length-1)*w).toFixed(1)},${(h-(c[k]-lo)/(hi-lo)*h).toFixed(1)}`).join(' ');
-  return html`<svg class="tw-curve" viewBox="0 0 240 48" preserveAspectRatio="none" role="img" aria-label="Température mesurée et rejouée sur 24 heures"><polyline points=${line('measured_temperature')} class="measured"/><polyline points=${line('temperature')} class="replayed"/></svg>
-   ${legend?html`<p class="tw-legend"><span class="measured">mesurée</span><span class="replayed">rejouée par le jumeau</span></p>`:nothing}`;
  }
  private message(e:unknown){return typeof e==='object'&&e&&'message' in e?String(e.message):'La connexion est indisponible. Réessayez sans quitter votre brouillon.';}
  private path(path:string){if(!this.isConnected)return;const full='/'+path.replace(/^\//,'');this.routeHandled=full==='/'?'':full;const [key,sub]=path.split('/');if(key==='bilan'){this.page='review';this.reviewRoom=sub;}else if(key==='pieces'||!key)this.page=key==='pieces'?'rooms':'health';history.pushState(null,'','/niak/confort'+(path?'/'+path:''));window.dispatchEvent(new CustomEvent('location-changed'));}
@@ -338,9 +327,9 @@ export class ComfortSetup extends LitElement {
  private ownSensors(){if(this.exteriorDraft?.pollution?.adapter==='niak_air')this.clear('pollution');this.weatherEntry=null;this.weatherAir=null;this.weatherSeason=null;this.saved='';}
  // The exterior: its source first; with Niak Weather everything is read from it, with own sensors each one is chosen.
  private exteriorSource(){const s=this.snapshot!,nw=s.niak_weather,from=this.weatherEntry?'weather':'own';
-  return frame('D’où viennent les mesures du dehors ?',html`<span id="l-from" class="sr-only">Source des mesures du dehors</span>
+  return html`<span id="l-from" class="sr-only">Source des mesures du dehors</span>
    ${this.choiceList('from','l-from',exteriorChoices(s),from,v=>v==='weather'?void this.useWeather(nw!.places[0].entry_id):this.ownSensors())}
-   ${from==='weather'&&(nw?.places.length??0)>1?this.zone('Lieu Niak Weather',nw!.places.map(p=>({value:p.entry_id,label:p.title})),this.weatherEntry!,id=>void this.useWeather(id)):nothing}`);}
+   ${from==='weather'&&(nw?.places.length??0)>1?this.zone('Lieu Niak Weather',nw!.places.map(p=>({value:p.entry_id,label:p.title})),this.weatherEntry!,id=>void this.useWeather(id)):nothing}`;}
  /** One line per outdoor measure: its name, then its sensor (a choice only with own sensors), then its value now. */
  private exteriorRows(){const weather=!!this.weatherEntry,all=(key:string)=>this.discovery?.candidates[key]??[];
   const keys=outdoorGroups.flatMap(([,k])=>k),spec=this.exteriorDraft!.pollution,air=all('pollution').find(x=>x.entity_id===spec?.entity_id),wa=this.weatherAir;
@@ -359,11 +348,11 @@ export class ComfortSetup extends LitElement {
    const ids=all(key).map(x=>x.entity_id);if(!ids.length)return html`<span class="muted">Aucun capteur compatible</span>`;
    const changed=(v:unknown)=>{if(v===''||v==null){if(id)this.clear(key,id);}else this.pick(key,v);};
    return html`${this.pickerTag?this.selector(key,ids,id,labels[key],changed):html`<select aria-label=${labels[key]} @change=${(e:Event)=>changed((e.target as HTMLSelectElement).value)}><option value="" ?selected=${!id}>Aucun</option>${all(key).map(x=>html`<option value=${x.entity_id} ?selected=${x.entity_id===id}>${x.name} · ${this.where(x)}</option>`)}</select>`}${c?this.warnings(c,key,true):nothing}`;};
-  return frame(weather?`Mesures de Niak Weather${title?' · '+title:''}`:'Vos capteurs',html`
-   ${weather?html`<p class="hint">Reprises telles quelles. Une autre station se choisit dans Niak Weather ; sinon, passez à vos propres capteurs.</p>`:nothing}
-   <div class="ex-rows">${keys.map(k=>html`<div class=${'ex-row'+(weather?'':' own')}><b>${labels[k]}</b><div class="ex-sensor">${sensor(k)}</div><div class="ex-value">${value(k)}</div></div>`)}
-    ${weather?html`<div class="ex-row"><b>${labels.pollution}</b><div class="ex-sensor"><span class="ex-name">${airName}</span></div><div class="ex-value">${airValue}</div></div>`:nothing}</div>
-   ${weather&&this.exteriorDraft!.pollution?this.airCaution():nothing}`);}
+  const rows=html`<div class="ex-rows">${keys.map(k=>html`<div class=${'ex-row'+(weather?'':' own')}><b>${labels[k]}</b><div class="ex-sensor">${sensor(k)}</div><div class="ex-value">${value(k)}</div></div>`)}
+    ${weather?html`<div class="ex-row"><b>${labels.pollution}</b><div class="ex-sensor"><span class="ex-name">${airName}</span></div><div class="ex-value">${airValue}</div></div>`:nothing}</div>`;
+  // With Niak Weather the measures are only read: folded, under its choice. Own sensors are chosen one by one.
+  if(weather)return html`<details class="ex-fold"><summary>Voir les ${keys.length+1} mesures reprises${title?' · '+title:''}</summary><p class="hint">Reprises telles quelles. Une autre station se choisit dans Niak Weather.</p>${rows}${this.shadeRow()}</details>${this.exteriorDraft!.pollution?this.airCaution():nothing}`;
+  return frame('Vos capteurs',rows);}
  /** The person's caution on a daily air index (Atmo France scale, also used by Niak Weather). */
  private airCaution(){const spec=this.exteriorDraft!.pollution;
   return spec&&['atmo_daily','niak_index','niak_air'].includes(spec.adapter??'')?html`<label class="ex-caution">Prudence à partir du niveau<select @change=${(e:Event)=>{this.exteriorDraft={...this.exteriorDraft!,pollution:{...spec!,block_from:Number((e.target as HTMLSelectElement).value)}};}}>${['Moyen','Dégradé','Mauvais','Très mauvais','Extrêmement mauvais'].map((label,i)=>html`<option value=${i+2} ?selected=${(spec!.block_from??4)===i+2}>${label}</option>`)}</select></label><p class="hint">Votre préférence de prudence, pas une consigne sanitaire.</p>`:nothing;}
@@ -378,10 +367,9 @@ export class ComfortSetup extends LitElement {
  private alarmBlock(){const states=this.hass?.states??{},chosen=this.snapshot?.home.alarm,panels=Object.keys(states).filter(e=>e.startsWith('alarm_control_panel.')).sort();
   const name=(e:string)=>String(states[e]?.attributes?.friendly_name??e),value=chosen===undefined||chosen===null?'auto':chosen===''?'none':chosen;
   const set=async(v:string)=>{this.busy=true;try{this.snapshot=await this.hass!.callWS<Snapshot>({type:'niak_comfort/set_alarm',alarm:v==='auto'?null:v==='none'?'':v});this.revision=this.snapshot.revision;}catch(e){this.error=(e as {message?:string}).message??'L’alarme n’a pas pu être enregistrée.';}finally{this.busy=false;}};
-  return frame('Alarme',html`<p class="hint">L’alarme dit si la maison est vide (absence, vacances) ou si l’on dort (nuit), et Niak prévient d’une fenêtre ouverte quand elle est armée. Alarmo est reconnu tout seul.</p>
-   <label>Alarme utilisée<select .value=${value} ?disabled=${this.busy} @change=${(e:Event)=>void set((e.target as HTMLSelectElement).value)}>
+  return html`<label>Alarme utilisée<select .value=${value} ?disabled=${this.busy} @change=${(e:Event)=>void set((e.target as HTMLSelectElement).value)}>
     <option value="auto">Trouver Alarmo tout seul</option>${panels.map(e=>html`<option value=${e} ?selected=${value===e}>${name(e)}</option>`)}<option value="none" ?selected=${value==='none'}>Ne pas utiliser d’alarme</option></select></label>
-   <p class="hint">Enregistré tout de suite, sans toucher aux autres réglages.</p>`);}
+   <p class="hint">Enregistré tout de suite, sans toucher aux autres réglages.</p>`;}
  private airBlock(){const all=this.discovery?.candidates.pollution??[],spec=this.exteriorDraft!.pollution,current=airSource(spec);
   const pickSource=(v:string)=>{if(v===current)return;if(v==='none'){this.clear('pollution');return;}
    const first=all.find(c=>c.adapter===(v==='atmo'?'atmo_daily':'niak_index'));if(first)this.choose('pollution',first);};
@@ -398,7 +386,7 @@ export class ComfortSetup extends LitElement {
  private choiceList(name:string,label:string,choices:Choice[],value:string,pick:(v:string)=>void){
   return html`<div class="sources" role="radiogroup" aria-labelledby=${label}>${choices.map(c=>html`<label class="source ${c.value===value?'on':''} ${c.available?'':'off'}">
    <input type="radio" name=${name} .checked=${c.value===value} ?disabled=${!c.available||this.busy} @change=${()=>pick(c.value)}>
-   <span><strong>${c.label}</strong><span>${c.hint}</span>${c.available?nothing:html`<span>${c.missing}${c.url?html` · <a href=${c.url} target="_blank" rel="noreferrer">installer ${c.label}</a>`:nothing}</span>`}</span></label>`)}</div>`;}
+   <span><strong>${c.label}${c.badge?html` <em class="ex-badge benefit">${c.badge}</em>`:nothing}</strong><span>${c.hint}</span>${c.available?nothing:html`<span>${c.missing}${c.url?html` · <a href=${c.url} target="_blank" rel="noreferrer">installer ${c.label}</a>`:nothing}</span>`}</span></label>`)}</div>`;}
  // The zone, place or device of the chosen source, shown even when there is only one.
  private zone(label:string,options:{value:string;label:string}[],value:string,pick:(v:string)=>void,hint=''){
   const known=options.some(o=>o.value===value);
@@ -614,8 +602,40 @@ export class ComfortSetup extends LitElement {
   ${this.stage===0?[...indoor,'illuminance'].map(key=>this.field(key)):this.stage===1?html`${this.field('windows')}${this.draft&&!this.draft.windows.length?html`<label class="check"><input type="checkbox" .checked=${this.draft.windows_unmeasured===true} @change=${(e:Event)=>this.draft={...this.draft!,windows_unmeasured:(e.target as HTMLInputElement).checked}}>Pas de contact de fenêtre ici, c’est voulu : ne plus le suggérer</label>`:nothing}`:this.stage===2?this.airPresence():this.stage===6?html`${this.field('presence')}${this.personsBlock()}`:this.stage===3?this.field('heating'):this.stage===4?this.preferences():this.summary()}
   ${this.stage!==4&&this.stage!==5?html`<button class="link" ?disabled=${this.busy} @click=${()=>this.refreshCandidates()}>Rechercher à nouveau les capteurs</button>`:nothing}${this.errorBlock()}
   <div class="bottom"><button ?disabled=${this.busy} @click=${()=>this.stage?this.go(roomOrder[roomOrder.indexOf(this.stage)-1]??0):this.cancel()}>Retour</button><div>${this.stage!==5?html`<button ?disabled=${this.busy} @click=${()=>this.go(5)}>Récapitulatif</button>`:nothing}<button class="primary" ?disabled=${this.busy} @click=${()=>this.stage===5?this.save():this.next()}>${this.stage===5?'Enregistrer':'Continuer'}</button></div></div>${this.removeBlock()}`;}
- private exterior(){return html`<div class="actions"><button class="link" @click=${()=>this.cancel()}>← Accueil Confort</button></div><h1 tabindex="-1">Réglages généraux</h1><p class="muted">La météo et la pollution, communes à toutes les pièces.</p>${this.intro('exterior')}
-  ${this.exteriorSource()}${this.exteriorRows()}${this.airBlock()}${this.alarmBlock()}${this.confirmBlock()}${this.errorBlock()}<div class="bottom"><button @click=${()=>this.cancel()}>Annuler</button><button class="primary" ?disabled=${this.busy} @click=${()=>this.save()}>Enregistrer</button></div>`;}
+ /** The general settings: the rooms, Niak's own bricks, then the other integrations Confort reads or could read. */
+ private exterior(){const h=this.health,ext=h?.extensions??[],weather=ext.find(x=>x.key==='niak_weather');
+  return html`<div class="actions"><button class="link" @click=${()=>this.cancel()}>← Accueil Confort</button></div><h1 tabindex="-1">Réglages généraux</h1><p class="muted">Vos pièces, le dehors et les extensions.</p>
+  ${this.roomsSettings()}
+  <h2 class="ex-sec">Extensions officielles Niak</h2>
+  ${this.extensionCard({...(weather??{key:'niak_weather',name:'Niak Weather',official:true,level:'none',role:'',use:'Le dehors pour toutes les pièces : température, humidité, pluie, vent, soleil, saison, pollution, alertes et prévisions.',without:'',url:'https://github.com/Niakman13/niak-weather-integration',text:'',rooms:[]}),
+    state:this.weatherEntry?'linked':this.snapshot?.niak_weather?.installed&&this.snapshot.niak_weather.places.length?'found':'missing'},
+    html`${this.exteriorSource()}${this.weatherEntry?this.exteriorRows():nothing}`)}
+  ${this.weatherEntry?nothing:html`${this.exteriorRows()}${this.airBlock()}`}
+  <h2 class="ex-sec">Extensions tierces</h2><p class="hint">Toutes facultatives. Chacune affine les conseils là où elle sert.</p>
+  ${h?ext.filter(x=>!x.official).map(x=>this.extensionCard(x,x.key==='alarmo'?this.alarmBlock():nothing)):html`<p class="muted" role="status">Recherche des extensions…</p>`}
+  ${h?.others?.length?html`<h2 class="ex-sec">Détectées, pas encore lues par Confort</h2>${frame('À proposer',html`<p class="hint">Trouvées dans votre Home Assistant. Confort ne s’en sert pas encore ; dites-nous si elles vous seraient utiles.</p>
+   ${h.others.map(o=>html`<div class="ac-row ex-other"><b>${o.name}<small class="hint ac-ext">${o.use}</small></b><span class="tw-pill">pas encore lue</span><a class="ex-act" href=${askUrl(o.name,o.use)} target="_blank" rel="noreferrer">Demander</a></div>`)}
+   <p class="hint">« Demander » ouvre une demande toute prête sur GitHub. Rien n’est envoyé sans vous.</p>`)}`:nothing}
+  ${frame('Les cartes',html`<p class="hint">Dans un tableau de bord : <strong>Ajouter une carte</strong>, puis <strong>Niak Confort</strong> pour une pièce (les pièces au même air n’en font qu’une), ou <strong>Niak Confort · logement</strong> pour la synthèse.</p>`)}
+  ${this.confirmBlock()}${this.errorBlock()}<div class="bottom"><button @click=${()=>this.cancel()}>Annuler</button><button class="primary" ?disabled=${this.busy} @click=${()=>this.save()}>Enregistrer</button></div>`;}
+ /** Every room, to change or to add; what needs setting is named on its line. */
+ private roomsSettings(){const todo=new Map<string,number>();for(const l of this.health?.todo??[])if(l.target?.kind==='room')todo.set(l.target.entry_id,(todo.get(l.target.entry_id)??0)+1);
+  return frame('Pièces',html`${this.addBar()}<div class="ac-lines">${this.snapshot!.rooms.map(r=>{const n=todo.get(r.entry_id)??0,others=(this.volumeName(r.entry_id)??'').split(' · ').filter(x=>x&&x!==r.title);
+   return html`<div class="ac-line ex-room"><b>${r.title}${others.length?html`<small class="hint"> · même air que ${others.join(' et ')}</small>`:nothing}</b><span class="hint">${coverage(r.config)}</span>${n?html`<span class="tw-pill act">${n>1?n+' points':'1 point'} à régler</span>`:nothing}
+    <button class="ac-edit" ?disabled=${this.busy} aria-label=${'Modifier '+r.title} @click=${()=>void this.openRoom(r.entry_id)}>Modifier</button></div>`;})}</div>`);}
+ /** From the general settings to a room: their draft is kept for the way back. */
+ private async openRoom(entry_id:string,section=''){const room=this.snapshot?.rooms.find(r=>r.entry_id===entry_id);if(!room)return;
+  this.remember();this.exteriorDraft=undefined;this.workspaceKey='';await this.editRoom(room);const stage=roomSections.find(x=>x.path===section)?.stage;if(section&&stage!=null&&this.draft)this.go(stage);}
+ /** One extension: what it is for, its state, and the one thing to do (link it, install it) when it is not used. */
+ private extensionCard(x:Extension,body:unknown=nothing){const [word,cls]=extState[x.state];
+  // Linking a heating or a cover is a room's choice: the first room opens on that step.
+  const step=x.key==='versatile_thermostat'?'chauffage':x.key==='adaptive_cover_pro'?'ouvertures':'';const first=this.snapshot?.rooms[0];
+  // Niak Weather's own choice already says how to install it.
+  const act=x.state==='missing'&&!x.official?html`<a class="ex-act" href=${hacsUrl(x.url)} target="_blank" rel="noreferrer">Installer avec HACS</a>`
+   :x.state==='found'&&step&&first?html`<button class="ac-edit" ?disabled=${this.busy} @click=${()=>void this.openRoom(first.entry_id,step)}>Lier</button>`:nothing;
+  const detail=x.state==='linked'?(x.rooms.length?`${x.rooms.length>1?x.rooms.length+' pièces':'1 pièce'} : ${x.rooms.join(', ')}`:''):x.state==='found'?(step?`Trouvé dans Home Assistant. Dans une pièce : Modifier → ${step==='chauffage'?'Chauffage':'Ouvertures'}.`:'Trouvée dans Home Assistant.'):x.without;
+  return html`<section class=${'nk-section ex-card'+(x.state==='found'?' act':'')}><div class="nk-body"><div class="ex-head"><span class="ex-icon">${hubIcon(extIcon[x.key]??'settings')}</span>
+   <div class="ex-body"><h3>${x.name} <span class=${'tw-pill '+cls}>${word}</span></h3><p class="hint">${x.use}</p>${detail&&x.key!=='niak_weather'?html`<p class="hint ex-detail">${detail}</p>`:nothing}</div>${act}</div>${body}</div></section>`;}
  private card(id:string){
   if(!customElements.get('niak-comfort-card'))return html`<p class="notice">L’aperçu de la carte apparaîtra après un rechargement de la page.</p>`;
   if(this.previewCard?.id!==id){const el=document.createElement('niak-comfort-card') as HTMLElement&{hass?:unknown;setConfig?:(c:object)=>void};el.setConfig?.({type:'custom:niak-comfort-card',entry_id:id,format:'full'});el.hass=this.hass;this.previewCard={id,el};}
