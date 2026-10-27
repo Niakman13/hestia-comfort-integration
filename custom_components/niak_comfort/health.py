@@ -69,6 +69,8 @@ class Facts:
     version: str = ""
     alarm: str = ""
     """The home's alarm as read: « Alarmo · désarmée », "" without one."""
+    installed: frozenset = frozenset()
+    """The integrations of EXTENSIONS and OTHERS that Home Assistant has loaded."""
 
 
 def ago(minutes):
@@ -165,18 +167,21 @@ def report(f):
                 cells.append({"level": "ok", "text": _plural(len(mine), "contact") if key == "windows" else "répond"})
         rooms.append({"entry_id": room.entry_id, "title": room.title, "cells": cells})
 
-    # Extensions: other integrations Niak recognises by itself, each making the advice better where it is used.
+    # Extensions: Niak's own bricks, then other integrations Niak reads by itself, each making the advice better where it is used.
     vt = [r.title for r in f.rooms if r.thermostat]
     acp = [r.title for r in f.rooms if r.driven_covers]
-    extensions = [
-        {"name": "Niak Weather", "level": "ok" if f.weather else "none", "role": "Extérieur, prévisions, pluie, vigilances",
-         "text": f"relié · {f.weather}" if f.weather else "installé, pas relié" if f.weather_installed else "non installé"},
-        {"name": thermostats.NAME, "level": "ok" if vt else "none", "role": "Consigne confort, raison d’un arrêt, présets, pente",
-         "text": f"{_plural(len(vt), 'pièce')} · " + ", ".join(vt) if vt else "aucun chauffage reconnu"},
-        {"name": cover_link.NAME, "level": "ok" if acp else "none", "role": "Volets pilotés avec le soleil",
-         "text": f"{_plural(len(acp), 'pièce')} · " + ", ".join(acp) if acp else "aucun volet reconnu"},
-        {"name": people.NAME, "level": "ok" if f.alarm else "none", "role": "Maison vide, nuit, fenêtre ouverte alarme armée",
-         "text": f.alarm or "aucune alarme (Réglages généraux)"}]
+    linked = {"niak_weather": [f.weather] if f.weather else [], thermostats.PLATFORM: vt, "adaptive_cover_pro": acp, people.PLATFORM: [f.alarm] if f.alarm else []}
+    installed = {"niak_weather": f.weather_installed}
+    extensions = []
+    for ext in EXTENSIONS:
+        found = linked[ext["key"]]
+        state = "linked" if found else "found" if installed.get(ext["key"], ext["key"] in f.installed) else "missing"
+        text = (f"relié · {f.weather}" if ext["key"] == "niak_weather" else f.alarm if ext["key"] == people.PLATFORM
+                else f"{_plural(len(found), 'pièce')} · " + ", ".join(found)) if found else ext[state]
+        extensions.append({**{k: ext[k] for k in ("key", "name", "official", "role", "use", "without", "url")},
+                           "state": state, "level": "ok" if found else "none", "text": text, "rooms": found if ext["key"] in (thermostats.PLATFORM, "adaptive_cover_pro") else []})
+    # Installed integrations Confort does not read yet: shown so that the person can ask for them.
+    others = [dict(o) for o in OTHERS if o["key"] in f.installed]
     versions = [{"level": "ok", "text": f"Intégration {f.version}", "why": "avec sa carte"},
                 {"level": "ok", "text": f"Relié à Niak Weather · {f.weather}", "why": "l’extérieur vient de sa station et de ses prévisions"} if f.weather else
                 {"level": "none", "text": "Pas relié à Niak Weather", "why": "installé : il peut remplir l’extérieur" if f.weather_installed else "non installé"}]
@@ -186,7 +191,38 @@ def report(f):
     return {"level": "action" if todo else "ok", "sensors": sensors, "summary": _plural(len(todo), "point") + " à régler" if todo else "Tout est suivi",
             "tips_summary": _plural(len(tips), "réglage") + " à améliorer" if tips else "",
             "rooms_summary": _plural(len(f.rooms), "pièce suivie", "pièces suivies"),
-            "todo": todo, "tips": tips, "sources": sources, "extensions": extensions, "columns": [label for _, label in COLUMNS], "rooms": rooms, "versions": versions}
+            "todo": todo, "tips": tips, "sources": sources, "extensions": extensions, "others": others, "columns": [label for _, label in COLUMNS], "rooms": rooms, "versions": versions}
+
+
+EXTENSIONS = (
+    {"key": "niak_weather", "name": "Niak Weather", "official": True, "url": "https://github.com/Niakman13/niak-weather-integration",
+     "role": "Extérieur, prévisions, pluie, vigilances",
+     "use": "Le dehors pour toutes les pièces : température, humidité, pluie, vent, soleil, saison, pollution, alertes et prévisions.",
+     "without": "Sans lui : vos propres capteurs, sans prévisions ni alertes.",
+     "found": "installé, pas relié", "missing": "non installé"},
+    {"key": thermostats.PLATFORM, "name": thermostats.NAME, "official": False, "url": "https://github.com/jmcollin78/versatile_thermostat",
+     "role": "Consigne confort, raison d’un arrêt, présets, pente",
+     "use": "Consigne de confort, raison d’un arrêt (fenêtre, absence), préréglage et pente de chauffe : plus de conseil de chauffer quand le thermostat s’en charge.",
+     "without": "Sans lui : le chauffage est lu sur le thermostat de Home Assistant seulement.",
+     "found": "installé, aucun chauffage choisi dans une pièce", "missing": "non installé"},
+    {"key": "adaptive_cover_pro", "name": cover_link.NAME, "official": False, "url": "https://github.com/jrhubott/adaptive-cover-pro",
+     "role": "Volets pilotés avec le soleil",
+     "use": "Volets pilotés avec le soleil : Confort sait quand ils se ferment et nomme les volets à fermer avant la chaleur.",
+     "without": "Sans lui : le soleil est estimé par la façade de chaque ouvrant.",
+     "found": "installé, aucun volet relié à un ouvrant", "missing": "non installé"},
+    {"key": people.PLATFORM, "name": people.NAME, "official": False, "url": "https://github.com/nielsfaber/alarmo",
+     "role": "Maison vide, nuit, fenêtre ouverte alarme armée",
+     "use": "Maison vide, nuit, vacances : pas d’aération conseillée quand personne n’est là, et un avertissement si une fenêtre reste ouverte alarme armée.",
+     "without": "Sans elle : l’absence est lue sur les personnes de la maison.",
+     "found": "installée, pas utilisée", "missing": "non installée"},
+)
+# Integrations Confort could read one day: listed only when Home Assistant has them.
+OTHERS = (
+    {"key": "better_thermostat", "name": "Better Thermostat", "use": "Pourrait donner la consigne et l’arrêt fenêtre ouverte."},
+    {"key": "smartir", "name": "SmartIR", "use": "Pourrait dire si la climatisation tourne, et dans quel mode."},
+    {"key": "scheduler", "name": "Scheduler", "use": "Pourrait dire quand le chauffage va reprendre."},
+)
+DOMAINS = frozenset(e["key"] for e in EXTENSIONS + OTHERS) | set(cover_link.PLATFORMS)
 
 
 def _weather_air(spec):
@@ -279,5 +315,8 @@ async def facts(hass, version):
     states = {"disarmed": "désarmée", "armed_away": "absence", "armed_home": "à la maison", "armed_night": "nuit",
               "armed_vacation": "vacances", "armed_custom_bypass": "personnalisée", "triggered": "déclenchée"}
     alarm = f"{found['name']} · {states.get(found['state'], found['state'])}" if found else ""
-    return Facts(alarm=alarm, rooms=rooms, exterior=exterior, configured=bool(service.home.get("configured")), weather=weather,
+    loaded = getattr(getattr(hass, "config", None), "components", None) or set()
+    # The original Adaptive Cover is read like the Pro one.
+    installed = {d for d in DOMAINS if d in loaded} | ({"adaptive_cover_pro"} if any(p in loaded for p in cover_link.PLATFORMS) else set())
+    return Facts(alarm=alarm, installed=frozenset(installed), rooms=rooms, exterior=exterior, configured=bool(service.home.get("configured")), weather=weather,
                  weather_installed=bool(link.get("installed") and link.get("places")), free_areas=free, version=version)
