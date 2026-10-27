@@ -13,6 +13,11 @@ points and the letter thresholds are Niak's own.
 - air: CO₂ above the outdoor air (taken as 400 ppm), up to 550 ppm (I), 800 (II), 1 350 (III).
 
 An unheated room (a laundry) is not graded on its warmth. A theme with less than two weeks of measures is not graded.
+
+Advice (`advice`) speaks only of a lasting problem the measures show, never of a cause they cannot prove: the standard's
+normal range is missed half the winter in most homes heated to the legal 19 °C, so a room is told to heat only when it
+falls out of every category (under 18 °C) for a sixth of the heating season, and to dry only above the 70 % that
+Confort already calls a mould risk.
 """
 from collections import defaultdict
 from statistics import mean
@@ -31,6 +36,12 @@ OUTDOOR_CO2 = 400.0
 CO2_ABOVE = ((1, 550.0), (2, 800.0), (3, 1350.0))
 MIN_HOURS = 14 * 24
 THEMES = ("warmth", "humidity", "air")
+# Share of the hours (%) beyond which a lasting problem is worth one piece of advice.
+CHILLY_SHARE, DAMP_SHARE, STALE_SHARE = 15, 15, 5
+# Above this the air gives water back to cold walls: Confort's own mould threshold.
+DAMP = 70.0
+# A summer worth cooling at night: its mean indoor temperature, and the outdoor air this much cooler at dawn.
+WARM_SUMMER, DAWN_GAP = 25.0, 3.0
 
 
 def letter(score):
@@ -100,9 +111,13 @@ def _profile(points, months):
 def warmth(points, outdoor, running):
     """The warmth of a room: grade, month by month against the normal range (II), and a typical day by season."""
     rows, months = [], defaultdict(lambda: {"values": [], "cold": 0, "hot": 0, "low": [], "high": []})
+    heating = chilly = 0
     for when, value in points:
         bands = warmth_bands(when, running)
         rows.append(_category(value, bands))
+        if when.month in HEATING_MONTHS:
+            heating += 1
+            chilly += value < HEAT_FIXED[2][1]
         _, low, high = bands[1]
         month = months[_month(when)]
         month["values"].append(value)
@@ -120,7 +135,7 @@ def warmth(points, outdoor, running):
                         "low": round(mean(m["low"]), 1), "high": round(mean(m["high"]), 1)})
     coldest = min(points, key=lambda p: p[1]) if points else None
     hottest = max(points, key=lambda p: p[1]) if points else None
-    return {**_grade(rows), "monthly": monthly,
+    return {**_grade(rows), "monthly": monthly, "chilly": round(100 * chilly / heating) if heating else None,
             "coldest": {"value": round(coldest[1], 1), "month": _month(coldest[0])} if coldest else None,
             "hottest": {"value": round(hottest[1], 1), "month": _month(hottest[0])} if hottest else None,
             "day": {"winter": _profile(points, WINTER), "summer": _profile(points, SUMMER),
@@ -137,6 +152,7 @@ def humidity(points):
     return {**_grade([humidity_category(v) for _, v in points]),
             "dry": round(100 * sum(v < low for _, v in points) / total, 1),
             "humid": round(100 * sum(v > high for _, v in points) / total, 1),
+            "damp": round(100 * sum(v > DAMP for _, v in points) / total, 1),
             "monthly": [{"month": k, "mean": round(mean(v)), "humid": round(100 * sum(x > high for x in v) / len(v))}
                         for k, v in sorted(months.items())]}
 
@@ -171,6 +187,48 @@ def room(series, outdoor, zone=None, heated=True):
     scores = [t["score"] for t in themes.values() if t["score"] is not None]
     score = mean(scores) if scores else None
     return {"score": round(score) if score is not None else None, "letter": letter(score), "themes": themes}
+
+
+def advice(review, ventilation=False):
+    """A room's advice, one per theme at most, most pressing first: {"key", "theme", "level", "share", …}.
+    `ventilation`: the room has a ventilation it can run longer."""
+    found, themes = [], review["themes"]
+    warm = themes.get("warmth") or {}
+    if warm.get("score") is not None and (warm.get("chilly") or 0) >= CHILLY_SHARE:
+        found.append({"key": "heat_more", "theme": "warmth", "level": "action", "share": warm["chilly"]})
+    wet = themes.get("humidity") or {}
+    if wet.get("score") is not None and (wet.get("damp") or 0) >= DAMP_SHARE:
+        found.append({"key": "run_ventilation" if ventilation else "air_daily", "theme": "humidity", "level": "action", "share": wet["damp"]})
+    air = themes.get("air") or {}
+    day = [v for v in air.get("day") or () if v is not None]
+    if air.get("score") is not None and air["split"][2] >= STALE_SHARE and day:
+        found.append({"key": "air_at", "theme": "air", "level": "action", "share": air["split"][2], "hour": air["day"].index(max(day))})
+    return sorted(found, key=lambda a: -a["share"])
+
+
+def home_advice(rooms):
+    """The home's advice: the rooms' most pressing ones, then what concerns the whole house. `rooms` carry "title" and
+    "advice" beside their review."""
+    found = [{**a, "room": r["title"], "entry_id": r.get("entry_id")} for r in rooms for a in r.get("advice", ())]
+    found.sort(key=lambda a: -a["share"])
+    # The summer night: a house warm all summer while dawn is clearly cooler outside, in most of its rooms.
+    summers = []
+    for r in rooms:
+        day = ((r["themes"].get("warmth") or {}).get("day") or {})
+        inside, outside = day.get("summer") or [], day.get("outdoor_summer") or []
+        pairs = [(i, o) for i, o in zip(inside, outside) if i is not None and o is not None]
+        if pairs:
+            dawn = min(pairs, key=lambda p: p[1])
+            summers.append((mean(i for i, _ in pairs), dawn[0] - dawn[1]))
+    warm = [s for s in summers if s[0] >= WARM_SUMMER and s[1] >= DAWN_GAP]
+    if summers and len(warm) * 2 > len(summers):
+        found.append({"key": "open_at_night", "theme": "warmth", "level": "benefit", "share": None,
+                      "gap": round(mean(g for _, g in warm), 1)})
+    # The air measured in fewer than half the rooms: a CO₂ sensor where people sleep says more than any rule.
+    measured = sum(1 for r in rooms if (r["themes"].get("air") or {}).get("score") is not None)
+    if rooms and measured * 2 < len(rooms):
+        found.append({"key": "add_co2", "theme": "air", "level": "neutral", "share": None, "rooms": measured})
+    return found
 
 
 def home(rooms):

@@ -91,6 +91,43 @@ class Rooms(unittest.TestCase):
         self.assertEqual(warm["day"]["winter"][0], 20.5)
 
 
+class Advice(unittest.TestCase):
+    """Advice only for a lasting problem the measures show; never « heat more » to a home kept at the legal 19 °C."""
+    def test_a_room_out_of_every_category_is_told_to_heat(self):
+        outdoor = hourly(JANUARY, 30, 6.0)
+        legal = review.room({"temperature": hourly(JANUARY, 30, 19.0)}, outdoor)
+        self.assertEqual(review.advice(legal), [])
+        cold = review.room({"temperature": hourly(JANUARY, 30, lambda t: 17.0 if t.hour < 8 else 19.5)}, outdoor)
+        self.assertEqual([(a["key"], a["share"]) for a in review.advice(cold)], [("heat_more", 33)])
+
+    def test_a_damp_room_runs_its_ventilation_or_is_aired(self):
+        damp = review.room({"humidity": hourly(JANUARY, 30, lambda t: 75 if t.hour < 6 else 55)}, [])
+        self.assertEqual(review.advice(damp)[0]["key"], "air_daily")
+        self.assertEqual(review.advice(damp, ventilation=True)[0]["key"], "run_ventilation")
+        # 65 %, above the standard's normal range but under Confort's mould threshold: nothing to do.
+        self.assertEqual(review.advice(review.room({"humidity": hourly(JANUARY, 30, 65)}, [])), [])
+
+    def test_stale_air_names_its_worst_hour(self):
+        stale = review.room({"co2": hourly(JANUARY, 30, lambda t: 1900 if t.hour in (21, 22) else 600)}, [])
+        self.assertEqual([(a["key"], a["hour"]) for a in review.advice(stale)], [("air_at", 21)])
+
+    def test_the_house_is_told_to_open_at_night_after_a_warm_summer(self):
+        dawn_cool = lambda t: 18.0 if 3 <= t.hour <= 7 else 30.0
+        warm = review.room({"temperature": hourly(JULY, 40, 27.0)}, hourly(JULY - timedelta(days=10), 50, dawn_cool))
+        found = review.home_advice([{"title": "Salon", **warm, "advice": []}])
+        self.assertEqual([a["key"] for a in found], ["open_at_night", "add_co2"])
+        self.assertEqual(found[0]["gap"], 9.0)
+        mild = review.room({"temperature": hourly(JULY, 40, 23.0)}, hourly(JULY - timedelta(days=10), 50, dawn_cool))
+        self.assertNotIn("open_at_night", [a["key"] for a in review.home_advice([{"title": "Salon", **mild, "advice": []}])])
+
+    def test_the_rooms_advice_comes_first_with_their_name(self):
+        outdoor = hourly(JANUARY, 30, 6.0)
+        cold = review.room({"temperature": hourly(JANUARY, 30, 16.0), "co2": hourly(JANUARY, 30, 600)}, outdoor)
+        found = review.home_advice([{"title": "Chambre P", "entry_id": "p", **cold, "advice": review.advice(cold)}])
+        self.assertEqual((found[0]["key"], found[0]["room"], found[0]["entry_id"]), ("heat_more", "Chambre P", "p"))
+        self.assertNotIn("add_co2", [a["key"] for a in found])
+
+
 class Source(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         from homeassistant.core import HomeAssistant

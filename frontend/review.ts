@@ -8,9 +8,10 @@ type Warmth=Grade&{monthly:(Month&{min:number;mean:number;max:number;cold:number
  coldest:{value:number;month:string}|null;hottest:{value:number;month:string}|null;day:{winter:(number|null)[];summer:(number|null)[];outdoor_winter:(number|null)[];outdoor_summer:(number|null)[]}};
 type Humidity=Grade&{dry:number;humid:number;monthly:(Month&{mean:number;humid:number})[]};
 type Air=Grade&{split:number[];day:(number|null)[];monthly:(Month&{median:number})[]};
-type RoomReview={entry_id:string;title:string;score:number|null;letter:string|null;themes:{warmth?:Warmth;humidity?:Humidity;air?:Air}};
+type Advice={key:string;theme:'warmth'|'humidity'|'air';level:'action'|'benefit'|'neutral';share:number|null;hour?:number;gap?:number;rooms?:number;room?:string;entry_id?:string};
+type RoomReview={entry_id:string;title:string;score:number|null;letter:string|null;themes:{warmth?:Warmth;humidity?:Humidity;air?:Air};advice?:Advice[]};
 type ThemeGrade={score:number|null;letter:string|null;rooms:number};
-export type Review={version:number;computed_at:string;start:string;outdoor:boolean;home:{score:number|null;letter:string|null;themes:Record<'warmth'|'humidity'|'air',ThemeGrade>};rooms:RoomReview[]};
+export type Review={version:number;computed_at:string;start:string;outdoor:boolean;home:{score:number|null;letter:string|null;themes:Record<'warmth'|'humidity'|'air',ThemeGrade>;advice?:Advice[]};rooms:RoomReview[]};
 type Hass={callWS:<T>(m:object)=>Promise<T>};
 
 const MONTHS=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
@@ -24,6 +25,20 @@ const CSS_BLUE=unsafeCSS(BLUE),CSS_AMBER=unsafeCSS(AMBER);
 const HEATING=[11,12,1,2,3,4],WINTER=[12,1,2],SUMMER=[6,7,8];
 const inMonths=(m:string,months:number[])=>months.includes(Number(m.slice(5,7)));
 const avg=(v:number[])=>v.length?v.reduce((a,b)=>a+b,0)/v.length:0;
+
+/** One gesture and the measured fact behind it (engine/review.py advice): never a cause the sensors cannot prove. */
+function adviceText(a:Advice):[string,string]{
+ const share=a.share==null?'':fr(a.share,0)+' %';
+ switch(a.key){
+  case 'heat_more':return ['Chauffez-la davantage l’hiver',`Sous 18 °C ${share} du temps, de novembre à avril`];
+  case 'run_ventilation':return ['Faites tourner la VMC plus longtemps',`Au-dessus de 70 % d’humidité ${share} du temps`];
+  case 'air_daily':return ['Aérez 10 minutes chaque jour',`Au-dessus de 70 % d’humidité ${share} du temps`];
+  case 'air_at':return [`Aérez 10 minutes vers ${a.hour} h`,`Air à renouveler ${share} du temps, surtout vers ${a.hour} h`];
+  case 'open_at_night':return ['L’été, ouvrez en grand la nuit',`À l’aube, dehors est ${fr(a.gap??0)} °C plus frais que la maison`];
+  case 'add_co2':return ['Ajoutez un capteur de CO₂ dans une chambre',`L’air n’est mesuré que dans ${a.rooms} pièce${(a.rooms??0)>1?'s':''}`];
+  default:return [a.key,''];
+ }
+}
 
 /** A small SVG chart: `n` slots across, values scaled between `lo` and `hi`. */
 function frame(n:number,lo:number,hi:number,w=320,h=140){
@@ -77,6 +92,11 @@ export class ComfortReview extends LitElement {
   .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--rv-muted);margin-top:4px}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
   details{margin-top:10px;font-size:14px}summary{cursor:pointer;color:var(--rv-muted)}details p{color:var(--rv-muted);line-height:1.6}
   .notice{padding:12px 14px;border-radius:12px;background:var(--rv-surface)}
+  .advice{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:8px}
+  .tip{display:block;text-align:left;font:inherit;color:inherit;background:var(--rv-surface);border:1px solid transparent;border-radius:12px;padding:10px 12px}
+  .tip.action{border-color:color-mix(in srgb,${CSS_AMBER} 55%,transparent)}.tip.benefit{border-color:color-mix(in srgb,#639922 60%,transparent)}
+  button.tip{cursor:pointer}button.tip:hover{background:color-mix(in srgb,var(--rv-surface) 80%,var(--rv-border))}
+  .tip b{display:block;font-size:15px;font-weight:600;margin:2px 0}
   .sheet{max-width:900px}
  `;
  connectedCallback(){super.connectedCallback();if(this.hass&&!this.asked)void this.load();}
@@ -107,8 +127,17 @@ export class ComfortReview extends LitElement {
     <div><div class="headline">${h.score==null?'Pas encore de note':`Confort : ${h.score} / 100`}</div><div class="muted">${this.homeLine(warm)}</div><div class="muted small">Selon la norme européenne EN 16798-1</div></div></div>
    ${this.how()}
    <div class="panels">${this.warmthPanel(warm)}${this.humidityPanel()}${this.airPanel()}${this.energyPanel()}</div>
+   ${this.adviceList(h.advice??[],true)}
    <h2 style="margin-top:20px">Vos pièces</h2>
    <div class="rooms">${[...d.rooms].sort((a,b)=>(b.score??-1)-(a.score??-1)).map(r=>html`<button class="room" @click=${()=>this.go(r.entry_id)}><span>${r.title}<br><span class="muted small">${r.score==null?'pas encore assez de mesures':r.score+' / 100'}</span></span>${this.letter(r.letter)}</button>`)}</div>`;
+ }
+ /** The pieces of advice, as cards: on the home's page each names its room and opens its sheet. */
+ private adviceList(list:Advice[],home=false){
+  if(!list.length)return home?html`<h2 style="margin-top:20px">Nos conseils</h2><p class="muted">Rien à signaler : aucun problème qui dure dans vos pièces.</p>`:nothing;
+  const order={action:0,benefit:1,neutral:2};
+  return html`${home?html`<h2 style="margin-top:20px">Nos conseils</h2>`:nothing}<div class="advice">${[...list].sort((a,b)=>order[a.level]-order[b.level]).map(a=>{const [title,why]=adviceText(a);
+   const body=html`<span class="muted small">${a.room??'Toute la maison'}</span><b>${title}</b><span class="muted small">${why}</span>`;
+   return home&&a.entry_id?html`<button class=${'tip '+a.level} @click=${()=>this.go(a.entry_id)}>${body}</button>`:html`<div class=${'tip '+a.level}>${home?body:html`<b>${title}</b><span class="muted small">${why}</span>`}</div>`;})}</div>`;
  }
  private homeLine(warm:Warmth[]){
   const h=this.data!.home;if(h.score==null)return '';
@@ -169,10 +198,16 @@ export class ComfortReview extends LitElement {
   return html`<div class="sheet"><button class="back" @click=${()=>this.go()}>← Votre maison</button>
    <div class="top"><div><h1>${r.title}</h1><p class="muted">${r.score==null?'Pas encore assez de mesures pour une note':`Confort : ${r.score} / 100${best?.entry_id===r.entry_id&&this.data!.rooms.length>1?' · la plus confortable de la maison':''}`}</p></div>${this.letter(r.letter,true)}</div>
    <div class="chips">${chips}</div>
-   ${t.warmth?this.warmthSection(t.warmth):nothing}${t.humidity?this.humiditySection(t.humidity):nothing}${t.air?this.airSection(t.air):nothing}</div>`;
+   ${t.warmth?this.warmthSection(t.warmth,this.tips(r,'warmth')):nothing}${t.humidity?this.humiditySection(t.humidity,this.tips(r,'humidity')):nothing}${t.air?this.airSection(t.air,this.tips(r,'air')):nothing}</div>`;
+ }
+ /** A theme's advice in a room's sheet; « Rien à faire » in blue when its grade is good and nothing is advised. */
+ private tips(r:RoomReview,theme:Advice['theme']){
+  const list=(r.advice??[]).filter(a=>a.theme===theme);
+  if(list.length)return this.adviceList(list);
+  return good(r.themes[theme]?.letter??null)?html`<p class="tip" style="background:color-mix(in srgb,${BLUE} 18%,transparent);color:var(--nc-accent,#a1c9e8)">Rien à faire, ${theme==='warmth'?'la chaleur est bonne':theme==='humidity'?'l’humidité est bonne':'l’air est sain'}</p>`:nothing;
  }
  private stat(label:string,value:string,note:string){return html`<div class="stat"><span class="muted small">${label}</span><b>${value}</b><span class="muted small">${note}</span></div>`;}
- private warmthSection(w:Warmth){
+ private warmthSection(w:Warmth,tips:unknown=nothing){
   const m=w.monthly.slice(-12);if(!m.length)return nothing;
   const lo=Math.floor(Math.min(...m.map(x=>Math.min(x.min,x.low))))-1,hi=Math.ceil(Math.max(...m.map(x=>Math.max(x.max,x.high))))+1,f=frame(m.length,lo,hi,WIDE,TALL);
   return html`<section class="theme"><h2><span>Chaleur</span>${this.letter(w.letter)}</h2>
@@ -184,7 +219,7 @@ export class ComfortReview extends LitElement {
     ${m.map((x,i)=>svg`<rect x=${f.x(i)-f.slot*.18} width=${f.slot*.36} y=${f.y(x.max)} height=${f.y(x.min)-f.y(x.max)} rx="3" fill=${GREY} fill-opacity=".35"/>`)}
     <polyline points=${line(f,m.map(x=>x.mean))} fill="none" stroke=${BLUE} stroke-width="2.5"/>${m.map((x,i)=>svg`<circle cx=${f.x(i)} cy=${f.y(x.mean)} r="2.5" fill=${BLUE}/>`)}</svg>
    <p class="muted small">La zone s’élargit l’été : sans climatisation, la norme accepte plus de chaleur après des jours chauds.</p>
-   ${this.day(w)}</section>`;
+   ${this.day(w)}${tips}</section>`;
  }
  private day(w:Warmth){
   const s=this.season,room=s==='winter'?w.day.winter:w.day.summer,out=s==='winter'?w.day.outdoor_winter:w.day.outdoor_summer;
@@ -201,7 +236,7 @@ export class ComfortReview extends LitElement {
    <p class="muted small">${s==='winter'?`L’hiver, la pièce descend vers ${fr(min)} °C à ${room.indexOf(min)} h et monte vers ${fr(max)} °C à ${room.indexOf(max)} h.`:`L’été, la pièce reste entre ${fr(min)} et ${fr(max)} °C au fil de la journée.`}</p>`
    :html`<p class="muted small">Pas encore de mesures ${s==='winter'?'cet hiver':'cet été'}.</p>`}`;
  }
- private humiditySection(h:Humidity){
+ private humiditySection(h:Humidity,tips:unknown=nothing){
   const m=h.monthly.slice(-12);if(!m.length)return nothing;
   const f=frame(m.length,20,90,WIDE,TALL),inside=Math.round(100-h.dry-h.humid);
   return html`<section class="theme"><h2><span>Humidité</span>${this.letter(h.letter)}</h2>
@@ -209,16 +244,16 @@ export class ComfortReview extends LitElement {
    <div class="muted small">Humidité moyenne, mois par mois · bande bleue = zone de la norme</div>
    <svg viewBox="0 0 ${f.w} ${f.h}" role="img" aria-label="Humidité moyenne mois par mois">${axes(f,[30,60,90],' %',m.map(x=>monthName(x.month)))}
     <rect x=${f.pad.l} width=${f.w-f.pad.l-f.pad.r} y=${f.y(60)} height=${f.y(25)-f.y(60)} fill=${BLUE} fill-opacity=".14"/>
-    <polyline points=${line(f,m.map(x=>x.mean))} fill="none" stroke=${BLUE} stroke-width="2.5"/>${m.map((x,i)=>svg`<circle cx=${f.x(i)} cy=${f.y(x.mean)} r="2.5" fill=${x.mean>60?AMBER:BLUE}/>`)}</svg></section>`;
+    <polyline points=${line(f,m.map(x=>x.mean))} fill="none" stroke=${BLUE} stroke-width="2.5"/>${m.map((x,i)=>svg`<circle cx=${f.x(i)} cy=${f.y(x.mean)} r="2.5" fill=${x.mean>60?AMBER:BLUE}/>`)}</svg>${tips}</section>`;
  }
- private airSection(a:Air){
+ private airSection(a:Air,tips:unknown=nothing){
   const known=a.day.filter((v):v is number=>v!=null);if(!known.length)return nothing;
   const peak=Math.max(...known),worst=a.day.indexOf(peak),hi=Math.max(900,Math.ceil(peak/100)*100+100),f=frame(24,400,hi,WIDE,TALL);
   return html`<section class="theme"><h2><span>Air</span>${this.letter(a.letter)}</h2>
    <div class="stats">${this.stat('Très bon',fr(a.split[0],0)+' %','du temps')}${this.stat('Le moins bon',worst+' h','en moyenne')}${this.stat('À renouveler',fr(a.split[2],0)+' %','du temps')}</div>
    <div class="muted small">CO₂ moyen selon l’heure de la journée</div>
    <svg viewBox="0 0 ${f.w} ${f.h}" role="img" aria-label="CO₂ moyen heure par heure">${axes(f,[400,Math.round((400+hi)/200)*100,hi],'',Array.from({length:24},(_,i)=>i+' h'),4)}
-    ${a.day.map((v,i)=>v==null?nothing:svg`<rect x=${f.x(i)-f.slot*.35} width=${f.slot*.7} y=${f.y(v)} height=${f.y(400)-f.y(v)} rx="2" fill=${v>=950?AMBER:v>=700?AMBER_LIGHT:BLUE_LIGHT}/>`)}</svg></section>`;
+    ${a.day.map((v,i)=>v==null?nothing:svg`<rect x=${f.x(i)-f.slot*.35} width=${f.slot*.7} y=${f.y(v)} height=${f.y(400)-f.y(v)} rx="2" fill=${v>=950?AMBER:v>=700?AMBER_LIGHT:BLUE_LIGHT}/>`)}</svg>${tips}</section>`;
  }
 }
 

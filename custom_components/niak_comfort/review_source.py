@@ -56,12 +56,15 @@ async def async_review(hass, now=None):
         rooms = []
         for entry in entries:
             series = {k: _points(stats.get(i)) for k, i in wanted[entry.entry_id].items() if i}
-            heated = entry.runtime_data.config.get("heated", True) is not False
-            rooms.append({"entry_id": entry.entry_id, "title": entry.title, **review.room(series, outside, zone, heated)})
+            config = entry.runtime_data.config
+            graded = review.room(series, outside, zone, config.get("heated", True) is not False)
+            # A room with a ventilation of its own is told to run it longer rather than to open.
+            ventilation = bool(config.get("sources", {}).get("ventilation"))
+            rooms.append({"entry_id": entry.entry_id, "title": entry.title, **graded, "advice": review.advice(graded, ventilation)})
         return rooms
 
     rooms = await hass.async_add_executor_job(build)
     result = {"version": 1, "computed_at": now.isoformat(), "start": start.isoformat(), "outdoor": bool(outside),
-              "home": review.home(rooms), "rooms": rooms}
+              "home": {**review.home(rooms), "advice": review.home_advice(rooms)}, "rooms": rooms}
     hass.data[DATA_REVIEW] = (now, result)
     return result
