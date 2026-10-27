@@ -8,7 +8,7 @@ import {build} from 'esbuild';
 const root=new URL('../',import.meta.url),temp=await mkdtemp(join(tmpdir(),'niak-comfort-card-'));
 await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts','src/views/room.ts','src/views/horizon.ts','src/editor.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
   bundle:true,platform:'node',format:'esm',outExtension:{'.js':'.mjs'},logLevel:'silent'});
-const {cleanConfig,cleanHomeConfig,homeAction}=await import(pathToFileURL(join(temp,'types.mjs')));
+const {cleanConfig,cleanHomeConfig,homeAction,cleanReviewConfig}=await import(pathToFileURL(join(temp,'types.mjs')));
 const {isView,numeric,summary,readingStatus,coverageText,windFrom,evolutionLines,co2Metric,solarMetric}=await import(pathToFileURL(join(temp,'view.mjs')));
 const {LiveView}=await import(pathToFileURL(join(temp,'live.mjs')));
 const {roomChoices}=await import(pathToFileURL(join(temp,'editor.mjs')));
@@ -604,4 +604,10 @@ test('where to open is said under the advice, only while airing is asked',()=>{
   // Nothing asked: nothing said, the banner stays the only gesture.
   v.assessment={...v.assessment,action:'ok',level:'calm',reason:'within_comfort',needs:[]};
   assert.equal(said().some(t=>t.startsWith('Ouvrez')),false);
+});
+test('the review card is a summary unless « full » is chosen, its title trimmed',()=>{
+  assert.deepEqual(cleanReviewConfig({type:'custom:niak-comfort-review-card'}),{type:'custom:niak-comfort-review-card',format:'summary'});
+  assert.deepEqual(cleanReviewConfig({type:'custom:niak-comfort-review-card',format:'full',title:'  Maison  '}),{type:'custom:niak-comfort-review-card',format:'full',title:'Maison'});
+  assert.equal(cleanReviewConfig({type:'custom:niak-comfort-review-card',format:'grand',title:' '}).format,'summary');
+  assert.throws(()=>cleanReviewConfig({type:'custom:niak-comfort-card'}));
 });

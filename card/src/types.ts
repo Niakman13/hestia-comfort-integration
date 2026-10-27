@@ -169,3 +169,14 @@ export function cleanHomeConfig(input:HomeConfig):HomeConfig {
 }
 /** What a long press does on the home card: a page when one is set, else a window, except on the full card (nothing). */
 export const homeAction=(c:HomeConfig)=>c.hold_action??(c.hold_path?'page':(c.format??'full')==='full'?'none':'popup');
+
+/** The review card (review-card.ts): a title and its format, « summary » unless « full » is chosen. */
+export type ReviewFormat='summary'|'full';
+export interface ReviewConfig {type:'custom:niak-comfort-review-card';title?:string;format?:ReviewFormat}
+
+export function cleanReviewConfig(input:ReviewConfig):ReviewConfig {
+  if(!input||input.type!=='custom:niak-comfort-review-card')throw new Error('Type de carte Niak Confort · bilan invalide.');
+  const config:ReviewConfig={type:input.type,format:input.format==='full'?'full':'summary'};
+  if(typeof input.title==='string'&&input.title.trim())config.title=input.title.trim();
+  return config;
+}

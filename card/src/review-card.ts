@@ -1,0 +1,59 @@
+import {LitElement,html,css,unsafeCSS,nothing,type PropertyValues} from 'lit';
+import {property,state} from 'lit/decorators.js';
+import style from './ui/charter.css';
+import {icon} from './ui/icons';
+import {cleanReviewConfig,type HomeAssistant,type ReviewConfig} from './types';
+import './review';
+
+/** The comfort review on a dashboard: the same review as the hub's « Bilan du logement » page, for the whole family
+    (the hub is for administrators only). « summary » opens the full review in a window; « full » shows it in place. */
+export class NiakComfortReviewCard extends LitElement {
+  static styles=[unsafeCSS(style),css`ha-card{padding:16px}.title{font-size:18px;font-weight:600;margin:0 0 12px}dialog>div:last-child{padding:0 16px 16px}`];
+  @property({attribute:false}) hass?:HomeAssistant;
+  @state() private config?:ReviewConfig;
+  @state() private dialogOpen=false;
+  setConfig(input:ReviewConfig){this.config=cleanReviewConfig(input);}
+  static getConfigElement(){return document.createElement('niak-comfort-review-card-editor');}
+  static getStubConfig():ReviewConfig{return {type:'custom:niak-comfort-review-card',format:'summary'};}
+  getCardSize(){return this.config?.format==='full'?12:4;}
+  protected updated(changed:PropertyValues){
+    if(changed.has('hass'))this.setAttribute('theme',this.hass?.themes?.darkMode===false?'light':'dark');
+    const dialog=this.renderRoot.querySelector<HTMLDialogElement>('dialog');if(this.dialogOpen&&dialog&&!dialog.open)dialog.showModal();
+  }
+  private close(){this.renderRoot.querySelector<HTMLDialogElement>('dialog')?.close();this.dialogOpen=false;}
+  protected render(){
+    if(!this.config||!this.hass)return nothing;
+    const title=this.config.title??'Bilan du logement';
+    if(this.config.format==='full')return html`<ha-card><p class="title">${title}</p><niak-comfort-review .hass=${this.hass}></niak-comfort-review></ha-card>`;
+    return html`<ha-card><p class="title">${title}</p><niak-comfort-review mode="summary" .hass=${this.hass} @review-open=${()=>{this.dialogOpen=true;}}></niak-comfort-review></ha-card>
+      <dialog aria-label=${title} @cancel=${()=>{this.dialogOpen=false;}} @close=${()=>{this.dialogOpen=false;}}>
+        <div class="dialog-top"><span>${title}</span><button class="icon-button" aria-label="Fermer" @click=${()=>this.close()}>${icon('close')}</button></div>
+        <div>${this.dialogOpen?html`<niak-comfort-review .hass=${this.hass}></niak-comfort-review>`:nothing}</div></dialog>`;
+  }
+}
+
+/** The editor: a title and the format, as the other Niak cards. */
+export class NiakComfortReviewEditor extends LitElement {
+  @property({attribute:false}) hass?:HomeAssistant;
+  @state() private config?:ReviewConfig;
+  setConfig(config:ReviewConfig){this.config=cleanReviewConfig(config);}
+  private changed(e:CustomEvent<{value:Partial<ReviewConfig>}>){
+    e.stopPropagation();if(!this.config)return;
+    this.config=cleanReviewConfig({...this.config,...e.detail.value});
+    this.dispatchEvent(new CustomEvent('config-changed',{detail:{config:this.config},bubbles:true,composed:true}));
+  }
+  protected render(){
+    if(!this.config||!this.hass)return nothing;
+    const schema=[{name:'title',selector:{text:{}}},{name:'format',selector:{select:{mode:'list',options:[
+      {value:'summary',label:'Résumé : la note, les thèmes et le conseil le plus important ; un appui ouvre le bilan complet'},
+      {value:'full',label:'Complet : le tableau de bord et la fiche de chaque pièce'}]}}}];
+    const labels:Record<string,string>={title:'Titre',format:'Format'};
+    return html`<ha-form .hass=${this.hass} .data=${this.config} .schema=${schema} .computeLabel=${(s:{name:string})=>labels[s.name]??s.name} @value-changed=${this.changed}></ha-form>`;
+  }
+}
+
+if(!customElements.get('niak-comfort-review-card'))customElements.define('niak-comfort-review-card',NiakComfortReviewCard);
+if(!customElements.get('niak-comfort-review-card-editor'))customElements.define('niak-comfort-review-card-editor',NiakComfortReviewEditor);
+window.customCards??=[];
+if(!window.customCards.some(c=>c.type==='niak-comfort-review-card'))window.customCards.push({type:'niak-comfort-review-card',name:'Niak Confort · bilan',
+  description:'Le bilan du logement sur douze mois : une note selon la norme européenne EN 16798-1, la chaleur, l’humidité, l’air, les pièces et des conseils.'});

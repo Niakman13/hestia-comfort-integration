@@ -1,5 +1,5 @@
 import {LitElement,html,svg,css,unsafeCSS,nothing} from 'lit';
-import {customElement,property,state} from 'lit/decorators.js';
+import {property,state} from 'lit/decorators.js';
 
 /** The comfort review (review_source.py): the home's dashboard, then one room's sheet. Graded on EN 16798-1. */
 type Month={month:string};
@@ -55,11 +55,12 @@ function axes(f:Frame,ticks:number[],unit:string,labels:string[],every=1){
 const line=(f:Frame,values:(number|null)[])=>values.map((v,i)=>v==null?null:`${f.x(i)},${f.y(v)}`).filter(Boolean).join(' ');
 const band=(f:Frame,low:number[],high:number[])=>[...high.map((v,i)=>`${f.x(i)},${f.y(v)}`),...low.map((v,i)=>`${f.x(i)},${f.y(v)}`).reverse()].join(' ');
 
-@customElement('niak-comfort-review')
 export class ComfortReview extends LitElement {
  @property({attribute:false}) hass?:Hass;
  /** The room whose sheet is shown; none for the home's dashboard. */
  @property({attribute:false}) room?:string;
+ /** « summary »: the note, the four themes and the most pressing piece of advice, for a dashboard card. */
+ @property() mode:'page'|'summary'='page';
  @state() private data?:Review;
  @state() private error='';
  @state() private season:'winter'|'summer'='winter';
@@ -72,6 +73,7 @@ export class ComfortReview extends LitElement {
   .note{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:16px;border-radius:14px;background:var(--rv-surface)}
   .scale{display:flex;align-items:center;gap:4px}.scale span{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:600;background:color-mix(in srgb,var(--rv-muted) 14%,transparent);color:var(--rv-muted)}
   .scale span.on{width:46px;height:46px;font-size:22px}
+  .scale span.on.good{background:color-mix(in srgb,${CSS_BLUE} 30%,transparent);color:var(--nc-accent,#a1c9e8)}.scale span.on.bad{background:color-mix(in srgb,${CSS_AMBER} 30%,transparent);color:var(--nc-todo,#f2a65a)}
   .letter{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;border-radius:8px;font-weight:600}
   .letter.big{min-width:46px;height:46px;font-size:22px;border-radius:12px}
   .good{background:color-mix(in srgb,${CSS_BLUE} 24%,transparent);color:var(--nc-accent,#a1c9e8)}.bad{background:color-mix(in srgb,${CSS_AMBER} 26%,transparent);color:var(--nc-todo,#f2a65a)}
@@ -98,6 +100,7 @@ export class ComfortReview extends LitElement {
   button.tip{cursor:pointer}button.tip:hover{background:color-mix(in srgb,var(--rv-surface) 80%,var(--rv-border))}
   .tip b{display:block;font-size:15px;font-weight:600;margin:2px 0}
   .sheet{max-width:900px}
+  button.summary{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
  `;
  connectedCallback(){super.connectedCallback();if(this.hass&&!this.asked)void this.load();}
  protected updated(){if(this.hass&&!this.asked)void this.load();}
@@ -105,7 +108,7 @@ export class ComfortReview extends LitElement {
   try{this.data=await this.hass!.callWS<Review>({type:'niak_comfort/review'});}
   catch(e){this.error=typeof e==='object'&&e&&'message' in e?String((e as {message:string}).message):'connexion indisponible';}
  }
- private go(room?:string){this.dispatchEvent(new CustomEvent('review-navigate',{detail:room?'bilan/'+room:'bilan',bubbles:true,composed:true}));}
+ private go(room?:string){this.room=room;this.dispatchEvent(new CustomEvent('review-navigate',{detail:room?'bilan/'+room:'bilan',bubbles:true,composed:true}));}
  private letter(l:string|null,big=false){return l?html`<span class=${'letter '+(big?'big ':'')+(good(l)?'good':'bad')}>${l}</span>`:html`<span class="letter none">sans note</span>`;}
  private period(){const d=this.data!;return `De ${longMonth(d.start.slice(0,7))} ${d.start.slice(0,4)} à ${longMonth(d.computed_at.slice(0,7))} ${d.computed_at.slice(0,4)}`;}
  private how(){return html`<details><summary>Comment est calculée la note ?</summary><p>Chaque heure est classée selon la norme européenne EN 16798-1 et reçoit des points : 100 en confort élevé, 75 en confort normal, 50 en confort modéré, 0 en dehors. La note est la moyenne, de 0 à 100 : A dès 85, B dès 70, C dès 55, D dès 40, E en dessous. Une pièce est notée sur ce qu’elle mesure, le logement sur la moyenne de ses pièces. Il faut deux semaines de mesures pour noter un thème.</p></details>`;}
@@ -113,8 +116,22 @@ export class ComfortReview extends LitElement {
  render(){
   if(this.error)return html`<p class="notice" role="alert">Le bilan n’a pas pu être chargé : ${this.error}. <button @click=${()=>this.load()}>Réessayer</button></p>`;
   if(!this.data)return html`<p class="muted" role="status">Calcul du bilan sur les douze derniers mois…</p>`;
+  if(this.mode==='summary')return this.summary();
   const room=this.room?this.data.rooms.find(r=>r.entry_id===this.room):undefined;
   return room?this.sheet(room):this.dashboard();
+ }
+
+ /** The dashboard card's summary: the note, a letter per theme, the most pressing advice; « review-open » asks for the rest. */
+ private summary(){
+  const h=this.data!.home,names={warmth:'Chaleur',humidity:'Humidité',air:'Air'} as const,order={action:0,benefit:1,neutral:2};
+  const first=[...(h.advice??[])].sort((a,b)=>order[a.level]-order[b.level])[0],[title,why]=first?adviceText(first):['',''];
+  const open=()=>this.dispatchEvent(new CustomEvent('review-open',{bubbles:true,composed:true}));
+  return html`<button class="summary" @click=${open} aria-label="Ouvrir le bilan du logement">
+   <div class="note"><div class="scale">${['A','B','C','D','E'].map(l=>html`<span class=${l===h.letter?'on '+(good(l)?'good':'bad'):''}>${l}</span>`)}</div>
+    <div><div class="headline">${h.score==null?'Pas encore de note':`Confort : ${h.score} / 100`}</div><div class="muted small">Sur les douze derniers mois</div></div></div>
+   <div class="chips" style="margin-top:10px">${(['warmth','humidity','air'] as const).map(k=>h.themes[k].letter?html`<span class=${'chip '+(good(h.themes[k].letter)?'good':'bad')}>${names[k]} ${h.themes[k].letter}</span>`:html`<span class="chip none">${names[k]} · sans note</span>`)}</div>
+   ${first?html`<div class=${'tip '+first.level} style="margin-top:10px"><span class="muted small">${first.room??'Toute la maison'}</span><b>${title}</b><span class="muted small">${why}</span></div>`:html`<p class="muted">Rien à signaler : aucun problème qui dure.</p>`}
+  </button>`;
  }
 
  // The home: its note, one panel per theme, its rooms.
@@ -186,7 +203,7 @@ export class ComfortReview extends LitElement {
   return svg`<svg viewBox="0 0 100 100" style="width:110px" role="img" aria-label="Répartition du temps selon la qualité de l’air">${parts.map((p,i)=>{const seg=svg`<circle cx="50" cy="50" r=${r} fill="none" stroke=${colors[i]} stroke-width="14" stroke-dasharray=${`${c*p/100} ${c}`} stroke-dashoffset=${-c*at/100} transform="rotate(-90 50 50)"/>`;at+=p;return seg;})}</svg>`;
  }
  private energyPanel(){
-  return html`<div class="panel"><h2><span>Énergie</span><span class="letter none">sans note</span></h2><div class="headline">Bientôt</div><div class="muted small">La consommation du chauffage, comparée à la météo, une fois son compteur choisi dans les réglages.</div></div>`;
+  return html`<div class="panel"><h2><span>Énergie</span><span class="letter none">sans note</span></h2><div class="headline">Bientôt</div><div class="muted small">La consommation du chauffage, comparée à la météo de chaque mois.</div></div>`;
  }
 
  // One room: its note, then each theme it measures.
@@ -257,4 +274,6 @@ export class ComfortReview extends LitElement {
  }
 }
 
+// The hub's panel and the dashboard card may both load it: defined once.
+if(!customElements.get('niak-comfort-review'))customElements.define('niak-comfort-review',ComfortReview);
 declare global{interface HTMLElementTagNameMap{'niak-comfort-review':ComfortReview}}
