@@ -100,6 +100,21 @@ export class ComfortReview extends LitElement {
   button.tip{cursor:pointer}button.tip:hover{background:color-mix(in srgb,var(--rv-surface) 80%,var(--rv-border))}
   .tip b{display:block;font-size:15px;font-weight:600;margin:2px 0}
   .sheet{max-width:900px}
+  /* Animations on arrival: bars grow, lines draw, the grade and the panels rise; none when the system asks for less motion. */
+  @keyframes rv-rise{from{opacity:0;transform:translateY(8px)}}@keyframes rv-grow-y{from{transform:scaleY(0)}}@keyframes rv-grow-x{from{transform:scaleX(0)}}
+  @keyframes rv-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}@keyframes rv-fade{from{opacity:0}}@keyframes rv-pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08)}}
+  @keyframes rv-turn{from{opacity:0;transform:rotate(-90deg)}}
+  @media (prefers-reduced-motion:no-preference){
+   .note,.panel,.room,.tip,section.theme,.stat{animation:rv-rise .45s ease-out both}
+   .panel:nth-child(2),.room:nth-child(2),.tip:nth-child(2),.stat:nth-child(2){animation-delay:.06s}.panel:nth-child(3),.room:nth-child(3),.tip:nth-child(3),.stat:nth-child(3){animation-delay:.12s}
+   .panel:nth-child(4),.room:nth-child(4),.tip:nth-child(4),.stat:nth-child(4){animation-delay:.18s}.panel:nth-child(n+5),.room:nth-child(n+5),.tip:nth-child(n+5),.stat:nth-child(n+5){animation-delay:.24s}
+   .scale span.on,.letter.big{animation:rv-pop .5s .15s ease-out both}
+   svg .bar{transform-box:fill-box;transform-origin:bottom;animation:rv-grow-y .7s .1s cubic-bezier(.2,.8,.2,1) both}
+   svg .hbar{transform-box:fill-box;transform-origin:left;animation:rv-grow-x .7s .1s cubic-bezier(.2,.8,.2,1) both}
+   svg .draw{stroke-dasharray:1;animation:rv-draw 1.1s .15s ease-out both}
+   svg .fade,svg .dot{animation:rv-fade .5s .7s both}
+   svg .ring{transform-box:view-box;transform-origin:50% 50%;animation:rv-turn .8s ease-out both}
+  }
   button.summary{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
  `;
  connectedCallback(){super.connectedCallback();if(this.hass&&!this.asked)void this.load();}
@@ -176,7 +191,7 @@ export class ComfortReview extends LitElement {
    <div class="headline">${t.score==null?'Pas encore de note':`${t.score} / 100 · ${headline}`}</div><div class="muted small">Part du temps, pièces chauffées, mois par mois</div>
    <svg viewBox="0 0 ${f.w} ${f.h}" role="img" aria-label="Part du temps trop frais, confortable et trop chaud, mois par mois">${axes(f,[0,50,100],' %',months.map(monthName))}
     ${months.map((m,i)=>{const c=at(m,'cold'),o=at(m,'comfortable'),hot=at(m,'hot'),x=f.x(i)-f.slot*.32,w=f.slot*.64;
-     return svg`<rect x=${x} width=${w} y=${f.y(c)} height=${f.y(0)-f.y(c)} fill=${BLUE_LIGHT}/><rect x=${x} width=${w} y=${f.y(c+o)} height=${f.y(c)-f.y(c+o)} fill=${BLUE}/><rect x=${x} width=${w} y=${f.y(c+o+hot)} height=${f.y(c+o)-f.y(c+o+hot)} fill=${AMBER}/>`;})}</svg>
+     return svg`<rect class="bar" x=${x} width=${w} y=${f.y(c)} height=${f.y(0)-f.y(c)} fill=${BLUE_LIGHT}/><rect class="bar" x=${x} width=${w} y=${f.y(c+o)} height=${f.y(c)-f.y(c+o)} fill=${BLUE}/><rect class="bar" x=${x} width=${w} y=${f.y(c+o+hot)} height=${f.y(c+o)-f.y(c+o+hot)} fill=${AMBER}/>`;})}</svg>
    <div class="legend"><span><i style="background:${BLUE_LIGHT}"></i>trop frais</span><span><i style="background:${BLUE}"></i>confortable</span><span><i style="background:${AMBER}"></i>trop chaud</span></div></div>`;
  }
  private humidityPanel(){
@@ -187,7 +202,7 @@ export class ComfortReview extends LitElement {
   return html`<div class="panel"><h2><span>Humidité</span>${this.letter(t.letter)}</h2>
    <div class="headline">${t.score==null?'Pas encore de note':`${t.score} / 100 · ${headline}`}</div><div class="muted small">Note de chaque pièce sur 100</div>
    <svg viewBox="0 0 320 ${h}" role="img" aria-label="Note d’humidité de chaque pièce">${rows.map((r,i)=>{const s=r.themes.humidity!.score!,y=6+i*22;
-    return svg`<text x="0" y=${y+11} class="tick" style="font-size:10px">${r.title}</text><rect x="96" y=${y} width="200" height="14" rx="4" fill=${GREY} fill-opacity=".18"/><rect x="96" y=${y} width=${2*s} height="14" rx="4" fill=${s>=70?BLUE:AMBER_LIGHT}/><text x="302" y=${y+11} class="tick" style="font-size:10px">${s}</text>`;})}</svg></div>`;
+    return svg`<text x="0" y=${y+11} class="tick" style="font-size:10px">${r.title}</text><rect x="96" y=${y} width="200" height="14" rx="4" fill=${GREY} fill-opacity=".18"/><rect class="hbar" x="96" y=${y} width=${2*s} height="14" rx="4" fill=${s>=70?BLUE:AMBER_LIGHT}/><text x="302" y=${y+11} class="tick" style="font-size:10px">${s}</text>`;})}</svg></div>`;
  }
  private airPanel(){
   const t=this.data!.home.themes.air,rooms=this.data!.rooms.filter(r=>r.themes.air?.score!=null);
@@ -200,7 +215,7 @@ export class ComfortReview extends LitElement {
  }
  private donut(parts:number[]){
   let at=0;const r=40,c=2*Math.PI*r,colors=[BLUE,AMBER_LIGHT,AMBER];
-  return svg`<svg viewBox="0 0 100 100" style="width:110px" role="img" aria-label="Répartition du temps selon la qualité de l’air">${parts.map((p,i)=>{const seg=svg`<circle cx="50" cy="50" r=${r} fill="none" stroke=${colors[i]} stroke-width="14" stroke-dasharray=${`${c*p/100} ${c}`} stroke-dashoffset=${-c*at/100} transform="rotate(-90 50 50)"/>`;at+=p;return seg;})}</svg>`;
+  return svg`<svg viewBox="0 0 100 100" style="width:110px" role="img" aria-label="Répartition du temps selon la qualité de l’air">${parts.map((p,i)=>{const seg=svg`<circle class="ring" cx="50" cy="50" r=${r} fill="none" stroke=${colors[i]} stroke-width="14" stroke-dasharray=${`${c*p/100} ${c}`} stroke-dashoffset=${-c*at/100} transform="rotate(-90 50 50)"/>`;at+=p;return seg;})}</svg>`;
  }
  private energyPanel(){
   return html`<div class="panel"><h2><span>Énergie</span><span class="letter none">sans note</span></h2><div class="headline">Bientôt</div><div class="muted small">La consommation du chauffage, comparée à la météo de chaque mois.</div></div>`;
@@ -233,8 +248,8 @@ export class ComfortReview extends LitElement {
    <div class="muted small">Mois par mois · le plus bas, la moyenne et le plus haut · bande bleue = zone de la norme</div>
    <svg viewBox="0 0 ${f.w} ${f.h}" role="img" aria-label="Température mois par mois et zone de confort de la norme">${axes(f,[lo+1,Math.round((lo+hi)/2),hi-1],'°',m.map(x=>monthName(x.month)))}
     <polygon points=${band(f,m.map(x=>x.low),m.map(x=>x.high))} fill=${BLUE} fill-opacity=".14"/>
-    ${m.map((x,i)=>svg`<rect x=${f.x(i)-f.slot*.18} width=${f.slot*.36} y=${f.y(x.max)} height=${f.y(x.min)-f.y(x.max)} rx="3" fill=${GREY} fill-opacity=".35"/>`)}
-    <polyline points=${line(f,m.map(x=>x.mean))} fill="none" stroke=${BLUE} stroke-width="2.5"/>${m.map((x,i)=>svg`<circle cx=${f.x(i)} cy=${f.y(x.mean)} r="2.5" fill=${BLUE}/>`)}</svg>
+    ${m.map((x,i)=>svg`<rect class="bar" x=${f.x(i)-f.slot*.18} width=${f.slot*.36} y=${f.y(x.max)} height=${f.y(x.min)-f.y(x.max)} rx="3" fill=${GREY} fill-opacity=".35"/>`)}
+    <polyline class="draw" pathLength="1" points=${line(f,m.map(x=>x.mean))} fill="none" stroke=${BLUE} stroke-width="2.5"/>${m.map((x,i)=>svg`<circle class="dot" cx=${f.x(i)} cy=${f.y(x.mean)} r="2.5" fill=${BLUE}/>`)}</svg>
    <p class="muted small">La zone s’élargit l’été : sans climatisation, la norme accepte plus de chaleur après des jours chauds.</p>
    ${this.day(w)}${tips}</section>`;
  }
@@ -248,7 +263,7 @@ export class ComfortReview extends LitElement {
     <span class="seg"><button class=${s==='winter'?'on':''} @click=${()=>this.season='winter'}>Hiver</button><button class=${s==='summer'?'on':''} @click=${()=>this.season='summer'}>Été</button></span></div>
    ${known.length?html`<svg viewBox="0 0 ${f.w} ${f.h}" role="img" aria-label="Température heure par heure, une journée type">${axes(f,[lo+1,Math.round((lo+hi)/2),hi-1],'°',Array.from({length:24},(_,i)=>i+' h'),4)}
     <rect x=${f.pad.l} width=${f.w-f.pad.l-f.pad.r} y=${f.y(high)} height=${f.y(low)-f.y(high)} fill=${BLUE} fill-opacity=".14"/>
-    <polyline points=${line(f,out)} fill="none" stroke=${GREY} stroke-width="1.5" stroke-dasharray="4 3"/><polyline points=${line(f,room)} fill="none" stroke=${BLUE} stroke-width="2.5"/></svg>
+    <polyline class="fade" points=${line(f,out)} fill="none" stroke=${GREY} stroke-width="1.5" stroke-dasharray="4 3"/><polyline class="draw" pathLength="1" points=${line(f,room)} fill="none" stroke=${BLUE} stroke-width="2.5"/></svg>
    <div class="legend"><span><i style="background:${BLUE}"></i>la pièce</span><span><i style="background:${GREY}"></i>dehors</span></div>
    <p class="muted small">${s==='winter'?`L’hiver, la pièce descend vers ${fr(min)} °C à ${room.indexOf(min)} h et monte vers ${fr(max)} °C à ${room.indexOf(max)} h.`:`L’été, la pièce reste entre ${fr(min)} et ${fr(max)} °C au fil de la journée.`}</p>`
    :html`<p class="muted small">Pas encore de mesures ${s==='winter'?'cet hiver':'cet été'}.</p>`}`;
@@ -261,7 +276,7 @@ export class ComfortReview extends LitElement {
    <div class="muted small">Humidité moyenne, mois par mois · bande bleue = zone de la norme</div>
    <svg viewBox="0 0 ${f.w} ${f.h}" role="img" aria-label="Humidité moyenne mois par mois">${axes(f,[30,60,90],' %',m.map(x=>monthName(x.month)))}
     <rect x=${f.pad.l} width=${f.w-f.pad.l-f.pad.r} y=${f.y(60)} height=${f.y(25)-f.y(60)} fill=${BLUE} fill-opacity=".14"/>
-    <polyline points=${line(f,m.map(x=>x.mean))} fill="none" stroke=${BLUE} stroke-width="2.5"/>${m.map((x,i)=>svg`<circle cx=${f.x(i)} cy=${f.y(x.mean)} r="2.5" fill=${x.mean>60?AMBER:BLUE}/>`)}</svg>${tips}</section>`;
+    <polyline class="draw" pathLength="1" points=${line(f,m.map(x=>x.mean))} fill="none" stroke=${BLUE} stroke-width="2.5"/>${m.map((x,i)=>svg`<circle class="dot" cx=${f.x(i)} cy=${f.y(x.mean)} r="2.5" fill=${x.mean>60?AMBER:BLUE}/>`)}</svg>${tips}</section>`;
  }
  private airSection(a:Air,tips:unknown=nothing){
   const known=a.day.filter((v):v is number=>v!=null);if(!known.length)return nothing;
@@ -270,7 +285,7 @@ export class ComfortReview extends LitElement {
    <div class="stats">${this.stat('Très bon',fr(a.split[0],0)+' %','du temps')}${this.stat('Le moins bon',worst+' h','en moyenne')}${this.stat('À renouveler',fr(a.split[2],0)+' %','du temps')}</div>
    <div class="muted small">CO₂ moyen selon l’heure de la journée</div>
    <svg viewBox="0 0 ${f.w} ${f.h}" role="img" aria-label="CO₂ moyen heure par heure">${axes(f,[400,Math.round((400+hi)/200)*100,hi],'',Array.from({length:24},(_,i)=>i+' h'),4)}
-    ${a.day.map((v,i)=>v==null?nothing:svg`<rect x=${f.x(i)-f.slot*.35} width=${f.slot*.7} y=${f.y(v)} height=${f.y(400)-f.y(v)} rx="2" fill=${v>=950?AMBER:v>=700?AMBER_LIGHT:BLUE_LIGHT}/>`)}</svg>${tips}</section>`;
+    ${a.day.map((v,i)=>v==null?nothing:svg`<rect class="bar" x=${f.x(i)-f.slot*.35} width=${f.slot*.7} y=${f.y(v)} height=${f.y(400)-f.y(v)} rx="2" fill=${v>=950?AMBER:v>=700?AMBER_LIGHT:BLUE_LIGHT}/>`)}</svg>${tips}</section>`;
  }
 }
 
