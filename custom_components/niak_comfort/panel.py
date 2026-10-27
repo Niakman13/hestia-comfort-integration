@@ -33,7 +33,7 @@ async def async_setup_panel(hass):
         hass.data[DOMAIN + "_panel_asset"] = True
     await async_register_brick(hass, {
         "domain": DOMAIN, "name": "Niak Confort", "slug": "confort", "version": VERSION,
-        "icon": "mdi:home-thermometer-outline", "navigation": 1, "module_url": f"{ASSETS}/panel.js?v={VERSION}",
+        "icon": "mdi:home-thermometer-outline", "navigation": 2, "module_url": f"{ASSETS}/panel.js?v={VERSION}",
         "element": "niak-comfort-setup", "status": comfort_status, "legacy_path": "niak-confort",
     }, f"{ASSETS}/niak-socle.js?v={VERSION}")
 

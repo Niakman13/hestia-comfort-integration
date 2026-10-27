@@ -90,7 +90,7 @@ Tout se règle dans le panneau **Niak** de la barre latérale, onglet **Confort*
 
 ![Le panneau Niak, onglet Confort : l’accueil, avec chaque pièce, ses mesures et son apprentissage](docs/images/niak-comfort-panneau.png)
 
-- **Vue d’ensemble** : l’état du logement, ce qui reste à régler, puis **Vos pièces** : les mesures de chacune, son apprentissage et un bouton **Modifier**. **Ajouter une pièce** se fait sur place. La section **Extensions** montre ce que Niak a reconnu (Niak Weather, Versatile Thermostat, Adaptive Cover Pro) et dans quelles pièces.
+- **Accueil** : l’état du logement, ce qui reste à régler, puis **Vos pièces** : les mesures de chacune, son apprentissage et un bouton **Modifier**. **Ajouter une pièce** se fait sur place. La section **Extensions** montre ce que Niak a reconnu (Niak Weather, Versatile Thermostat, Adaptive Cover Pro) et dans quelles pièces.
 - **Réglages généraux** : l’extérieur, commun à toutes les pièces. Avec Niak Weather, ses mesures sont seulement affichées.
 - Une pièce se règle en six onglets : Température, Ouvertures, Air intérieur, Présence, Chauffage, La pièce.
 
