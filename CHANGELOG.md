@@ -1,4 +1,4 @@
-## 1.8.0 — Aérer quand ça sert vraiment
+## 1.7.10 — Aérer quand ça sert vraiment
 
 **En bref**
 
