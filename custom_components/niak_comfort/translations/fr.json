@@ -148,6 +148,81 @@
       },
       "twin_humidity": {
         "name": "Humidité prévue dans 1 h"
+      },
+      "humidity_room": {
+        "name": "Humidité · {room}",
+        "state": {
+          "normal": "Dans votre plage",
+          "slightly_humid": "Légèrement humide",
+          "humid": "Air humide",
+          "very_humid": "Très humide",
+          "slightly_dry": "Légèrement sec",
+          "dry": "Air sec",
+          "very_dry": "Très sec"
+        }
+      },
+      "learning_room": {
+        "name": "Apprentissage · {room}"
+      },
+      "heating_action_room": {
+        "name": "Chauffage observé · {room}",
+        "state": {
+          "heating": "Chauffe en cours",
+          "idle": "Au repos",
+          "off": "Arrêté",
+          "cooling": "Rafraîchit",
+          "unknown": "Inconnu",
+          "not_configured": "Non configuré"
+        }
+      },
+      "reason_room": {
+        "name": "Raison · {room}",
+        "state": {
+          "within_comfort": "Rien à signaler",
+          "rain_open_windows": "Pluie et ouvrants ouverts",
+          "opening_blocked": "Contrainte extérieure",
+          "verify_exterior": "Vérifier les conditions extérieures",
+          "air_needed": "Renouvellement d’air nécessaire",
+          "cooling_possible": "Rafraîchissement possible",
+          "warming_possible": "Réchauffement possible",
+          "drying_possible": "Assèchement possible",
+          "exchange_harmful": "Échange défavorable",
+          "cooling_unavailable": "Fraîcheur indisponible",
+          "heat_needed": "Besoin de chaleur",
+          "drying_unavailable": "Assèchement indisponible",
+          "drying_later": "Assécher plus tard",
+          "drying_slow": "Aérer assèche peu ici",
+          "drying_night": "Aérer au réveil",
+          "drying_alone": "Sèche d’elle-même",
+          "ventilation_possible": "La VMC peut assécher",
+          "warm_walls": "Chauffez un peu plus",
+          "incomplete_data": "Information incomplète",
+          "optional_air_change": "Renouvellement d’air facultatif",
+          "gust_open_windows": "Rafales : fermer",
+          "alarm_open": "Alarme armée : fermer",
+          "short_air_change": "Aération courte",
+          "sun_entering": "Soleil qui entre",
+          "rain_soon": "Pluie imminente",
+          "precool_possible": "Pré-rafraîchir la nuit",
+          "precool_later": "Pré-rafraîchir plus tard",
+          "shared_volume": "Même air qu’une pièce voisine",
+          "humid_outdoor": "Humidité venue du dehors",
+          "open_neutral": "Fenêtre ouverte sans effet",
+          "rehumidification_risk": "Air du dehors plus humide"
+        }
+      },
+      "coverage_room": {
+        "name": "Couverture des données · {room}",
+        "state": {
+          "partial": "Bilan partiel",
+          "configured_sources_available": "Sources configurées disponibles"
+        }
+      },
+      "twin_temperature_room": {
+        "name": "Température prévue dans 1 h · {room}"
+      },
+      "twin_humidity_room": {
+        "name": "Humidité prévue dans 1 h · {room}"
       }
     },
     "binary_sensor": {
@@ -168,6 +243,9 @@
       },
       "home_gesture": {
         "name": "Un geste à faire"
+      },
+      "humid_room": {
+        "name": "Trop humide · {room}"
       }
     }
   }

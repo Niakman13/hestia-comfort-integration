@@ -217,6 +217,24 @@ class AdapterTests(AdapterFixture):
         self.assertIsNone(registry.async_get(old.entity_id))
         self.assertIsNotNone(registry.async_get(kept.entity_id))
 
+    async def test_the_room_carrying_a_shared_air_shows_only_that_air(self):
+        from types import SimpleNamespace
+        from custom_components.niak_comfort.entities import async_clean, volume_id
+        self.hass.config_entries._entries[self.entry.entry_id] = self.entry
+        registry, devices = er.async_get(self.hass), dr.async_get(self.hass)
+        salon = devices.async_get_or_create(config_entry_id=self.entry.entry_id, identifiers={("niak_comfort", self.entry.entry_id)}, name="Salon")
+        humidity = registry.async_get_or_create("sensor", "niak_comfort", f"{self.entry.entry_id}_humidity", config_entry=self.entry,
+                                                device_id=salon.id, suggested_object_id="salon_humidite")
+        coordinator = SimpleNamespace(entry_id=self.entry.entry_id, partners=[{"entry_id": "cuisine"}], volume_name="Salon · Cuisine",
+                                      config={"name": "Salon"}, config_entry=self.entry)
+        async_clean(self.hass, self.entry, coordinator)
+        shared = next(d for d in dr.async_entries_for_config_entry(devices, self.entry.entry_id)
+                      if ("niak_comfort", volume_id(coordinator)) in d.identifiers)
+        self.assertEqual(shared.name, "Salon · Cuisine")
+        # Same entity, same history: only its device changes, and the room's own device is gone.
+        self.assertEqual(registry.async_get(humidity.entity_id).device_id, shared.id)
+        self.assertIsNone(devices.async_get(salon.id))
+
     async def test_unavailable_co2_and_heating_action(self):
         self.hass.states.async_set("sensor.co2", "unavailable")
         self.hass.states.async_set("climate.test", "heat", {})
