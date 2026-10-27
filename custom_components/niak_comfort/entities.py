@@ -28,6 +28,11 @@ def room_device(entry):
             "model": "Comfort · observation", "configuration_url": "homeassistant://niak/confort"}
 
 
+def volume_device(coordinator):
+    return {"identifiers": {(DOMAIN, volume_id(coordinator))}, "name": coordinator.volume_name, "manufacturer": "Niak",
+            "model": "Comfort · même air", "configuration_url": "homeassistant://niak/confort"}
+
+
 def volume_id(coordinator):
     return "volume_" + "_".join(sorted([coordinator.entry_id, *(p["entry_id"] for p in coordinator.partners)]))
 
@@ -79,10 +84,19 @@ def async_clean(hass, entry, coordinator):
             if entity_id and (item := registry.async_get(entity_id)).config_entry_id != entry.entry_id:
                 registry.async_update_entity(entity_id, config_entry_id=entry.entry_id)
     devices = dr.async_get(hass)
-    own = {(DOMAIN, entry.entry_id)} | ({(DOMAIN, volume_id(coordinator))} if volume_owner(coordinator) else set())
+    # The room that carries the shared air shows only « Salon · Cuisine »: its own measures move there, history kept.
+    if volume_owner(coordinator):
+        shared = devices.async_get_or_create(config_entry_id=entry.entry_id, **volume_device(coordinator))
+        own = {(DOMAIN, volume_id(coordinator))}
+        for item in er.async_entries_for_config_entry(registry, entry.entry_id):
+            if item.device_id != shared.id:
+                registry.async_update_entity(item.entity_id, device_id=shared.id)
+    else:
+        own = {(DOMAIN, entry.entry_id)}
     for device in dr.async_entries_for_config_entry(devices, entry.entry_id):
+        # Its entities moved or gone first: removing a device takes its remaining entities with it.
         if not device.identifiers & own:
-            devices.async_update_device(device.id, remove_config_entry_id=entry.entry_id)
+            devices.async_remove_device(device.id)
 
 
 def home_clean(hass, entry):
@@ -150,9 +164,14 @@ class VerdictEntity(CoordinatorEntity):
         self.name_key = key[7:] if self.shared else key
         self._attr_unique_id = unique_id(entry, coordinator, key)
         self._attr_translation_key = self.name_key
-        self._attr_device_info = ({"identifiers": {(DOMAIN, volume_id(coordinator))}, "name": coordinator.volume_name,
-                                   "manufacturer": "Niak", "model": "Comfort · même air", "configuration_url": "homeassistant://niak/confort"}
-                                  if self.shared else room_device(entry))
+        self._attr_device_info = room_device(entry)
+        if self.shared:
+            self._attr_device_info = volume_device(coordinator)
+        elif volume_owner(coordinator):
+            # Its own measures, on the shared air's device: « Humidité · Salon », never confused with the kitchen's.
+            self._attr_device_info = volume_device(coordinator)
+            self._attr_translation_key = f"{self.name_key}_room"
+            self._attr_translation_placeholders = {"room": coordinator.config.get("name") or entry.title}
         self._listening = set()
 
     def views(self):

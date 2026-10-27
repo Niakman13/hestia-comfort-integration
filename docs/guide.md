@@ -405,7 +405,7 @@ En diagnostic (masquées) : **Raison** (le terme du moteur), **Couverture des do
 ### Des pièces qui partagent le même air
 
 « Salon · Cuisine » a son propre appareil, avec **Conseil**, **État**, **Couleur** et les quatre oui/non de geste.
-Le Salon et la Cuisine gardent seulement leurs mesures : Humidité, Trop humide, Apprentissage, Chauffage observé.
+Il porte aussi les mesures de la pièce où « Même air » est coché (« Humidité · Salon »…). L’autre pièce garde son appareil avec ses mesures : Humidité, Trop humide, Apprentissage, Chauffage observé.
 
 ### Mon logement
 
