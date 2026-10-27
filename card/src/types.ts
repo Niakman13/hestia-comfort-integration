@@ -85,6 +85,8 @@ export interface Features {
  horizon?:Horizon[];
  night?:{windows:{start:string;end:string}[];minimum:{time:string;temperature:number}|null;peak:{time:string;outdoor:number;shut:number;aired:number}|null;gain:number;worth?:boolean;humid:boolean}|null;
  warm_walls?:{degrees:number;target:number;surface:number;after:number}|null;
+ /** An open window letting warmer air into a room under the middle of its range. */
+ open_warms?:boolean;
  drying?:{minutes:number;now:number;after:number;gain:number;tau:number;openings:number;morning?:number;alone?:number;net?:number;later:{minutes:number;now:number;after:number;gain:number;time:string}|null}|null;
  trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string};
  season?:{known:boolean;weight:number|null;outdoor_mean:number|null;minimum:number;maximum:number;heated:boolean;

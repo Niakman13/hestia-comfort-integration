@@ -93,6 +93,10 @@ class EveryCombination(unittest.TestCase):
             check("a room just under its range is never told to switch the heating on",
                   not (room == "cold" and reason == "heat_needed" and act != "fermer") or level in ("calm", "neutral"), case, a)
             check("a gesture to make is never shown as « nothing to do »", not (level in ("action", "urgent") and nothing_to_do(a)), case, a)
+            # 27 October: 19 °C inside, much milder outside, and the card said « opening would bring nothing ».
+            check("a cold room with a clearly milder outside is never told that opening brings nothing",
+                  not (room == "cold" and te >= ti + SETTINGS.cooling_delta and weather in ("calm", "rain_later") and co2 == "ok"
+                       and equipment in ("none", "heating_off_home") and outside != "summer_night" and not opened) or act == "ouvrir", case, a)
             check("a cold room in an empty home stays blue",
                   not (room == "cold" and equipment == "heating_off_away" and reason == "heat_needed" and act != "fermer") or level in ("calm", "neutral"), case, a)
         self.assertEqual(broken, {})

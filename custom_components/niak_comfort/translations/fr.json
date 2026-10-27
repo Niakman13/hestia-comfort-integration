@@ -72,6 +72,7 @@
           "verify_exterior": "Vérifier les conditions extérieures",
           "air_needed": "Renouvellement d’air nécessaire",
           "cooling_possible": "Rafraîchissement possible",
+          "warming_possible": "Réchauffement possible",
           "drying_possible": "Assèchement possible",
           "exchange_harmful": "Échange défavorable",
           "cooling_unavailable": "Fraîcheur indisponible",

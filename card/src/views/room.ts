@@ -137,7 +137,7 @@ function gesture(v:View):Advice {
     // « Au mieux », in blue, and « À savoir » says what is out and why. Only a room clearly cold with no heating
     // known keeps « Trop frais »: someone could warm it, Niak cannot tell who.
     const unsettled=a.needs.includes('heat')&&!coldSettled(a),first=unsettled?'heat':a.needs.includes('dry')?'dry':a.needs[0];
-    return {title:'Rien à faire',line:opened?html`Ouverte ou fermée, ${b('cela ne change rien')}`:a.reason==='opening_blocked'?html`Aérer ${b('n’est pas possible')} pour l’instant`
+    return {title:'Rien à faire',line:opened&&a.features?.open_warms?html`L’air du dehors, plus doux, ${b('réchauffe la pièce')}`:opened?html`Ouverte ou fermée, ${b('cela ne change rien')}`:a.reason==='opening_blocked'?html`Aérer ${b('n’est pas possible')} pour l’instant`
       :a.reason==='drying_night'?html`La nuit, ${b('aérez plutôt au réveil')}`
       :a.reason==='drying_alone'?html`Elle ${b('sèche d’elle-même')}, fenêtres fermées`
       :winterWarm?html`Ouvrir la ${b('refroidirait trop vite')} en hiver`:html`Ouvrir ${b('n’apporterait rien')} pour l’instant`,disk:opened?'open':'check',cap:opened?'Fenêtre ouverte':undefined,
@@ -156,6 +156,8 @@ function gesture(v:View):Advice {
     case 'short_air_change': return {title:a.action==='ok'?'Aération en cours':'Aérez 5 minutes',line:html`${a.needs.includes('air')?'Air à renouveler':'Humidité à évacuer'}, ${b(shortWhy(a.constraints))}`,disk:'open',cap:a.action==='ok'?undefined:'Puis refermez'};
     case 'air_needed': return airing('Aérez','Renouvelez l’air',airWhy(v));
     case 'cooling_possible': return airing('Ouvrez','Ouvrez pour rafraîchir',temps);
+    // Warming has no airing time: an open window is kept open while the outside stays milder.
+    case 'warming_possible': return a.action==='ok'?{title:'Laissez ouvert',line:html`L’air du dehors, plus doux, ${b('réchauffe la pièce')}`,disk:'open',cap:first}:{title:'Ouvrez pour réchauffer',line:temps,disk:'open',cap:first};
     case 'precool_possible': return {title:a.action==='ok'?'Laissez ouvert cette nuit':'Ouvrez pour la nuit',line:html`Demain sera chaud : ${b('stockez le frais')}`,disk:'moon',cap:first};
     case 'precool_later':
     case 'cooling_unavailable':
@@ -230,7 +232,7 @@ function learning(v:View):Fact|null {
   const g=t.progress,a=v.assessment,ready=g?.ready;
   if(g&&ready){
     const kind=a.reason==='drying_possible'||a.reason==='ventilation_possible'?'humidity':['air_needed','short_air_change','optional_air_change'].includes(a.reason)?'air'
-      :['cooling_possible','precool_possible'].includes(a.reason)?'temperature':null;
+      :['cooling_possible','precool_possible','warming_possible'].includes(a.reason)?'temperature':null;
     if(!kind)return null;
     const n=g.seen.airings,p=t.precision,week=t.status==='ready'&&t.days>=7;
     const why=!week?`${Math.max(1,Math.floor(t.days))} jour${Math.floor(t.days)>1?'s':''} de mesures sur 7`
@@ -289,7 +291,9 @@ export function facts(v:View):Fact[] {
   if(!humOut&&hum?.trend==='improving'&&hum.degree)out.push({ic:'drop',title:'Humidité',text:'revient vers votre plage'});
   else if(!humOut&&hum?.lasting&&hum.degree)out.push({ic:'clock',title:'Humidité',text:hum.status==='low'?'sous votre plage depuis plusieurs heures':'au-dessus de votre plage depuis plusieurs heures'});
   if(a.reason==='shared_volume'&&vol)out.push({ic:'home',title:'Même air',text:`conseil commun avec : ${vol.lead}`});
-  if(a.reason==='open_neutral')out.push({ic:'open',title:'Fenêtre ouverte',text:a.needs.includes('dry')?'elle ne fait presque pas baisser l’humidité, vous pouvez refermer':'sans effet sur le confort, vous pouvez refermer'});
+  // An open window that warms the room is no window to close: the banner says it warms, this line only the humidity.
+  if(a.reason==='open_neutral'&&!(f?.open_warms&&!a.needs.includes('dry')))out.push({ic:'open',title:'Fenêtre ouverte',
+    text:a.needs.includes('dry')?`elle ne fait presque pas baisser l’humidité${f?.open_warms?'':', vous pouvez refermer'}`:'sans effet sur le confort, vous pouvez refermer'});
   // Opening held back: what holds it, in words.
   // Only under « Rien à faire »: a « Gardez fermé » banner already names it. An open sheltered window may stay open.
   if(a.reason==='opening_blocked'&&a.action!=='fermer'&&['calm','neutral'].includes(a.level)){const c=a.constraints[0],open=Object.entries(o).some(([k,r])=>k.startsWith('window:')&&r.quality==='valid'&&r.value===true);
@@ -349,10 +353,11 @@ export function facts(v:View):Fact[] {
   // « Gardez fermé … le besoin attendra » already says it.
   const waiting=a.reason==='opening_blocked'&&!['calm','neutral'].includes(a.level);
   if(a.needs.includes('dry')&&!said&&!waiting&&!['drying_possible','drying_later','ventilation_possible','short_air_change'].includes(a.reason))
-    out.push({ic:'drop',title:'Humidité',text:a.reason==='heat_needed'||a.needs.includes('heat')?'aérer refroidirait une pièce déjà fraîche'
+    // « Would cool » only when the outside is not warmer: a warmer outside would warm the room, not cool it.
+    // Asked to open for the air: the same words as the gesture, not a denial of it.
+    out.push({ic:'drop',title:'Humidité',text:['ouvrir','ok'].includes(a.action)&&['action','urgent','benefit'].includes(a.level)?'l’aération la baissera peu'
+      :(a.reason==='heat_needed'||a.needs.includes('heat'))&&!(a.temperature_delta!=null&&a.temperature_delta>0.5)?'aérer refroidirait une pièce déjà fraîche'
       :a.reason==='opening_blocked'?'elle attendra que l’on puisse aérer'
-      // Asked to open for the air: the same words as the gesture, not a denial of it.
-      :['ouvrir','ok'].includes(a.action)&&['action','urgent','benefit'].includes(a.level)?'l’aération la baissera peu'
       :gain!=null&&gain<4?`l’aération ne la baisserait que ${gain<1.5?'d’un point à peine':`de ${Math.round(gain)} points`}`:'l’aération ne la ferait pas assez baisser'});
   // The last airing followed: what it gave, against what was predicted.
   const last=v.feedback?.last;
@@ -383,6 +388,8 @@ const HUMID_WHY:[RegExp,string|((m:RegExpMatchArray)=>string)][]=[
   [/^(au-dessus|sous) de votre plage$/,''],
   [/^en marche, elle aide à assécher/,REMEDY],
 ];
+/** A reason about the humidity in its few words: the same wording whichever room of one air says it. */
+const humidWhy=(t:string)=>{for(const [re,to] of HUMID_WHY){const m=t.match(re);if(m)return typeof to==='string'?to:to(m);}return t;};
 /** A line about the humidity: its state, its risk, why airing does not help, or the ventilation drying it. */
 const humidLine=(f:Fact)=>TOPICS[f.title]==='humidity'||(typeof f.text==='string'&&((f.title==='Aération'&&/humidit|plus sec/.test(f.text))||(f.title==='VMC'&&/assécher/.test(f.text))));
 /** Damp walls with no gesture nor remedy: what the person can still do, instead of a fatality. */
@@ -394,7 +401,7 @@ function oneHumidity(out:Fact[],weight:number,tip:boolean):Fact[] {
   const lines=out.filter(humidLine);
   if(!lines.length)return out;
   const head=lines.find(f=>f.title==='Humidité élevée')??lines.find(f=>f.key==='humidity')??lines[0];
-  const short=(f:Fact)=>{const t=typeof f.text==='string'?f.text:'';for(const [re,to] of HUMID_WHY){const m=t.match(re);if(m)return typeof to==='string'?to:to(m);}return t;};
+  const short=(f:Fact)=>humidWhy(typeof f.text==='string'?f.text:'');
   // The head's own state words step aside for the reason when there is one: « Air humide » already says it is out.
   const own=head.title==='Humidité élevée'?String(head.text):short(head);
   let rest=lines.filter(f=>f!==head).map(short).filter(Boolean);
@@ -430,10 +437,14 @@ export function factList(v:View,partners:View[]=[],config:Config={type:'custom:n
   // The humidity line of the most humid room takes the reasons the other rooms gave: it is one air.
   const hum=strongest.get('humidity'),joined=new Map<Fact,Fact>();
   if(hum&&typeof hum.text==='string'){const parts=hum.text.split(', ');
-    for(const f of all)if(f.key==='humidity'&&f!==hum&&typeof f.text==='string')for(const p of f.text.split(', '))
-      if(!parts.includes(p)&&!/^(au-dessus|sous) de votre plage|^risque de moisissure|^revient vers/.test(p))parts.push(p);
+    for(const f of all)if(f.key==='humidity'&&f!==hum&&typeof f.text==='string')for(const p of f.text.split(', ').map(humidWhy))
+      if(p&&!parts.includes(p)&&!/^(au-dessus|sous) de votre plage|^risque de moisissure|^revient vers/.test(p))parts.push(p);
     joined.set(hum,{...hum,text:(parts.length>1?parts.filter(p=>!/^(au-dessus|sous) de votre plage$/.test(p)):parts).join(', ')});}
+  // One air, one answer about its windows: a room the open window warms keeps it open, the others do not ask to close it.
+  const keep=all.some(f=>typeof f.text==='string'&&f.text.includes('laisser ouvert'))||[v,...partners].some(r=>r.assessment.features?.open_warms);
   const seen=new Set<string>(),list=all.filter(f=>!f.key||strongest.get(f.key)===f).map(f=>joined.get(f)??f)
+    .map(f=>keep&&typeof f.text==='string'&&f.text.endsWith(', vous pouvez refermer')?{...f,text:f.text.slice(0,-', vous pouvez refermer'.length)}:f)
+    .filter(f=>!(keep&&f.title==='Fenêtre ouverte'&&f.text==='sans effet sur le confort'))
     .filter(f=>(!partners.length||f.title!=='Même air')&&!seen.has(f.title)&&!!seen.add(f.title))
     .sort((x,y)=>rank(x)-rank(y)).slice(0,config.insight_max??4);
   return list;
@@ -443,7 +454,7 @@ export function factBox(v:View,partners:View[]=[],config:Config={type:'custom:ni
   return list.length?html`<div class="nc-facts"><div class="nw-label">À savoir</div><ul>${list.map((f,i)=>html`<li class=${(i===0&&list.length>1?'key':'')+(rank(f)===1?' risk':'')}>${icon(f.ic)}<span><b>${f.title}</b> · ${partners.length&&f.key==='humidity'&&f.room?`${f.room}, `:''}${f.text}</span></li>`)}</ul></div>`:nothing;
 }
 /** Why the room that leads a shared air asks for its gesture, after its name. */
-const SHARED:Record<string,string>={air_needed:'a besoin d’air',short_air_change:'a besoin d’air',cooling_possible:'se rafraîchit',
+const SHARED:Record<string,string>={air_needed:'a besoin d’air',short_air_change:'a besoin d’air',cooling_possible:'se rafraîchit',warming_possible:'se réchauffe',
   drying_possible:'s’assèche',precool_possible:'stocke le frais',rain_soon:'attend la pluie',rain_open_windows:'prend la pluie',
   gust_open_windows:'prend le vent',alarm_open:'est ouverte, alarme armée',opening_blocked:'doit rester fermé',exchange_harmful:'se dérègle',rehumidification_risk:'reprend l’humidité',
   heat_needed:'est trop fraîche',sun_entering:'prend le soleil'};
