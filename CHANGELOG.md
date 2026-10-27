@@ -1,3 +1,26 @@
+## 1.8.0 — Aérer quand ça sert vraiment
+
+**En bref**
+
+- Plus de « Aérez » en pleine nuit : la carte attend le réveil.
+- La carte compare l’aération avec « ne rien faire » : elle ne la demande que si elle fait nettement mieux qu’attendre.
+- La durée d’aération est apprise pièce par pièce, au lieu d’une heure presque à chaque fois.
+
+### Nouveautés
+
+- **« La nuit, aérez plutôt au réveil »** : en dehors des heures de la saison (8 h – 21 h au printemps et en automne), une pièce humide ne demande plus d’ouvrir. « À savoir » indique l’heure à partir de laquelle aérer si l’humidité reste haute.
+- **« Elle sèche d’elle-même »** : chaque pièce apprend à quelle vitesse elle perd seule l’humidité d’une douche ou de la nuit, fenêtres fermées. Si elle fait seule la moitié du travail, la carte ne demande pas d’ouvrir.
+
+### Améliorations
+
+- **Une durée d’aération plus juste** : l’aération s’arrête dès que la pièce revient dans sa plage, ou quand cinq minutes de plus n’apporteraient presque plus rien.
+- **Un apprentissage qui ne se laisse plus tromper** : seule la première heure de chaque ouverture compte. Une fenêtre oubliée toute une journée ne fait plus croire que la pièce sèche mal.
+- **Un conseil qui n’hésite plus** : un « Aérez » déjà donné n’est plus retiré puis redonné pour un dixième de point.
+
+### Après la mise à jour
+
+- Rechargez la page (ou videz le cache de l’application mobile) pour voir la nouvelle carte.
+
 ## 1.7.9 — Chaque état a son allure
 
 **En bref**

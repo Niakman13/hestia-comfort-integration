@@ -9,6 +9,11 @@ history, three numbers:
 - `residual`: g/m³ the room keeps above the outdoor air even after a long airing (its moisture sources);
 - `rebound`: share of the water removed that comes back within 45 minutes once the window is closed.
 
+Each room also learns what it does with its windows shut, from the peaks of water it sheds by itself (a shower
+next door, a night's sleep): `settle`, minutes for such a surplus to lose about two thirds of its way back to
+`usual`, the g/m³ the room keeps above the outdoor air on an ordinary day. An airing is then judged against
+waiting, not against now.
+
 Each opening is summarised by a few sums (a least-squares fit of the 5-minute change of the indoor water
 content against its gap to the outdoor air), so episodes can be stored, merged and refitted cheaply.
 """
@@ -19,6 +24,9 @@ import math
 STEP = timedelta(minutes=5)
 REBOUND_AFTER = timedelta(minutes=45)
 MIN_OPENING = timedelta(minutes=10)
+# Only the first hour of an opening teaches the drying speed: the longest airing ever asked. A window forgotten
+# all day, near its floor for hours, would otherwise outweigh every real airing.
+FIT_SPAN = timedelta(hours=1)
 BLIP = timedelta(minutes=10)
 # Before any opening is learned: a modest, ordinary room rather than a full air replacement.
 DEFAULT = {"tau": 45.0, "residual": 1.0, "rebound": 0.4}
@@ -32,6 +40,14 @@ MIN_GAIN = 5.0
 MAX_FORECAST_BIAS = 2.5
 KEEP_DAYS = 90
 KEEP_EPISODES = 60
+# A peak of water, windows shut: risen this much (g/m³) within the hour, then followed two hours shut.
+PEAK_RISE = 1.5
+SETTLE_AFTER = timedelta(hours=2)
+# Peaks known before the room's own shedding is trusted: until then, an airing is judged against now, as before.
+SETTLE_PEAKS = 3
+KEEP_PEAKS = 30
+# Five more minutes open bringing less than this (humidity points): the airing stops there.
+KNEE = 0.5
 
 
 def absolute(temperature: float, relative: float) -> float:
@@ -105,7 +121,7 @@ def episodes(contacts, indoor_temperature, indoor_humidity, outdoor_temperature,
             continue
         n = sx = sy = sxx = sxy = 0.0
         when, before = start, water(start)
-        while when + STEP <= end:
+        while when + STEP <= min(end, start + FIT_SPAN):
             after = water(when + STEP)
             if before and after:
                 gap, change = before[0] - before[1], after[0] - before[0]
@@ -162,20 +178,103 @@ def fit(records):
             "openings": count}
 
 
+def peaks(contacts, indoor_temperature, indoor_humidity, outdoor_temperature, outdoor_humidity):
+    """The peaks of water the room shed by itself, windows shut: what was left of each surplus two hours later.
+
+    The surplus is measured above the room's usual gap to the outdoor air, the median of the previous day shut."""
+    ti, hi, te, he = (_Series(p) for p in (indoor_temperature, indoor_humidity, outdoor_temperature, outdoor_humidity))
+    spans = _intervals(contacts)
+    if not ti.times or not hi.times:
+        return []
+
+    def gap(when):
+        a, b, c, d = ti.at(when), hi.at(when), te.at(when), he.at(when)
+        if None in (a, b, c, d) or not (0 < b <= 100 and 0 < d <= 100):
+            return None
+        return absolute(a, b) - absolute(c, d)
+
+    def shut(when, until=None):
+        return not any(start < (until or when) and end > when for start, end, _ in spans)
+
+    quarter = timedelta(minutes=15)
+    start = hi.times[0].replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+    series, when = [], start
+    while when <= hi.times[-1]:
+        series.append((when, gap(when), shut(when)))
+        when += quarter
+    found, i, day, ahead = [], 4, 96, int(SETTLE_AFTER / quarter)
+    while i < len(series) - ahead:
+        when, value, closed = series[i]
+        before = series[i - 4][1]
+        window = [g for _, g, c in series[max(0, i - day):i] if c and g is not None]
+        if (value is None or before is None or not closed or len(window) < day // 2 or value - before < PEAK_RISE
+                or any(g is not None and g > value for _, g, _ in series[i + 1:i + 3])
+                or not shut(when, when + SETTLE_AFTER) or series[i + ahead][1] is None):
+            i += 1
+            continue
+        usual = sorted(window)[len(window) // 2]
+        surplus = value - usual
+        if surplus >= 1.0:
+            found.append({"start": when.isoformat(), "usual": round(usual, 2), "surplus": round(surplus, 2),
+                          "left": round((series[i + ahead][1] - usual) / surplus, 3)})
+        i += ahead
+    return found
+
+
+def settling(records):
+    """How the room sheds a surplus of water by itself: {"settle" minutes, "usual" g/m³, "peaks"}; no time constant
+    until SETTLE_PEAKS peaks are known. The median peak, so one shower with the door open does not decide."""
+    records = [e for e in records or [] if all(isinstance(e.get(k), (int, float)) for k in ("usual", "left"))]
+    if len(records) < SETTLE_PEAKS:
+        return {"settle": None, "usual": None, "peaks": len(records)}
+    lefts = sorted(min(0.95, max(0.05, e["left"])) for e in records)
+    usuals = sorted(e["usual"] for e in records)
+    return {"settle": round(-SETTLE_AFTER.total_seconds() / 60 / math.log(lefts[len(lefts) // 2]), 1),
+            "usual": round(usuals[len(usuals) // 2], 2), "peaks": len(records)}
+
+
 def minutes(model):
     """How long to air: about one time constant, between 10 minutes and one hour, by steps of five."""
     return int(min(60, max(10, 5 * round(model["tau"] / 5))))
 
 
-def outcome(model, indoor_temperature, indoor_water, outdoor_water, duration=None):
-    """Humidity after airing for `duration` minutes, once the room has given part of its water back."""
-    duration = duration or minutes(model)
+def _gain(model, indoor_temperature, indoor_water, outdoor_water, duration):
     floor = outdoor_water + model["residual"]
-    saturated = absolute(indoor_temperature, 100)
-    now = indoor_water / saturated * 100
     removed = max(0.0, indoor_water - floor) * (1 - math.exp(-duration / model["tau"]))
-    gain = removed * (1 - model["rebound"]) / saturated * 100
-    return {"minutes": duration, "now": round(now, 1), "after": round(now - gain, 1), "gain": round(gain, 1)}
+    return removed * (1 - model["rebound"]) / absolute(indoor_temperature, 100) * 100
+
+
+def alone(model, indoor_temperature, indoor_water, outdoor_water, duration):
+    """Humidity points the room loses by itself, windows shut, in `duration` minutes; 0 until it is learned."""
+    settle, usual = model.get("settle"), model.get("usual")
+    if not isinstance(settle, (int, float)) or not isinstance(usual, (int, float)) or settle <= 0:
+        return 0.0
+    surplus = max(0.0, indoor_water - outdoor_water - usual)
+    return surplus * (1 - math.exp(-duration / settle)) / absolute(indoor_temperature, 100) * 100
+
+
+def airing_minutes(model, indoor_temperature, indoor_water, outdoor_water, target=None):
+    """How long to air: until the room is back under `target` (% humidity), or until five more minutes would bring
+    less than KNEE points; between 10 minutes and one hour, by steps of five."""
+    now = indoor_water / absolute(indoor_temperature, 100) * 100
+    for length in range(10, 60, 5):
+        gain = _gain(model, indoor_temperature, indoor_water, outdoor_water, length)
+        if target is not None and now - gain <= target:
+            return length
+        if _gain(model, indoor_temperature, indoor_water, outdoor_water, length + 5) - gain < KNEE:
+            return length
+    return 60
+
+
+def outcome(model, indoor_temperature, indoor_water, outdoor_water, duration=None, target=None):
+    """Humidity after airing for `duration` minutes (chosen by `airing_minutes` when not given), once the room has given
+    part of its water back; `alone`: what waiting as long would bring, `net`: what the airing adds to it."""
+    duration = duration or airing_minutes(model, indoor_temperature, indoor_water, outdoor_water, target)
+    now = indoor_water / absolute(indoor_temperature, 100) * 100
+    gain = _gain(model, indoor_temperature, indoor_water, outdoor_water, duration)
+    shed = min(gain, alone(model, indoor_temperature, indoor_water, outdoor_water, duration))
+    return {"minutes": duration, "now": round(now, 1), "after": round(now - gain, 1), "gain": round(gain, 1),
+            "alone": round(now - shed, 1), "net": round(gain - shed, 1)}
 
 
 # Hours an airing can be asked for, local time, by season (0 winter … 1 summer, engine/assessment.py seasonal):
