@@ -1,1 +1,1 @@
-{"compilerOptions":{"target":"ES2022","module":"ESNext","moduleResolution":"bundler","strict":true,"useDefineForClassFields":false,"experimentalDecorators":true,"skipLibCheck":true,"noEmit":true},"include":["*.ts","socle/*.ts"]}
+{"compilerOptions":{"target":"ES2022","module":"ESNext","moduleResolution":"bundler","strict":true,"useDefineForClassFields":false,"experimentalDecorators":true,"skipLibCheck":true,"noEmit":true,"paths":{"lit":["./node_modules/lit"],"lit/*":["./node_modules/lit/*"]}},"include":["*.ts","socle/*.ts"]}
