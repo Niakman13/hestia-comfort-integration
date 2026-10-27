@@ -51,6 +51,7 @@ export function humidityLabel(v:View):string|null {
   const wet=humidity.status==='high';
   return humidity.degree===1?(wet?'Légèrement humide':'Légèrement sec'):humidity.degree===3?(wet?'Très humide':'Très sec'):(wet?'Air humide':'Air sec');
 }
+// Mirrored word for word by custom_components/niak_comfort/engine/verdict.py for the entities: tests/test_verdict_parity.py.
 export function advice(v:View):Advice {
   const out=withLearning(v,gesture(v));
   const humidity=v.assessment.features?.humidity,label=humidityLabel(v);

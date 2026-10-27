@@ -14,7 +14,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import area_registry as ar, floor_registry as fr, device_registry as dr, entity_registry as er
 from custom_components.niak_comfort.config_flow import ComfortOptionsFlow, ComfortConfigFlow
 from custom_components.niak_comfort.coordinator import ComfortCoordinator
-from custom_components.niak_comfort.sensor import ComfortSensor, DESCRIPTIONS
+from custom_components.niak_comfort.sensor import ComfortSensor
+from custom_components.niak_comfort.binary_sensor import ComfortBinary
 from custom_components.niak_comfort import async_setup
 
 
@@ -188,9 +189,33 @@ class AdapterTests(AdapterFixture):
         result = coordinator.data["assessment"]
         self.assertEqual((result["level"], result["action"], result["heating_action"]), ("urgent", "ouvrir", "idle"))
         self.assertAlmostEqual(coordinator.data["observations"]["indoor_temperature"]["value"], 200/9)
-        sensor = ComfortSensor(coordinator, self.entry, DESCRIPTIONS[0])
-        self.assertEqual(sensor.native_value, "urgent")
+        # The entities say the card's banner: its title, its pill as a state, its colour, the gesture to make.
+        verdict = coordinator.data["verdict"]
+        self.assertEqual(ComfortSensor(coordinator, self.entry, "advice").native_value, verdict["title"])
+        self.assertEqual(ComfortSensor(coordinator, self.entry, "state").native_value, verdict["state"])
+        self.assertRegex(ComfortSensor(coordinator, self.entry, "colour").native_value, r"^#[0-9a-f]{6}$")
+        self.assertEqual(verdict["level"], "urgent")
+        self.assertTrue(ComfortBinary(coordinator, self.entry, "gesture").is_on)
+        self.assertTrue(ComfortBinary(coordinator, self.entry, "airing").is_on)
+        from custom_components.niak_comfort.entities import room_keys
+        keys = room_keys(coordinator)
+        for key in keys["sensor"]:
+            sensor = ComfortSensor(coordinator, self.entry, key)
+            sensor.native_value, sensor.extra_state_attributes  # every entity reads without error
+        for key in keys["binary_sensor"]:
+            self.assertIn(ComfortBinary(coordinator, self.entry, key).is_on, (True, False))
         self.assertEqual(coordinator.data["area_id"], "salon")
+
+    async def test_the_old_situation_and_gesture_entities_go(self):
+        from custom_components.niak_comfort.entities import async_clean
+        self.hass.config_entries._entries[self.entry.entry_id] = self.entry
+        registry = er.async_get(self.hass)
+        coordinator = ComfortCoordinator(self.hass, self.entry)
+        old = registry.async_get_or_create("sensor", "niak_comfort", f"{self.entry.entry_id}_level", config_entry=self.entry)
+        kept = registry.async_get_or_create("sensor", "niak_comfort", f"{self.entry.entry_id}_heating_action", config_entry=self.entry)
+        async_clean(self.hass, self.entry, coordinator)
+        self.assertIsNone(registry.async_get(old.entity_id))
+        self.assertIsNotNone(registry.async_get(kept.entity_id))
 
     async def test_unavailable_co2_and_heating_action(self):
         self.hass.states.async_set("sensor.co2", "unavailable")

@@ -18,6 +18,7 @@ from .engine.assessment import Opening, Settings, Sun, assess
 from .engine import airflow, feedback, habits, horizon, learning, night, people, sunlight, thermostat as thermostats, twin, voc as vocs
 from .engine.volume import arbitrate
 from .engine.sources import normalize, Reading
+from .engine.verdict import verdict
 from .configuration import DATA_CONFIG
 from .exterior import exterior_reading
 from .discovery import voc_device_class
@@ -384,7 +385,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
                      "next_hour": twin.next_hour(learned, current),
                      "precision": {k: precision[k] for k in ("hours", "temperature", "humidity")} if precision else None,
                      "progress": self.learning_progress()}
-        return {"version": VIEW_VERSION, "entry_id": self.entry_id,
+        view = {"version": VIEW_VERSION, "entry_id": self.entry_id,
                 "area_id": self.config.get("area_id"), "title": self.config.get("name"),
                 "comfort_minimum": self.settings.minimum,
                 "computed_at": now.isoformat(), "assessment": assessment,
@@ -397,6 +398,14 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 "observations": {k: asdict(v) for k, v in readings.items()},
                 "names": {e: (state.name if (state := self.hass.states.get(e)) else e) for e in self.windows},
                 "starting": (now - self.started).total_seconds() < STARTUP_GRACE_SECONDS}
+        # What the card's banner says, as states for the entities (engine/verdict.py, kept word for word with the card).
+        # A verdict that fails leaves the room's advice standing: its entities only go unknown.
+        try:
+            view["verdict"] = verdict(view, dt_util.as_local)
+        except (KeyError, TypeError, ValueError):
+            logging.getLogger(__name__).exception("Niak Comfort: verdict for %s", view["title"])
+            view["verdict"] = None
+        return view
 
     def _alarm_entity(self):
         """The home's alarm panel: the one chosen in the general settings, else Alarmo found by itself; None for none."""

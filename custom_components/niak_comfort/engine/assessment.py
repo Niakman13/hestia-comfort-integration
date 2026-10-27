@@ -42,6 +42,12 @@ WARM_WALL_SURFACE = 82.0
 WARM_WALL_REASONS = ("drying_slow", "drying_unavailable", "heat_needed", "humid_outdoor", "open_neutral", "within_comfort")
 LEVELS = ("calm", "benefit", "action", "urgent", "neutral")
 ACTIONS = ("ok", "ouvrir", "fermer", "attendre", "unknown")
+# Every reason the engine gives, for the « Raison » diagnostic sensor.
+REASONS = ("within_comfort", "rain_open_windows", "opening_blocked", "verify_exterior", "air_needed", "cooling_possible", "warming_possible",
+           "drying_possible", "exchange_harmful", "cooling_unavailable", "heat_needed", "drying_unavailable", "drying_later", "drying_slow",
+           "drying_night", "drying_alone", "ventilation_possible", "incomplete_data", "optional_air_change", "gust_open_windows",
+           "short_air_change", "sun_entering", "rain_soon", "precool_possible", "precool_later", "shared_volume", "humid_outdoor",
+           "open_neutral", "rehumidification_risk", "alarm_open", "warm_walls")
 
 
 @dataclass(frozen=True)

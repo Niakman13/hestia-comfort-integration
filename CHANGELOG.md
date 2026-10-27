@@ -1,3 +1,32 @@
+## 1.7.16 — Des entités qui disent ce que dit la carte
+
+**En bref**
+
+- Les entités disent maintenant exactement ce que dit la carte : même conseil, même pastille, même couleur.
+- « Salon · Cuisine » a son propre appareil dans Home Assistant.
+- De nouvelles entités pour vos automatisations : VMC, LED de notification, fenêtres.
+
+### Nouveautés
+
+- **Conseil** : le titre de la carte (« Rien à faire », « Aérez 10 min », « Lancez la VMC »…).
+- **État** : la pastille de la carte (Tout va bien, Au mieux, Geste conseillé…).
+- **Couleur** : la couleur de la carte, prête pour une lumière (`hs_color` en attribut).
+- **Oui/non** : Geste à faire, Aération conseillée, Fenêtres à refermer, VMC conseillée, Trop humide.
+- **Humidité** et **Apprentissage** pour chaque pièce.
+- **Pièces au même air** : un appareil « Salon · Cuisine » porte leur conseil commun.
+- **Mon logement** : le geste le plus important, sa couleur, et le nombre de pièces qui demandent un geste.
+
+### Améliorations
+
+- **VMC conseillée** reste allumée tant que la VMC assèche une pièce encore humide : une automatisation ne la coupe pas trop tôt.
+- **Raison** passe en diagnostic, masquée par défaut.
+- Guide : exemples pour des LED aux couleurs de la carte et une VMC qui suit le conseil.
+
+### Après la mise à jour
+
+- **Situation** et **Geste** sont retirées : remplacez-les par **État** et **Conseil** (ou les oui/non) dans vos automatisations.
+- Salon et Cuisine n’ont plus leur propre Conseil : il est sur l’appareil « Salon · Cuisine ».
+
 ## 1.7.15 — Le bon degré d’humidité sous un conseil
 
 **En bref**
