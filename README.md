@@ -55,7 +55,7 @@ La carte est fournie par l’intégration : rien d’autre à installer.
 
 1. **Vos pièces** : Niak reprend vos pièces Home Assistant et les capteurs qui y sont rangés. Décochez celles à ne pas suivre, puis créez-les d’un coup.
 2. **L’extérieur** : dans **Réglages généraux**, choisissez Niak Weather (ses mesures sont reprises telles quelles) ou vos capteurs. Il sert à toutes les pièces.
-3. **Chaque pièce** : sur l’accueil Confort, **Modifier** ouvre ses réglages. Niak propose les capteurs de la pièce : vous gardez, changez ou retirez.
+3. **Chaque pièce** : dans **Réglages généraux**, **Modifier** ouvre ses réglages. Niak propose les capteurs de la pièce : vous gardez, changez ou retirez.
 4. **La carte** : sur un tableau de bord, **Ajouter une carte → Niak Confort**.
 
 Rien n’est enregistré avant **Enregistrer**. [Le guide pas à pas](docs/guide.md).
@@ -90,8 +90,8 @@ Tout se règle dans le panneau **Niak** de la barre latérale, onglet **Confort*
 
 ![Le panneau Niak, onglet Confort : l’accueil, avec chaque pièce, ses mesures et son apprentissage](docs/images/niak-comfort-panneau.png)
 
-- **Accueil** : l’état du logement, ce qui reste à régler, puis **Vos pièces** : les mesures de chacune, son apprentissage et un bouton **Modifier**. **Ajouter une pièce** se fait sur place. La section **Extensions** montre ce que Niak a reconnu (Niak Weather, Versatile Thermostat, Adaptive Cover Pro) et dans quelles pièces.
-- **Réglages généraux** : l’extérieur, commun à toutes les pièces. Avec Niak Weather, ses mesures sont seulement affichées.
+- **Accueil** : à lire seulement. L’état du logement, ce qui reste à régler, l’apprentissage de chaque pièce, l’état des extensions, puis **Versions et liens**.
+- **Réglages généraux** : tout ce qui se modifie. Les pièces (**Modifier**, **Ajouter une pièce**), Niak Weather ou vos propres capteurs pour le dehors, puis les **extensions tierces** (Versatile Thermostat, Adaptive Cover Pro, Alarmo) : liée, à lier ou à installer, avec l’utilité de chacune. Les extensions trouvées que Confort ne lit pas encore peuvent être demandées en un clic.
 - Une pièce se règle en six onglets : Température, Ouvertures, Air intérieur, Présence, Chauffage, La pièce.
 
 Chaque réglage a son aide. Les seuils sont expliqués avec leurs sources ([les repères](docs/SEUILS.md)).

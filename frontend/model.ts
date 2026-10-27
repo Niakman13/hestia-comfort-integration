@@ -38,7 +38,7 @@ export interface Twins {version:1;rooms:{entry_id:string;title:string;twin:Twin;
  /** Where the station's sun sensor is shaded, learned (engine/sunlight.py): azimuths by 10°. */ sun_shade?:{scale:number;shaded:number[];sunny_days:number}|null}[]}
 export interface HealthLine {level:Level;text:string;why:string;target?:Target|null}
 export interface Health {level:'ok'|'action';summary:string;tips_summary:string;rooms_summary:string;todo:HealthLine[];tips:HealthLine[];
- sources:{label:string;level:Level;text:string}[];sensors?:{answering:number;total:number};extensions?:{name:string;level:Level;role:string;text:string}[];columns:string[];rooms:{entry_id:string;title:string;cells:{level:Level;text:string}[]}[];versions:HealthLine[]}
+ sources:{label:string;level:Level;text:string}[];sensors?:{answering:number;total:number};extensions?:Extension[];others?:{key:string;name:string;use:string}[];socle?:string;columns:string[];rooms:{entry_id:string;title:string;cells:{level:Level;text:string}[]}[];versions:HealthLine[]}
 export interface Hass {callWS<T>(msg:Record<string,unknown>):Promise<T>;user?:{is_admin:boolean};themes?:{darkMode?:boolean};connection?:unknown;states?:Record<string,{state:string;attributes?:Record<string,unknown>}>}
 export const warningText:Record<string,string>={
  alias:'Cette entité recopie une autre mesure. Vérifiez sa provenance ci-dessous.',
@@ -126,7 +126,9 @@ export const seasonNames:Record<string,string>={spring:'Printemps',printemps:'Pr
 export const advancedDefaults:Record<string,number>={illuminance_low:100,gust_max:45,frost:1,sun_facade:250,max_age_seconds:10800};
 export function changedAdvanced(settings:Record<string,number>):number{return Object.entries(advancedDefaults).filter(([k,v])=>settings[k]!==undefined&&settings[k]!==v).length;}
 // One source in a list chosen by integration: its name, what it gives, and how to install it when missing.
-export interface Choice {value:string;label:string;hint:string;available:boolean;missing?:string;url?:string}
+export interface Choice {value:string;label:string;hint:string;available:boolean;missing?:string;url?:string;badge?:string}
+/** An integration Confort reads (health.py EXTENSIONS): linked, installed but not used, or missing. */
+export interface Extension {key:string;name:string;official:boolean;state:'linked'|'found'|'missing';level:Level;role:string;use:string;without:string;url:string;text:string;rooms:string[]}
 export const links={atmofrance:'https://github.com/sebcaps/atmofrance',niak_weather:'https://github.com/Niakman13/niak-weather-integration'};
 // The integration behind an outdoor air quality source.
 export function airSource(spec?:Spec):string{return !spec?'none':spec.adapter==='atmo_daily'?'atmo':spec.adapter==='niak_index'?'niak':'other';}
@@ -145,7 +147,7 @@ export function airChoices(s:Pick<Snapshot,'niak_weather'|'integrations'>,all:Ca
 // Where the exterior measures come from: Niak Weather's station, or the person's own sensors.
 export function exteriorChoices(s:Pick<Snapshot,'niak_weather'>):Choice[]{
  const nw=s.niak_weather,ready=!!nw?.installed&&!!nw.places.length;
- return [{value:'weather',label:'Niak Weather',hint:'Reprend la station de votre lieu, ses alertes et ses prévisions.',available:ready,
+ return [{value:'weather',label:'Niak Weather',hint:'Meilleurs conseils : Confort sait s’il va pleuvoir, quand le soleil arrive et quand l’air dehors est mauvais.',badge:'recommandé',available:ready,
    ...(ready?{}:nw?.installed?{missing:'Aucun lieu dans l’onglet Météo pour l’instant.'}:{missing:'Pas encore installée',url:links.niak_weather})},
-  {value:'own',label:'Vos propres capteurs',hint:'Choisissez-les un par un ci-dessous ; tous sont facultatifs.',available:true}];
+  {value:'own',label:'Vos propres capteurs',hint:'Une mesure à la fois, toutes facultatives. Sans prévisions ni alertes, les conseils seront moins justes.',available:true}];
 }

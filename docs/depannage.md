@@ -2,7 +2,7 @@
 
 Commencez par l’**Accueil Niak** : il dit ce qui va, et ce qui reste à régler en orange.
 
-Puis ouvrez **Confort → Accueil**. Quand quelque chose est à régler, l’encadré **À régler** liste chaque problème, avec un bouton vers le bon réglage. Le tableau **Vos pièces** montre, pour chaque pièce, les mesures qui répondent.
+Puis ouvrez **Confort → Accueil**. Quand quelque chose est à régler, l’encadré **À régler** liste chaque problème, avec un bouton vers le bon réglage. Le tableau **Vos pièces** montre où en est l’apprentissage de chaque pièce.
 
 - [Un capteur ne répond pas](#un-capteur-ne-répond-pas)
 - [Mesures en chargement ou absentes](#mesures-en-chargement-ou-absentes)
@@ -67,7 +67,7 @@ La carte est fournie par l’intégration : rien à installer à part.
 - Confort a besoin de Niak Weather 2.1 ou plus récent ;
 - après l’installation de Weather, redémarrez Home Assistant.
 
-Une fois relié, l’encadré **Extérieur** de l’Accueil indique « Niak Weather · » et votre lieu. Weather affiche aussi « Relié à Niak Confort ».
+Une fois relié, l’encadré **Extensions** de l’Accueil indique Niak Weather « liée », et **Versions et liens** le cite dans ses liaisons. Weather affiche aussi « Relié à Niak Confort ».
 
 **Une mesure du dehors à changer** : avec Niak Weather, elles sont reprises de sa station et ne se choisissent pas dans Confort. Changez la station dans Niak Weather, ou choisissez **Vos propres capteurs** dans Réglages généraux.
 
