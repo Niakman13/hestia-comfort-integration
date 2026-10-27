@@ -86,6 +86,8 @@ def _spans(rows, test):
     return out
 
 
+# The drawing starts at the next half hour: an airing asked « now » starts there, or it would fall before the first
+# step and change nothing (a graph never needed).
 def _window(at, minutes):
     end = at + timedelta(minutes=minutes)
     return lambda t: max(0.0, min(1.0, ((min(end, t + STEP) - max(at, t)).total_seconds()) / STEP.total_seconds()))
@@ -110,6 +112,7 @@ def cool(model, start, series, *, minimum, mass, sun):
 
 
 def air(model, start, series, *, mass, sun, heated, at, minutes):
+    at = max(at, series[0]["time"])
     base = _simulate(model, start, series, mass=mass, sun=sun, opened=lambda t: 0.0, heated=heated)
     aired = _simulate(model, start, series, mass=mass, sun=sun, opened=_window(at, minutes), heated=heated)
     gaps = [b["ti"] - a["ti"] for b, a in zip(base, aired)]
@@ -143,6 +146,7 @@ def sunny(model, start, series, *, mass, sun, heated, minimum=None):
 
 
 def dry(model, start, series, *, mass, sun, heated, at, minutes):
+    at = max(at, series[0]["time"])
     base = _simulate(model, start, series, mass=mass, sun=sun, opened=lambda t: 0.0, heated=heated)
     aired = _simulate(model, start, series, mass=mass, sun=sun, opened=_window(at, minutes), heated=heated)
     # Two hours after the airing: what is left once the walls have given some water back.
