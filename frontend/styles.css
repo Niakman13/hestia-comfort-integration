@@ -107,3 +107,4 @@ main.wide{max-width:1280px}
 .ex-other{flex-wrap:wrap}.ex-other b{white-space:normal;flex:1 1 220px}
 .ex-room{grid-template-columns:minmax(140px,260px) minmax(0,1fr) auto auto}@media(max-width:600px){.ex-room{grid-template-columns:1fr auto}}
 @media(max-width:600px){.ex-head{grid-template-columns:24px minmax(0,1fr)}.ex-head>.ex-act,.ex-head>.ac-edit{grid-column:2;justify-self:start}}
+.ac-links .ac-support{margin-top:6px;display:inline-flex;align-items:center;min-height:40px;padding:8px 16px;border:1px solid var(--nc-accent);border-radius:999px;font-weight:600;text-decoration:none}.ac-links .ac-support:hover{background:color-mix(in srgb,var(--nc-accent) 12%,transparent)}

@@ -9,7 +9,7 @@
 
 - **Extensions tierces** : chacune dit si elle est liée, à lier (un bouton « Lier ») ou pas installée (un lien « Installer avec HACS » et ce que Confort fait sans elle).
 - **Extensions pas encore lues** : celles trouvées dans Home Assistant que Confort ne lit pas encore (Better Thermostat, SmartIR, Scheduler) ; « Demander » ouvre une demande toute prête sur GitHub.
-- **Versions et liens** sur l’accueil, comme dans Niak Weather : versions, liaisons et liens utiles.
+- **Versions et liens** sur l’accueil, comme dans Niak Weather : versions (dont le socle commun), liaisons, liens utiles et un bouton « Soutenez mon travail ».
 - **Logo Niak** en tête du menu de gauche (et de la barre du haut sur téléphone), lisible sur fond clair comme sur fond foncé.
 
 ### Améliorations

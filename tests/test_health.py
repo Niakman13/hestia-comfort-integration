@@ -57,6 +57,7 @@ class HealthTests(unittest.TestCase):
         self.assertEqual((ext["alarmo"]["state"], ext["alarmo"]["text"]), ("missing", "non installée"))
         self.assertTrue(all(e["use"] and e["without"] and e["url"].startswith("https://github.com/") for e in r["extensions"]))
         self.assertEqual([o["name"] for o in r["others"]], ["Better Thermostat"])
+        self.assertRegex(r["socle"], r"^1\.\d+$")
 
     def test_weather_installed_but_not_linked_is_found(self):
         r = report(Facts(weather_installed=True, alarm="Alarmo · désarmée", installed=frozenset({"alarmo"})))
