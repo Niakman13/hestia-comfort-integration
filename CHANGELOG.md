@@ -1,3 +1,27 @@
+## 1.7.14 — Un accueil à lire, des réglages complets
+
+**En bref**
+
+- L’accueil Confort se lit seulement : tout ce qui se modifie est dans **Réglages généraux**.
+- Les réglages ont une rubrique **Extensions** : Niak Weather, puis Versatile Thermostat, Adaptive Cover Pro et Alarmo, chacune avec son utilité.
+
+### Nouveautés
+
+- **Extensions tierces** : chacune dit si elle est liée, à lier (un bouton « Lier ») ou pas installée (un lien « Installer avec HACS » et ce que Confort fait sans elle).
+- **Extensions pas encore lues** : celles trouvées dans Home Assistant que Confort ne lit pas encore (Better Thermostat, SmartIR, Scheduler) ; « Demander » ouvre une demande toute prête sur GitHub.
+- **Versions et liens** sur l’accueil, comme dans Niak Weather : versions (dont le socle commun), liaisons, liens utiles et un bouton « Soutenez mon travail ».
+- **Logo Niak** en tête du menu de gauche (et de la barre du haut sur téléphone), lisible sur fond clair comme sur fond foncé.
+
+### Améliorations
+
+- **Accueil plus simple** : plus de boutons « Modifier » ni « Ajouter une pièce », plus de courbe 24 h. Une pièce s’ouvre sur son bilan, et un bouton mène aux réglages.
+- **Niak Weather recommandé** : le choix dit pourquoi les conseils sont meilleurs avec lui, et ce qu’on perd avec ses propres capteurs. Ses mesures reprises sont repliées.
+- **Alarme** : réglée dans l’encart Alarmo.
+
+### Après la mise à jour
+
+- Rechargez la page (ou videz le cache de l’application mobile) pour voir le nouvel accueil.
+
 ## 1.7.13 — Le bilan dans le menu
 
 **En bref**

@@ -65,7 +65,9 @@ Une mesure absente reste inconnue : Niak conseille quand même et le dit sur la 
 
 ## Les pièces
 
-L’accueil Confort (**Accueil**) liste vos pièces : leurs mesures, leur apprentissage et un bouton **Modifier**, qui ouvre les réglages de la pièce. **Ajouter une pièce** propose vos pièces Home Assistant pas encore suivies, ou une pièce libre.
+L’accueil Confort (**Accueil**) se lit seulement : vos pièces et leur apprentissage, l’état des extensions, les versions et les liens utiles. Appuyez sur une pièce pour voir son bilan.
+
+Tout ce qui se modifie est dans **Réglages généraux** : **Modifier** ouvre les réglages d’une pièce ; **Ajouter une pièce** propose vos pièces Home Assistant pas encore suivies, ou une pièce libre. La rubrique **Extensions** dit pour chacune à quoi elle sert, et si elle est liée, à lier ou à installer.
 
 ![Les réglages d’une pièce : l’onglet Ouvertures](images/niak-comfort-reglages.png)
 
@@ -365,7 +367,7 @@ Chaque aération conseillée et suivie est mesurée : la carte montre son résul
 
 Quand l’humidité d’une pièce monte souvent à la même heure, ou qu’une fenêtre reste ouverte la nuit, l’accueil pose une question : Oui, Non ou Je ne sais pas. Une cause n’est jamais devinée : seul un « Oui » la nomme.
 
-L’accueil Confort montre où en est chaque pièce : optimal, en cours, à affiner ou à vérifier, avec la précision de ses prévisions et sa courbe sur 24 h.
+L’accueil Confort montre où en est chaque pièce : optimal, en cours, à affiner ou à vérifier, avec ce qui lui reste à apprendre et la précision de ses prévisions.
 
 Pour apprendre, une pièce a besoin :
 
