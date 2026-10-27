@@ -44,6 +44,22 @@ class Horizon(unittest.TestCase):
         self.assertGreater(a["result"]["drop"], 0.2)
         self.assertIsNotNone(a["result"]["back"])
 
+    def test_an_airing_asked_between_two_half_hours_still_shows(self):
+        # The forecast comes on whole hours, the drawing starts at the next half hour: a short airing asked at 14 h 12
+        # used to end before it and change nothing.
+        hour = datetime(2026, 1, 20, 14, tzinfo=timezone(timedelta(hours=1)))
+        now = hour + timedelta(minutes=12)
+        out = horizon.build({"reason": "air_needed", "action": "ouvrir", "needs": ["air"],
+                             "features": {"ventilation": {"duration_minutes": {"max": 11}}}},
+                            MODEL, {"ti": 20.2, "hi": 50, "te": 5, "holding": True}, forecast(hour, 4, 4), now, minimum=19, sun=sun)
+        self.assertEqual(out[0]["kind"], "air")
+        self.assertGreater(out[0]["result"]["drop"], 0.2)
+        self.assertTrue(out[0]["needed"])
+        a = {"reason": "drying_possible", "action": "ouvrir", "needs": ["dry"], "features": {"drying": {"minutes": 10}}}
+        out = horizon.build(a, MODEL, {"ti": 20.5, "hi": 72, "te": 15}, forecast(hour, 12, 5, humidity=lambda h: 55), now,
+                            minimum=19, sun=sun)
+        self.assertLess(out[0]["result"]["with"], out[0]["result"]["without"])
+
     def test_the_sun_warming_a_cool_room_is_drawn_with_and_without_the_sun(self):
         now = datetime(2026, 4, 10, 8, tzinfo=timezone(timedelta(hours=2)))
         out = horizon.build({"reason": "heat_needed", "action": "ok", "needs": ["heat"], "features": {"warmth": {"warming": True}}},
