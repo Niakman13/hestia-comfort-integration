@@ -10,6 +10,9 @@ from .panel import CARD_URL, async_setup_panel
 from .socle import async_remove_card
 from .air_references import apply_air_references, apply_freshness
 from .api import API_KEY, NiakComfortApi
+from .entities import async_clean, home_clean
+
+PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -27,21 +30,24 @@ async def async_setup_entry(hass, entry):
     await get_configuration(hass)
     await async_setup_panel(hass)
     if entry.data.get("home"):
+        # « Mon logement »: the whole home's gesture and colour, for a light or a notification.
+        home_clean(hass, entry)
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
         return True
     apply_air_references(hass, entry)
     apply_freshness(hass, entry)
     coordinator = ComfortCoordinator(hass, entry)
     await coordinator.async_start()
     entry.runtime_data = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, [Platform.SENSOR])
+    # « Situation » and « Geste » replaced, a room now in a shared air: what this entry no longer provides goes.
+    async_clean(hass, entry, coordinator)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_reload))
     return True
 
 
 async def async_unload_entry(hass, entry):
-    if entry.data.get("home"):
-        return True
-    return await hass.config_entries.async_unload_platforms(entry, [Platform.SENSOR])
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_entry(hass, entry):

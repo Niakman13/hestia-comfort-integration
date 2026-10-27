@@ -43,25 +43,51 @@
   },
   "entity": {
     "sensor": {
-      "level": {
-        "name": "Situation",
+      "advice": {
+        "name": "Conseil"
+      },
+      "state": {
+        "name": "État",
         "state": {
           "calm": "Tout va bien",
-          "benefit": "Potentiel détecté",
+          "best": "Au mieux",
+          "benefit": "À saisir",
           "action": "Geste conseillé",
-          "urgent": "Attention nécessaire",
-          "neutral": "Information incomplète"
+          "urgent": "Attention",
+          "neutral": "À vérifier",
+          "optimized": "Conseil optimisé",
+          "too_cold": "Trop frais",
+          "starting": "Démarrage",
+          "sensors_silent": "Capteurs muets",
+          "sensor_silent": "Un capteur muet"
         }
       },
-      "action": {
-        "name": "Geste",
+      "colour": {
+        "name": "Couleur"
+      },
+      "humidity": {
+        "name": "Humidité",
         "state": {
-          "ok": "Aucun nouveau geste",
-          "ouvrir": "Ouvrir",
-          "fermer": "Fermer",
-          "attendre": "Attendre",
-          "unknown": "À vérifier"
+          "normal": "Dans votre plage",
+          "slightly_humid": "Légèrement humide",
+          "humid": "Air humide",
+          "very_humid": "Très humide",
+          "slightly_dry": "Légèrement sec",
+          "dry": "Air sec",
+          "very_dry": "Très sec"
         }
+      },
+      "learning": {
+        "name": "Apprentissage"
+      },
+      "home_rooms_asking": {
+        "name": "Pièces demandant un geste"
+      },
+      "home_advice": {
+        "name": "Conseil"
+      },
+      "home_colour": {
+        "name": "Couleur"
       },
       "reason": {
         "name": "Raison",
@@ -122,6 +148,26 @@
       },
       "twin_humidity": {
         "name": "Humidité prévue dans 1 h"
+      }
+    },
+    "binary_sensor": {
+      "gesture": {
+        "name": "Geste à faire"
+      },
+      "airing": {
+        "name": "Aération conseillée"
+      },
+      "close": {
+        "name": "Fenêtres à refermer"
+      },
+      "ventilation": {
+        "name": "VMC conseillée"
+      },
+      "humid": {
+        "name": "Trop humide"
+      },
+      "home_gesture": {
+        "name": "Un geste à faire"
       }
     }
   }

@@ -380,20 +380,68 @@ Une ouverture de moins de 10 minutes ne compte pas. Avant d’avoir appris, Niak
 
 ## Pour vos automatisations
 
-Chaque pièce crée cinq entités, rattachées à son appareil :
+Les entités disent **exactement ce que dit la carte** : même conseil, même pastille, même couleur.
 
-| Entité | Valeurs |
+### Une pièce seule
+
+| Entité | Ce qu’elle dit |
 | --- | --- |
-| **Situation** | Tout va bien · Potentiel détecté · Geste conseillé · Attention nécessaire · Information incomplète |
-| **Geste** | Ouvrir · Fermer · Attendre · Aucun nouveau geste · À vérifier |
-| **Raison** | Dans la plage de confort · Pluie et ouvrants ouverts · Renouvellement d’air nécessaire · Rafraîchissement possible · Assèchement possible · Soleil qui entre · Pluie imminente… |
+| **Conseil** | Le titre de la carte : Rien à faire · Aérez 10 min · Refermez · Lancez la VMC… En attributs : `geste` (stable, pour les automatisations), `precision` (la fenêtre visée, l’heure avant la pluie), `pastille` |
+| **État** | La pastille : Tout va bien · Au mieux · À saisir · Geste conseillé · Attention · À vérifier · Conseil optimisé · Trop frais… |
+| **Couleur** | La couleur de la carte, en `#rrggbb`. En attributs : `rgb_color`, et `hs_color` saturée pour une lumière |
+| **Humidité** | Dans votre plage · Légèrement humide · Air humide · Très humide · (et sec) |
+| **Apprentissage** | En % |
 | **Chauffage observé** | Chauffe en cours · Au repos · Arrêté · Rafraîchit · Inconnu · Non configuré |
-| **Couverture des données** | Sources configurées disponibles · Bilan partiel |
+| **Geste à faire** | Oui quand la carte demande un geste maintenant |
+| **Aération conseillée** | Oui quand la carte dit d’ouvrir |
+| **Fenêtres à refermer** | Oui quand la carte dit de refermer |
+| **VMC conseillée** | Oui quand la carte dit « Lancez la VMC », et tant que la VMC assèche une pièce encore humide |
+| **Trop humide** | Oui au-dessus de votre plage d’humidité |
 
-Leur nom suit celui de la pièce, par exemple `sensor.salon_geste`.
+Valeurs de `geste` : `none`, `open`, `keep_open`, `close`, `keep_closed`, `later`, `ventilation`, `heat`, `covers`, `check_outside`, `check_sensors`.
 
-Exemples :
+En diagnostic (masquées) : **Raison** (le terme du moteur), **Couverture des données**, et les prévisions du jumeau dans 1 h.
 
-- prévenir quand le **Geste** d’une pièce passe à **Fermer** et que la **Raison** est la pluie ;
-- allumer un voyant quand la **Situation** passe à **Attention nécessaire** ;
-- couper un chauffage d’appoint quand le **Geste** devient **Ouvrir**. Cette décision reste la vôtre : Niak ne commande rien.
+### Des pièces qui partagent le même air
+
+« Salon · Cuisine » a son propre appareil, avec **Conseil**, **État**, **Couleur** et les quatre oui/non de geste.
+Le Salon et la Cuisine gardent seulement leurs mesures : Humidité, Trop humide, Apprentissage, Chauffage observé.
+
+### Mon logement
+
+| Entité | Ce qu’elle dit |
+| --- | --- |
+| **Pièces demandant un geste** | Leur nombre ; leurs noms en attribut |
+| **Conseil** | Le geste le plus important : « Chambre P : Lancez la VMC », ou Rien à faire |
+| **Couleur** | La couleur de la pièce la plus importante |
+| **Un geste à faire** | Oui dès qu’une pièce demande un geste |
+
+### Exemples
+
+Des LED aux couleurs de la carte :
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: sensor.mon_logement_couleur
+actions:
+  - action: light.turn_on
+    target:
+      entity_id: light.led_notification
+    data:
+      hs_color: "{{ state_attr('sensor.mon_logement_couleur', 'hs_color') }}"
+```
+
+La VMC qui suit le conseil :
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.chambre_p_vmc_conseillee
+actions:
+  - action: "fan.turn_{{ trigger.to_state.state }}"
+    target:
+      entity_id: fan.vmc
+```
+
+Niak ne commande rien lui-même : ces automatisations restent les vôtres.

@@ -65,9 +65,8 @@ class Advice(unittest.TestCase):
         self.assertEqual(a.features["people"], {"home": [], "away": ["Paul"]})
 
     def test_the_alarm_reason_is_known_to_the_sensor(self):
-        from custom_components.niak_comfort.sensor import DESCRIPTIONS
-        reasons = next(d for d in DESCRIPTIONS if d.key == "reason").options
-        self.assertIn("alarm_open", reasons)
+        from custom_components.niak_comfort.engine.assessment import REASONS
+        self.assertIn("alarm_open", REASONS)
 
 
 if __name__ == "__main__":
