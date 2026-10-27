@@ -17,7 +17,7 @@ from .const import DOMAIN, LEARNING_REFRESH_SECONDS, OPEN_DEBOUNCE_SECONDS, SEAS
 from .engine.assessment import Opening, Settings, Sun, assess
 from .engine import airflow, feedback, habits, horizon, learning, night, people, sunlight, thermostat as thermostats, twin, voc as vocs
 from .engine.volume import arbitrate
-from .engine.sources import normalize, Reading
+from .engine.sources import indicator_state, normalize, Reading
 from .engine.verdict import verdict
 from .configuration import DATA_CONFIG
 from .exterior import exterior_reading
@@ -30,7 +30,7 @@ SUN_SMOOTHING = timedelta(minutes=15)
 # Twin samples stored before 1.2.9 counted the other room's windows as this room's own: rebuilt from the history.
 TWIN_FORMAT = 3
 # What belongs to an air shared by rooms open onto each other: a room without its own reads its partner's.
-SHARED_SOURCES = ("heating", "co2", "voc", "pm25", "purifier", "ventilation", "ventilation_boost")
+SHARED_SOURCES = ("heating", "heating_indicator", "co2", "voc", "pm25", "purifier", "ventilation", "ventilation_boost")
 
 
 class ComfortCoordinator(DataUpdateCoordinator):
@@ -123,7 +123,10 @@ class ComfortCoordinator(DataUpdateCoordinator):
         own = dict(self.config.get("sources", {}))
         for partner in self.partners:
             for key, entity_id in partner.get("shared", {}).items():
-                if key == "heating" and self.config.get("heated") is False:
+                if key in ("heating", "heating_indicator") and self.config.get("heated") is False:
+                    continue
+                # The indicator goes with its thermostat: never laid over the room's own.
+                if key == "heating_indicator" and own.get("heating") and "heating" not in partner["shared"]:
                     continue
                 own.setdefault(key, entity_id)
         return own
@@ -253,7 +256,8 @@ class ComfortCoordinator(DataUpdateCoordinator):
         for key, kind in SOURCES.items():
             entity_id = selected.get(key)
             # Optional unselected sources do not fabricate a missing measurement.
-            if not entity_id:
+            # The heating indicator is read with the heating, never alone.
+            if not entity_id or key == "heating_indicator":
                 continue
             readings[key] = self._reading(entity_id, kind, now)
         if self.home_configuration:
@@ -528,9 +532,15 @@ class ComfortCoordinator(DataUpdateCoordinator):
             # The card writes the leading room's advice with its own measures (its CO₂, its humidity).
             partner = next(p for p in self.partners if p["title"] == lead)
             entry = self.hass.config_entries.async_get_entry(partner["entry_id"])
-            data = getattr(getattr(entry, "runtime_data", None), "data", None) or {}
+            leader = getattr(entry, "runtime_data", None)
+            data = getattr(leader, "data", None) or {}
             settled["features"]["volume"]["observations"] = {k: v for k, v in data.get("observations", {}).items()
                                                              if not k.startswith(("shutter", "cover"))}
+            # « Prochaines heures » follows the advice too: drawn on the leading room, for its gesture. This room's own
+            # graph answers its own advice, which the card no longer shows.
+            led = ((getattr(leader, "own", None) or {}).get("features") or {}).get("horizon")
+            if led is not None:
+                settled["features"] = {**settled["features"], "horizon": led}
         return settled
 
     def _outdoor_entity(self):
@@ -667,11 +677,14 @@ class ComfortCoordinator(DataUpdateCoordinator):
                     [*self.windows, *sources.values(), *([solar] if solar else []), *(e for e in air.values() if e),
                      *(e for pair in beside for e in pair)], None, True, False, False, True)
                 # The thermostat's running state is an attribute: its own query keeps them.
+                # An indicator chosen beside it says it in its state, and is what the room reads now.
+                indicator = self.sources.get("heating_indicator") if heating else None
                 running = await recorder.async_add_executor_job(
-                    history.get_significant_states, self.hass, start, now, [heating], None, True, False, False, False) if heating else {}
+                    history.get_significant_states, self.hass, start, now, [indicator or heating], None, True, False, False, not indicator) if heating else {}
                 contacts = {e: [(row.last_changed, {"on": True, "off": False}.get(row.state)) for row in states.get(e, [])] for e in self.windows}
-                heat = [(row.last_updated, row.attributes.get("hvac_action") == "heating") for row in running.get(heating, [])
-                        if hasattr(row, "attributes")]
+                heat = [(row.last_changed, indicator_state(row.state) == "heating") for row in running.get(indicator, [])] if indicator else \
+                    [(row.last_updated, row.attributes.get("hvac_action") == "heating") for row in running.get(heating, [])
+                     if hasattr(row, "attributes")]
                 fresh = await self.hass.async_add_executor_job(
                     partial(twin.samples, start, now, *(self._points(states, sources[k]) for k in keys),
                             self._sun_history(states, solar) if solar else [], contacts, heat,
@@ -893,10 +906,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 if voc_class is None or (unit is None and voc_class != "volatile_organic_compounds_index"):
                     return Reading(None, "unknown", entity_id, state.last_reported.isoformat(), "incompatible_unit")
             if kind == "heating":
-                raw = state.attributes.get("hvac_action")
-                # A thermostat that does not say what it is doing still says when it is off.
-                if raw is None and state.state == "off":
-                    raw = "off"
+                raw, detail = self._heating_action(state)
             elif kind in ("cover", "purifier_speed"):
                 raw = state.attributes.get("current_position" if kind == "cover" else "percentage") if state.state not in ("unknown", "unavailable") else None
                 unit = "%"
@@ -905,4 +915,22 @@ class ComfortCoordinator(DataUpdateCoordinator):
         reading = normalize(kind, raw, unit,
                             source=entity_id, reported_at=self._heard(entity_id, state) if state else None,
                             now=now, max_age=None if kind in STATE_KINDS else self.settings.max_age_seconds)
+        # Where « heating » or « idle » came from: the thermostat's own action, or the indicator chosen beside it.
+        if kind == "heating" and state and reading.usable:
+            reading = replace(reading, detail=detail)
         return reading
+
+    def _heating_action(self, state):
+        """What the heating does, and from where: off when the thermostat is off; then the indicator chosen
+        beside it (a valve, a relay, a « work state »), which the person trusts more; then its own hvac_action."""
+        if state.state in ("unknown", "unavailable"):
+            return None, None
+        if state.state == "off":
+            return "off", "hvac_mode"
+        indicator = self.sources.get("heating_indicator")
+        said = self.hass.states.get(indicator) if indicator else None
+        running = indicator_state(said.state) if said else None
+        if running is not None:
+            return ("cooling" if running == "heating" and state.state == "cool" else running), "indicator"
+        action = state.attributes.get("hvac_action")
+        return action, "hvac_action" if action is not None else None
