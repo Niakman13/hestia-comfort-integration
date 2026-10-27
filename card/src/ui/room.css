@@ -138,16 +138,16 @@ button.nc-tile { font:inherit; color:inherit; text-align:left; cursor:pointer; b
 @keyframes nc-throb { 0%,40%,100% { opacity:.65; transform:scale(1); } 15% { opacity:1; transform:scale(1.1); } 28% { opacity:.8; transform:scale(1.04); } }
 .nc-disk { position:relative; }
 .nc-disk::before, .nc-disk::after { content:''; position:absolute; inset:-8px; border-radius:50%; pointer-events:none; }
-/* Une piste fine sous les anneaux qui tournent. */
-:is(.nc-diskslide, .nc-line-card)[data-mood="best"] > .nc-disk::after, :is(.nc-diskslide, .nc-line-card)[data-mood="benefit"] > .nc-disk::after { border:2px solid color-mix(in oklab, var(--c) 22%, transparent); }
+/* Une piste sous les anneaux qui tournent, de la même épaisseur qu'eux : l'arc court exactement sur elle, sans paraître décentré. */
+:is(.nc-diskslide, .nc-line-card)[data-mood="best"] > .nc-disk::after, :is(.nc-diskslide, .nc-line-card)[data-mood="benefit"] > .nc-disk::after { border:3px solid color-mix(in oklab, var(--c) 22%, transparent); }
 /* Tout va bien : l'anneau respire avec la lumière. */
 :is(.nc-diskslide, .nc-line-card)[data-mood="calm"] > .nc-disk::after { box-shadow:0 0 0 2px color-mix(in oklab, var(--c) 55%, transparent), 0 0 14px 2px color-mix(in oklab, var(--c) 30%, transparent);
   animation:nc-ring-breath 7s ease-in-out infinite; }
 @keyframes nc-ring-breath { 50% { box-shadow:0 0 0 3px color-mix(in oklab, var(--c) 85%, transparent), 0 0 22px 6px color-mix(in oklab, var(--c) 40%, transparent); transform:scale(1.05); } }
 /* Au mieux : un demi-anneau, comme la marque de la pastille. À saisir : une comète. */
 :is(.nc-diskslide, .nc-line-card)[data-mood="best"] > .nc-disk::before, :is(.nc-diskslide, .nc-line-card)[data-mood="benefit"] > .nc-disk::before {
-  -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));
-  mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px)); }
+  -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+  mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); }
 :is(.nc-diskslide, .nc-line-card)[data-mood="best"] > .nc-disk::before { background:conic-gradient(var(--c) 0 50%, transparent 50%); animation:nc-spin 8s linear infinite; }
 :is(.nc-diskslide, .nc-line-card)[data-mood="benefit"] > .nc-disk::before { background:conic-gradient(transparent 0 55%, color-mix(in oklab, var(--c) 40%, transparent) 80%, color-mix(in oklab, var(--c) 30%, var(--nw-fg)) 99%, transparent 100%);
   animation:nc-spin 3s linear infinite; }

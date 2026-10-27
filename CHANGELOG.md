@@ -1,3 +1,22 @@
+## 1.7.19 — Le graphique « Prochaines heures » enfin visible, un hub plus fluide
+
+**En bref**
+
+- **Le graphique « Prochaines heures » s’affiche** quand une aération est conseillée : il ne se montrait presque jamais.
+- **Plus de « Chargement… » sans fin** après avoir enregistré une pièce.
+
+### Améliorations
+
+- **Pièce chauffée** : un interrupteur en tête de l’onglet Chauffage. Éteint, il masque le thermostat et ses réglages.
+- **Aperçu de la carte** après l’enregistrement d’une pièce, sans recharger la page.
+
+### Corrections
+
+- Le graphique « Prochaines heures » ne voyait pas une aération conseillée « maintenant » : il se repliait au lieu de s’ouvrir.
+- « Retour à Mon logement » après un enregistrement restait bloqué sur « Chargement… ».
+- Plus de page fugace en cliquant sur « Modifier » depuis les Réglages généraux.
+- L’anneau tournant « Au mieux » est bien centré sur sa piste.
+
 ## 1.7.18 — Le bilan du logement, des entités qui disent ce que dit la carte, un hub refait
 
 Tout ce qui est nouveau depuis la 1.6.0.
