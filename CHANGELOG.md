@@ -1,3 +1,14 @@
+## 1.7.21 — Une seule liaison avec Niak Weather
+
+**En bref**
+
+- **Liaison avec Niak Weather** : elle se coupe ou se rétablit depuis Confort comme depuis Niak Weather, et les deux disent toujours la même chose.
+
+### Améliorations
+
+- Dans Niak Weather 2.9.0, Réglages → Extensions → Niak Confort : un interrupteur relie le lieu à Confort. Allumé, Confort reprend les mesures de ce lieu. Éteint, Confort garde ces capteurs comme les siens, sans l’air de Niak Weather.
+- Choisir « Vos propres capteurs » dans les Réglages généraux de Confort coupe aussi la liaison côté Niak Weather.
+
 ## 1.7.20 — Un indicateur de chauffe pour les thermostats muets
 
 **En bref**
