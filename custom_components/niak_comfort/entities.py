@@ -4,6 +4,7 @@ The verdict entities (advice, state, colour, gestures) belong to whoever the car
 shared air of several rooms. A room of a shared air keeps only its own measures (humidity, heating, learning)."""
 from datetime import timedelta
 
+from homeassistant.core import callback
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -205,10 +206,11 @@ class HomeEntity:
         self._listening = {}
 
     async def async_added_to_hass(self):
-        self.async_on_remove(async_track_time_interval(self.hass, lambda _now: self._attach(), timedelta(seconds=30)))
+        self.async_on_remove(async_track_time_interval(self.hass, callback(lambda _now: self._attach()), timedelta(seconds=30)))
         self.async_on_remove(lambda: [remove() for remove in self._listening.values()])
         self._attach()
 
+    @callback
     def _attach(self):
         """Listen to every loaded room; a room reloaded brings a new coordinator, listened to in turn."""
         current = {id(e.runtime_data): e.runtime_data for e in loaded_entries(self.hass) if getattr(e, "runtime_data", None)}

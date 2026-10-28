@@ -109,7 +109,7 @@ def ws_home_subscribe(hass, connection, msg):
         connection.send_message(websocket_api.event_message(msg["id"], {"version": 1, "reload": True}))
 
     removers = [c.async_add_listener(send) for c in coordinators]
-    removers.extend(hass.bus.async_listen(event, lambda _: send()) for event in
+    removers.extend(hass.bus.async_listen(event, callback(lambda _: send())) for event in
                     (ar.EVENT_AREA_REGISTRY_UPDATED, fr.EVENT_FLOOR_REGISTRY_UPDATED))
     for c in coordinators:
         c.stop_listeners.add(stopped)
