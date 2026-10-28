@@ -308,8 +308,9 @@ export class ComfortSetup extends LitElement {
  private begin(){this.confirmRemove=false;this.adding=false;this.busy=true;this.error='';this.saved='';this.preview=undefined;this.search={};this.confirmed=false;}
  private async start(area:{area_id:string;name:string}|null,name=''){
   if(!area&&!name.trim()){this.error='Donnez un nom à la pièce libre, par exemple « Étage » ou « Suite parentale ».';return;}
-  const workspace=this.workspaceGeneration;this.begin();
-  try{const d=await this.discover(area?.area_id);if(workspace!==this.workspaceGeneration)return;this.discovery=d;this.revision=d.revision;this.entryId=undefined;this.draft=newRoom(area,name.trim(),d);this.proposed=[...Object.values(this.draft.sources),...this.draft.windows];this.stage=0;this.acknowledged=[];this.freeName='';this.workspaceKey='nouvelle';this.path('nouvelle/temperature');}
+  // From the general settings their draft is kept for the way back, and gives way to the new room's.
+  const workspace=this.workspaceGeneration;this.remember();this.begin();
+  try{const d=await this.discover(area?.area_id);if(workspace!==this.workspaceGeneration)return;this.exteriorDraft=undefined;this.discovery=d;this.revision=d.revision;this.entryId=undefined;this.draft=newRoom(area,name.trim(),d);this.proposed=[...Object.values(this.draft.sources),...this.draft.windows];this.stage=0;this.acknowledged=[];this.freeName='';this.workspaceKey='nouvelle';this.path('nouvelle/temperature');}
   catch(e){this.error=this.message(e);}finally{this.busy=false;}
  }
  private async editRoom(room:Room,route=true){
