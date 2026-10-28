@@ -1,3 +1,9 @@
+## Non publié — Créer une pièce depuis les Réglages généraux
+
+### Corrections
+
+- Dans les Réglages généraux, « Créer » (pièce libre) ou le choix d'une pièce Home Assistant ne faisait que changer l'adresse : l'écran restait sur les réglages. La configuration de la nouvelle pièce s'ouvre maintenant.
+
 ## 1.7.21 — Une seule liaison avec Niak Weather
 
 **En bref**
