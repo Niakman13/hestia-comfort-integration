@@ -15,7 +15,7 @@
 
 Il conseille seulement : il ne commande aucun équipement.
 
-![Niak Confort — le confort de chaque pièce, expliqué : la carte d’une pièce qui conseille d’aérer vers 9 h, à côté de la carte du logement](docs/images/niak-comfort-banner.png)
+![Niak Confort — le confort de chaque pièce, expliqué : la carte d’une pièce qui conseille d’aérer 40 à 50 min, entre l’aération apprise et le bilan du logement](docs/images/niak-comfort-banner.png)
 
 ## Pourquoi
 
