@@ -13,7 +13,6 @@
 
 **Le confort de chaque pièce, expliqué.** Niak Confort regarde vos pièces et le temps dehors. Il dit en une phrase quoi faire : ouvrir, fermer, attendre ou rien. Et il dit pourquoi.
 
-Il conseille seulement : il ne commande aucun équipement.
 
 ![Niak Confort — le confort de chaque pièce, expliqué : la carte d’une pièce qui conseille d’aérer 40 à 50 min, entre l’aération apprise et le bilan du logement](docs/images/niak-comfort-banner.png)
 
