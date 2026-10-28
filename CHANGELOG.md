@@ -1,3 +1,13 @@
+## 1.7.23 — Journal de Home Assistant allégé
+
+**En bref**
+
+- **Plus d’avertissements de thread** : les entités « Mon logement » ne remplissent plus le journal toutes les 30 secondes (issue #37).
+
+### Corrections
+
+- Le minuteur de 30 s des entités « Mon logement » et l’écoute des changements de pièces et d’étages exécutaient leur code hors de la boucle d’événements de Home Assistant, ce qui provoquait des avertissements répétés. Ils s’exécutent maintenant dans la boucle.
+
 ## 1.7.22 — Créer une pièce depuis les Réglages généraux
 
 **En bref**
