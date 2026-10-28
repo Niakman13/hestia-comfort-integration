@@ -15,7 +15,7 @@
 
 Il conseille seulement : il ne commande aucun équipement.
 
-![Niak Confort — le confort de chaque pièce, expliqué : la carte d’une pièce qui conseille d’aérer vers 23 h, à côté de la carte du logement](docs/images/niak-comfort-banner.png)
+![Niak Confort — le confort de chaque pièce, expliqué : la carte d’une pièce qui conseille d’aérer vers 9 h, à côté de la carte du logement](docs/images/niak-comfort-banner.png)
 
 ## Pourquoi
 
@@ -37,7 +37,7 @@ Toute la famille lit la même carte. Elle ne parle que quand un geste aide vraim
 
 - Home Assistant **2026.10** ou plus récent.
 - Un thermomètre dans chaque pièce à suivre. C’est le seul capteur obligatoire.
-- En plus, si vous en avez : humidité, CO₂, contacts de fenêtres, thermostat (Versatile Thermostat reconnu tout seul), VMC, purificateur, volets (Adaptive Cover Pro reconnu tout seul), présence.
+- En plus, si vous en avez : humidité, CO₂, contacts de fenêtres, thermostat, VMC, purificateur, volets, présence. Les [extensions](#les-extensions) sont reconnues toutes seules.
 - Pour l’extérieur : [Niak Weather](https://github.com/Niakman13/niak-weather-integration) (conseillé) ou vos propres capteurs.
 
 ## Installation
@@ -81,7 +81,7 @@ La couleur dit s’il y a quelque chose à faire :
 - **orange** : un geste conseillé maintenant ;
 - **rouge** : urgent (la pluie entre).
 
-![Quatre pièces : tout va bien, aérer plus tard, lancer la VMC, fermer car il pleut](docs/images/niak-comfort-situations.png)
+![Quatre pièces : au mieux, aérer vers 9 h, aérer maintenant, fermer car il pleut](docs/images/niak-comfort-situations.png)
 
 Sous l’échelle, le graphique **« Prochaines heures »** montre la pièce sans le geste conseillé et avec : vous voyez ce qu’il change.
 
@@ -97,64 +97,80 @@ Une note de confort de **A à E**, pour le logement et pour chaque pièce, sur l
 - La fiche de chaque pièce : mois par mois, une journée type l’hiver et l’été.
 - Des conseils seulement s’il y a un problème qui dure : chauffer une pièce restée trop froide, faire tourner la VMC, ouvrir la nuit après un été chaud.
 
+![Le bilan du logement : la note B, la chaleur, l’humidité et l’air sur douze mois, puis les conseils et la note de chaque pièce](docs/images/niak-comfort-bilan.png)
+
 Il est dans le panneau **Niak**, onglet **Confort**, sous **Accueil**. La carte **Niak Confort · bilan** le montre à toute la famille. Il faut deux semaines de mesures pour noter un thème. [Le bilan en détail](docs/guide.md#le-bilan-du-logement).
 
 ## Le panneau Niak
 
 Tout se règle dans le panneau **Niak** de la barre latérale, onglet **Confort**. Pas de YAML, pas de nom d’entité à connaître.
 
-![Le panneau Niak, onglet Confort : l’accueil, avec chaque pièce, ses mesures et son apprentissage](docs/images/niak-comfort-panneau.png)
+![Le panneau Niak, onglet Confort : l’accueil, avec chaque pièce, ce qu’elle a observé et ce qui lui reste à apprendre](docs/images/niak-comfort-panneau.png)
 
 - **Accueil** : à lire seulement. L’état du logement, ce qui reste à régler, l’apprentissage de chaque pièce, l’état des extensions, puis **Versions et liens**. Une pièce s’ouvre sur son bilan.
 - **Bilan du logement** : la note et la fiche de chaque pièce.
-- **Réglages généraux** : tout ce qui se modifie. Les pièces (**Modifier**, **Ajouter une pièce**), Niak Weather ou vos propres capteurs pour le dehors, puis les **extensions** : Niak Weather, Versatile Thermostat, Adaptive Cover Pro et Alarmo. Chacune dit à quoi elle sert et a un interrupteur pour l’activer ou la couper. Coupée, elle n’est lue dans aucune pièce. Les extensions trouvées que Confort ne lit pas encore peuvent être demandées en un clic.
+- **Réglages généraux** : tout ce qui se modifie. Les pièces (**Modifier**, **Ajouter une pièce**), le dehors, puis les [extensions](#les-extensions).
 - Une pièce se règle en six onglets : Température, Ouvertures, Air intérieur, Présence, Chauffage, La pièce.
 
 Chaque réglage a son aide. Les seuils sont expliqués avec leurs sources ([les repères](docs/SEUILS.md)).
 
-## Avec Niak Weather et l’écosystème Niak
+## Les extensions
 
-Niak Confort fonctionne seul. Avec [Niak Weather](https://github.com/Niakman13/niak-weather-integration), il devient plus malin :
+Niak Confort fonctionne seul. Chaque extension installée le rend plus juste, là où elle sert. Elles se règlent toutes au même endroit : **Réglages généraux → Extensions**.
 
-- l’extérieur se règle en un clic : la station de votre lieu Weather ;
-- il anticipe : « Refermez avant la pluie », « Ouvrez vers 22 h », rafraîchir la nuit avant une journée chaude ;
-- il prévoit la nuit quand une pièce a chaud : « Cette nuit : ouvrez de 22 h à 7 h · 1,8 °C de mieux demain au plus chaud ». Il tient compte des murs, qui gardent la fraîcheur, et du soleil qui entre quand on relève les volets. Une idée inspirée de [NADIR](https://github.com/solal3105/NADIR2), de Solal Gendrin ;
-- il tient compte des vigilances et des orages ;
-- l’air du dehors suit la source choisie dans Weather (Atmo France ou une station WAQI). Si Atmo France tombe en panne, Confort garde l’indice du jour. Il faut Niak Weather 2.5.7 ou plus récent.
+![Les extensions dans les Réglages généraux : Niak Weather, puis Versatile Thermostat, Adaptive Cover Pro et Alarmo avec leur interrupteur, et Scheduler détecté, à proposer](docs/images/niak-comfort-extensions.png)
 
-La liaison se règle des deux côtés, et les deux disent toujours la même chose : dans Niak Weather 2.9.0 ou plus récent, **Réglages → Extensions → Niak Confort** ; dans Confort, **Réglages généraux**. Coupée d’un côté, elle l’est des deux.
+| Extension | Ce qu’elle apporte |
+| --- | --- |
+| [Niak Weather](https://github.com/Niakman13/niak-weather-integration) | Le dehors pour toutes les pièces, avec les prévisions, les vigilances et l’air |
+| [Versatile Thermostat](https://github.com/jmcollin78/versatile_thermostat) | La consigne et la raison d’un arrêt : plus de « Rallumez » quand le thermostat s’en charge |
+| [Adaptive Cover Pro](https://github.com/jrhubott/adaptive-cover-pro) | Les volets pilotés avec le soleil : Confort sait quand ils se ferment |
+| [Alarmo](https://github.com/nielsfaber/alarmo) | Maison vide, nuit, vacances : une fenêtre ouverte alarme armée est signalée |
 
-Les deux briques partagent le panneau **Niak** et la même charte. L’**Accueil Niak** montre l’état de chacune.
+Chacune est reconnue toute seule : rien à renseigner. Niak Weather se choisit pour le dehors, à la place de vos propres capteurs. Les extensions tierces ont un interrupteur ; coupée, une extension n’est lue dans aucune pièce.
 
-## Avec Versatile Thermostat
+**Confort repère aussi les extensions qu’il pourrait lire.** Il en trouve une dans votre Home Assistant, Scheduler par exemple ? Elle apparaît sous **Détectées, pas encore lues par Confort**, avec ce qu’elle pourrait apporter. **Demander** ouvre une demande toute prête sur GitHub ; rien n’est envoyé sans vous.
 
-Le chauffage d’une pièce est un [Versatile Thermostat](https://github.com/jmcollin78/versatile_thermostat) ? Niak le reconnaît tout seul, dès que vous le choisissez dans l’onglet **Chauffage** :
+### Niak Weather
 
-- sa consigne sert de minimum à la pièce : en éco à 17 °C, une pièce à 18 °C n’est pas « trop fraîche ». En hors-gel, c’est sa température confort qui compte ;
-- Niak sait pourquoi il est arrêté. Seul un arrêt à la main donne « Rallumez le chauffage ». Arrêté par une fenêtre ouverte ou par lui-même, il repartira seul : la carte l’explique ;
+L’extension officielle, de la même famille. Avec elle, Confort :
+
+- règle le dehors en un clic : la station de votre lieu Weather ;
+- anticipe : « Refermez avant la pluie », « Ouvrez vers 22 h », rafraîchir la nuit avant une journée chaude ;
+- prévoit la nuit quand une pièce a chaud : « Cette nuit : ouvrez de 22 h à 7 h · 1,8 °C de mieux demain au plus chaud ». Il tient compte des murs, qui gardent la fraîcheur, et du soleil qui entre quand on relève les volets. Une idée inspirée de [NADIR](https://github.com/solal3105/NADIR2), de Solal Gendrin ;
+- tient compte des vigilances et des orages ;
+- suit la source d’air choisie dans Weather (Atmo France ou une station WAQI).
+
+Sans elle, choisissez **Vos propres capteurs** : une mesure à la fois, toutes facultatives. La liaison se règle des deux côtés et les deux disent toujours la même chose : dans Niak Weather 2.9.0 ou plus récent, **Réglages → Extensions → Niak Confort**. Coupée d’un côté, elle l’est des deux. Les deux briques partagent le panneau **Niak** et la même charte.
+
+### Versatile Thermostat
+
+Dès que vous le choisissez dans l’onglet **Chauffage** d’une pièce :
+
+- sa consigne sert de minimum à la pièce : en éco à 17 °C, une pièce à 18 °C n’est pas « trop fraîche » ;
+- seul un arrêt à la main donne « Rallumez le chauffage ». Arrêté par une fenêtre ouverte ou par lui-même, il repartira seul : la carte l’explique ;
 - en éco, hors-gel ou absence, une pièce plus fraîche est voulue : Niak ne demande rien ;
 - la fenêtre ouverte qu’il détecte est signalée, même sans contact sur la fenêtre.
 
 Un autre thermostat ne dit pas s’il chauffe ? Choisissez son **indicateur de chauffe** (vanne, relais, état de marche) dans l’onglet **Chauffage** : l’apprentissage du chauffage peut alors aller jusqu’au bout.
 
-Sans Versatile Thermostat, « Rallumez le chauffage » attend que la pièce soit nettement sous son minimum (1 °C par défaut, réglable) depuis 30 minutes. Niak ne commande rien. Il faut Niak Confort 1.5.0 ou plus récent.
+### Adaptive Cover Pro
 
-## Avec Alarmo et vos personnes
+Dès que vous choisissez le volet d’une fenêtre :
 
-- [Alarmo](https://github.com/nielsfaber/alarmo) est reconnu tout seul. Pour ne pas en tenir compte, coupez-le dans **Réglages généraux → Extensions**. Armée en absence, la maison est vide et une fenêtre ouverte devient urgente ; en mode nuit, elle est signalée.
-- Dans l’onglet **Présence** de chaque pièce, cochez les personnes à qui elle sert : la chambre de quelqu’un qui est parti compte comme vide.
-
-## Avec Adaptive Cover Pro
-
-Vos volets sont pilotés par [Adaptive Cover Pro](https://github.com/jrhubott/adaptive-cover-pro) ? Niak le reconnaît tout seul, dès que vous choisissez le volet d’une fenêtre :
-
-- il lit ses interrupteurs (intégration, pilotage automatique, suivi du soleil, mode climat, détection de la reprise à la main) : rien à renseigner ;
-- il reprend l’orientation exacte de la fenêtre, sa largeur et sa hauteur ;
+- Niak lit ses interrupteurs (pilotage automatique, suivi du soleil, mode climat, reprise à la main) et l’orientation exacte de la fenêtre ;
 - quand Adaptive Cover Pro pilote le volet, Niak ne vous demande pas de le faire ;
-- s’il est coupé, Niak vous prévient, même avant que le soleil n’arrive : « à fermer avant 13 h 50 » ;
+- s’il est coupé, Niak prévient avant que le soleil n’arrive : « à fermer avant 13 h 50 » ;
 - la carte a une tuile **Volet** : position, et qui le pilote.
 
-Niak ne commande toujours rien. Il faut Niak Confort 1.1.3 ou plus récent. Voir [le guide](docs/guide.md#avec-adaptive-cover-pro).
+[Plus de détails](docs/guide.md#avec-adaptive-cover-pro).
+
+### Alarmo et vos personnes
+
+- Armée en absence, la maison est vide et une fenêtre ouverte devient urgente ; en mode nuit, elle est signalée.
+- Dans l’onglet **Présence** de chaque pièce, cochez les personnes à qui elle sert : la chambre de quelqu’un qui est parti compte comme vide.
+
+Niak ne commande aucune de ces extensions : il les lit.
 
 ## Pour vos automatisations
 
