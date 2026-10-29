@@ -5,7 +5,7 @@ ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntries,ConfigEntry,ConfigEntryState
 from homeassistant.helpers import area_registry as ar,floor_registry as fr,device_registry as dr,entity_registry as er
-from custom_components.niak_comfort.configuration import Configuration
+from custom_components.hestia_comfort.configuration import Configuration
 
 async def main():
  with tempfile.TemporaryDirectory() as tmp:
@@ -24,7 +24,7 @@ async def main():
    hass.states.async_set(eid,value,attrs)
   config={'name':'Salon','area_id':area.id,'sources':{'indoor_temperature':'sensor.demo_temperature','indoor_humidity':'sensor.demo_humidity','co2':'sensor.demo_co2'},'windows':['binary_sensor.demo_window'],'openings':{'binary_sensor.demo_window':{'exposure':'O','kind':'window','sheltered':False,'shutter':'manual'}},'settings':{'minimum':20,'maximum':24},'presence':[],'evolution':{}}
   service=Configuration(hass);cleaned,_=service.validate(config)
-  entry=ConfigEntry(domain='niak_comfort',title='Salon',unique_id=area.id,version=1,minor_version=1,source='user',data=cleaned,options={},discovery_keys={},subentries_data=[])
+  entry=ConfigEntry(domain='hestia_comfort',title='Salon',unique_id=area.id,version=1,minor_version=1,source='user',data=cleaned,options={},discovery_keys={},subentries_data=[])
   hass.config_entries._entries[entry.entry_id]=entry;entry._async_set_state(hass,ConfigEntryState.LOADED,None)
   device=dr.async_get(hass).async_get_or_create(config_entry_id=entry.entry_id,identifiers={('demo','ikea-voc')},manufacturer='IKEA',model='VINDSTYRKA air quality and humidity sensor')
   er.async_get(hass).async_update_entity('sensor.demo_voc',device_id=device.id)

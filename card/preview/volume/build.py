@@ -1,7 +1,7 @@
 """Builds maquette.html: the compiled card, the engine's situations, one file that opens anywhere."""
 from pathlib import Path
 here = Path(__file__).parent
-bundle = (here.parents[2] / "custom_components" / "niak_comfort" / "frontend" / "niak-comfort-card.js").read_text()
+bundle = (here.parents[2] / "custom_components" / "hestia_comfort" / "frontend" / "hestia-comfort-card.js").read_text()
 scenes = (here / "scenes.json").read_text()
 style = (here.parent / "conseils" / "build.py").read_text().split("<style>")[1].split("</style>")[0]
 page = """<!doctype html>
@@ -39,7 +39,7 @@ h2{font-size:19px;margin:34px 0 4px}
 </script>
 <script type="module">
 const data=__SCENES__;
-await customElements.whenDefined('niak-comfort-card');
+await customElements.whenDefined('hestia-comfort-card');
 const views={};
 for(const s of data.scenes){views[s.salon.entry_id]=s.salon;views[s.cuisine.entry_id]=s.cuisine;
   // « Avant » : the same rooms as two separate cards, without the shared air.
@@ -48,7 +48,7 @@ const fresh=v=>({...structuredClone(v),computed_at:new Date().toISOString()});
 const dark=()=>document.documentElement.dataset.theme==='dark';
 const hass=()=>({themes:{darkMode:dark()},connection:{async subscribeMessage(cb,m){
     // Like Home Assistant, a fresh view every 30 s: the card treats a silent link as stale after 75 s.
-    const send=()=>m.type==='niak_comfort/home_subscribe'?cb({...data.home,rooms:data.home.rooms.map(fresh)}):cb({version:1,view:fresh(views[m.entry_id])});
+    const send=()=>m.type==='hestia_comfort/home_subscribe'?cb({...data.home,rooms:data.home.rooms.map(fresh)}):cb({version:1,view:fresh(views[m.entry_id])});
     send();const t=setInterval(send,30000);return ()=>clearInterval(t);}},
   async callWS(){return data.entries;}});
 // The room picker, grouped as the card editor now groups it.
@@ -57,13 +57,13 @@ for(const e of data.entries){if(done.has(e.entry_id))continue;[e.entry_id,...e.v
   const d=document.createElement('div');d.className='opt'+(e.volume.length?' on':'');d.textContent=e.volume.length?e.volume_name:e.title;picker.append(d);}
 const cards=[];
 const make=(where,id,format,title,note)=>{const fig=document.createElement('figure');fig.innerHTML=`<figcaption><b>${title}</b><span>${note??''}</span></figcaption>`;
-  const c=document.createElement('niak-comfort-card');c.setConfig({type:'custom:niak-comfort-card',entry_id:id,format});fig.append(c);document.getElementById(where).append(fig);cards.push(c);};
+  const c=document.createElement('hestia-comfort-card');c.setConfig({type:'custom:hestia-comfort-card',entry_id:id,format});fig.append(c);document.getElementById(where).append(fig);cards.push(c);};
 const first=data.scenes[0];
 make('before','avant-'+first.salon.entry_id,'tile','Salon','Aujourd’hui, deux bandeaux pour un même air.');
 make('before','avant-'+first.cuisine.entry_id,'tile','Cuisine','');
 for(const s of data.scenes)make('after',s.salon.entry_id,'tile',s.title,s.note);
 make('full',data.scenes[2].salon.entry_id,'full','Porte-fenêtre ouverte, format complet','Les mesures de chaque pièce sous son nom.');
-const home=document.createElement('niak-comfort-home-card');home.setConfig({type:'custom:niak-comfort-home-card',rooms_open:true});
+const home=document.createElement('hestia-comfort-home-card');home.setConfig({type:'custom:hestia-comfort-home-card',rooms_open:true});
 document.getElementById('home').append(home);cards.push(home);
 const apply=()=>{const h=hass();for(const c of cards)c.hass=h;};apply();
 document.querySelectorAll('[data-theme-set]').forEach(b=>b.addEventListener('click',()=>{document.documentElement.dataset.theme=b.dataset.themeSet;

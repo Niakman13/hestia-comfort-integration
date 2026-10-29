@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 import unittest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "niak_comfort"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "hestia_comfort"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from engine.assessment import Opening, Settings, Sun, absolute_humidity, assess, seasonal
 from engine.sources import Reading
@@ -84,7 +84,7 @@ class SteadySun(unittest.TestCase):
     def test_a_passing_cloud_does_not_make_the_sun_come_and_go(self):
         """21 October at 12 h 44: the station falls to 78 W/m² for one minute between 470 and 500."""
         try:
-            from custom_components.niak_comfort.coordinator import ComfortCoordinator
+            from custom_components.hestia_comfort.coordinator import ComfortCoordinator
         except ImportError:
             self.skipTest("Home Assistant is not installed")
         from collections import deque

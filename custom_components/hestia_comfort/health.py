@@ -180,13 +180,13 @@ def report(f):
     # Extensions: Hestia's own bricks, then other integrations Hestia reads by itself, each making the advice better where it is used.
     vt = [r.title for r in f.rooms if r.thermostat]
     acp = [r.title for r in f.rooms if r.driven_covers]
-    linked = {"niak_weather": [f.weather] if f.weather else [], thermostats.PLATFORM: vt, "adaptive_cover_pro": acp, people.PLATFORM: [f.alarm] if f.alarm else []}
-    installed = {"niak_weather": f.weather_installed}
+    linked = {"hestia_weather": [f.weather] if f.weather else [], thermostats.PLATFORM: vt, "adaptive_cover_pro": acp, people.PLATFORM: [f.alarm] if f.alarm else []}
+    installed = {"hestia_weather": f.weather_installed}
     extensions = []
     for ext in EXTENSIONS:
         found = linked[ext["key"]]
         state = "off" if ext["key"] in f.disabled else "linked" if found else "found" if installed.get(ext["key"], ext["key"] in f.installed) else "missing"
-        text = (t("relié · {place}", place=f.weather) if ext["key"] == "niak_weather" else f.alarm if ext["key"] == people.PLATFORM
+        text = (t("relié · {place}", place=f.weather) if ext["key"] == "hestia_weather" else f.alarm if ext["key"] == people.PLATFORM
                 else _count(len(found), "{n} pièce", "{n} pièces") + " · " + ", ".join(found)) if found and state != "off" else t("désactivée") if state == "off" else t(ext[state])
         extensions.append({**{k: ext[k] for k in ("key", "name", "official", "url")}, **{k: t(ext[k]) for k in ("role", "use", "without")},
                            "state": state, "level": "ok" if found else "none", "text": text, "rooms": found if ext["key"] in (thermostats.PLATFORM, "adaptive_cover_pro") else []})
@@ -208,7 +208,7 @@ def report(f):
 
 
 EXTENSIONS = (
-    {"key": "niak_weather", "name": "Hestia Weather", "official": True, "url": "https://github.com/hestiaFB/hestia-weather-integration",
+    {"key": "hestia_weather", "name": "Hestia Weather", "official": True, "url": "https://github.com/hestiaFB/hestia-weather-integration",
      "role": N_("Extérieur, prévisions, pluie, vigilances"),
      "use": N_("Le dehors pour toutes les pièces : température, humidité, pluie, vent, soleil, saison, pollution, alertes et prévisions."),
      "without": N_("Sans lui : vos propres capteurs, sans prévisions ni alertes."),
@@ -316,7 +316,7 @@ async def facts(hass, version):
                 sensor.status = "stale"
         rooms.append(room)
     home = service.live_sources()
-    exterior = [_weather_air(spec) if spec.get("adapter") == "niak_air" else _sensor(hass, key, spec["entity_id"], now)
+    exterior = [_weather_air(spec) if spec.get("adapter") == "hestia_air" else _sensor(hass, key, spec["entity_id"], now)
                 for key, spec in home.items() if spec.get("entity_id")]
     for sensor in exterior:
         if sensor.status == "ok" and sensor.entity_id and sensor.entity_id in stale:

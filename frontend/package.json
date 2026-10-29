@@ -1,6 +1,6 @@
 {
-  "name": "niak-comfort-configuration",
-  "version": "1.7.27",
+  "name": "hestia-comfort-configuration",
+  "version": "2.0.0b1",
   "private": true,
   "type": "module",
   "scripts": {

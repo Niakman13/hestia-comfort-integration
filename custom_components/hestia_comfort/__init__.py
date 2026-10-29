@@ -9,8 +9,9 @@ from .configuration import get_configuration
 from .panel import CARD_URL, async_setup_panel
 from .socle import async_remove_card
 from .air_references import apply_air_references, apply_freshness
-from .api import API_KEY, NiakComfortApi
+from .api import API_KEY, HestiaComfortApi
 from .entities import async_clean, home_clean
+from .domain_migration import async_setup_migration
 
 PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR]
 
@@ -18,8 +19,10 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass, config):
+    # A home installed under the former technical name is carried over: its files now, the rest once Home Assistant has started.
+    await async_setup_migration(hass)
     # What Hestia Confort publishes for the other bricks (the rooms and what their twins learned).
-    hass.data.setdefault(API_KEY, NiakComfortApi(hass))
+    hass.data.setdefault(API_KEY, HestiaComfortApi(hass))
     async_setup_websocket(hass)
     await get_configuration(hass)
     await async_setup_panel(hass)

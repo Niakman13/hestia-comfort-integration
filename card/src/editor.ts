@@ -105,7 +105,7 @@ export class ComfortEditor extends LitElement {
   protected shouldUpdate(changed:Map<PropertyKey,unknown>){
     // Home Assistant pushes every state change to editors: nothing here depends on them.
     if(changed.has('hass')&&!this.asked&&this.hass){this.asked=true;
-      this.hass.callWS<Entry[]>({type:'niak_comfort/entries'}).then(e=>{this.entries=e;},()=>{this.entries=null;});}
+      this.hass.callWS<Entry[]>({type:'hestia_comfort/entries'}).then(e=>{this.entries=e;},()=>{this.entries=null;});}
     return !(changed.size===1&&changed.has('hass'));
   }
   private schema(){
@@ -151,7 +151,7 @@ export class ComfortEditor extends LitElement {
       <ha-form .hass=${this.hass} .data=${data} .schema=${this.schema()} .computeLabel=${labelFor(c.format)} .computeHelper=${helperFor} @value-changed=${this.changed}></ha-form>`;
   }
 }
-if(!customElements.get('niak-comfort-card-editor'))customElements.define('niak-comfort-card-editor',ComfortEditor);
+if(!customElements.get('hestia-comfort-card-editor'))customElements.define('hestia-comfort-card-editor',ComfortEditor);
 
 const HOME_DEFAULTS:Record<string,unknown>={format:'full',sections:[...SHOWN_SECTIONS],folded:[...FOLDED_SECTIONS],more_open:false,period:'day',animations:true,glass_effect:true,rotate:true,show_scale:true,show_rooms:true,rooms_open:false,show_details:true,details_open:false,
   banner_blocks:['rooms','house'],list_order:'urgent',hold_action:'popup'};
@@ -196,4 +196,4 @@ export class ComfortHomeEditor extends LitElement {
       <ha-form .hass=${this.hass} .data=${data} .schema=${this.schema()} .computeLabel=${labelFor(c.format)} .computeHelper=${helperFor} @value-changed=${this.changed}></ha-form>`;
   }
 }
-if(!customElements.get('niak-comfort-home-card-editor'))customElements.define('niak-comfort-home-card-editor',ComfortHomeEditor);
+if(!customElements.get('hestia-comfort-home-card-editor'))customElements.define('hestia-comfort-home-card-editor',ComfortHomeEditor);

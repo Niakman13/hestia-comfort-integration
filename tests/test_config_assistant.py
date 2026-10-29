@@ -2,10 +2,10 @@
 from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
 from homeassistant.helpers.entity import EntityCategory
 import test_ha_adapter
-from custom_components.niak_comfort.config_flow import ComfortConfigFlow
-from custom_components.niak_comfort.configuration import Configuration
-from custom_components.niak_comfort.discovery import catalog, suggestions
-from custom_components.niak_comfort import weather_link
+from custom_components.hestia_comfort.config_flow import ComfortConfigFlow
+from custom_components.hestia_comfort.configuration import Configuration
+from custom_components.hestia_comfort.discovery import catalog, suggestions
+from custom_components.hestia_comfort import weather_link
 
 
 class AssistantTests(test_ha_adapter.AdapterFixture):
@@ -193,38 +193,38 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
             def station(self, entry_id=None): return {"entry_id": "nw1", "title": "Gardanne", "sensors": sensors}
             def hourly(self, entry_id=None): return list(hours)
             def add_listener(self, entry_id, cb): listeners.append(cb); return lambda: listeners.remove(cb)
-        self.hass.data['niak_weather_api'] = Api()
+        self.hass.data['hestia_weather_api'] = Api()
         return listeners
 
-    def niak_entity(self, domain, key, object_id, state, attrs=None):
-        er.async_get(self.hass).async_get_or_create(domain, 'niak_weather', f'nw1_{key}', suggested_object_id=object_id)
+    def weather_entity(self, domain, key, object_id, state, attrs=None):
+        er.async_get(self.hass).async_get_or_create(domain, 'hestia_weather', f'nw1_{key}', suggested_object_id=object_id)
         self.hass.states.async_set(f'{domain}.{object_id}', state, attrs or {})
 
-    async def test_niak_weather_station_fills_the_exterior(self):
+    async def test_hestia_weather_station_fills_the_exterior(self):
         self.register('sensor.gw_out', 'temperature', area='exterieur')
         self.register('sensor.gw_dir', 'wind_direction', area='exterieur', unit='°', value='270')
         self.link_weather({'temperature': 'sensor.gw_out', 'wind_bearing': 'sensor.gw_dir', 'pressure': 'sensor.p'})
-        self.niak_entity('binary_sensor', 'pluie_en_cours', 'niak_weather_pluie_en_cours', 'off')
-        self.niak_entity('sensor', 'qualite_air', 'niak_weather_qualite_air', '2')
+        self.weather_entity('binary_sensor', 'pluie_en_cours', 'hestia_weather_pluie_en_cours', 'off')
+        self.weather_entity('sensor', 'qualite_air', 'hestia_weather_qualite_air', '2')
         found = self.service.weather_proposal()
         self.assertEqual(found['title'], 'Gardanne')
         self.assertEqual(found['sources']['outdoor_temperature'], {'entity_id': 'sensor.gw_out', 'adapter': 'direct'})
         self.assertEqual(found['sources']['wind_bearing']['entity_id'], 'sensor.gw_dir')
-        self.assertEqual(found['sources']['rain'], {'entity_id': 'binary_sensor.niak_weather_pluie_en_cours', 'adapter': 'binary'})
-        self.assertEqual(found['sources']['pollution']['adapter'], 'niak_index')
+        self.assertEqual(found['sources']['rain'], {'entity_id': 'binary_sensor.hestia_weather_pluie_en_cours', 'adapter': 'binary'})
+        self.assertEqual(found['sources']['pollution']['adapter'], 'hestia_index')
         cleaned, _ = self.service.validate({'sources': found['sources'], 'weather': 'nw1'}, home=True)
         self.assertEqual(cleaned['weather'], 'nw1')
         with self.assertRaises(ValueError):
             self.service.validate({'sources': {}, 'weather': 'gone'}, home=True)
 
-    async def test_niak_weather_link_set_from_either_side_is_one_link(self):
+    async def test_hestia_weather_link_set_from_either_side_is_one_link(self):
         """Hestia Weather's settings link or unlink through Confort's interface: the home then says the same on both sides."""
-        from custom_components.niak_comfort.api import NiakComfortApi
-        from custom_components.niak_comfort.configuration import DATA_CONFIG
+        from custom_components.hestia_comfort.api import HestiaComfortApi
+        from custom_components.hestia_comfort.configuration import DATA_CONFIG
         self.register('sensor.gw_out', 'temperature', area='exterieur')
         self.link_weather({'temperature': 'sensor.gw_out'})
         self.hass.data[DATA_CONFIG] = self.service
-        api = NiakComfortApi(self.hass)
+        api = HestiaComfortApi(self.hass)
         self.assertIsNone(api.weather())
         self.assertEqual(await api.set_weather('nw1'), 'nw1')
         self.assertEqual(self.service.snapshot()['home']['weather'], 'nw1')
@@ -236,24 +236,24 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         with self.assertRaises(ValueError):
             await api.set_weather('gone')
 
-    async def test_niak_weather_air_without_an_entity_is_kept(self):
+    async def test_hestia_weather_air_without_an_entity_is_kept(self):
         """Hestia Weather 2.5.7 gives its air through api.air() (here a WAQI station): taking its station must keep it."""
         self.register('sensor.gw_out', 'temperature', area='exterieur')
         self.link_weather({'temperature': 'sensor.gw_out'})
-        api = self.hass.data['niak_weather_api']
+        api = self.hass.data['hestia_weather_api']
         type(api).air = lambda self, entry_id=None: {'entry_id': 'nw1', 'source': 'waqi', 'provider': 'WAQI', 'entity_id': 'sensor.waqi_marseille', 'index': 2, 'label': 'Moyen', 'at': None}
         found = self.service.weather_proposal()
-        self.assertEqual(found['sources']['pollution'], {'entity_id': 'sensor.waqi_marseille', 'adapter': 'niak_air', 'block_from': 4})
+        self.assertEqual(found['sources']['pollution'], {'entity_id': 'sensor.waqi_marseille', 'adapter': 'hestia_air', 'block_from': 4})
         self.assertEqual(found['air'], {'provider': 'WAQI', 'index': 2, 'label': 'Moyen'})
         cleaned, _ = self.service.validate({'sources': {**found['sources'], 'pollution': {**found['sources']['pollution'], 'block_from': 3}}, 'weather': 'nw1'}, home=True)
-        self.assertEqual(cleaned['sources']['pollution'], {'entity_id': 'sensor.waqi_marseille', 'adapter': 'niak_air', 'block_from': 3})
+        self.assertEqual(cleaned['sources']['pollution'], {'entity_id': 'sensor.waqi_marseille', 'adapter': 'hestia_air', 'block_from': 3})
         with self.assertRaises(ValueError):
-            self.service.validate({'sources': {'pollution': {'entity_id': 'sensor.other', 'adapter': 'niak_air'}}, 'weather': 'nw1'}, home=True)
+            self.service.validate({'sources': {'pollution': {'entity_id': 'sensor.other', 'adapter': 'hestia_air'}}, 'weather': 'nw1'}, home=True)
 
     async def test_a_season_sensor_is_an_exterior_source(self):
         """Without Hestia Weather, the Season integration's sensor gives the hours an airing can be asked for."""
-        from custom_components.niak_comfort.discovery import candidate
-        from custom_components.niak_comfort.exterior import exterior_reading
+        from custom_components.hestia_comfort.discovery import candidate
+        from custom_components.hestia_comfort.exterior import exterior_reading
         from homeassistant.util import dt as dt_util
         self.register('sensor.season', 'enum', area='exterieur', value='autumn', unit=None, platform='season')
         self.register('sensor.saison_maison', None, area='exterieur', value='Été', unit=None)
@@ -265,36 +265,36 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         reading = exterior_reading(self.hass.states.get('sensor.saison_maison'), 'season', spec, now=dt_util.utcnow(), max_age=1800)
         self.assertEqual((reading.value, reading.quality), ('summer', 'valid'))
 
-    async def test_niak_weather_gives_its_season(self):
+    async def test_hestia_weather_gives_its_season(self):
         self.register('sensor.gw_out', 'temperature', area='exterieur')
         self.link_weather({'temperature': 'sensor.gw_out'})
-        api = self.hass.data['niak_weather_api']
+        api = self.hass.data['hestia_weather_api']
         type(api).season = lambda self, entry_id=None: {'entry_id': 'nw1', 'season': 'autumn', 'label': 'Automne'}
         self.assertEqual(self.service.weather_proposal()['season'], 'autumn')
 
-    async def test_niak_weather_knows_niak_comfort_listens(self):
+    async def test_hestia_weather_knows_hestia_comfort_listens(self):
         """Hestia Weather 2.1+ is told who listens, so its settings show « Relié à Hestia Confort »."""
         heard = []
         class Api:
             version = 1
             def add_listener(self, entry_id, update, brick=None): heard.append((entry_id, brick)); return lambda: None
-        self.hass.data['niak_weather_api'] = Api()
+        self.hass.data['hestia_weather_api'] = Api()
         weather_link.listen(self.hass, 'nw1', lambda: None)
-        self.assertEqual(heard, [('nw1', 'niak_comfort')])
+        self.assertEqual(heard, [('nw1', 'hestia_comfort')])
 
-    async def test_an_older_niak_weather_is_still_followed(self):
+    async def test_an_older_hestia_weather_is_still_followed(self):
         listeners = self.link_weather({})
         stop = weather_link.listen(self.hass, 'nw1', lambda: None)
         self.assertEqual(len(listeners), 1)
         stop()
         self.assertEqual(listeners, [])
 
-    async def test_without_niak_weather_nothing_is_invented(self):
-        self.assertFalse(self.service.snapshot()['niak_weather']['installed'])
+    async def test_without_hestia_weather_nothing_is_invented(self):
+        self.assertFalse(self.service.snapshot()['hestia_weather']['installed'])
         with self.assertRaises(ValueError):
             self.service.weather_proposal()
-        self.hass.data['niak_weather_api'] = type('Old', (), {'version': 2})()
-        self.assertFalse(self.service.snapshot()['niak_weather']['installed'])
+        self.hass.data['hestia_weather_api'] = type('Old', (), {'version': 2})()
+        self.assertFalse(self.service.snapshot()['hestia_weather']['installed'])
 
     async def test_the_page_knows_whether_atmo_france_is_installed(self):
         from homeassistant.config_entries import ConfigEntry
@@ -304,13 +304,13 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         self.hass.config_entries._entries[atmo.entry_id] = atmo
         self.assertTrue(self.service.snapshot()['integrations']['atmofrance'])
 
-    async def test_outlook_reads_niak_weather_by_stable_keys(self):
-        from custom_components.niak_comfort import weather_link
+    async def test_outlook_reads_hestia_weather_by_stable_keys(self):
+        from custom_components.hestia_comfort import weather_link
         self.link_weather({}, hours=[{'time': '2026-10-14T21:00:00+00:00', 'temperature': 18}])
-        self.niak_entity('binary_sensor', 'orage', 'niak_weather_orage', 'on')
-        self.niak_entity('sensor', 'vigilance', 'niak_weather_vigilance', 'orange')
-        self.niak_entity('sensor', 'next_rain', 'niak_weather_pluie_dans', '0.5')
-        self.niak_entity('sensor', 'maximale_demain', 'niak_weather_maximale_demain', '31.2')
+        self.weather_entity('binary_sensor', 'orage', 'hestia_weather_orage', 'on')
+        self.weather_entity('sensor', 'vigilance', 'hestia_weather_vigilance', 'orange')
+        self.weather_entity('sensor', 'next_rain', 'hestia_weather_pluie_dans', '0.5')
+        self.weather_entity('sensor', 'maximale_demain', 'hestia_weather_maximale_demain', '31.2')
         found = weather_link.outlook(self.hass, 'nw1')
         self.assertEqual((found['storm'], found['vigilance'], found['rain_in_hours'], found['tomorrow_max']), (True, 2, 0.5, 31.2))
         self.assertEqual(len(found['hours']), 1)

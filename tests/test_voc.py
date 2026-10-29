@@ -4,7 +4,7 @@ import pathlib
 import sys
 import unittest
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "custom_components" / "niak_comfort"))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "custom_components" / "hestia_comfort"))
 
 from engine import voc  # noqa: E402
 from engine.assessment import assess  # noqa: E402

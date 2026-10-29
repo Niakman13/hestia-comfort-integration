@@ -7,9 +7,9 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from custom_components.niak_comfort.engine import learning
-from custom_components.niak_comfort.engine.assessment import assess
-from custom_components.niak_comfort.engine.sources import Reading
+from custom_components.hestia_comfort.engine import learning
+from custom_components.hestia_comfort.engine.assessment import assess
+from custom_components.hestia_comfort.engine.sources import Reading
 
 T0 = datetime(2026, 10, 10, 8, 0, tzinfo=timezone.utc)
 SATURATED_20 = learning.absolute(20, 100)

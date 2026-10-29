@@ -1,8 +1,8 @@
-import '../../custom_components/niak_comfort/frontend/niak-comfort-card.js';
+import '../../custom_components/hestia_comfort/frontend/hestia-comfort-card.js';
 const fixtures=await (await fetch('./card-fixtures.json')).json();
 const $=id=>document.getElementById(id);
 const listeners=new Set();
-let scene=fixtures[0],stream='normal',config={type:'custom:niak-comfort-card',entry_id:'demo-salon',format:'full',theme:'dark'};
+let scene=fixtures[0],stream='normal',config={type:'custom:hestia-comfort-card',entry_id:'demo-salon',format:'full',theme:'dark'};
 let starts=0,stops=0;
 const result=entry=>{
   const v=structuredClone(scene.view);
@@ -22,13 +22,13 @@ function status(){$('bench-status').textContent=`Scénario calculé par le moteu
 function push(){for(const s of listeners)s.callback(stream==='reload'?{version:1,reload:true}:result(s.entry));status();}
 function apply(){$('primary').setConfig(config);$('editor').setConfig(config);}
 $('scenario').innerHTML=fixtures.map(f=>`<option value="${f.id}">${f.name}</option>`).join('');
-apply();$('secondary').setConfig({type:'custom:niak-comfort-card',entry_id:'demo-salon',format:'tile',theme:'dark'});
+apply();$('secondary').setConfig({type:'custom:hestia-comfort-card',entry_id:'demo-salon',format:'tile',theme:'dark'});
 for(const id of ['primary','secondary','editor'])$(id).hass=hass;
 $('scenario').addEventListener('change',e=>{scene=fixtures.find(f=>f.id===e.target.value);push();});
 $('format').addEventListener('change',e=>{config={...config,format:e.target.value};apply();});
 $('theme').addEventListener('change',e=>{
   const theme=e.target.value;document.documentElement.dataset.theme=theme;config={...config,theme};apply();
-  $('secondary').setConfig({type:'custom:niak-comfort-card',entry_id:'demo-salon',format:'tile',theme});
+  $('secondary').setConfig({type:'custom:hestia-comfort-card',entry_id:'demo-salon',format:'tile',theme});
 });
 $('stream').addEventListener('change',e=>{
   stream=e.target.value;

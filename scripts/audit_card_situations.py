@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import itertools, json, sys
 from pathlib import Path
 repo = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(repo / "custom_components" / "niak_comfort"))
+sys.path.insert(0, str(repo / "custom_components" / "hestia_comfort"))
 from engine.assessment import Opening, Settings, Sun, absolute_humidity, assess
 from engine.sources import normalize
 from engine.volume import arbitrate

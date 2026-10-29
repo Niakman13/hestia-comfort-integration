@@ -5,11 +5,11 @@ Pour les développeurs. Le guide pour les utilisateurs est [ici](../guide.md).
 ## Tests et compilation
 
 - Tests Python : Python 3.14, `pip install -r requirements-test.txt`, puis `python -m unittest discover -s tests -p 'test_*.py'`.
-- Types : `pip install mypy`, puis `python -m mypy --follow-imports=silent --ignore-missing-imports custom_components/niak_comfort/api.py custom_components/niak_comfort/recorder_history.py custom_components/niak_comfort/room/constants.py` (les fichiers déjà typés ; la liste grandit avec eux).
+- Types : `pip install mypy`, puis `python -m mypy --follow-imports=silent --ignore-missing-imports custom_components/hestia_comfort/api.py custom_components/hestia_comfort/recorder_history.py custom_components/hestia_comfort/room/constants.py` (les fichiers déjà typés ; la liste grandit avec eux).
 - Le coordinateur d’une pièce (`coordinator.py`) garde son cycle de vie et son calcul ; ses parties sont dans `room/` : `learning.py` (apprentissage, historique, statistiques), `volume.py` (même air), `presence.py`, `sun.py`, `airings.py` (aérations suivies, COV), `readings.py` (lecture des capteurs), `constants.py`.
-- Panneau : `cd frontend && npm ci && npm run validate` (produit `custom_components/niak_comfort/frontend/panel.js`).
-- Carte : `cd card && npm ci && npm run validate` (produit `custom_components/niak_comfort/frontend/niak-comfort-card.js`).
-- Chargement des cartes : `cd card && npx playwright install chromium firefox && NIAK_TEST_FIREFOX=1 npm run test:loading`. Vérifie les cartes logement et pièce, et leur éditeur, avant et après l’initialisation de Home Assistant, sur deux onglets, avec cache et rechargement.
+- Panneau : `cd frontend && npm ci && npm run validate` (produit `custom_components/hestia_comfort/frontend/panel.js`).
+- Carte : `cd card && npm ci && npm run validate` (produit `custom_components/hestia_comfort/frontend/hestia-comfort-card.js`).
+- Chargement des cartes : `cd card && npx playwright install chromium firefox && HESTIA_TEST_FIREFOX=1 npm run test:loading`. Vérifie les cartes logement et pièce, et leur éditeur, avant et après l’initialisation de Home Assistant, sur deux onglets, avec cache et rechargement.
 
 ## Bancs visuels
 
@@ -30,8 +30,8 @@ Hestia Confort parle français et anglais. Le français est écrit dans le code 
 | --- | --- |
 | `card/src/i18n/en.ts` | Les cartes et le bilan |
 | `frontend/i18n-en.ts` et `frontend/socle/i18n-en.ts` | Le panneau Hestia |
-| `custom_components/niak_comfort/engine/i18n_en.py` | Les conseils et les textes calculés pour la carte et le panneau |
-| `custom_components/niak_comfort/translations/en.json` | L’assistant de Paramètres et les noms des entités |
+| `custom_components/hestia_comfort/engine/i18n_en.py` | Les conseils et les textes calculés pour la carte et le panneau |
+| `custom_components/hestia_comfort/translations/en.json` | L’assistant de Paramètres et les noms des entités |
 
 Les valeurs des entités restent en français : elles servent aux automatisations. Les tests vérifient qu’aucune phrase n’est oubliée et que les `{noms}` entre accolades sont gardés.
 
@@ -39,7 +39,7 @@ Pas à l’aise avec ces fichiers ? [Ouvrez une demande « Traduction »](https:
 
 ## Interfaces
 
-- API WebSocket v1 en lecture : `niak_comfort/entries`, `niak_comfort/view`, `niak_comfort/subscribe`, `niak_comfort/home_subscribe`.
+- API WebSocket v1 en lecture : `hestia_comfort/entries`, `hestia_comfort/view`, `hestia_comfort/subscribe`, `hestia_comfort/home_subscribe`.
 - Entités par pièce : situation, geste, raison, chauffage observé, couverture des données (identifiant interne `<entrée>_<clé>`).
 - Hestia Weather : `weather_link.py` lit son API publique (station, prévisions, `air()` depuis Weather 2.5.7).
 

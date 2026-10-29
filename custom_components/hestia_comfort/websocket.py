@@ -79,7 +79,7 @@ def loaded_entries(hass):
                    if e.state is ConfigEntryState.LOADED and not e.data.get("home")), key=lambda e: e.title)
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/entries"})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/entries"})
 @callback
 def ws_entries(hass, connection, msg):
     def volume(entry):
@@ -91,7 +91,7 @@ def ws_entries(hass, connection, msg):
         "volume": volume(e)[0], "volume_name": volume(e)[1]} for e in loaded_entries(hass)])
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/subscribe", vol.Optional("entry_id"): str})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/subscribe", vol.Optional("entry_id"): str})
 @callback
 def ws_subscribe(hass, connection, msg):
     entries = loaded_entries(hass)
@@ -133,7 +133,7 @@ def ws_subscribe(hass, connection, msg):
     send()
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/home_subscribe"})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/home_subscribe"})
 @callback
 def ws_home_subscribe(hass, connection, msg):
     """The home card: every room view plus the synthesis, refreshed when any room changes."""
@@ -193,7 +193,7 @@ def ws_home_subscribe(hass, connection, msg):
     send()
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/view", vol.Required("entry_id"): str})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/view", vol.Required("entry_id"): str})
 @callback
 def ws_view(hass, connection, msg):
     entry = hass.config_entries.async_get_entry(msg["entry_id"])
@@ -203,7 +203,7 @@ def ws_view(hass, connection, msg):
     connection.send_result(msg["id"], entry.runtime_data.data)
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/review"})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/review"})
 @websocket_api.async_response
 async def ws_review(hass, connection, msg):
     """The comfort review of the home over the past year (review_source.py)."""
@@ -216,7 +216,7 @@ async def ws_review(hass, connection, msg):
         connection.send_result(msg["id"], result)
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/home_periods"})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/home_periods"})
 @websocket_api.async_response
 async def ws_periods(hass, connection, msg):
     """The home card's last day, week and month (review_source.py)."""
@@ -232,7 +232,7 @@ async def ws_periods(hass, connection, msg):
 from .configuration import get_configuration
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/configuration", LANGUAGE: str})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/configuration", LANGUAGE: str})
 @websocket_api.require_admin
 @websocket_api.async_response
 @spoken
@@ -241,7 +241,7 @@ async def ws_configuration(hass, connection, msg):
     connection.send_result(msg["id"], service.snapshot())
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/discover", LANGUAGE: str, vol.Optional("area_id"): str, vol.Optional("entry_id"): str})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/discover", LANGUAGE: str, vol.Optional("area_id"): str, vol.Optional("entry_id"): str})
 @websocket_api.require_admin
 @websocket_api.async_response
 @spoken
@@ -255,7 +255,7 @@ async def ws_discover(hass, connection, msg):
         connection.send_result(msg["id"], result)
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/overview", LANGUAGE: str})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/overview", LANGUAGE: str})
 @websocket_api.require_admin
 @websocket_api.async_response
 @spoken
@@ -264,7 +264,7 @@ async def ws_overview(hass, connection, msg):
     connection.send_result(msg["id"], service.overview())
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/weather_proposal", LANGUAGE: str, vol.Optional("entry_id"): str})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/weather_proposal", LANGUAGE: str, vol.Optional("entry_id"): str})
 @websocket_api.require_admin
 @websocket_api.async_response
 @spoken
@@ -276,7 +276,7 @@ async def ws_weather(hass, connection, msg):
         connection.send_error(msg["id"], "not_available", str(err))
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/validate_config", LANGUAGE: str, vol.Required("config"): dict, vol.Optional("home", default=False): bool})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/validate_config", LANGUAGE: str, vol.Required("config"): dict, vol.Optional("home", default=False): bool})
 @websocket_api.require_admin
 @websocket_api.async_response
 @spoken
@@ -290,7 +290,7 @@ async def ws_validate(hass, connection, msg):
         connection.send_result(msg["id"], {"config": config, "warnings": warnings, "revision": service.revision()})
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/save_config", LANGUAGE: str, vol.Required("config"): dict,
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/save_config", LANGUAGE: str, vol.Required("config"): dict,
     vol.Required("revision"): str, vol.Optional("entry_id"): str, vol.Optional("home", default=False): bool,
     vol.Optional("acknowledged", default=[]): [str]})
 @websocket_api.require_admin
@@ -306,7 +306,7 @@ async def ws_save(hass, connection, msg):
         connection.send_result(msg["id"], result)
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/remove_room", LANGUAGE: str, vol.Required("entry_id"): str, vol.Required("revision"): str})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/remove_room", LANGUAGE: str, vol.Required("entry_id"): str, vol.Required("revision"): str})
 @websocket_api.require_admin
 @websocket_api.async_response
 @spoken

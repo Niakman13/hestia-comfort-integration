@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "niak_comfort"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "hestia_comfort"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from engine import review
 
@@ -146,7 +146,7 @@ class Source(unittest.IsolatedAsyncioTestCase):
 
         for title, config in (("Salon", {"sources": {"indoor_temperature": "sensor.t_salon", "co2": "sensor.co2"}}),
                               ("Buanderie", {"heated": False, "sources": {"indoor_temperature": "sensor.t_b", "indoor_humidity": "sensor.h_b"}})):
-            entry = ConfigEntry(domain="niak_comfort", title=title, unique_id=title, version=1, minor_version=1, source="user",
+            entry = ConfigEntry(domain="hestia_comfort", title=title, unique_id=title, version=1, minor_version=1, source="user",
                                 data={"name": title}, options={}, discovery_keys={}, subentries_data=[])
             entry.runtime_data = Coordinator(config)
             self.hass.config_entries._entries[entry.entry_id] = entry
@@ -157,7 +157,7 @@ class Source(unittest.IsolatedAsyncioTestCase):
         self.temp.cleanup()
 
     async def test_the_review_reads_a_year_of_statistics_once_an_hour(self):
-        from custom_components.niak_comfort import review_source
+        from custom_components.hestia_comfort import review_source
         rows = lambda value: [{"start": (JANUARY + timedelta(hours=h)).timestamp(), "mean": value} for h in range(30 * 24)]
         stats = {"sensor.t_salon": rows(21.5), "sensor.co2": rows(700), "sensor.t_b": rows(14.0), "sensor.h_b": rows(55), "sensor.outdoor": rows(6.0)}
         calls = []

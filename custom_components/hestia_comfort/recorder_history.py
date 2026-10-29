@@ -6,7 +6,7 @@ and only what the analyses use is kept: every change of a contact or a state, fo
 A CO₂ sensor reporting in bursts while a window is open keeps its whole fall: that is what the airing model reads.
 Runs in the recorder's executor (blocking database calls).
 
-Copied unchanged into each brick from niak-ecosysteme/socle/ (copier.sh), like socle.py.
+Copied unchanged into each brick from hestia-ecosysteme/socle/ (copier.sh), like socle.py.
 """
 from __future__ import annotations
 

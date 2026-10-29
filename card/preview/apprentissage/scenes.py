@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "custom_components" / "niak_comfort"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "custom_components" / "hestia_comfort"))
 from engine.assessment import Opening, Settings, Sun, assess
 from engine.sources import Reading
 
@@ -14,7 +14,7 @@ S = Settings(minimum=20, maximum=24, humidity_high=60, co2_potential=800, co2_ac
 UNITS = {"indoor_temperature": "°C", "outdoor_temperature": "°C", "indoor_humidity": "%", "outdoor_humidity": "%", "co2": "ppm"}
 DRY = {"outdoor_temperature": 14, "outdoor_humidity": 62, "rain": False, "pollution": False, "wind_gust": 8}
 HUMID = {"outdoor_temperature": 16.5, "outdoor_humidity": 90, "rain": False, "pollution": False, "wind_gust": 8}
-# What the twins had learned at home on 20 Oct. (niak_comfort/twins).
+# What the twins had learned at home on 20 Oct. (hestia_comfort/twins).
 TWINS = {"cuisine": (10.0, 0.24, 1.5), "chambre_m": (10.1, 0.35, 0.7), "chambre_al": (10.0, 1.14, 4.7), "chambre_p": (10.1, None, None), "nouvelle": (3.2, None, None)}
 
 

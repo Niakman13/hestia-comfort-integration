@@ -10,7 +10,7 @@ await build({entryPoints:[join(temp,'entry.ts')],outfile:join(temp,'all.mjs'),bu
 const m=await import(pathToFileURL(join(temp,'all.mjs')));
 const cases=JSON.parse(await readFile(join(temp,'cases.json'),'utf8')).flatMap(c=>c.rooms.map((v,i)=>({v,partners:c.rooms.filter((_,j)=>j!==i)})));
 const fixtures=JSON.parse(await readFile(join(card,'preview/card-fixtures.json'),'utf8')).map(f=>({v:f.view,partners:[]}));
-const config={type:'custom:niak-comfort-card',modules:['temperature','humidity','air','windows','shutters','coordination']};
+const config={type:'custom:hestia-comfort-card',modules:['temperature','humidity','air','windows','shutters','coordination']};
 const st={why:true,tilesOpen:true,detailsOpen:true,toggle(){},uid:'x'};
 m.setLanguage('en');
 for(const {v,partners} of [...cases,...fixtures]){

@@ -11,17 +11,18 @@ from homeassistant.components.websocket_api import DOMAIN as WS_DOMAIN
 from homeassistant.config_entries import ConfigEntries, ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er, floor_registry as fr
-from custom_components.niak_comfort import socle
-from custom_components.niak_comfort.configuration import get_configuration
-from custom_components.niak_comfort.panel import comfort_status
+from custom_components.hestia_comfort import socle
+from custom_components.hestia_comfort.engine import legacy
+from custom_components.hestia_comfort.configuration import get_configuration
+from custom_components.hestia_comfort.panel import comfort_status
 
 
 def brick(status=None, **extra):
     async def ok(hass):
         return {"level": "ok", "summary": "Tout va bien.", "details": [], "links": []}
-    return {"domain": "niak_comfort", "name": "Hestia Confort", "slug": "confort", "version": "1.0",
-            "icon": "mdi:home", "module_url": "/a/panel.js", "element": "niak-comfort-setup",
-            "status": status or ok, "legacy_path": "niak-confort", **extra}
+    return {"domain": "hestia_comfort", "name": "Hestia Confort", "slug": "confort", "version": "1.0",
+            "icon": "mdi:home", "module_url": "/a/panel.js", "element": "hestia-comfort-setup",
+            "status": status or ok, "legacy_path": "hestia-confort", **extra}
 
 
 class SocleTests(unittest.IsolatedAsyncioTestCase):
@@ -39,106 +40,106 @@ class SocleTests(unittest.IsolatedAsyncioTestCase):
         return self.hass.data[DATA_PANELS]["hestia"].config["_panel_custom"]["module_url"]
 
     async def test_one_brick_opens_the_hestia_panel_and_keeps_its_old_addresses(self):
-        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
+        await socle.async_register_brick(self.hass, brick(), "/a/hestia-socle.js")
         panels = self.hass.data[DATA_PANELS]
         self.assertEqual(panels["hestia"].sidebar_title, "Hestia")
-        self.assertEqual(self.module(), "/a/niak-socle.js")
+        self.assertEqual(self.module(), "/a/hestia-socle.js")
         self.assertTrue(panels["hestia"].require_admin)
-        # /niak, the panel's address before socle 1.12, leads to /hestia, hidden from the sidebar.
-        self.assertIsNone(panels["niak"].sidebar_title)
-        self.assertEqual(panels["niak"].config["redirect"], "/hestia")
-        legacy = panels["niak-confort"]
-        self.assertIsNone(legacy.sidebar_title)  # hidden from the sidebar
-        self.assertEqual(legacy.config["redirect"], "/hestia/confort")
-        self.assertEqual(legacy.config_panel_domain, "niak_comfort")  # « Configurer » still works
-        self.assertIn("niak/overview", self.hass.data[WS_DOMAIN])
+        # The panel's address before socle 1.12 (legacy.PANEL) leads to /hestia, hidden from the sidebar.
+        self.assertIsNone(panels[legacy.PANEL].sidebar_title)
+        self.assertEqual(panels[legacy.PANEL].config["redirect"], "/hestia")
+        former = panels["hestia-confort"]
+        self.assertIsNone(former.sidebar_title)  # hidden from the sidebar
+        self.assertEqual(former.config["redirect"], "/hestia/confort")
+        self.assertEqual(former.config_panel_domain, "hestia_comfort")  # « Configurer » still works
+        self.assertIn("hestia/overview", self.hass.data[WS_DOMAIN])
 
     async def test_registering_again_changes_nothing(self):
-        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
-        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
+        await socle.async_register_brick(self.hass, brick(), "/a/hestia-socle.js")
+        await socle.async_register_brick(self.hass, brick(), "/a/hestia-socle.js")
         self.assertEqual(len(self.hass.data[socle.KEY]["bricks"]), 1)
 
     async def test_the_newest_copy_shows_the_panel(self):
-        await socle.async_register_brick(self.hass, brick(domain="niak_old", slug="old", legacy_path=None), "/old/niak-socle.js")
+        await socle.async_register_brick(self.hass, brick(domain="hestia_old", slug="old", legacy_path=None), "/old/hestia-socle.js")
         self.hass.data[socle.KEY]["panel"]["socle"] = (0, 9)  # as written by an older copy
-        await socle.async_register_brick(self.hass, brick(), "/new/niak-socle.js")
-        self.assertEqual(self.module(), "/new/niak-socle.js")
-        self.assertEqual(set(self.hass.data[socle.KEY]["bricks"]), {"niak_old", "niak_comfort"})
+        await socle.async_register_brick(self.hass, brick(), "/new/hestia-socle.js")
+        self.assertEqual(self.module(), "/new/hestia-socle.js")
+        self.assertEqual(set(self.hass.data[socle.KEY]["bricks"]), {"hestia_old", "hestia_comfort"})
 
     async def test_an_older_copy_never_replaces_a_newer_panel(self):
-        await socle.async_register_brick(self.hass, brick(), "/new/niak-socle.js")
+        await socle.async_register_brick(self.hass, brick(), "/new/hestia-socle.js")
         self.hass.data[socle.KEY]["panel"]["socle"] = (2, 0)
-        await socle.async_register_brick(self.hass, brick(domain="niak_weather", slug="meteo", legacy_path=None), "/old/niak-socle.js")
-        self.assertEqual(self.module(), "/new/niak-socle.js")
+        await socle.async_register_brick(self.hass, brick(domain="hestia_weather", slug="meteo", legacy_path=None), "/old/hestia-socle.js")
+        self.assertEqual(self.module(), "/new/hestia-socle.js")
 
     async def test_home_page_lists_bricks_and_published_ones_not_yet_in_the_panel(self):
-        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
-        self.hass.config.components.add("niak_weather")
+        await socle.async_register_brick(self.hass, brick(), "/a/hestia-socle.js")
+        self.hass.config.components.add("hestia_weather")
         overview = await socle.async_overview(self.hass)
         self.assertEqual([b["slug"] for b in overview["bricks"]], ["confort"])
         self.assertFalse(any(callable(v) for v in overview["bricks"][0].values()))  # sendable as JSON
         self.assertEqual(overview["bricks"][0]["status"]["level"], "ok")
-        weather = next(o for o in overview["others"] if o["domain"] == "niak_weather")
+        weather = next(o for o in overview["others"] if o["domain"] == "hestia_weather")
         self.assertTrue(weather["installed"])
-        self.assertEqual(weather["settings_path"], "/config/integrations/integration/niak_weather")
-        self.assertNotIn("niak_comfort", [o["domain"] for o in overview["others"]])
+        self.assertEqual(weather["settings_path"], "/config/integrations/integration/hestia_weather")
+        self.assertNotIn("hestia_comfort", [o["domain"] for o in overview["others"]])
 
     async def test_a_failing_brick_is_unknown_and_never_hides_the_others(self):
         async def broken(hass):
             raise RuntimeError("boom")
-        await socle.async_register_brick(self.hass, brick(broken), "/a/niak-socle.js")
-        with self.assertLogs("custom_components.niak_comfort.socle", "ERROR"):
+        await socle.async_register_brick(self.hass, brick(broken), "/a/hestia-socle.js")
+        with self.assertLogs("custom_components.hestia_comfort.socle", "ERROR"):
             overview = await socle.async_overview(self.hass)
         self.assertEqual(overview["bricks"][0]["status"]["level"], "unknown")
 
     async def test_unknown_levels_are_never_shown_as_fine(self):
         async def odd(hass):
             return {"level": "great", "summary": "?"}
-        await socle.async_register_brick(self.hass, brick(odd), "/a/niak-socle.js")
+        await socle.async_register_brick(self.hass, brick(odd), "/a/hestia-socle.js")
         self.assertEqual((await socle.async_overview(self.hass))["bricks"][0]["status"]["level"], "unknown")
 
     async def test_the_sidebar_entry_can_be_hidden_and_the_panel_stays_open(self):
-        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
+        await socle.async_register_brick(self.hass, brick(), "/a/hestia-socle.js")
         self.assertTrue((await socle.async_overview(self.hass))["sidebar"])
         await socle.async_set_sidebar(self.hass, False)
         panel = self.hass.data[DATA_PANELS]["hestia"]
         self.assertIsNone(panel.sidebar_title)  # gone from the sidebar, still served at /hestia
-        self.assertEqual(self.module(), "/a/niak-socle.js")
+        self.assertEqual(self.module(), "/a/hestia-socle.js")
         self.assertFalse((await socle.async_overview(self.hass))["sidebar"])
         await socle.async_set_sidebar(self.hass, True)
         self.assertEqual(self.hass.data[DATA_PANELS]["hestia"].sidebar_title, "Hestia")
 
     async def test_the_choice_survives_a_restart_and_applies_to_the_next_brick(self):
-        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
+        await socle.async_register_brick(self.hass, brick(), "/a/hestia-socle.js")
         await socle.async_set_sidebar(self.hass, False)
         self.hass.data.pop(socle.KEY)  # as after a restart: the file is all that remains
-        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
+        await socle.async_register_brick(self.hass, brick(), "/a/hestia-socle.js")
         self.assertIsNone(self.hass.data[DATA_PANELS]["hestia"].sidebar_title)
-        self.assertIn("niak/set_sidebar", self.hass.data[WS_DOMAIN])
+        self.assertIn("hestia/set_sidebar", self.hass.data[WS_DOMAIN])
 
     async def test_theme_and_sidebar_survive_restart_without_overwriting_each_other(self):
-        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
-        self.assertEqual((await socle.async_overview(self.hass))["theme"], "niak")
-        self.assertIn("niak/set_theme", self.hass.data[WS_DOMAIN])
+        await socle.async_register_brick(self.hass, brick(), "/a/hestia-socle.js")
+        self.assertEqual((await socle.async_overview(self.hass))["theme"], "hestia")
+        self.assertIn("hestia/set_theme", self.hass.data[WS_DOMAIN])
         await socle.async_set_theme(self.hass, "ha")
         await socle.async_set_sidebar(self.hass, False)
         self.hass.data.pop(socle.KEY)
-        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
+        await socle.async_register_brick(self.hass, brick(), "/a/hestia-socle.js")
         overview = await socle.async_overview(self.hass)
         self.assertEqual(overview["theme"], "ha")
         self.assertFalse(overview["sidebar"])
-        await socle.async_set_theme(self.hass, "niak")
+        await socle.async_set_theme(self.hass, "hestia")
         self.assertFalse((await socle.async_overview(self.hass))["sidebar"])
         with self.assertRaises(ValueError):
             await socle.async_set_theme(self.hass, "unknown")
-        self.assertEqual((await socle.async_overview(self.hass))["theme"], "niak")
+        self.assertEqual((await socle.async_overview(self.hass))["theme"], "hestia")
 
-    async def test_old_settings_keep_the_existing_niak_appearance(self):
+    async def test_old_settings_keep_the_hestia_appearance(self):
         from homeassistant.helpers.storage import Store
         await Store(self.hass, socle.STORE_VERSION, socle.KEY).async_save({"sidebar": False})
-        await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
+        await socle.async_register_brick(self.hass, brick(), "/a/hestia-socle.js")
         overview = await socle.async_overview(self.hass)
-        self.assertEqual(overview["theme"], "niak")
+        self.assertEqual(overview["theme"], "hestia")
         self.assertFalse(overview["sidebar"])
 
     async def test_old_copy_loading_first_does_not_erase_stored_theme(self):
@@ -146,19 +147,19 @@ class SocleTests(unittest.IsolatedAsyncioTestCase):
         await Store(self.hass, socle.STORE_VERSION, socle.KEY).async_save({"sidebar": False, "theme": "ha"})
         # Socle 1.5/1.6 only imports the sidebar field before the newest copy starts.
         self.hass.data[socle.KEY] = {"bricks": {}, "panel": None, "settings": {"sidebar": False}}
-        await socle.async_register_brick(self.hass, brick(), "/new/niak-socle.js")
+        await socle.async_register_brick(self.hass, brick(), "/new/hestia-socle.js")
         self.assertEqual((await socle.async_overview(self.hass))["theme"], "ha")
         self.assertFalse((await socle.async_overview(self.hass))["sidebar"])
 
     async def test_older_weather_copy_cannot_replace_theme_handler_or_preference(self):
         from unittest.mock import patch
-        await socle.async_register_brick(self.hass, brick(), "/new/niak-socle.js")
+        await socle.async_register_brick(self.hass, brick(), "/new/hestia-socle.js")
         await socle.async_set_theme(self.hass, "ha")
-        handler = self.hass.data[WS_DOMAIN]["niak/set_theme"]
+        handler = self.hass.data[WS_DOMAIN]["hestia/set_theme"]
         with patch.object(socle, "SOCLE_VERSION", (1, 4)):
-            await socle.async_register_brick(self.hass, brick(domain="niak_weather", slug="meteo", legacy_path=None), "/old/niak-socle.js")
-        self.assertEqual(self.module(), "/new/niak-socle.js")
-        self.assertIs(self.hass.data[WS_DOMAIN]["niak/set_theme"], handler)
+            await socle.async_register_brick(self.hass, brick(domain="hestia_weather", slug="meteo", legacy_path=None), "/old/hestia-socle.js")
+        self.assertEqual(self.module(), "/new/hestia-socle.js")
+        self.assertIs(self.hass.data[WS_DOMAIN]["hestia/set_theme"], handler)
         self.assertEqual((await socle.async_overview(self.hass))["theme"], "ha")
 
 
@@ -181,7 +182,7 @@ class ComfortStatusTests(unittest.IsolatedAsyncioTestCase):
         self.temp.cleanup()
 
     def room(self, name, state=ConfigEntryState.LOADED, reason="ventilate"):
-        entry = ConfigEntry(domain="niak_comfort", title=name, unique_id=name, version=1, minor_version=1,
+        entry = ConfigEntry(domain="hestia_comfort", title=name, unique_id=name, version=1, minor_version=1,
             source="user", data={"name": name, "area_id": None}, options={}, discovery_keys={}, subentries_data=[])
         entry.runtime_data = SimpleNamespace(data={"assessment": {"reason": reason}})
         self.hass.config_entries._entries[entry.entry_id] = entry
@@ -241,7 +242,7 @@ class Resources:
 
 
 class CardResourceTests(unittest.IsolatedAsyncioTestCase):
-    URL = "/niak_comfort-assets/niak-comfort-card.js"
+    URL = "/hestia_comfort-assets/hestia-comfort-card.js"
 
     async def asyncSetUp(self):
         self.temp = tempfile.TemporaryDirectory()

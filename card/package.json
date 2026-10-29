@@ -1,6 +1,6 @@
 {
-  "name": "niak-comfort-card",
-  "version": "1.7.27",
+  "name": "hestia-comfort-card",
+  "version": "2.0.0b1",
   "private": true,
   "type": "module",
   "scripts": {

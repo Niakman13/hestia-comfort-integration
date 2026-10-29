@@ -1,4 +1,4 @@
-/* CHARTE COMMUNE NIAK — jetons et pièces partagés par toutes les cartes Hestia.
+/* CHARTE COMMUNE HESTIA — jetons et pièces partagés par toutes les cartes Hestia.
    Valeurs reprises de la carte Hestia Weather (card/src/ui/charter.ts), qui fait référence.
    Modifier ICI, puis recopier avec charte/copier.sh dans chaque carte : jamais directement dans une brique. */
 :host {
@@ -23,24 +23,24 @@
   --nw-fs-label: 10px; --nw-fs-small: 12px; --nw-fs-text: 13px; --nw-fs-title: 17px; --nw-fs-value: 30px; --nw-fs-temp: 42px;
   --nw-label-spacing: .6px;
   /* Couleurs de sens, palette « Aube » (OKLCH, même clarté et même saturation). Un thème peut les remplacer. */
-  --nw-rain: var(--niak-rain-color, oklch(.8 .07 190));
-  --nw-wind: var(--niak-wind-color, oklch(.79 .075 280));
-  --nw-heat: var(--niak-heat-color, oklch(.83 .085 42));
-  --nw-cold: var(--niak-cold-color, oklch(.85 .05 220));
-  --nw-calm: var(--niak-calm-color, oklch(.83 .075 150));
-  --nw-pressure: var(--niak-pressure-color, oklch(.78 .07 315));
-  --nw-level1: var(--niak-level1-color, oklch(.88 .1 96));
-  --nw-level2: var(--niak-level2-color, oklch(.81 .105 64));
-  --nw-level3: var(--niak-level3-color, oklch(.74 .115 18));
+  --nw-rain: var(--hestia-rain-color, oklch(.8 .07 190));
+  --nw-wind: var(--hestia-wind-color, oklch(.79 .075 280));
+  --nw-heat: var(--hestia-heat-color, oklch(.83 .085 42));
+  --nw-cold: var(--hestia-cold-color, oklch(.85 .05 220));
+  --nw-calm: var(--hestia-calm-color, oklch(.83 .075 150));
+  --nw-pressure: var(--hestia-pressure-color, oklch(.78 .07 315));
+  --nw-level1: var(--hestia-level1-color, oklch(.88 .1 96));
+  --nw-level2: var(--hestia-level2-color, oklch(.81 .105 64));
+  --nw-level3: var(--hestia-level3-color, oklch(.74 .115 18));
   /* Couleurs d'état, communes à toutes les cartes : elles disent s'il y a quelque chose à FAIRE, pas où tombe une mesure.
      Bleu tout va bien · vert bénéfice à saisir ou en cours · orange geste utile maintenant · rouge urgent ·
      ambre mesure hors de votre plage, sans geste demandé · gris (texte secondaire) à vérifier.
      La vigilance météo garde sa propre échelle jaune / orange / rouge (--nw-level1 à 3). */
-  --nw-ok: var(--niak-ok-color, var(--nw-cold));
-  --nw-benefit: var(--niak-benefit-color, var(--nw-calm));
-  --nw-act: var(--niak-act-color, var(--nw-level2));
-  --nw-alert: var(--niak-alert-color, var(--nw-level3));
-  --nw-watch: var(--niak-watch-color, oklch(.84 .13 86));
+  --nw-ok: var(--hestia-ok-color, var(--nw-cold));
+  --nw-benefit: var(--hestia-benefit-color, var(--nw-calm));
+  --nw-act: var(--hestia-act-color, var(--nw-level2));
+  --nw-alert: var(--hestia-alert-color, var(--nw-level3));
+  --nw-watch: var(--hestia-watch-color, oklch(.84 .13 86));
   /* Part de couleur dans un texte coloré : 34 % reste lisible (contraste 4,5:1). */
   --nw-ink: 34%;
   --nw-ease: cubic-bezier(.2, .8, .2, 1);

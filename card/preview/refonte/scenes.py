@@ -12,9 +12,9 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
-from custom_components.niak_comfort.engine.assessment import Settings, Sun, assess  # noqa: E402
-from custom_components.niak_comfort.engine.home import synthesis  # noqa: E402
-from custom_components.niak_comfort.engine.sources import Reading  # noqa: E402
+from custom_components.hestia_comfort.engine.assessment import Settings, Sun, assess  # noqa: E402
+from custom_components.hestia_comfort.engine.home import synthesis  # noqa: E402
+from custom_components.hestia_comfort.engine.sources import Reading  # noqa: E402
 
 NOW = datetime(2026, 10, 18, 15, 0, tzinfo=timezone.utc)
 UNITS = {"indoor_temperature": "°C", "outdoor_temperature": "°C", "indoor_humidity": "%", "outdoor_humidity": "%", "co2": "ppm"}

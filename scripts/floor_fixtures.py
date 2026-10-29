@@ -5,7 +5,7 @@ from pathlib import Path
 import json
 import sys
 ROOT=Path(__file__).resolve().parents[1]
-sys.path.insert(0,str(ROOT/'custom_components/niak_comfort'))
+sys.path.insert(0,str(ROOT/'custom_components/hestia_comfort'))
 from engine.assessment import assess, Opening
 from engine.sources import normalize
 from engine.home import synthesis

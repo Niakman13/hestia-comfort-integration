@@ -28,7 +28,7 @@ Une paire nécessite un besoin de rafraîchissement ou de pré-refroidissement d
 
 ## Données publiées
 
-Ajouts compatibles au message WebSocket `niak_comfort/home_subscribe`, version 1 :
+Ajouts compatibles au message WebSocket `hestia_comfort/home_subscribe`, version 1 :
 
 | Champ | Contenu |
 |---|---|

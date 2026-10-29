@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 import unittest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "niak_comfort"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "hestia_comfort"))
 from engine import habits
 from engine.assessment import Opening, assess
 from test_engine import zone
@@ -77,7 +77,7 @@ class Answers(unittest.TestCase):
         from types import SimpleNamespace
         try:
             sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-            from custom_components.niak_comfort.configuration import Configuration
+            from custom_components.hestia_comfort.configuration import Configuration
         except ImportError:
             self.skipTest("Home Assistant is not installed")
         saved = []

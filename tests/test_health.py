@@ -4,7 +4,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from custom_components.niak_comfort.health import Facts, Room, Sensor, ago, report
+from custom_components.hestia_comfort.health import Facts, Room, Sensor, ago, report
 
 
 def room(title="Salon", sensors=None, **extra):
@@ -50,8 +50,8 @@ class HealthTests(unittest.TestCase):
         r = report(Facts(rooms=[room(thermostat=True)], weather="Gardanne", weather_installed=True,
                          installed=frozenset({"versatile_thermostat", "adaptive_cover_pro", "better_thermostat"})))
         ext = {e["key"]: e for e in r["extensions"]}
-        self.assertEqual([e["key"] for e in r["extensions"]], ["niak_weather", "versatile_thermostat", "adaptive_cover_pro", "alarmo"])
-        self.assertEqual((ext["niak_weather"]["state"], ext["niak_weather"]["official"]), ("linked", True))
+        self.assertEqual([e["key"] for e in r["extensions"]], ["hestia_weather", "versatile_thermostat", "adaptive_cover_pro", "alarmo"])
+        self.assertEqual((ext["hestia_weather"]["state"], ext["hestia_weather"]["official"]), ("linked", True))
         self.assertEqual((ext["versatile_thermostat"]["state"], ext["versatile_thermostat"]["rooms"]), ("linked", ["Salon"]))
         self.assertEqual((ext["adaptive_cover_pro"]["state"], ext["adaptive_cover_pro"]["level"]), ("found", "none"))
         self.assertEqual((ext["alarmo"]["state"], ext["alarmo"]["text"]), ("missing", "non installée"))
@@ -67,7 +67,7 @@ class HealthTests(unittest.TestCase):
     def test_weather_installed_but_not_linked_is_found(self):
         r = report(Facts(weather_installed=True, alarm="Alarmo · désarmée", installed=frozenset({"alarmo"})))
         ext = {e["key"]: e for e in r["extensions"]}
-        self.assertEqual((ext["niak_weather"]["state"], ext["niak_weather"]["text"]), ("found", "installé, pas relié"))
+        self.assertEqual((ext["hestia_weather"]["state"], ext["hestia_weather"]["text"]), ("found", "installé, pas relié"))
         self.assertEqual((ext["alarmo"]["state"], ext["alarmo"]["text"]), ("linked", "Alarmo · désarmée"))
         self.assertEqual(r["others"], [])
 

@@ -248,5 +248,19 @@
         "name": "Trop humide · {room}"
       }
     }
+  },
+  "issues": {
+    "migration_manual": {
+      "title": "Hestia Confort : quelques lignes à changer à la main",
+      "description": "Hestia Confort porte désormais le nom technique « hestia_comfort ». Vos pièces, réglages, apprentissages, historiques et statistiques ont été gardés, et ce qui a été fait dans l’interface a été mis à jour.\n\nCes fichiers écrits à la main utilisent encore l’ancien nom (numéros de ligne entre parenthèses). Remplacez-y l’ancien nom par « hestia_comfort » (ou « hestia-comfort » pour les cartes) :\n\n{items}"
+    },
+    "migration_restart": {
+      "title": "Hestia Confort : redémarrez Home Assistant",
+      "description": "Le passage au nom « hestia_comfort » est fait. L’ancienne copie de l’intégration a été retirée : redémarrez Home Assistant une fois pour terminer."
+    },
+    "migration_failed": {
+      "title": "Hestia Confort : le passage au nouveau nom n’est pas terminé",
+      "description": "Rien n’a été perdu. Le passage reprendra au prochain redémarrage de Home Assistant. Si ce message revient, ouvrez un signalement avec le journal de Home Assistant."
+    }
   }
 }

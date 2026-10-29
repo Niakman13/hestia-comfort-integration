@@ -1,7 +1,7 @@
 import {html, LitElement, unsafeCSS, nothing, type PropertyValues} from 'lit';
 import {property,state} from 'lit/decorators.js';
 import style from './ui/charter.css';
-import charte from './ui/niak-charte.css';
+import charte from './ui/hestia-charte.css';
 import roomStyle from './ui/room.css';
 import {cleanConfig,type Config,type View,type HomeAssistant} from './types';
 import {icon} from './ui/icons';
@@ -25,7 +25,7 @@ const problems:Record<string,[string,string]>={
   reload:[fr('La pièce se recharge'),fr('Les réglages ont changé. Le conseil reviendra après reconnexion.')],
   connection:[fr('Connexion indisponible'),fr('Le conseil est retiré. La carte réessaie automatiquement ; vérifiez la connexion et les journaux de l’intégration.')],
 };
-export class NiakComfortCard extends LitElement {
+export class HestiaComfortCard extends LitElement {
   static styles=[unsafeCSS(style),unsafeCSS(charte),unsafeCSS(roomStyle)];
   @property({attribute:false}) hass?:HomeAssistant;
   @state() private config?:Config;
@@ -58,8 +58,8 @@ export class NiakComfortCard extends LitElement {
     if(old?.entry_id!==next.entry_id){this.live.stop();this.stopPartners();this.view=undefined;this.problem=undefined;this.closeFull();this.open={};}
     this.config=next;
   }
-  static getConfigElement(){return document.createElement('niak-comfort-card-editor');}
-  static getStubConfig():Config{return {type:'custom:niak-comfort-card',format:'tile'};}
+  static getConfigElement(){return document.createElement('hestia-comfort-card-editor');}
+  static getStubConfig():Config{return {type:'custom:hestia-comfort-card',format:'tile'};}
   getCardSize(){const f=this.config?.format;return f==='mini'?1:f==='alert'?2:f==='full'?10:f==='measures'?4:3;}
   getGridOptions(){return {columns:this.config?.format==='full'?'full':12,rows:'auto',min_columns:6};}
   connectedCallback(){super.connectedCallback();this.connect();}
@@ -139,9 +139,9 @@ export class NiakComfortCard extends LitElement {
   }
 }
 // The integration bundles this card; an older copy declared as a resource must not break the page.
-if(!customElements.get('niak-comfort-card'))customElements.define('niak-comfort-card',NiakComfortCard);
+if(!customElements.get('hestia-comfort-card'))customElements.define('hestia-comfort-card',HestiaComfortCard);
 declare global {interface Window {customCards?:Array<Record<string,unknown>>}}
 window.customCards??=[];
 // The « Add card » list is written at load, before the card gets Home Assistant: the page's language then.
 guessLanguage();
-if(!window.customCards.some(c=>c.type==='niak-comfort-card'))window.customCards.push({type:'niak-comfort-card',name:t('Hestia Confort'),description:t('Hestia Comfort : le confort par pièce, avec des conseils expliqués et des sources visibles.')});
+if(!window.customCards.some(c=>c.type==='hestia-comfort-card'))window.customCards.push({type:'hestia-comfort-card',name:t('Hestia Confort'),description:t('Hestia Comfort : le confort par pièce, avec des conseils expliqués et des sources visibles.')});

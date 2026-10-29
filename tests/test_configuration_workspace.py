@@ -8,12 +8,12 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.exceptions import Unauthorized
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.util import dt as dt_util
-from custom_components.niak_comfort.configuration import Configuration
-from custom_components.niak_comfort.discovery import catalog, suggestions
-from custom_components.niak_comfort.exterior import exterior_reading
-from custom_components.niak_comfort.engine.assessment import assess
-from custom_components.niak_comfort.engine.sources import normalize
-from custom_components.niak_comfort.websocket import ws_configuration, ws_discover, ws_validate, ws_save, ws_remove
+from custom_components.hestia_comfort.configuration import Configuration
+from custom_components.hestia_comfort.discovery import catalog, suggestions
+from custom_components.hestia_comfort.exterior import exterior_reading
+from custom_components.hestia_comfort.engine.assessment import assess
+from custom_components.hestia_comfort.engine.sources import normalize
+from custom_components.hestia_comfort.websocket import ws_configuration, ws_discover, ws_validate, ws_save, ws_remove
 
 
 class WorkspaceTests(AdapterFixture):
@@ -47,8 +47,8 @@ class WorkspaceTests(AdapterFixture):
             self.service.validate(self.config(settings={'humidity_low':65,'humidity_high':60}))
 
     async def test_health_suggestions_keep_full_catalog_results_without_scanning_other_rooms(self):
-        from custom_components.niak_comfort import health
-        from custom_components.niak_comfort.discovery import candidate
+        from custom_components.hestia_comfort import health
+        from custom_components.hestia_comfort.discovery import candidate
         self.register('sensor.local_humidity','humidity',unit='%')
         self.register('sensor.cuisine_humidity','humidity',area='cuisine',unit='%')
         self.register('sensor.local_co2','carbon_dioxide',unit='ppm')
@@ -61,7 +61,7 @@ class WorkspaceTests(AdapterFixture):
         expected=suggestions(catalog(self.hass,'salon',config['sources']),'salon')
         expected={k:v for k,v in expected.items() if k in ('indoor_humidity','co2','windows','heating')}
         with patch.object(health,'get_configuration',AsyncMock(return_value=self.service)), \
-             patch('custom_components.niak_comfort.discovery.candidate',wraps=candidate) as calls:
+             patch('custom_components.hestia_comfort.discovery.candidate',wraps=candidate) as calls:
             facts=await health.facts(self.hass,'test')
         self.assertEqual(set(facts.rooms[0].available),set(expected))
         self.assertNotIn('binary_sensor.fridge',expected.get('windows',[]))
@@ -175,7 +175,7 @@ class WorkspaceTests(AdapterFixture):
         with patch.object(self.hass.config_entries,'async_remove',new=AsyncMock()) as remove:
             with self.assertRaises(ValueError):await self.service.remove(self.entry.entry_id,'old')
             with self.assertRaises(ValueError):await self.service.remove('missing',self.service.revision())
-            home=ConfigEntry(version=1,minor_version=1,domain='niak_comfort',title='Mon logement',data={'home':True},source='user',options={},unique_id='niak_home',discovery_keys={},subentries_data=[])
+            home=ConfigEntry(version=1,minor_version=1,domain='hestia_comfort',title='Mon logement',data={'home':True},source='user',options={},unique_id='hestia_home',discovery_keys={},subentries_data=[])
             self.hass.config_entries._entries[home.entry_id]=home
             with self.assertRaises(ValueError):await self.service.remove(home.entry_id,self.service.revision())
             remove.assert_not_awaited()
@@ -193,7 +193,7 @@ class WorkspaceTests(AdapterFixture):
         for cmd,msg in ((ws_configuration,{'id':1}),(ws_discover,{'id':2}),(ws_validate,{'id':3}),(ws_save,{'id':4}),(ws_remove,{'id':5})):
             with self.assertRaises(Unauthorized):
                 cmd(self.hass,conn,msg)
-        self.assertNotIn('niak_comfort_configuration',self.hass.data)
+        self.assertNotIn('hestia_comfort_configuration',self.hass.data)
 
     async def test_home_assistant_reference_is_proposed_but_alias_is_still_reviewed(self):
         self.register('sensor.reference','temperature',unit='°C',platform='template')
@@ -214,13 +214,13 @@ class WeatherAirTests(AdapterFixture):
         self.service=Configuration(self.hass);await self.service.load()
         self.now=dt_util.utcnow()
 
-    async def test_outdoor_air_follows_the_source_chosen_in_niak_weather(self):
+    async def test_outdoor_air_follows_the_source_chosen_in_hestia_weather(self):
         atmo={'entity_id':'sensor.atmo_day','adapter':'atmo_daily','block_from':3}
         self.service.home={'configured':True,'weather':'w1','sources':{'pollution':atmo}}
         air={'entry_id':'w1','source':'waqi','provider':'WAQI','entity_id':'sensor.gardanne_aqi','index':3,'label':'Dégradé','at':self.now.isoformat()}
-        with patch('custom_components.niak_comfort.configuration.weather_link.air',return_value=air):
+        with patch('custom_components.hestia_comfort.configuration.weather_link.air',return_value=air):
             spec=self.service.live_sources()['pollution']
-        self.assertEqual((spec['entity_id'],spec['adapter'],spec['block_from']),('sensor.gardanne_aqi','niak_air',3))
+        self.assertEqual((spec['entity_id'],spec['adapter'],spec['block_from']),('sensor.gardanne_aqi','hestia_air',3))
         self.assertEqual(self.service.home_sources()['pollution'],atmo)  # what was saved stays as it was
         r=exterior_reading(None,'pollution',spec,now=self.now,max_age=1800)
         self.assertEqual((r.quality,r.value,r.source),('estimated',True,'sensor.gardanne_aqi'))
@@ -230,10 +230,10 @@ class WeatherAirTests(AdapterFixture):
     async def test_a_pollution_sensor_of_another_kind_is_kept(self):
         own={'entity_id':'binary_sensor.pollution','adapter':'binary'}
         self.service.home={'configured':True,'weather':'w1','sources':{'pollution':own}}
-        with patch('custom_components.niak_comfort.configuration.weather_link.air',return_value={'entity_id':'sensor.x','index':2}):
+        with patch('custom_components.hestia_comfort.configuration.weather_link.air',return_value={'entity_id':'sensor.x','index':2}):
             self.assertEqual(self.service.live_sources()['pollution'],own)
 
     async def test_no_outdoor_air_chosen_stays_without_air(self):
         self.service.home={'configured':True,'weather':'w1','sources':{}}
-        with patch('custom_components.niak_comfort.configuration.weather_link.air',return_value={'entity_id':'sensor.x','index':2}):
+        with patch('custom_components.hestia_comfort.configuration.weather_link.air',return_value={'entity_id':'sensor.x','index':2}):
             self.assertNotIn('pollution',self.service.live_sources())

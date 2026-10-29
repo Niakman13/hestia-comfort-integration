@@ -5,7 +5,7 @@ import unittest
 from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from custom_components.niak_comfort.entities import binary_value, room_keys, units, volume_id, volume_owner  # noqa: E402
+from custom_components.hestia_comfort.entities import binary_value, room_keys, units, volume_id, volume_owner  # noqa: E402
 
 
 def verdict(gesture="none", level="calm", humidity="normal"):

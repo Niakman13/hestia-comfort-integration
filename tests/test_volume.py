@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 import unittest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "niak_comfort"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "hestia_comfort"))
 from engine.assessment import Opening, assess
 from engine.volume import arbitrate, weight
 from test_engine import zone
@@ -58,7 +58,7 @@ class VolumeDeclaration(unittest.TestCase):
     def test_open_onto_is_mutual_and_passes_from_room_to_room(self):
         from types import SimpleNamespace
         try:
-            from custom_components.niak_comfort.configuration import Configuration
+            from custom_components.hestia_comfort.configuration import Configuration
         except ImportError:  # the engine's own test run, without Home Assistant
             self.skipTest("Home Assistant is not installed")
         rooms = {"salon": ["cuisine"], "cuisine": [], "entree": ["cuisine"], "chambre": []}
@@ -74,7 +74,7 @@ class SharedSources(unittest.TestCase):
     def test_the_kitchen_reads_the_heating_and_air_of_its_living_room(self):
         """Cuisine, 21 October: no thermostat of its own, heated by the Salon's, breathing the air its CO₂ sensor measures."""
         try:
-            from custom_components.niak_comfort.coordinator import ComfortCoordinator
+            from custom_components.hestia_comfort.coordinator import ComfortCoordinator
         except ImportError:  # the engine's own test run, without Home Assistant
             self.skipTest("Home Assistant is not installed")
         room = ComfortCoordinator.__new__(ComfortCoordinator)

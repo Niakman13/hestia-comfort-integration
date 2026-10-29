@@ -52,7 +52,7 @@ export function humidityLabel(v:View):string|null {
   const wet=humidity.status==='high';
   return humidity.degree===1?(wet?'Légèrement humide':'Légèrement sec'):humidity.degree===3?(wet?'Très humide':'Très sec'):(wet?'Air humide':'Air sec');
 }
-// Mirrored word for word by custom_components/niak_comfort/engine/verdict.py for the entities: tests/test_verdict_parity.py.
+// Mirrored word for word by custom_components/hestia_comfort/engine/verdict.py for the entities: tests/test_verdict_parity.py.
 export function advice(v:View):Advice {
   const out=withLearning(v,gesture(v));
   // The gesture made, the window open while it still helps: nothing better to do, in blue. « Vous pouvez refermer » is orange again.
@@ -433,7 +433,7 @@ const TOPICS:Record<string,string>={'Humidité':'humidity','Air sec':'humidity',
   'Aération':'windows','Aération d’hiver':'windows','Pièce vide':'household','Nuit':'household','Purificateur':'equipment','VMC':'equipment',
   'Cette nuit':'forecast','Dernière aération':'learning','COV':'windows'};
 /** The « À savoir » lines of a card, rooms sharing one air merged, by priority. */
-export function factList(v:View,partners:View[]=[],config:Config={type:'custom:niak-comfort-card'}):Fact[] {
+export function factList(v:View,partners:View[]=[],config:Config={type:'custom:hestia-comfort-card'}):Fact[] {
   if(config.show_insights===false)return [];
   const kept=new Set<string>(config.insight_topics??INSIGHT_TOPICS);
   // One card for one air: « Même air » goes without saying, and a line said by two rooms is said once.
@@ -459,7 +459,7 @@ export function factList(v:View,partners:View[]=[],config:Config={type:'custom:n
     .sort((x,y)=>rank(x)-rank(y)).slice(0,config.insight_max??4);
   return list;
 }
-export function factBox(v:View,partners:View[]=[],config:Config={type:'custom:niak-comfort-card'},list=factList(v,partners,config)):TemplateResult|typeof nothing {
+export function factBox(v:View,partners:View[]=[],config:Config={type:'custom:hestia-comfort-card'},list=factList(v,partners,config)):TemplateResult|typeof nothing {
   // The first line is what counts most: set apart, and a risk in the « to watch » colour.
   return list.length?html`<div class="nc-facts"><div class="nw-label">${t('À savoir')}</div><ul>${list.map((f,i)=>html`<li class=${(i===0&&list.length>1?'key':'')+(rank(f)===1?' risk':'')}>${icon(f.ic)}<span><b>${tx(f.title)}</b> · ${partners.length&&f.key==='humidity'&&f.room?`${f.room}, `:''}${tl(f.text)}</span></li>`)}</ul></div>`:nothing;
 }
@@ -672,7 +672,7 @@ export function hero(o:{name:string;level:Level;slides:Slide[];scaleLabel:string
   const many=o.slides.length>1;
   return html`<div class=${'nc-hero'+(o.small?' nc-compact':'')} data-mood=${mood(o.slides[0],o.level)}>
     <div class="nc-top"><h2>${o.name}</h2><button class="nw-info" aria-label=${t('Pourquoi ce conseil ?')} aria-expanded=${o.st.why} aria-controls=${o.st.uid+'-why'} @click=${()=>o.st.toggle('why')}>${icon('info')}</button><span class="nw-chip nc-level">${many?t('{n} conseils',{n:o.slides.length}):pillMark(o.slides[0]?.pill??pills[o.level],o.slides[0]?.level??o.level,!!o.slides[0]?.learned)}</span></div>
-    <niak-advice-ticker .slides=${o.slides} .still=${!!o.still}></niak-advice-ticker>
+    <hestia-advice-ticker .slides=${o.slides} .still=${!!o.still}></hestia-advice-ticker>
     <div class="nc-why" id=${o.st.uid+'-why'} ?hidden=${!o.st.why}>${o.why}</div>
     ${o.compact?nothing:html`<div class="nc-sec nw-glass"><div class="nw-label">${o.scaleLabel}</div>${o.scale}</div>`}
     ${o.graph??nothing}
@@ -768,7 +768,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
 
 /** The advices, one at a time every 4.5 s (as Hestia Weather's ticker). Every slide sits in the same place,
     so the card keeps the height of the longest one. Pauses on hover or focus; a tap shows the next one. */
-export class NiakAdviceTicker extends LitElement {
+export class HestiaAdviceTicker extends LitElement {
   @property({attribute:false}) slides:Slide[]=[];
   @property({type:Boolean}) still=false;
   @state() private index=0;
@@ -808,7 +808,7 @@ export class NiakAdviceTicker extends LitElement {
     </div>`;
   }
 }
-if(!customElements.get('niak-advice-ticker'))customElements.define('niak-advice-ticker',NiakAdviceTicker);
+if(!customElements.get('hestia-advice-ticker'))customElements.define('hestia-advice-ticker',HestiaAdviceTicker);
 
 /** What a room needs, as measured: « 68 % trop humide », « 282 COV élevés ». The home card shows it under
     the room, since the advice itself is already in its banner. A device at work is not a need. */
@@ -833,7 +833,7 @@ export function needs(v:View,includeSlight=true):string[] {
 }
 
 /** Short texts one at a time, every 3 s, in the same place; still when animations are off. */
-export class NiakNoteTicker extends LitElement {
+export class HestiaNoteTicker extends LitElement {
   @property({attribute:false}) notes:string[]=[];
   @property({type:Boolean}) still=false;
   @state() private index=0;
@@ -847,4 +847,4 @@ export class NiakNoteTicker extends LitElement {
     return html`<span class="nc-notes" title=${list.map(tx).join(' · ')}>${list.map((n,k)=>html`<span class=${k===i?'on':''} aria-hidden=${k===i?'false':'true'}>${tx(n)}</span>`)}</span>`;
   }
 }
-if(!customElements.get('niak-note-ticker'))customElements.define('niak-note-ticker',NiakNoteTicker);
+if(!customElements.get('hestia-note-ticker'))customElements.define('hestia-note-ticker',HestiaNoteTicker);

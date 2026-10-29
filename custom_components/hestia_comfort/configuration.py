@@ -9,6 +9,7 @@ import math
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers import area_registry as ar
 from . import cover_link, weather_link
+from .domain_migration import async_entry_ids
 from .floors import floor_catalog, room_floor
 from .const import DOMAIN, OUTDOOR_AREAS, SOURCES
 from .engine.i18n import t
@@ -35,6 +36,11 @@ class Configuration:
         # A file that cannot be read stops the setup, so that nothing is ever saved over the person's settings.
         if saved:
             self.home = {**self.home, **saved}
+        # The Hestia Weather place this home is linked to took a new id when Hestia Weather moved to its Hestia name.
+        moved = (await async_entry_ids(self.hass)).get(self.home.get("weather") or "")
+        if moved:
+            self.home["weather"] = moved
+            await self.store.async_save(self.home)
 
     def entries(self):
         return [e for e in self.hass.config_entries.async_entries(DOMAIN) if not e.data.get("home")]
@@ -67,7 +73,7 @@ class Configuration:
             entries.append({"entry_id": e.entry_id, "title": e.title, "loaded": e.state.value == "loaded", "config": config, "floor": room_floor(self.hass, config)})
         areas = [{"area_id": a.id, "name": a.name, "floor_id": a.floor_id, "outdoor": a.name.strip().casefold() in OUTDOOR_AREAS}
                  for a in ar.async_get(self.hass).areas.values()]
-        return {"version": 1, "revision": self.revision(), "home": {"sources": self.home_sources(), "configured": bool(self.home.get("configured")), "acknowledged": self.home.get("acknowledged", []), "weather": self.home.get("weather"), "alarm": self.home.get("alarm"), "disabled": list(self.home.get("disabled") or [])}, "niak_weather": weather_link.status(self.hass), "integrations": {"atmofrance": bool(self.hass.config_entries.async_entries("atmofrance"))}, "rooms": entries, "floors": floor_catalog(self.hass), "areas": sorted(areas, key=lambda a: (a["name"].casefold() != "salon", a["name"].casefold()))}
+        return {"version": 1, "revision": self.revision(), "home": {"sources": self.home_sources(), "configured": bool(self.home.get("configured")), "acknowledged": self.home.get("acknowledged", []), "weather": self.home.get("weather"), "alarm": self.home.get("alarm"), "disabled": list(self.home.get("disabled") or [])}, "hestia_weather": weather_link.status(self.hass), "integrations": {"atmofrance": bool(self.hass.config_entries.async_entries("atmofrance"))}, "rooms": entries, "floors": floor_catalog(self.hass), "areas": sorted(areas, key=lambda a: (a["name"].casefold() != "salon", a["name"].casefold()))}
 
     def discover(self, area_id=None, entry_id=None):
         if area_id and not ar.async_get(self.hass).async_get_area(area_id):
@@ -109,11 +115,11 @@ class Configuration:
         sources = {}
         for key, entity_id in found["proposals"].items():
             if c := candidate(self.hass, entity_id, key):
-                sources[key] = {"entity_id": entity_id, "adapter": c["adapter"], **({"block_from": 4} if c["adapter"] == "niak_index" else {})}
+                sources[key] = {"entity_id": entity_id, "adapter": c["adapter"], **({"block_from": 4} if c["adapter"] == "hestia_index" else {})}
         # Hestia Weather 2.5.7 gives its air through api.air() (Atmo France or a WAQI station), without an entity of its own.
         air = weather_link.air(self.hass, found["entry_id"])
         if "pollution" not in sources and air:
-            sources["pollution"] = {"entity_id": air["entity_id"], "adapter": "niak_air", "block_from": 4}
+            sources["pollution"] = {"entity_id": air["entity_id"], "adapter": "hestia_air", "block_from": 4}
         shown = {"provider": air["provider"], "index": air.get("index"), "label": air.get("label")} if air else None
         # Its season too (2.6.2): from its own Season sensor or the date, read through its interface.
         season = weather_link.season(self.hass, found["entry_id"])
@@ -136,19 +142,19 @@ class Configuration:
                 if not isinstance(spec, dict) or not isinstance(spec.get("entity_id"), str):
                     raise ValueError(t("Choisissez une source extérieure existante."))
                 threshold = spec.get("block_from", 4)
-                if spec.get("adapter") == "niak_air":
+                if spec.get("adapter") == "hestia_air":
                     # The air of the linked Hestia Weather place, whatever its source; read again on every update.
                     air = weather_link.air(self.hass, payload.get("weather"))
                     if key != "pollution" or not air or air["entity_id"] != spec["entity_id"]:
                         raise ValueError(t("La qualité de l’air de Hestia Weather n’est plus disponible : rechargez la page."))
                     if isinstance(threshold, bool) or not isinstance(threshold, int) or not 2 <= threshold <= 6:
                         raise ValueError(t("Choisissez un niveau ATMO entre Moyen et Extrêmement mauvais."))
-                    cleaned["sources"][key] = {"entity_id": spec["entity_id"], "adapter": "niak_air", "block_from": threshold}
+                    cleaned["sources"][key] = {"entity_id": spec["entity_id"], "adapter": "hestia_air", "block_from": threshold}
                     continue
                 c = candidate(self.hass, spec["entity_id"], key, include_legacy=True)
                 if not c or spec.get("adapter") != c["adapter"]:
                     raise ValueError(t("Source extérieure incompatible : {name}", name=key))
-                daily = c["adapter"] in ("atmo_daily", "niak_index")
+                daily = c["adapter"] in ("atmo_daily", "hestia_index")
                 if daily and (isinstance(threshold, bool) or not isinstance(threshold, int) or not 2 <= threshold <= 6):
                     raise ValueError(t("Choisissez un niveau ATMO entre Moyen et Extrêmement mauvais."))
                 cleaned["sources"][key] = {"entity_id": c["entity_id"], "adapter": c["adapter"]}
@@ -404,7 +410,7 @@ class Configuration:
         if entry_id == self.weather():
             return self.snapshot()
         sources = (self.weather_proposal(entry_id)["sources"] if entry_id
-                   else {k: v for k, v in self.home_sources().items() if v.get("adapter") != "niak_air"})
+                   else {k: v for k, v in self.home_sources().items() if v.get("adapter") != "hestia_air"})
         payload = {"sources": sources, "weather": entry_id}
         # Choosing the link is choosing its sensors: their roles need no second confirmation.
         _, warnings = self.validate(payload, home=True)
@@ -452,11 +458,11 @@ class Configuration:
         if config is not None and not self.uses_home(config):
             return sources
         spec = sources.get("pollution")
-        if not spec or spec.get("adapter") not in ("atmo_daily", "niak_index", "niak_air"):
+        if not spec or spec.get("adapter") not in ("atmo_daily", "hestia_index", "hestia_air"):
             return sources
         found = weather_link.air(self.hass, self.home.get("weather")) if self.home.get("configured") else None
         if found:
-            sources["pollution"] = {"entity_id": found["entity_id"], "adapter": "niak_air", "block_from": (spec or {}).get("block_from", 4),
+            sources["pollution"] = {"entity_id": found["entity_id"], "adapter": "hestia_air", "block_from": (spec or {}).get("block_from", 4),
                                     "index": found.get("index"), "provider": found.get("provider"), "at": found.get("at")}
         return sources
 

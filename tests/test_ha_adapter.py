@@ -13,11 +13,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from homeassistant.config_entries import ConfigEntry, ConfigEntries, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import area_registry as ar, floor_registry as fr, device_registry as dr, entity_registry as er
-from custom_components.niak_comfort.config_flow import ComfortOptionsFlow, ComfortConfigFlow
-from custom_components.niak_comfort.coordinator import ComfortCoordinator
-from custom_components.niak_comfort.sensor import ComfortSensor
-from custom_components.niak_comfort.binary_sensor import ComfortBinary
-from custom_components.niak_comfort import async_setup
+from custom_components.hestia_comfort.config_flow import ComfortOptionsFlow, ComfortConfigFlow
+from custom_components.hestia_comfort.coordinator import ComfortCoordinator
+from custom_components.hestia_comfort.sensor import ComfortSensor
+from custom_components.hestia_comfort.binary_sensor import ComfortBinary
+from custom_components.hestia_comfort import async_setup
 
 
 class AdapterFixture(unittest.IsolatedAsyncioTestCase):
@@ -32,7 +32,7 @@ class AdapterFixture(unittest.IsolatedAsyncioTestCase):
         await dr.async_load(self.hass)
         await er.async_load(self.hass)
         ar.async_get(self.hass).async_create("Salon")
-        self.entry = ConfigEntry(domain="niak_comfort", title="Salon", unique_id="salon", version=1, minor_version=1,
+        self.entry = ConfigEntry(domain="hestia_comfort", title="Salon", unique_id="salon", version=1, minor_version=1,
             source="user", data={"name": "Salon", "area_id": "salon", "sources": {
                 "indoor_temperature": "sensor.inside", "outdoor_temperature": "sensor.outside",
                 "co2": "sensor.co2", "rain": "binary_sensor.rain", "pollution": "binary_sensor.pollution",
@@ -139,7 +139,7 @@ class AdapterTests(AdapterFixture):
         self.assertTrue(data["assessment"]["openings"][0]["open"])
         # Closed again, the next opening without advice waits for the bounce delay as before.
         event.data.update(old_state=SimpleNamespace(state="on"), new_state=SimpleNamespace(state="off", attributes={}))
-        with patch.object(coordinator, "async_request_refresh", AsyncMock()), patch("custom_components.niak_comfort.coordinator.async_call_later", lambda *a: (lambda: None)):
+        with patch.object(coordinator, "async_request_refresh", AsyncMock()), patch("custom_components.hestia_comfort.coordinator.async_call_later", lambda *a: (lambda: None)):
             await coordinator._changed(event)
         self.assertNotIn("binary_sensor.window", coordinator.followed)
 
@@ -154,7 +154,7 @@ class AdapterTests(AdapterFixture):
         coordinator.opened_since["binary_sensor.window"] = now - timedelta(minutes=7)
         event = SimpleNamespace(data={"entity_id": "binary_sensor.window", "old_state": SimpleNamespace(state="on"),
                                       "new_state": SimpleNamespace(state="off", attributes={})})
-        with patch.object(coordinator, "async_request_refresh", AsyncMock()), patch("custom_components.niak_comfort.coordinator.async_call_later", lambda *a: (lambda: None)):
+        with patch.object(coordinator, "async_request_refresh", AsyncMock()), patch("custom_components.hestia_comfort.coordinator.async_call_later", lambda *a: (lambda: None)):
             await coordinator._changed(event)
         self.assertIsNotNone(coordinator.voc_aired)
         self.assertGreater(coordinator.voc_aired["after"], 300)
@@ -163,7 +163,7 @@ class AdapterTests(AdapterFixture):
         # Someone going through the door is not an airing.
         coordinator.voc_aired = None
         coordinator.opened_since["binary_sensor.window"] = dt_util.utcnow() - timedelta(seconds=40)
-        with patch.object(coordinator, "async_request_refresh", AsyncMock()), patch("custom_components.niak_comfort.coordinator.async_call_later", lambda *a: (lambda: None)):
+        with patch.object(coordinator, "async_request_refresh", AsyncMock()), patch("custom_components.hestia_comfort.coordinator.async_call_later", lambda *a: (lambda: None)):
             await coordinator._changed(event)
         self.assertIsNone(coordinator.voc_aired)
 
@@ -212,7 +212,7 @@ class AdapterTests(AdapterFixture):
         self.assertEqual(coordinator.drying_model["openings"], 1)
         self.assertEqual(len((await coordinator._learning_store.async_load())["episodes"]), 1)
         # A window shut asks for the last day only: the opening already learned stays, merged by its start.
-        from custom_components.niak_comfort.coordinator import SHORT_SPAN
+        from custom_components.hestia_comfort.coordinator import SHORT_SPAN
         begins.clear()
         with patch("homeassistant.components.recorder.get_instance", return_value=FakeRecorder()), \
                 patch("homeassistant.components.recorder.history.get_significant_states", significant):
@@ -258,10 +258,10 @@ class AdapterTests(AdapterFixture):
         climate = registry.async_get_or_create("switch", "adaptive_cover_pro", "acp_climate_mode", suggested_object_id="volet_climate_mode")
         self.hass.states.async_set(climate.entity_id, "unavailable")
         self.hass.states.async_set("cover.volet", "open", {"current_position": 100})
-        from custom_components.niak_comfort import cover_link
+        from custom_components.hestia_comfort import cover_link
         found = cover_link.find(self.hass, "cover.volet")
         self.assertEqual((found["auto"], found["override"], found["sun"]), ("switch.volet_automatic_control", "binary_sensor.volet_manual_override", "binary_sensor.volet_sun_infront"))
-        entry = ConfigEntry(domain="niak_comfort", title="Salon", unique_id="salon2", version=1, minor_version=1, source="user",
+        entry = ConfigEntry(domain="hestia_comfort", title="Salon", unique_id="salon2", version=1, minor_version=1, source="user",
             data=self.entry.data, options={"openings": {"binary_sensor.window": {"shutter": "connected", "cover_entity": "cover.volet"}}},
             discovery_keys={}, subentries_data=[])
         data = await ComfortCoordinator(self.hass, entry)._async_update_data()
@@ -273,7 +273,7 @@ class AdapterTests(AdapterFixture):
         self.assertEqual(data["assessment"]["openings"][0]["exposure"], "O")
     async def test_adaptive_cover_pro_window_size_and_bearing_come_from_its_settings(self):
         from types import SimpleNamespace
-        from custom_components.niak_comfort import cover_link
+        from custom_components.hestia_comfort import cover_link
         entry = SimpleNamespace(data={}, options={"set_azimuth": 273.0, "window_width": 1.4, "window_height": 0.96})
         hass = SimpleNamespace(states=SimpleNamespace(get=lambda e: None), config_entries=SimpleNamespace(async_get_entry=lambda i: entry))
         self.assertEqual(cover_link.facts(hass, {"entry": "acp"}), {"azimuth": 273.0, "reason": None, "width": 1.4, "height": 0.96})
@@ -291,7 +291,7 @@ class AdapterTests(AdapterFixture):
         self.assertEqual(verdict["level"], "urgent")
         self.assertTrue(ComfortBinary(coordinator, self.entry, "gesture").is_on)
         self.assertTrue(ComfortBinary(coordinator, self.entry, "airing").is_on)
-        from custom_components.niak_comfort.entities import room_keys
+        from custom_components.hestia_comfort.entities import room_keys
         keys = room_keys(coordinator)
         for key in keys["sensor"]:
             sensor = ComfortSensor(coordinator, self.entry, key)
@@ -301,29 +301,29 @@ class AdapterTests(AdapterFixture):
         self.assertEqual(coordinator.data["area_id"], "salon")
 
     async def test_the_old_situation_and_gesture_entities_go(self):
-        from custom_components.niak_comfort.entities import async_clean
+        from custom_components.hestia_comfort.entities import async_clean
         self.hass.config_entries._entries[self.entry.entry_id] = self.entry
         registry = er.async_get(self.hass)
         coordinator = ComfortCoordinator(self.hass, self.entry)
-        old = registry.async_get_or_create("sensor", "niak_comfort", f"{self.entry.entry_id}_level", config_entry=self.entry)
-        kept = registry.async_get_or_create("sensor", "niak_comfort", f"{self.entry.entry_id}_heating_action", config_entry=self.entry)
+        old = registry.async_get_or_create("sensor", "hestia_comfort", f"{self.entry.entry_id}_level", config_entry=self.entry)
+        kept = registry.async_get_or_create("sensor", "hestia_comfort", f"{self.entry.entry_id}_heating_action", config_entry=self.entry)
         async_clean(self.hass, self.entry, coordinator)
         self.assertIsNone(registry.async_get(old.entity_id))
         self.assertIsNotNone(registry.async_get(kept.entity_id))
 
     async def test_the_room_carrying_a_shared_air_shows_only_that_air(self):
         from types import SimpleNamespace
-        from custom_components.niak_comfort.entities import async_clean, volume_id
+        from custom_components.hestia_comfort.entities import async_clean, volume_id
         self.hass.config_entries._entries[self.entry.entry_id] = self.entry
         registry, devices = er.async_get(self.hass), dr.async_get(self.hass)
-        salon = devices.async_get_or_create(config_entry_id=self.entry.entry_id, identifiers={("niak_comfort", self.entry.entry_id)}, name="Salon")
-        humidity = registry.async_get_or_create("sensor", "niak_comfort", f"{self.entry.entry_id}_humidity", config_entry=self.entry,
+        salon = devices.async_get_or_create(config_entry_id=self.entry.entry_id, identifiers={("hestia_comfort", self.entry.entry_id)}, name="Salon")
+        humidity = registry.async_get_or_create("sensor", "hestia_comfort", f"{self.entry.entry_id}_humidity", config_entry=self.entry,
                                                 device_id=salon.id, suggested_object_id="salon_humidite")
         coordinator = SimpleNamespace(entry_id=self.entry.entry_id, partners=[{"entry_id": "cuisine"}], volume_name="Salon · Cuisine",
                                       config={"name": "Salon"}, config_entry=self.entry)
         async_clean(self.hass, self.entry, coordinator)
         shared = next(d for d in dr.async_entries_for_config_entry(devices, self.entry.entry_id)
-                      if ("niak_comfort", volume_id(coordinator)) in d.identifiers)
+                      if ("hestia_comfort", volume_id(coordinator)) in d.identifiers)
         self.assertEqual(shared.name, "Salon · Cuisine")
         # Same entity, same history: only its device changes, and the room's own device is gone.
         self.assertEqual(registry.async_get(humidity.entity_id).device_id, shared.id)
@@ -361,7 +361,7 @@ class AdapterTests(AdapterFixture):
         first = await coordinator._async_update_data()
         self.assertEqual(first["assessment"]["level"], "urgent")
         # Beyond the three-hour expiry with no news from the sensor or its device, a measure is no longer current.
-        with patch("custom_components.niak_comfort.coordinator.dt_util.utcnow", return_value=dt_util.utcnow()+timedelta(hours=4)):
+        with patch("custom_components.hestia_comfort.coordinator.dt_util.utcnow", return_value=dt_util.utcnow()+timedelta(hours=4)):
             expired = await coordinator._async_update_data()
         self.assertEqual(expired["observations"]["co2"]["quality"], "stale")
         self.assertEqual(expired["assessment"]["action"], "unknown")

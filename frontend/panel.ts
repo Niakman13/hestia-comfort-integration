@@ -11,7 +11,7 @@ import {words,labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom
 addDictionary('en',PANEL_EN);
 /** An extension's state in one word, and its colour: blue when linked, orange when one step is left. */
 const extState:Record<Extension['state'],[string,string]>={linked:[fr('liée'),'ok'],found:[fr('à lier'),'act'],missing:[fr('non installée'),''],off:[fr('désactivée'),'']};
-const extIcon:Record<string,string>={niak_weather:'weather',versatile_thermostat:'heating',adaptive_cover_pro:'openings',alarmo:'presence'};
+const extIcon:Record<string,string>={hestia_weather:'weather',versatile_thermostat:'heating',adaptive_cover_pro:'openings',alarmo:'presence'};
 /** HACS opens the repository from its GitHub address. */
 const hacsUrl=(url:string)=>{const [owner,repository]=url.replace('https://github.com/','').split('/');return `https://my.home-assistant.io/redirect/hacs_repository/?owner=${owner}&repository=${repository}&category=integration`;};
 const askUrl=(name:string,use:string)=>`https://github.com/hestiaFB/hestia-comfort-integration/issues/new?title=${encodeURIComponent(t('Lire l’extension {name}',{name}))}&body=${encodeURIComponent(t('J’utilise {name}.',{name})+' '+use)}`;
@@ -54,7 +54,7 @@ function loadPicker():Promise<string|null>{
  })();
  return pickerLoad;
 }
-@customElement('niak-comfort-setup')
+@customElement('hestia-comfort-setup')
 export class ComfortSetup extends LitElement {
  static styles=[unsafeCSS(styles),hubStyles,modernStyles,pageStyles];
  @property({attribute:false}) hass?:Hass;
@@ -123,15 +123,15 @@ export class ComfortSetup extends LitElement {
  }
  private async load(){
   if(!this.hass)return;const generation=++this.generation;this.busy=true;this.error='';
-  try{const value=await this.ws<Snapshot>({type:'niak_comfort/configuration'});if(generation===this.generation){this.snapshot=value;await this.followRoute();if(!value.rooms.length)await this.loadOverview();}}
+  try{const value=await this.ws<Snapshot>({type:'hestia_comfort/configuration'});if(generation===this.generation){this.snapshot=value;await this.followRoute();if(!value.rooms.length)await this.loadOverview();}}
   catch(e){if(generation===this.generation)this.error=this.message(e);}
   finally{if(generation===this.generation)this.busy=false;}
  }
  private async loadHealth(){
   const generation=++this.healthGeneration;this.healthLoading=true;this.healthError='';
   // What the twins learned is a bonus: the health page never waits for it nor fails with it.
-  void this.ws<Twins>({type:'niak_comfort/twins'}).then(t=>{if(generation===this.healthGeneration)this.twins=t;},()=>{});
-  try{const value=await this.ws<Health>({type:'niak_comfort/health'});if(generation===this.healthGeneration)this.health=value;}
+  void this.ws<Twins>({type:'hestia_comfort/twins'}).then(t=>{if(generation===this.healthGeneration)this.twins=t;},()=>{});
+  try{const value=await this.ws<Health>({type:'hestia_comfort/health'});if(generation===this.healthGeneration)this.health=value;}
   catch(e){if(generation===this.healthGeneration)this.healthError=this.message(e);}
   finally{if(generation===this.healthGeneration)this.healthLoading=false;}
  }
@@ -171,7 +171,7 @@ export class ComfortSetup extends LitElement {
  /** Versions and useful links, as on Hestia Weather's home. */
  private versionsBox(){const h=this.health!,version=h.version??'';
   const bricks=(h.extensions??[]).filter(x=>x.official&&x.state==='linked').map(x=>x.name);
-  return versionsFrame([[t('Intégration'),version||t('Version non reçue')],[t('Carte'),version||t('Version non reçue')],['API','niak_comfort_api v1'],[t('Socle commun'),h.socle||t('Version non reçue')],[t('Liaisons'),bricks.length?bricks.join(' · '):t('Aucune brique reliée')]],repository,'niak_comfort');}
+  return versionsFrame([[t('Intégration'),version||t('Version non reçue')],[t('Carte'),version||t('Version non reçue')],['API','hestia_comfort_api v1'],[t('Socle commun'),h.socle||t('Version non reçue')],[t('Liaisons'),bricks.length?bricks.join(' · '):t('Aucune brique reliée')]],repository,'hestia_comfort');}
  /** The state of each extension, in one word; linking and installing are in the general settings. */
  private extensionsSummary(){const h=this.health!,level:Record<string,NkLevel>={ok:'ok',act:'todo'};
   return extensionsFrame((h.extensions??[]).map(x=>({name:x.name,group:x.official?t('Briques Hestia'):t('Extensions tierces'),pill:{text:t(extState[x.state][0]),level:level[extState[x.state][1]]??'none'}})),{label:t('Gérer les extensions'),onClick:()=>this.path('extensions'),disabled:this.busy});}
@@ -249,7 +249,7 @@ export class ComfortSetup extends LitElement {
   const asked=(this.twins?.rooms??[]).flatMap(r=>(r.questions??[]).map(q=>({...q,entry_id:r.entry_id})));
   if(!asked.length)return nothing;
   const answer=async(entry_id:string,key:string,value:string)=>{
-   try{await this.ws({type:'niak_comfort/answer',entry_id,key,answer:value});this.twins=await this.ws<Twins>({type:'niak_comfort/twins'});}
+   try{await this.ws({type:'hestia_comfort/answer',entry_id,key,answer:value});this.twins=await this.ws<Twins>({type:'hestia_comfort/twins'});}
    catch(e){this.error=this.message(e);}};
   return html`<h3 class="tw-sub">${t('Pour affiner l’apprentissage')}</h3>${asked.map(q=>html`<div class="tw-q"><p>${q.text}<small>${q.hint}</small></p>
    <div class="tw-btns">${[['yes',t('Oui')],['no',t('Non')],['unknown',t('Je ne sais pas')]].map(([v,l])=>html`<button @click=${()=>void answer(q.entry_id,q.key,v)}>${l}</button>`)}</div></div>`)}`;
@@ -297,7 +297,7 @@ export class ComfortSetup extends LitElement {
   finally{if(generation===this.workspaceGeneration)this.opening=false;}
  }
  private async loadOverview(){
-  try{const o=await this.ws<{areas:NonNullable<ComfortSetup['overview']>}>({type:'niak_comfort/overview'});const living=livingArea(o.areas.map(a=>({...a,outdoor:false})),new Set());this.overview=living?[...o.areas.filter(a=>a.area_id===living.area_id),...o.areas.filter(a=>a.area_id!==living.area_id)]:o.areas;this.picked=o.areas.filter(a=>typeof a.suggestions.indoor_temperature==='string').map(a=>a.area_id);}
+  try{const o=await this.ws<{areas:NonNullable<ComfortSetup['overview']>}>({type:'hestia_comfort/overview'});const living=livingArea(o.areas.map(a=>({...a,outdoor:false})),new Set());this.overview=living?[...o.areas.filter(a=>a.area_id===living.area_id),...o.areas.filter(a=>a.area_id!==living.area_id)]:o.areas;this.picked=o.areas.filter(a=>typeof a.suggestions.indoor_temperature==='string').map(a=>a.area_id);}
   catch{this.overview=[];}
  }
  private detected(s:Record<string,string|string[]>){const parts=[s.indoor_temperature&&t('température'),s.indoor_humidity&&t('humidité'),s.co2&&'CO₂',s.heating&&t('chauffage')].filter(Boolean) as string[];const n=Array.isArray(s.windows)?s.windows.length:0;if(n)parts.push(n>1?t('{n} ouvrants',{n}):t('{n} ouvrant',{n}));return parts.join(', ');}
@@ -305,7 +305,7 @@ export class ComfortSetup extends LitElement {
  private async createAll(){
   const areas=(this.overview??[]).filter(a=>this.picked.includes(a.area_id));if(!areas.length){this.error=t('Cochez au moins une pièce.');return;}
   this.busy=true;this.error='';let created=0;
-  try{for(const a of areas){const discovery=await this.discover(a.area_id);const snapshot:Snapshot=await this.ws<Snapshot>({type:'niak_comfort/save_config',config:newRoom({area_id:a.area_id,name:a.name},'',discovery),revision:this.snapshot!.revision,acknowledged:[]});this.snapshot=snapshot;created++;}
+  try{for(const a of areas){const discovery=await this.discover(a.area_id);const snapshot:Snapshot=await this.ws<Snapshot>({type:'hestia_comfort/save_config',config:newRoom({area_id:a.area_id,name:a.name},'',discovery),revision:this.snapshot!.revision,acknowledged:[]});this.snapshot=snapshot;created++;}
    this.saved=(created>1?t('{n} pièces créées.',{n:created}):t('{n} pièce créée.',{n:created}))+' '+t('Ouvrez chacune pour renseigner l’exposition des ouvrants et compléter si besoin.');this.overview=undefined;}
   catch(e){this.error=(created?(created>1?t('{n} pièces créées, puis : ',{n:created}):t('{n} pièce créée, puis : ',{n:created})):'')+this.message(e);}
   finally{this.busy=false;}
@@ -313,7 +313,7 @@ export class ComfortSetup extends LitElement {
  private menu(){this.dispatchEvent(new CustomEvent('hass-toggle-menu',{bubbles:true,composed:true}));}
  private areaName(id:string|null){return id?this.snapshot?.areas.find(a=>a.area_id===id)?.name??id:'';}
  private async discover(area_id?:string|null,entry_id?:string){
-  return await this.ws<Discovery>({type:'niak_comfort/discover',...(area_id?{area_id}:{}),...(entry_id?{entry_id}:{})});
+  return await this.ws<Discovery>({type:'hestia_comfort/discover',...(area_id?{area_id}:{}),...(entry_id?{entry_id}:{})});
  }
  private begin(){this.confirmRemove=false;this.adding=false;this.busy=true;this.error='';this.saved='';this.preview=undefined;this.search={};this.confirmed=false;}
  private async start(area:{area_id:string;name:string}|null,name=''){
@@ -340,14 +340,14 @@ export class ComfortSetup extends LitElement {
  // Takes Hestia Weather's station and signals as the whole exterior; only the caution on the air stays the person's.
  private async useWeather(entry_id:string,quiet=false){
   if(!quiet)this.busy=true;this.error='';
-  try{const p=await this.ws<{entry_id:string;title:string;sources:Record<string,Spec>;air?:{provider:string;index:number|null;label:string|null}|null;season?:string|null}>({type:'niak_comfort/weather_proposal',entry_id});
+  try{const p=await this.ws<{entry_id:string;title:string;sources:Record<string,Spec>;air?:{provider:string;index:number|null;label:string|null}|null;season?:string|null}>({type:'hestia_comfort/weather_proposal',entry_id});
    const caution=this.exteriorDraft?.pollution?.block_from,next={...p.sources};if(next.pollution&&caution)next.pollution={...next.pollution,block_from:caution};
    this.exteriorDraft=next;this.weatherEntry=p.entry_id;this.weatherAir=p.air??null;this.weatherSeason=p.season??null;if(!quiet)this.saved=t('Les mesures de Hestia Weather ({place}) sont reprises : enregistrez pour les garder.',{place:p.title});}
   catch(e){if(quiet)this.weatherEntry=entry_id;this.error=this.message(e);}finally{if(!quiet)this.busy=false;}
  }
- private ownSensors(){if(this.exteriorDraft?.pollution?.adapter==='niak_air')this.clear('pollution');this.weatherEntry=null;this.weatherAir=null;this.weatherSeason=null;this.saved='';}
+ private ownSensors(){if(this.exteriorDraft?.pollution?.adapter==='hestia_air')this.clear('pollution');this.weatherEntry=null;this.weatherAir=null;this.weatherSeason=null;this.saved='';}
  // The exterior: its source first; with Hestia Weather everything is read from it, with own sensors each one is chosen.
- private exteriorSource(){const s=this.snapshot!,nw=s.niak_weather,from=this.weatherEntry?'weather':'own';
+ private exteriorSource(){const s=this.snapshot!,nw=s.hestia_weather,from=this.weatherEntry?'weather':'own';
   return html`<span id="l-from" class="sr-only">${t('Source des mesures du dehors')}</span>
    ${this.choiceList('from','l-from',exteriorChoices(s),from,v=>v==='weather'?void this.useWeather(nw!.places[0].entry_id):this.ownSensors())}
    ${from==='weather'&&(nw?.places.length??0)>1?this.zone(t('Lieu Hestia Weather'),nw!.places.map(p=>({value:p.entry_id,label:p.title})),this.weatherEntry!,id=>void this.useWeather(id)):nothing}`;}
@@ -355,10 +355,10 @@ export class ComfortSetup extends LitElement {
  private exteriorRows(){const weather=!!this.weatherEntry,all=(key:string)=>this.discovery?.candidates[key]??[];
   const keys=outdoorGroups.flatMap(([,k])=>k),spec=this.exteriorDraft!.pollution,air=all('pollution').find(x=>x.entity_id===spec?.entity_id),wa=this.weatherAir;
   // The air comes from Hestia Weather's own choice (Atmo France or a WAQI station), or from its index entity.
-  const airName=spec?.adapter==='niak_air'&&wa?'Hestia Weather · '+wa.provider:air?air.name:'—';
-  const airValue=spec?.adapter==='niak_air'?(wa?.index?html`<span>${wa.label??t('indice {n}',{n:wa.index})}</span>`:html`<span class="bad">${t('ne répond pas')}</span>`)
+  const airName=spec?.adapter==='hestia_air'&&wa?'Hestia Weather · '+wa.provider:air?air.name:'—';
+  const airValue=spec?.adapter==='hestia_air'?(wa?.index?html`<span>${wa.label??t('indice {n}',{n:wa.index})}</span>`:html`<span class="bad">${t('ne répond pas')}</span>`)
    :air?html`<span class=${air.available?'':'bad'}>${air.atmo_label??measurement(air)}</span>`:html`<span class="muted">${spec?'—':t('non fourni par Hestia Weather')}</span>`;
-  const title=this.snapshot?.niak_weather?.places.find(p=>p.entry_id===this.weatherEntry)?.title;
+  const title=this.snapshot?.hestia_weather?.places.find(p=>p.entry_id===this.weatherEntry)?.title;
   const value=(key:string)=>{const id=this.selected(key)[0],c=all(key).find(x=>x.entity_id===id);
    // With Hestia Weather, its season comes through its interface, as on its own card.
    if(weather&&key==='season')return this.weatherSeason?html`<span>${seasonNames[this.weatherSeason]??this.weatherSeason}</span>`:html`<span class="muted">${t('non fourni par Hestia Weather')}</span>`;
@@ -376,7 +376,7 @@ export class ComfortSetup extends LitElement {
   return frame(t('Vos capteurs'),rows);}
  /** The person's caution on a daily air index (Atmo France scale, also used by Hestia Weather). */
  private airCaution(){const spec=this.exteriorDraft!.pollution;
-  return spec&&['atmo_daily','niak_index','niak_air'].includes(spec.adapter??'')?html`<label class="ex-caution">${t('Prudence à partir du niveau')}<select @change=${(e:Event)=>{this.exteriorDraft={...this.exteriorDraft!,pollution:{...spec!,block_from:Number((e.target as HTMLSelectElement).value)}};}}>${[t('Moyen'),t('Dégradé'),t('Mauvais'),t('Très mauvais'),t('Extrêmement mauvais')].map((label,i)=>html`<option value=${i+2} ?selected=${(spec!.block_from??4)===i+2}>${label}</option>`)}</select></label><p class="hint">${t('Votre préférence de prudence, pas une consigne sanitaire.')}</p>`:nothing;}
+  return spec&&['atmo_daily','hestia_index','hestia_air'].includes(spec.adapter??'')?html`<label class="ex-caution">${t('Prudence à partir du niveau')}<select @change=${(e:Event)=>{this.exteriorDraft={...this.exteriorDraft!,pollution:{...spec!,block_from:Number((e.target as HTMLSelectElement).value)}};}}>${[t('Moyen'),t('Dégradé'),t('Mauvais'),t('Très mauvais'),t('Extrêmement mauvais')].map((label,i)=>html`<option value=${i+2} ?selected=${(spec!.block_from??4)===i+2}>${label}</option>`)}</select></label><p class="hint">${t('Votre préférence de prudence, pas une consigne sanitaire.')}</p>`:nothing;}
  // The outdoor air: with Hestia Weather, its index of the day; otherwise an integration, then its zone or place.
  /** The people the room is for: one for a bedroom, several for a shared room, none for the whole household. */
  private personsBlock(){const d=this.draft;if(!d)return nothing;const states=this.hass?.states??{},all=Object.keys(states).filter(e=>e.startsWith('person.')).sort(),mine=new Set(d.persons??[]);
@@ -386,7 +386,7 @@ export class ComfortSetup extends LitElement {
     :html`<p class="muted">${t('Aucune personne dans Home Assistant (Paramètres → Personnes).')}</p>`}`);}
  private airBlock(){const all=this.discovery?.candidates.pollution??[],spec=this.exteriorDraft!.pollution,current=airSource(spec);
   const pickSource=(v:string)=>{if(v===current)return;if(v==='none'){this.clear('pollution');return;}
-   const first=all.find(c=>c.adapter===(v==='atmo'?'atmo_daily':'niak_index'));if(first)this.choose('pollution',first);};
+   const first=all.find(c=>c.adapter===(v==='atmo'?'atmo_daily':'hestia_index'));if(first)this.choose('pollution',first);};
   const zones=spec&&current!=='other'?all.filter(c=>c.adapter===spec.adapter):[],c=all.find(x=>x.entity_id===spec?.entity_id);
   if(this.weatherEntry)return nothing;
   return frame(labels.pollution,html`<span id="l-air" class="sr-only">${labels.pollution}</span><p class="hint">${t('Une précaution régionale du jour, pas une mesure à vos fenêtres.')}</p>
@@ -420,7 +420,7 @@ export class ComfortSetup extends LitElement {
  }
  // Deleting a room leaves the person's devices untouched; an area room is proposed again on the home page.
  private async removeRoom(){const id=this.entryId,d=this.draft;if(!id||!d)return;this.busy=true;this.error='';
-  try{const snapshot=await this.ws<Snapshot>({type:'niak_comfort/remove_room',entry_id:id,revision:this.revision});this.snapshot=snapshot;this.discard();this.confirmRemove=false;
+  try{const snapshot=await this.ws<Snapshot>({type:'hestia_comfort/remove_room',entry_id:id,revision:this.revision});this.snapshot=snapshot;this.discard();this.confirmRemove=false;
    this.saved=t('« {name} » est supprimée. Vos capteurs n’ont pas été touchés.',{name:d.name})+(d.area_id?' '+t('La pièce vous est de nouveau proposée ci-dessous.'):'');if(!snapshot.rooms.length)await this.loadOverview();}
   catch(e){this.error=this.message(e);}finally{this.busy=false;}
  }
@@ -579,11 +579,11 @@ export class ComfortSetup extends LitElement {
  private async save(){
   const config=this.exteriorDraft?{sources:this.exteriorDraft,weather:this.weatherEntry}:this.draft;if(!config)return;
   const workspace=this.workspaceGeneration,entryId=this.entryId,isHome=!!this.exteriorDraft,revision=this.revision;this.busy=true;this.error='';
-  try{const validated=await this.ws<{warnings:{key:string;entity_id:string}[]}>({type:'niak_comfort/validate_config',config,home:isHome});if(workspace!==this.workspaceGeneration)return;const missing=validated.warnings.map(w=>warningId(w.key,w.entity_id)).filter(id=>!this.acknowledged.includes(id));
+  try{const validated=await this.ws<{warnings:{key:string;entity_id:string}[]}>({type:'hestia_comfort/validate_config',config,home:isHome});if(workspace!==this.workspaceGeneration)return;const missing=validated.warnings.map(w=>warningId(w.key,w.entity_id)).filter(id=>!this.acknowledged.includes(id));
    if(missing.length&&!this.confirmed){this.error=t('Cochez « J’ai vérifié, je confirme mes choix » juste au-dessus pour enregistrer.');return;}
    this.acknowledged=[...new Set([...this.acknowledged,...missing])];
    const before=new Set(this.snapshot?.rooms.map(r=>r.entry_id));const wasRoom=!isHome;const edited=entryId;
-   this.snapshot=await this.ws<Snapshot>({type:'niak_comfort/save_config',config,home:isHome,revision,...(entryId?{entry_id:entryId}:{}),acknowledged:this.acknowledged});
+   this.snapshot=await this.ws<Snapshot>({type:'hestia_comfort/save_config',config,home:isHome,revision,...(entryId?{entry_id:entryId}:{}),acknowledged:this.acknowledged});
    if(workspace!==this.workspaceGeneration)return;
    this.drafts.delete(this.workspaceKey);this.workspaceKey='';this.path('');this.draft=undefined;this.exteriorDraft=undefined;this.discovery=undefined;this.entryId=undefined;
    if(wasRoom){this.preview=edited??this.snapshot.rooms.find(r=>!before.has(r.entry_id))?.entry_id;this.previewEdited=!!edited;if(this.preview)this.path('apercu/'+this.preview);}
@@ -628,11 +628,11 @@ export class ComfortSetup extends LitElement {
    next:this.stage!==5?{label:t('Continuer'),onClick:()=>this.next(),disabled:this.busy}:undefined,
    save:this.entryId?{label:t('Enregistrer'),onClick:()=>this.saveRoom(),disabled:this.busy}:this.stage===5?{label:t('Créer la pièce'),onClick:()=>void this.save(),disabled:this.busy}:undefined})}${this.removeBlock()}`;}
  /** The general settings: the rooms, Hestia's own bricks, then the other integrations Confort reads or could read. */
- private exterior(){const h=this.health,ext=h?.extensions??[],weather=ext.find(x=>x.key==='niak_weather');
+ private exterior(){const h=this.health,ext=h?.extensions??[],weather=ext.find(x=>x.key==='hestia_weather');
   return html`${pageHead({back:{label:t('Accueil Confort'),onClick:()=>this.cancel()},title:t('Extensions'),subtitle:t('Les autres briques Hestia, le dehors qu’elles donnent, et les intégrations que Confort lit.')})}
   <h2 class="ex-sec">${t('Extensions officielles Hestia')}</h2>
-  ${this.extensionCard({...(weather??{key:'niak_weather',name:t('Hestia Weather'),official:true,level:'none',role:'',use:t('Le dehors pour toutes les pièces : température, humidité, pluie, vent, soleil, saison, pollution, alertes et prévisions.'),without:'',url:'https://github.com/hestiaFB/hestia-weather-integration',text:'',rooms:[]}),
-    state:this.weatherEntry?'linked':this.snapshot?.niak_weather?.installed&&this.snapshot.niak_weather.places.length?'found':'missing'},
+  ${this.extensionCard({...(weather??{key:'hestia_weather',name:t('Hestia Weather'),official:true,level:'none',role:'',use:t('Le dehors pour toutes les pièces : température, humidité, pluie, vent, soleil, saison, pollution, alertes et prévisions.'),without:'',url:'https://github.com/hestiaFB/hestia-weather-integration',text:'',rooms:[]}),
+    state:this.weatherEntry?'linked':this.snapshot?.hestia_weather?.installed&&this.snapshot.hestia_weather.places.length?'found':'missing'},
     html`${this.exteriorSource()}${this.weatherEntry?this.exteriorRows():nothing}`)}
   ${this.weatherEntry?nothing:html`${this.exteriorRows()}${this.airBlock()}`}
   <h2 class="ex-sec">${t('Extensions tierces')}</h2><p class="hint">${t('Rangées par thème. Toutes facultatives : chacune affine les conseils là où elle sert.')}</p>
@@ -666,20 +666,20 @@ export class ComfortSetup extends LitElement {
   const off=x.state==='off',act=x.state==='missing'&&!x.official?html`<a class="ex-act" href=${hacsUrl(x.url)} target="_blank" rel="noreferrer">${t('Installer avec HACS')}</a>`
    :x.state==='found'&&step&&first?html`<button class="nk-edit" ?disabled=${this.busy} @click=${()=>void this.openRoom(first.entry_id,step)}>${t('Lier')}</button>`:nothing;
   const detail=off?t('Confort ne s’en sert pas.')+' '+x.without:x.state==='linked'?(x.rooms.length?(x.rooms.length>1?t('{n} pièces : {names}',{n:x.rooms.length,names:x.rooms.join(', ')}):t('1 pièce : {names}',{names:x.rooms.join(', ')})):''):x.state==='found'?(step?t('Trouvé dans Home Assistant. Dans une pièce : Modifier → {step}.',{step:step==='chauffage'?t('Chauffage'):t('Ouvertures')}):t('Trouvée dans Home Assistant.')):x.without;
-  return nkExtensionCard({icon:extIcon[x.key]??'settings',name:x.name,use:x.use,pill:{text:word,level:cls==='ok'?'ok':cls==='act'?'todo':'none'},detail:detail&&x.key!=='niak_weather'?detail:'',action:act,todo:x.state==='found',
+  return nkExtensionCard({icon:extIcon[x.key]??'settings',name:x.name,use:x.use,pill:{text:word,level:cls==='ok'?'ok':cls==='act'?'todo':'none'},detail:detail&&x.key!=='hestia_weather'?detail:'',action:act,todo:x.state==='found',
    switches:!x.official&&x.state!=='missing'?[{label:t('Utiliser {name} dans les conseils',{name:x.name}),checked:!off,disabled:this.busy,onChange:on=>void this.useExtension(x.key,on)}]:[],body});}
  /** A third-party integration used or not, for every room; saved at once, without touching the other settings. */
  private async useExtension(key:string,enabled:boolean){this.busy=true;
-  try{this.snapshot=await this.ws<Snapshot>({type:'niak_comfort/set_extension',key,enabled});this.revision=this.snapshot.revision;await this.loadHealth();}
+  try{this.snapshot=await this.ws<Snapshot>({type:'hestia_comfort/set_extension',key,enabled});this.revision=this.snapshot.revision;await this.loadHealth();}
   catch(e){this.error=(e as {message?:string}).message??t('Le réglage n’a pas pu être enregistré.');}finally{this.busy=false;}}
  /** False when the person turned this integration off in the general settings. */
  private uses(key:string){return !(this.snapshot?.home.disabled??[]).includes(key);}
  private card(id:string){
   // The card is a dashboard resource, absent from a page opened straight on the panel: it comes with the panel's own version.
-  if(!customElements.get('niak-comfort-card')){
-   if(this.cardLoad==='idle'){this.cardLoad='loading';import(/* @vite-ignore */ new URL('niak-comfort-card.js'+new URL(import.meta.url).search,import.meta.url).href).then(()=>this.cardLoad='done',()=>this.cardLoad='failed');}
+  if(!customElements.get('hestia-comfort-card')){
+   if(this.cardLoad==='idle'){this.cardLoad='loading';import(/* @vite-ignore */ new URL('hestia-comfort-card.js'+new URL(import.meta.url).search,import.meta.url).href).then(()=>this.cardLoad='done',()=>this.cardLoad='failed');}
    return html`<p class="notice">${this.cardLoad==='failed'?t('L’aperçu de la carte apparaîtra après un rechargement de la page.'):t('Chargement de l’aperçu…')}</p>`;}
-  if(this.previewCard?.id!==id){const el=document.createElement('niak-comfort-card') as HTMLElement&{hass?:unknown;setConfig?:(c:object)=>void};el.setConfig?.({type:'custom:niak-comfort-card',entry_id:id,format:'full'});el.hass=this.hass;this.previewCard={id,el};}
+  if(this.previewCard?.id!==id){const el=document.createElement('hestia-comfort-card') as HTMLElement&{hass?:unknown;setConfig?:(c:object)=>void};el.setConfig?.({type:'custom:hestia-comfort-card',entry_id:id,format:'full'});el.hass=this.hass;this.previewCard={id,el};}
   return this.previewCard!.el;
  }
  private previewScreen(){const s=this.snapshot!,room=s.rooms.find(r=>r.entry_id===this.preview);if(!room)return this.home();
@@ -703,6 +703,6 @@ export class ComfortSetup extends LitElement {
   const header=this.hasAttribute('embedded')?nothing:html`<header><button aria-label=${t('Ouvrir le menu Home Assistant')} @click=${()=>this.menu()}><span class="menu-icon"></span></button><strong>${t('Hestia Confort')}</strong></header>`;
   return html`${header}<main class=${(this.page==='health'||this.page==='review')&&!editing&&!this.preview&&this.snapshot?.rooms.length?'wide':''}>${this.confirmDiscard?html`<section class="notice" role="alertdialog" aria-label=${t('Abandonner le brouillon')}><h2>${t('Quitter sans enregistrer ?')}</h2><p>${t('Vos choix de cette page seront perdus.')}</p><div class="actions"><button @click=${()=>this.confirmDiscard=false}>${t('Continuer la configuration')}</button><button @click=${()=>this.discard()}>${t('Quitter sans enregistrer')}</button></div></section>`:nothing}
    ${!editing?html`${this.errorBlock()}${this.error&&!this.snapshot?html`<button @click=${()=>this.load()}>${t('Réessayer')}</button>`:nothing}`:nothing}${this.saved?html`<p class="notice success" role="status">${this.saved}</p>`:nothing}${this.busy&&!this.snapshot?html`<p class="loading" role="status">${t('Chargement de votre logement…')}</p>`:nothing}
-   ${this.snapshot?(this.exteriorDraft?this.exterior():this.draft?this.wizard():this.preview?this.previewScreen():this.opening?html`<p class="muted" role="status">${t('Chargement…')}</p>`:this.page==='settings'?this.settingsPage():this.page==='review'?html`<niak-comfort-review .hass=${this.hass} .room=${this.reviewRoom} @review-navigate=${(e:CustomEvent<string>)=>this.path(e.detail)}></niak-comfort-review>`:this.page==='health'&&this.snapshot.rooms.length?this.healthScreen():this.home()):nothing}${this.busy&&this.snapshot?html`<p class="busy" role="status">${t('Un instant…')}</p>`:nothing}</main>`;
+   ${this.snapshot?(this.exteriorDraft?this.exterior():this.draft?this.wizard():this.preview?this.previewScreen():this.opening?html`<p class="muted" role="status">${t('Chargement…')}</p>`:this.page==='settings'?this.settingsPage():this.page==='review'?html`<hestia-comfort-review .hass=${this.hass} .room=${this.reviewRoom} @review-navigate=${(e:CustomEvent<string>)=>this.path(e.detail)}></hestia-comfort-review>`:this.page==='health'&&this.snapshot.rooms.length?this.healthScreen():this.home()):nothing}${this.busy&&this.snapshot?html`<p class="busy" role="status">${t('Un instant…')}</p>`:nothing}</main>`;
  }
 }

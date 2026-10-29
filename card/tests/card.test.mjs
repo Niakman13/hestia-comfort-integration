@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
-const root=new URL('../',import.meta.url),temp=await mkdtemp(join(tmpdir(),'niak-comfort-card-'));
+const root=new URL('../',import.meta.url),temp=await mkdtemp(join(tmpdir(),'hestia-comfort-card-'));
 await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts','src/views/room.ts','src/views/horizon.ts','src/editor.ts','src/hass-change.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
   bundle:true,platform:'node',format:'esm',outExtension:{'.js':'.mjs'},logLevel:'silent'});
 const {cleanConfig,cleanHomeConfig,homeAction,cleanReviewConfig}=await import(pathToFileURL(join(temp,'types.mjs')));
@@ -28,7 +28,7 @@ test('humidity graduation stays consistent on room and home cards, including dry
     v.assessment={...v.assessment,level:'calm',reason:'within_comfort',action:'ok',needs:[],missing:[],features:{humidity:{status,degree,measured:value,reachable:20},air:{co2_status:'ok',pm25_status:'ok',voc_status:'ok'}}};
     assert.equal(humidityLabel(v),label);assert.equal(advice(v).pill,'Au mieux');assert.equal(advice(v).level,'calm');
     if(status==='high')assert.equal(facts(v)[0].title,label);
-    const tile=tiles(v,cleanConfig({type:'custom:niak-comfort-card',modules:['humidity']}))[0];
+    const tile=tiles(v,cleanConfig({type:'custom:hestia-comfort-card',modules:['humidity']}))[0];
     assert.equal(tile.note,label.toLowerCase());assert.equal(tile.out,degree>=2);
     assert.equal(needs(v,false).length,degree>=2?1:0);assert.match(needs(v)[0],new RegExp(label.toLowerCase()));
     if(status==='low')assert.match(facts(v)[0].text,/assécherait davantage/);
@@ -52,7 +52,7 @@ test('unavailable or estimated measures never become current numeric readings',(
   assert.equal(numeric({value:600,quality:'valid'}),600);
 });
 test('config keeps hidden modules and order without mutating input',()=>{
-  const input={type:'custom:niak-comfort-card',modules:['air','windows','air']};
+  const input={type:'custom:hestia-comfort-card',modules:['air','windows','air']};
   assert.deepEqual(cleanConfig(input).modules,['air','windows']);assert.equal(input.modules.length,3);
   assert.deepEqual(cleanConfig({...input,modules:[]}).modules,[]);
   assert.throws(()=>cleanConfig({...input,format:'bad'}));
@@ -192,9 +192,9 @@ test('an outdoor source that does not answer is « indisponible », a missing on
   assert.equal(outsideGaps(v),'Pluie et air extérieur non suivis');
 });
 test('card display settings are booleans, kept as given',()=>{
-  const c=cleanConfig({type:'custom:niak-comfort-card',measures_open:false,details_open:true,rotate:false,show_scale:false});
+  const c=cleanConfig({type:'custom:hestia-comfort-card',measures_open:false,details_open:true,rotate:false,show_scale:false});
   assert.equal(c.measures_open,false);assert.equal(c.details_open,true);assert.equal(c.rotate,false);assert.equal(c.show_scale,false);
-  assert.throws(()=>cleanConfig({type:'custom:niak-comfort-card',rotate:'non'}));
+  assert.throws(()=>cleanConfig({type:'custom:hestia-comfort-card',rotate:'non'}));
 });
 
 // A lit template read as plain text, as the banner shows it.
@@ -350,10 +350,10 @@ test('rooms sharing one air show the same advice, with the leading room’s meas
 });
 
 test('the home card keeps its display settings and refuses wrong ones',()=>{
-  const c=cleanHomeConfig({type:'custom:niak-comfort-home-card',rotate:false,show_rooms:false,rooms_open:true,animations:false,glass_effect:false});
+  const c=cleanHomeConfig({type:'custom:hestia-comfort-home-card',rotate:false,show_rooms:false,rooms_open:true,animations:false,glass_effect:false});
   assert.equal(c.rotate,false);assert.equal(c.show_rooms,false);assert.equal(c.glass_effect,false);
-  assert.throws(()=>cleanHomeConfig({type:'custom:niak-comfort-home-card',show_scale:'oui'}));
-  assert.throws(()=>cleanHomeConfig({type:'custom:niak-comfort-card'}));
+  assert.throws(()=>cleanHomeConfig({type:'custom:hestia-comfort-home-card',show_scale:'oui'}));
+  assert.throws(()=>cleanHomeConfig({type:'custom:hestia-comfort-card'}));
 });
 
 test('silent sensors are a state, not advice: loading after a start, then muted; one secondary sensor keeps the banner calm',()=>{
@@ -367,19 +367,19 @@ test('silent sensors are a state, not advice: loading after a start, then muted;
 });
 
 test('the new formats and their settings: lists checked, alert hidden when nothing is asked',()=>{
-  const c=cleanConfig({type:'custom:niak-comfort-card',format:'alert',banner_blocks:['later'],scale_marks:[],tile_chips:['humidity','humidity'],hold_action:'page',hold_path:'/confort'});
+  const c=cleanConfig({type:'custom:hestia-comfort-card',format:'alert',banner_blocks:['later'],scale_marks:[],tile_chips:['humidity','humidity'],hold_action:'page',hold_path:'/confort'});
   assert.deepEqual(c.tile_chips,['humidity']);assert.equal(c.format,'alert');
-  assert.throws(()=>cleanConfig({type:'custom:niak-comfort-card',format:'grand'}));
-  assert.throws(()=>cleanConfig({type:'custom:niak-comfort-card',scale_marks:['nuit']}));
-  assert.throws(()=>cleanConfig({type:'custom:niak-comfort-card',hold_action:'vibrer'}));
+  assert.throws(()=>cleanConfig({type:'custom:hestia-comfort-card',format:'grand'}));
+  assert.throws(()=>cleanConfig({type:'custom:hestia-comfort-card',scale_marks:['nuit']}));
+  assert.throws(()=>cleanConfig({type:'custom:hestia-comfort-card',hold_action:'vibrer'}));
   const st={why:false,tilesOpen:false,detailsOpen:false,uid:'t',toggle(){}};
   const calm=fresh();calm.assessment={...calm.assessment,level:'calm',reason:'within_comfort'};
-  assert.equal(roomCard(calm,cleanConfig({type:'custom:niak-comfort-card',format:'alert'}),st,'alert'),null);
+  assert.equal(roomCard(calm,cleanConfig({type:'custom:hestia-comfort-card',format:'alert'}),st,'alert'),null);
   const asked=fresh();asked.assessment={...asked.assessment,level:'action',reason:'air_needed',action:'ouvrir'};
-  assert.notEqual(roomCard(asked,cleanConfig({type:'custom:niak-comfort-card',format:'alert'}),st,'alert'),null);
-  assert.match(flat(roomCard(asked,cleanConfig({type:'custom:niak-comfort-card',format:'mini'}),st,'mini')),/nc-line-card/);
-  const h=cleanHomeConfig({type:'custom:niak-comfort-home-card',format:'list',list_order:'floor',banner_blocks:['rooms']});
-  assert.equal(h.list_order,'floor');assert.throws(()=>cleanHomeConfig({type:'custom:niak-comfort-home-card',format:'grille'}));
+  assert.notEqual(roomCard(asked,cleanConfig({type:'custom:hestia-comfort-card',format:'alert'}),st,'alert'),null);
+  assert.match(flat(roomCard(asked,cleanConfig({type:'custom:hestia-comfort-card',format:'mini'}),st,'mini')),/nc-line-card/);
+  const h=cleanHomeConfig({type:'custom:hestia-comfort-home-card',format:'list',list_order:'floor',banner_blocks:['rooms']});
+  assert.equal(h.list_order,'floor');assert.throws(()=>cleanHomeConfig({type:'custom:hestia-comfort-home-card',format:'grille'}));
 });
 
 test('right after a start, one or two late secondary sensors do not hide the advice',()=>{
@@ -390,16 +390,16 @@ test('right after a start, one or two late secondary sensors do not hide the adv
 });
 
 test('the home card can open a page on a long press, in every format',()=>{
-  assert.equal(homeAction(cleanHomeConfig({type:'custom:niak-comfort-home-card'})),'none');
-  assert.equal(homeAction(cleanHomeConfig({type:'custom:niak-comfort-home-card',hold_path:'/lovelace/maison'})),'page');
-  assert.equal(homeAction(cleanHomeConfig({type:'custom:niak-comfort-home-card',format:'list'})),'popup');
-  assert.equal(homeAction(cleanHomeConfig({type:'custom:niak-comfort-home-card',format:'list',hold_action:'page',hold_path:'/maison'})),'page');
+  assert.equal(homeAction(cleanHomeConfig({type:'custom:hestia-comfort-home-card'})),'none');
+  assert.equal(homeAction(cleanHomeConfig({type:'custom:hestia-comfort-home-card',hold_path:'/lovelace/maison'})),'page');
+  assert.equal(homeAction(cleanHomeConfig({type:'custom:hestia-comfort-home-card',format:'list'})),'popup');
+  assert.equal(homeAction(cleanHomeConfig({type:'custom:hestia-comfort-home-card',format:'list',hold_action:'page',hold_path:'/maison'})),'page');
 });
 test('a running ventilation or purifier is never counted out of your range',()=>{
   const v=fresh();v.assessment={...v.assessment,level:'calm',reason:'within_comfort',needs:[],features:{...v.assessment.features,air:{...(v.assessment.features?.air??{}),co2_status:'ok',ventilation:{on:true,boost:false}}}};
   v.observations={...v.observations,purifier:{value:true,quality:'valid',source:'fan.p'}};
   const st={why:false,tilesOpen:false,detailsOpen:false,uid:'t',toggle(){}};
-  const text=plain(roomCard(v,cleanConfig({type:'custom:niak-comfort-card',format:'measures',modules:['air','humidity']}),st,'measures'));
+  const text=plain(roomCard(v,cleanConfig({type:'custom:hestia-comfort-card',format:'measures',modules:['air','humidity']}),st,'measures'));
   assert.match(text,/En marche/);assert.doesNotMatch(text,/à surveiller/);
 });
 test('the home card names what a room needs, as measured',async()=>{
@@ -415,7 +415,7 @@ test('a cover driven by Adaptive Cover Pro has its own tile, and asks nothing wh
   const {tiles}=await import(pathToFileURL(join(temp,'views/room.mjs')));
   const v=fresh(),base={entity_id:'binary_sensor.w',mode:'connected',position:100,state:'open',advice:null,message:'',shade_fraction:null,shade_model:'unknown',manual_override:false,automatic:true,cover:'cover.v',driver:'adaptive_cover_pro',sun_front:true,target:30};
   v.assessment={...v.assessment,features:{...v.assessment.features,shutters:[base]}};
-  const c=cleanConfig({type:'custom:niak-comfort-card',modules:['shutters']});
+  const c=cleanConfig({type:'custom:hestia-comfort-card',modules:['shutters']});
   let t=tiles(v,c).find(x=>x.label==='Volet');
   assert.deepEqual([t.value,t.note,t.out,t.entity],['Ouvert','automatique · soleil devant',false,'cover.v']);
   v.assessment.features.shutters=[{...base,automatic:false,advice:'close'}];
@@ -452,14 +452,14 @@ test('rooms sharing one air show each measure once, under the room that has it',
   cuisine.observations={...cuisine.observations,indoor_temperature:r(20.1,'sensor.ct','°C'),co2:r(441,'sensor.co2','ppm'),voc:r(29,'sensor.voc'),purifier:r(false,'fan.p')};
   cuisine.inherited={co2:'Salon'};
   const st={why:false,tilesOpen:true,detailsOpen:false,uid:'t',toggle(){}};
-  const text=plain(roomCard(salon,cleanConfig({type:'custom:niak-comfort-card',format:'measures',modules:['air','temperature'],scale_marks:[]}),st,'measures',[cuisine]));
+  const text=plain(roomCard(salon,cleanConfig({type:'custom:hestia-comfort-card',format:'measures',modules:['air','temperature'],scale_marks:[]}),st,'measures',[cuisine]));
   assert.equal((text.match(/CO₂/g)??[]).length,1);
   assert.equal((text.match(/COV/g)??[]).length,1);
   assert.equal((text.match(/Purificateur/g)??[]).length,1);
   // Both temperatures, each under its room.
   assert.match(text,/20,2/);assert.match(text,/20,1/);
   // A room shown alone says where a borrowed measure comes from.
-  assert.match(plain(roomCard(cuisine,cleanConfig({type:'custom:niak-comfort-card',format:'measures',modules:['air']}),st,'measures')),/· Salon/);
+  assert.match(plain(roomCard(cuisine,cleanConfig({type:'custom:hestia-comfort-card',format:'measures',modules:['air']}),st,'measures')),/· Salon/);
 });
 test('an open window that changes nothing is not told that opening would bring nothing',()=>{
   const v=fresh();v.assessment={...v.assessment,reason:'open_neutral',action:'ok',level:'calm',needs:[]};
@@ -545,31 +545,31 @@ test('the season changes what the card says',()=>{
 
 test('the four sections are settings of their own: À savoir topics and count, detail lines, the graph',async()=>{
   const {factBox,details}=await import(pathToFileURL(join(temp,'views/room.mjs')));
-  const c=cleanConfig({type:'custom:niak-comfort-card',insight_topics:['sun'],insight_max:2,detail_rows:['range'],horizon_subjects:['humidity'],show_horizon:false});
+  const c=cleanConfig({type:'custom:hestia-comfort-card',insight_topics:['sun'],insight_max:2,detail_rows:['range'],horizon_subjects:['humidity'],show_horizon:false});
   assert.deepEqual([c.insight_topics,c.insight_max,c.detail_rows,c.horizon_subjects,c.show_horizon],[['sun'],2,['range'],['humidity'],false]);
-  assert.throws(()=>cleanConfig({type:'custom:niak-comfort-card',insight_topics:['weather']}),/À savoir/);
-  assert.throws(()=>cleanConfig({type:'custom:niak-comfort-card',insight_max:0}),/de 1 à 8/);
+  assert.throws(()=>cleanConfig({type:'custom:hestia-comfort-card',insight_topics:['weather']}),/À savoir/);
+  assert.throws(()=>cleanConfig({type:'custom:hestia-comfort-card',insight_max:0}),/de 1 à 8/);
   const v=fresh();v.assessment={...v.assessment,features:{...(v.assessment.features??{}),season:{minimum:19,maximum:23,heated:true,known:true,name:'autumn'},
     benefits:[{kind:'sun_warms',openings:[],watts:300,keep_shut:true}],humidity:{status:'high',degree:2,lasting:true,measured:70}}};
   const text=r=>JSON.stringify(r);
-  assert.match(text(factBox(v,[],cleanConfig({type:'custom:niak-comfort-card',insight_topics:['sun']}))),/Soleil/);
-  assert.doesNotMatch(text(factBox(v,[],cleanConfig({type:'custom:niak-comfort-card',insight_topics:['sun']}))),/Humidité/);
+  assert.match(text(factBox(v,[],cleanConfig({type:'custom:hestia-comfort-card',insight_topics:['sun']}))),/Soleil/);
+  assert.doesNotMatch(text(factBox(v,[],cleanConfig({type:'custom:hestia-comfort-card',insight_topics:['sun']}))),/Humidité/);
   // Hidden: nothing is drawn (Lit's « nothing », not a template).
-  assert.equal(factBox(v,[],cleanConfig({type:'custom:niak-comfort-card',show_insights:false})).strings,undefined);
-  assert.equal(details(v,cleanConfig({type:'custom:niak-comfort-card',detail_rows:[]})).length,0);
-  assert.ok(text(details(v,cleanConfig({type:'custom:niak-comfort-card',detail_rows:['range']}))).includes('Votre plage de confort'));
+  assert.equal(factBox(v,[],cleanConfig({type:'custom:hestia-comfort-card',show_insights:false})).strings,undefined);
+  assert.equal(details(v,cleanConfig({type:'custom:hestia-comfort-card',detail_rows:[]})).length,0);
+  assert.ok(text(details(v,cleanConfig({type:'custom:hestia-comfort-card',detail_rows:['range']}))).includes('Votre plage de confort'));
 });
 
 test('the scale switch turns the scale off and on, even though the form sends back its hidden list of marks',async()=>{
   const {nextConfig,scaleShown}=await import(pathToFileURL(join(temp,'editor.mjs')));
-  const base=cleanConfig({type:'custom:niak-comfort-card',format:'full'});
+  const base=cleanConfig({type:'custom:hestia-comfort-card',format:'full'});
   // What Home Assistant's form sends: every field, the hidden marks included.
   const off=cleanConfig(nextConfig(base,{show_scale:false,scale_marks:['band','day','out'],rotate:true}));
   assert.equal(scaleShown(off),false);
   const on=cleanConfig(nextConfig(off,{show_scale:true,scale_marks:['band','day','out']}));
   assert.equal(scaleShown(on),true);
   // Another switch leaves a card's own marks untouched.
-  const kept=cleanConfig(nextConfig(cleanConfig({type:'custom:niak-comfort-card',scale_marks:['band']}),{show_scale:true,scale_marks:['band','day','out'],rotate:false}));
+  const kept=cleanConfig(nextConfig(cleanConfig({type:'custom:hestia-comfort-card',scale_marks:['band']}),{show_scale:true,scale_marks:['band','day','out'],rotate:false}));
   assert.deepEqual(kept.scale_marks,['band']);
 });
 
@@ -585,8 +585,8 @@ test('the graph shows when the gesture changes something, or always with the tre
   assert.deepEqual(horizonShown([subject('air',false),subject('sun',false),subject('trend',false)],'always').map(h=>h.kind),['sun']);
   // An older engine, without `needed`: drawn as before.
   assert.deepEqual(horizonShown([{...subject('air'),needed:undefined}]).map(h=>h.kind),['air']);
-  assert.equal(cleanConfig({type:'custom:niak-comfort-card',horizon_mode:'always'}).horizon_mode,'always');
-  assert.throws(()=>cleanConfig({type:'custom:niak-comfort-card',horizon_mode:'parfois'}),/graphique/);
+  assert.equal(cleanConfig({type:'custom:hestia-comfort-card',horizon_mode:'always'}).horizon_mode,'always');
+  assert.throws(()=>cleanConfig({type:'custom:hestia-comfort-card',horizon_mode:'parfois'}),/graphique/);
   const o={plage:()=>null,second:false,onTab:()=>{},uid:'test'};
   const text=r=>JSON.stringify(r);
   assert.equal(horizonBox(barely,{...o,uid:'never'}),Symbol.for('lit-nothing'));
@@ -627,17 +627,17 @@ test('one air never says « refermer » and « laisser ouvert », nor « refroid
   assert.match(flat(advice(salon).line),/réchauffe la pièce/);
 });
 test('the review card is a summary unless « full » is chosen, its title trimmed',()=>{
-  assert.deepEqual(cleanReviewConfig({type:'custom:niak-comfort-review-card'}),{type:'custom:niak-comfort-review-card',format:'summary'});
-  assert.deepEqual(cleanReviewConfig({type:'custom:niak-comfort-review-card',format:'full',title:'  Maison  '}),{type:'custom:niak-comfort-review-card',format:'full',title:'Maison'});
-  assert.equal(cleanReviewConfig({type:'custom:niak-comfort-review-card',format:'grand',title:' '}).format,'summary');
-  assert.throws(()=>cleanReviewConfig({type:'custom:niak-comfort-card'}));
+  assert.deepEqual(cleanReviewConfig({type:'custom:hestia-comfort-review-card'}),{type:'custom:hestia-comfort-review-card',format:'summary'});
+  assert.deepEqual(cleanReviewConfig({type:'custom:hestia-comfort-review-card',format:'full',title:'  Maison  '}),{type:'custom:hestia-comfort-review-card',format:'full',title:'Maison'});
+  assert.equal(cleanReviewConfig({type:'custom:hestia-comfort-review-card',format:'grand',title:' '}).format,'summary');
+  assert.throws(()=>cleanReviewConfig({type:'custom:hestia-comfort-card'}));
 });
 
 test('the full home card chooses its sections, what folds away and the period shown first',()=>{
-  const c=cleanHomeConfig({type:'custom:niak-comfort-home-card',sections:['themes','rooms_chart','curve'],folded:['curve'],period:'week',more_open:true});
+  const c=cleanHomeConfig({type:'custom:hestia-comfort-home-card',sections:['themes','rooms_chart','curve'],folded:['curve'],period:'week',more_open:true});
   assert.deepEqual([c.sections,c.folded,c.period,c.more_open],[['themes','rooms_chart','curve'],['curve'],'week',true]);
-  assert.throws(()=>cleanHomeConfig({type:'custom:niak-comfort-home-card',sections:['graphique']}));
-  assert.throws(()=>cleanHomeConfig({type:'custom:niak-comfort-home-card',period:'année'}));
+  assert.throws(()=>cleanHomeConfig({type:'custom:hestia-comfort-home-card',sections:['graphique']}));
+  assert.throws(()=>cleanHomeConfig({type:'custom:hestia-comfort-home-card',period:'année'}));
 });
 test('a new hass from an unrelated state change does not redraw the cards',()=>{
   const connection={},hass={connection,themes:{darkMode:true},user:{is_admin:true}};

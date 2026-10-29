@@ -17,7 +17,7 @@ COMPASS = ("nord", "nord-est", "est", "sud-est", "sud", "sud-ouest", "ouest", "n
 STATES = {"Tout va bien": "calm", "Au mieux": "best", "À saisir": "benefit", "Geste conseillé": "action", "Attention": "urgent",
           "À vérifier": "neutral", "Conseil optimisé": "optimized", "Trop frais": "too_cold", "Démarrage": "starting",
           "Capteurs muets": "sensors_silent", "Un capteur muet": "sensor_silent"}
-# The card's colours (niak-charte.css, oklch converted to sRGB): blue all is well, green a benefit, orange a gesture.
+# The card's colours (hestia-charte.css, oklch converted to sRGB): blue all is well, green a benefit, orange a gesture.
 COLOURS = {"calm": (170, 214, 229), "best": (170, 214, 229), "benefit": (165, 214, 174), "action": (241, 178, 119),
            "urgent": (234, 140, 143), "neutral": (177, 177, 177)}
 # The same hues, saturated, for a coloured light: a pastel looks white on a LED.

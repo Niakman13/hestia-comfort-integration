@@ -8,7 +8,7 @@
       "acknowledged": [],
       "weather": null
     },
-    "niak_weather": {
+    "hestia_weather": {
       "installed": false,
       "places": []
     },

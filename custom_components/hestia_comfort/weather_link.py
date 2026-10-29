@@ -1,15 +1,18 @@
 """Link with Hestia Weather, through its published interface only (Écosystème Hestia, rule 6).
 
 Its entities are found by their stable unique id `<entry>_<key>`, never by name, and its
-settings are read through `hass.data["niak_weather_api"]` (version 1), never directly.
+settings are read through `hass.data["hestia_weather_api"]` (version 1), never directly.
 """
 import inspect
 
 from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN
+from .engine import legacy
 
-API_KEY = "niak_weather_api"
+API_KEY = "hestia_weather_api"
+# Hestia Weather's entities, under its name and, until it is updated too, its former one.
+PLATFORMS = ("hestia_weather", legacy.WEATHER_DOMAIN)
 API_VERSION = 1
 # Hestia Weather station roles → Hestia Confort exterior sources.
 ROLES = {"temperature": "outdoor_temperature", "humidity": "outdoor_humidity", "rain_rate": "rain",
@@ -18,7 +21,7 @@ VIGILANCE = {"verte": 0, "jaune": 1, "orange": 2, "rouge": 3}
 
 
 def api(hass):
-    candidate = hass.data.get(API_KEY)
+    candidate = hass.data.get(API_KEY) or hass.data.get(legacy.WEATHER_API_KEY)
     return candidate if candidate is not None and getattr(candidate, "version", None) == API_VERSION else None
 
 
@@ -46,8 +49,9 @@ def entity(hass, entry_id, key):
         return None
     found = er.async_get(hass).async_get_entity_id
     for domain in ("sensor", "binary_sensor"):
-        if entity_id := found(domain, "niak_weather", f"{entry_id}_{key}"):
-            return entity_id
+        for platform in PLATFORMS:
+            if entity_id := found(domain, platform, f"{entry_id}_{key}"):
+                return entity_id
     return None
 
 

@@ -64,7 +64,7 @@ document.getElementById('app').innerHTML=`
  <section><h3>Sources partagées</h3>${H.sources.map(s=>`<div class="srow"><b>${s.label}</b><span>${s.text}</span></div>`).join('')}
   <div class="srow"><b>Présence</b><span>Alarmo · zone Maison</span></div><div class="srow"><b>Soleil</b><span>sun.sun · façades des fenêtres</span></div></section>
  <section><h3>Versions et liens</h3><div class="srow"><b>Intégration</b><span>1.2.5</span></div><div class="srow"><b>Carte</b><span>1.2.5 · embarquée</span></div>
-  <div class="srow"><b>Hestia Weather</b><span>2.6.1 · relié à Gardanne</span></div><div class="srow"><b>Interface Maison</b><span>niak_comfort_api v1</span></div></section>
+  <div class="srow"><b>Hestia Weather</b><span>2.6.1 · relié à Gardanne</span></div><div class="srow"><b>Interface Maison</b><span>hestia_comfort_api v1</span></div></section>
  <section><h3>Les cartes</h3><p class="empty" style="margin:0 0 10px">Dans un tableau de bord : Ajouter une carte, puis <b>Hestia Confort</b> pour une pièce, ou <b>Hestia Confort · logement</b> pour la synthèse.</p>
   <div class="short"><button>Ajouter une carte pièce <span>8 pièces · Salon · Cuisine en une</span></button><button>Ajouter la carte logement <span>synthèse</span></button></div></section>
 </div></div>`;

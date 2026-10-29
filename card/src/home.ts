@@ -1,7 +1,7 @@
 import {html,LitElement,unsafeCSS,nothing,type PropertyValues} from 'lit';
 import {property,state} from 'lit/decorators.js';
 import style from './ui/charter.css';
-import charte from './ui/niak-charte.css';
+import charte from './ui/hestia-charte.css';
 import roomStyle from './ui/room.css';
 import {html as h2} from 'lit';
 import {isView,number,numeric} from './view';
@@ -27,7 +27,7 @@ interface Home {
 }
 
 /** The home card: a synthesis of every room. It never replaces the room cards' advice. */
-export class NiakComfortHomeCard extends LitElement {
+export class HestiaComfortHomeCard extends LitElement {
   static styles=[unsafeCSS(style),unsafeCSS(charte),unsafeCSS(roomStyle),homeboardStyles];
   @property({attribute:false}) hass?:HomeAssistant;
   @state() private config?:HomeConfig;
@@ -36,7 +36,7 @@ export class NiakComfortHomeCard extends LitElement {
   @state() private problem?:string;
   @state() private folds:Record<string,boolean>={};
   @state() private dialogOpen=false;
-  /** The last day, week and month of the home (niak_comfort/home_periods), read every quarter of an hour. */
+  /** The last day, week and month of the home (hestia_comfort/home_periods), read every quarter of an hour. */
   @state() private periods?:Periods;
   @state() private period?:Period;
   @state() private slide=0;
@@ -51,8 +51,8 @@ export class NiakComfortHomeCard extends LitElement {
   private retry?:ReturnType<typeof setTimeout>;
   private generation=0;
   setConfig(input:HomeConfig){this.config=cleanHomeConfig(input);}
-  static getConfigElement(){return document.createElement('niak-comfort-home-card-editor');}
-  static getStubConfig():HomeConfig{return {type:'custom:niak-comfort-home-card'};}
+  static getConfigElement(){return document.createElement('hestia-comfort-home-card-editor');}
+  static getStubConfig():HomeConfig{return {type:'custom:hestia-comfort-home-card'};}
   getCardSize(){const f=this.config?.format;return f==='mini'?1:f==='alert'?2:f==='list'?1+this.rooms.length:f==='tile'?4:4+this.rooms.length;}
   connectedCallback(){super.connectedCallback();this.connect();}
   disconnectedCallback(){super.disconnectedCallback();this.stop();}
@@ -76,10 +76,10 @@ export class NiakComfortHomeCard extends LitElement {
       if(event.reload){this.rooms=[];this.home=undefined;this.problem='reload';this.later();return;}
       if(event.version!==1||!event.home||!Array.isArray(event.rooms)){this.problem='version';return;}
       this.rooms=event.rooms.filter(isView);this.home=event.home;this.problem=undefined;
-    },{type:'niak_comfort/home_subscribe'}).then(remove=>{if(generation!==this.generation)void remove();else this.unsubscribe=remove;})
+    },{type:'hestia_comfort/home_subscribe'}).then(remove=>{if(generation!==this.generation)void remove();else this.unsubscribe=remove;})
       .catch((e:{code?:string})=>{if(generation===this.generation){this.problem=e?.code??'connection';this.later();}});
     if((this.config.format??'full')==='full'){
-      const read=()=>{this.hass?.callWS<Periods>({type:'niak_comfort/home_periods'}).then(p=>{if(generation===this.generation&&p?.version===1)this.periods=p;},()=>{});};
+      const read=()=>{this.hass?.callWS<Periods>({type:'hestia_comfort/home_periods'}).then(p=>{if(generation===this.generation&&p?.version===1)this.periods=p;},()=>{});};
       read();this.reader=setInterval(read,15*60000);
       this.ticker=setInterval(()=>{if(!this.paused&&this.config?.rotate!==false&&this.config?.animations!==false)this.slide++;},6000);
     }
@@ -129,7 +129,7 @@ export class NiakComfortHomeCard extends LitElement {
     const note=tx(t===null?'mesure indisponible':['action','urgent'].includes(lvl)?advice(r).title.toLowerCase():unheated?'non chauffée':'dans votre plage');
     // Like the room card: what is out of range is always said; the orange frame only with a gesture to make.
     const out=['action','urgent'].includes(lvl),need=t===null?[]:this.tileNeeds(r);
-    return h2`<button class=${'nc-tile'+(out?' out':need.length?' out soft':'')} data-level=${unheated&&!out?'neutral':lvl} @click=${(e:Event)=>{const id=r.observations.indoor_temperature?.source;if(id)moreInfo(e,id);else this.open(r);}} title=${tt('Détails : {label}',{label:r.title})}><div class="nc-tile-h"><span class="nw-label">${r.title}</span></div><b>${number(t)}<small>°C</small></b><em>${need.length?h2`<niak-note-ticker .notes=${need} .still=${this.config?.animations===false||this.config?.rotate===false}></niak-note-ticker>`:note}</em></button>`;
+    return h2`<button class=${'nc-tile'+(out?' out':need.length?' out soft':'')} data-level=${unheated&&!out?'neutral':lvl} @click=${(e:Event)=>{const id=r.observations.indoor_temperature?.source;if(id)moreInfo(e,id);else this.open(r);}} title=${tt('Détails : {label}',{label:r.title})}><div class="nc-tile-h"><span class="nw-label">${r.title}</span></div><b>${number(t)}<small>°C</small></b><em>${need.length?h2`<hestia-note-ticker .notes=${need} .still=${this.config?.animations===false||this.config?.rotate===false}></hestia-note-ticker>`:note}</em></button>`;
   }
   private details(h:Home){
     const row=(label:string,x:string)=>h2`<li><b>${tx(label)}</b><span> · ${tx(x)}</span></li>`,out=[];
@@ -285,8 +285,8 @@ export class NiakComfortHomeCard extends LitElement {
     </ha-card>`;
   }
 }
-if(!customElements.get('niak-comfort-home-card'))customElements.define('niak-comfort-home-card',NiakComfortHomeCard);
+if(!customElements.get('hestia-comfort-home-card'))customElements.define('hestia-comfort-home-card',HestiaComfortHomeCard);
 declare global {interface Window {customCards?:Array<Record<string,unknown>>}}
 window.customCards??=[];
 guessLanguage();
-if(!window.customCards.some(c=>c.type==='niak-comfort-home-card'))window.customCards.push({type:'niak-comfort-home-card',name:tt('Hestia Confort · logement'),description:tt('La synthèse de toutes vos pièces : celle qui demande le plus d’attention, la plus chaude, les ouvrants ouverts.')});
+if(!window.customCards.some(c=>c.type==='hestia-comfort-home-card'))window.customCards.push({type:'hestia-comfort-home-card',name:tt('Hestia Confort · logement'),description:tt('La synthèse de toutes vos pièces : celle qui demande le plus d’attention, la plus chaude, les ouvrants ouverts.')});

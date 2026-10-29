@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 import unittest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "niak_comfort"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "hestia_comfort"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from engine import people
 from engine.assessment import Settings, assess
@@ -65,7 +65,7 @@ class Advice(unittest.TestCase):
         self.assertEqual(a.features["people"], {"home": [], "away": ["Paul"]})
 
     def test_the_alarm_reason_is_known_to_the_sensor(self):
-        from custom_components.niak_comfort.engine.assessment import REASONS
+        from custom_components.hestia_comfort.engine.assessment import REASONS
         self.assertIn("alarm_open", REASONS)
 
 

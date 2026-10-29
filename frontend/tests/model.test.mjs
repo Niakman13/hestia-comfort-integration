@@ -5,7 +5,7 @@ import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
-const temp=await mkdtemp(join(tmpdir(),'niak-setup-'));
+const temp=await mkdtemp(join(tmpdir(),'hestia-setup-'));
 await build({entryPoints:['model.ts'],bundle:true,platform:'node',format:'esm',outfile:join(temp,'model.mjs')});
 const {newRoom,measurement,coverage,livingArea,exteriorSummary,stages,intros,airSource,airChoices,exteriorChoices,changedAdvanced,vocPreset,airReferenceDefaults}=await import(pathToFileURL(join(temp,'model.mjs')));
 after(()=>rm(temp,{recursive:true,force:true}));
@@ -47,21 +47,21 @@ test('steps are named by what they set, each with its explanation',()=>{
  assert.ok(intros.exterior.length<=3);
 });
 test('air quality is chosen by integration, missing ones greyed with a link, « Pas de » last',()=>{
- const none={niak_weather:{installed:false,places:[]},integrations:{atmofrance:false}};
+ const none={hestia_weather:{installed:false,places:[]},integrations:{atmofrance:false}};
  let list=airChoices(none,[],'none');
- assert.deepEqual(list.map(c=>c.value),['atmo','niak','none']);
+ assert.deepEqual(list.map(c=>c.value),['atmo','hestia','none']);
  assert.equal(list[0].available,false);assert.equal(list[0].missing,'Pas encore installée');assert.match(list[0].url,/atmofrance/);
  assert.equal(list.at(-1).label,'Pas de qualité de l’air');assert.equal(list.at(-1).available,true);
  list=airChoices({...none,integrations:{atmofrance:true}},[],'none');
  assert.equal(list[0].available,false);assert.equal(list[0].url,undefined);
  list=airChoices(none,[{adapter:'atmo_daily'}],'atmo');assert.equal(list[0].available,true);
- assert.deepEqual(airChoices(none,[],'other').map(c=>c.value),['atmo','niak','other','none']);
- assert.equal(airSource(undefined),'none');assert.equal(airSource({adapter:'atmo_daily'}),'atmo');assert.equal(airSource({adapter:'niak_index'}),'niak');assert.equal(airSource({adapter:'binary'}),'other');
+ assert.deepEqual(airChoices(none,[],'other').map(c=>c.value),['atmo','hestia','other','none']);
+ assert.equal(airSource(undefined),'none');assert.equal(airSource({adapter:'atmo_daily'}),'atmo');assert.equal(airSource({adapter:'hestia_index'}),'hestia');assert.equal(airSource({adapter:'binary'}),'other');
 });
 test('the exterior comes from Hestia Weather only when it has a place',()=>{
  assert.equal(exteriorChoices({}).at(0).missing,'Pas encore installée');
- assert.equal(exteriorChoices({niak_weather:{installed:true,places:[]}}).at(0).available,false);
- assert.equal(exteriorChoices({niak_weather:{installed:true,places:[{entry_id:'a',title:'Maison'}]}}).at(0).available,true);
+ assert.equal(exteriorChoices({hestia_weather:{installed:true,places:[]}}).at(0).available,false);
+ assert.equal(exteriorChoices({hestia_weather:{installed:true,places:[{entry_id:'a',title:'Maison'}]}}).at(0).available,true);
 });
 test('advanced settings count only what differs from the defaults',()=>{
  assert.equal(changedAdvanced({minimum:20}),0);assert.equal(changedAdvanced({humidity_high:62,frost:2}),1);

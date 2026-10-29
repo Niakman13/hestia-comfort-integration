@@ -1,5 +1,5 @@
 // The card's own banner for every view of a cases file, for tests/test_verdict_parity.py: the Python port
-// (custom_components/niak_comfort/engine/verdict.py) must say word for word the same. Usage: verdict-cases.mjs <cases.json>
+// (custom_components/hestia_comfort/engine/verdict.py) must say word for word the same. Usage: verdict-cases.mjs <cases.json>
 import {mkdtemp,readFile,rm} from 'node:fs/promises';import {tmpdir} from 'node:os';import {join} from 'node:path';import {pathToFileURL,fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 const card=fileURLToPath(new URL('../',import.meta.url)),temp=await mkdtemp(join(tmpdir(),'nc-verdict-'));

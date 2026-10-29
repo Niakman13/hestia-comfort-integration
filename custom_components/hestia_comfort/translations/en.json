@@ -248,5 +248,19 @@
         "name": "Too humid · {room}"
       }
     }
+  },
+  "issues": {
+    "migration_manual": {
+      "title": "Hestia Comfort: a few lines to change by hand",
+      "description": "Hestia Comfort's technical name is now “hestia_comfort”. Your rooms, settings, learning, history and statistics were kept, and what was made in the interface was updated.\n\nThese hand-written files still use the former name (line numbers in brackets). Replace it there with “hestia_comfort” (or “hestia-comfort” for the cards):\n\n{items}"
+    },
+    "migration_restart": {
+      "title": "Hestia Comfort: restart Home Assistant",
+      "description": "The move to the “hestia_comfort” name is done. The former copy of the integration was removed: restart Home Assistant once to finish."
+    },
+    "migration_failed": {
+      "title": "Hestia Comfort: the move to the new name did not finish",
+      "description": "Nothing was lost. It will start again at the next restart of Home Assistant. If this message comes back, open an issue with Home Assistant's log."
+    }
   }
 }

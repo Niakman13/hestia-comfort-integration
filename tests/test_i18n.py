@@ -7,7 +7,7 @@ import re
 import sys
 import unittest
 
-ROOT = Path(__file__).resolve().parents[1] / "custom_components" / "niak_comfort"
+ROOT = Path(__file__).resolve().parents[1] / "custom_components" / "hestia_comfort"
 sys.path.insert(0, str(ROOT))
 from engine import i18n  # noqa: E402
 from engine.i18n_en import EN  # noqa: E402

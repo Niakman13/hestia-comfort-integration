@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from custom_components.niak_comfort.recorder_history import compact
+from custom_components.hestia_comfort.recorder_history import compact
 
 START = datetime(2026, 10, 20, tzinfo=timezone.utc)
 

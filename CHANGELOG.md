@@ -1,3 +1,22 @@
+## 2.0.0b1 — Bêta : le nom technique devient hestia_comfort
+
+**En bref**
+
+- **Hestia Confort prend son nom technique Hestia : `hestia_comfort`.** Au premier démarrage, votre installation passe seule au nouveau nom.
+- **Rien n’est perdu** : vos pièces, réglages, apprentissages, historiques et statistiques restent, comme le nom, la pièce et l’icône de vos entités.
+
+### Avant de mettre à jour
+
+- Mettez à jour Hestia Weather en même temps (3.0.0b1), si vous l’avez : la liaison entre les deux suit d’elle-même.
+- Après le redémarrage, une réparation peut demander un second redémarrage : faites-le.
+- Si une réparation « quelques lignes à changer à la main » apparaît, elle liste les fichiers YAML et les lignes où remplacer l’ancien nom.
+
+### Améliorations
+
+- Les automatisations, scripts, scènes et tableaux de bord faits dans l’interface sont mis à jour tout seuls.
+- Les cartes deviennent `custom:hestia-comfort-card`, `custom:hestia-comfort-home-card` et `custom:hestia-comfort-review-card`.
+- L’ancienne adresse du panneau mène toujours à `/hestia/confort`.
+
 ## 1.7.27 — Préversion : correctif d’affichage sur petit écran
 
 ### Corrections
@@ -72,7 +91,7 @@
 - Nouveau logo du hub : un H à la place du N.
 - La liaison s’appelle maintenant « Hestia Weather », et le panneau commun « Hestia ».
 - Dans HACS, l’intégration s’appelle « Hestia Comfort ».
-- Les noms internes (`niak_comfort`, `niak-comfort-card`) ne changent pas, pour ne rien casser chez vous.
+- Les noms internes (`hestia_comfort`, `hestia-comfort-card`) ne changent pas, pour ne rien casser chez vous.
 
 ## 1.7.23 — Journal de Home Assistant allégé
 

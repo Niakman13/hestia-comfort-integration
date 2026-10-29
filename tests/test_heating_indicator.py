@@ -5,8 +5,8 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from custom_components.niak_comfort.discovery import suggestions
-from custom_components.niak_comfort.engine.sources import indicator_state
+from custom_components.hestia_comfort.discovery import suggestions
+from custom_components.hestia_comfort.engine.sources import indicator_state
 
 
 class IndicatorWords(unittest.TestCase):

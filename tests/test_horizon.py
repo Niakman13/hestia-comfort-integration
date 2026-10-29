@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 import unittest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "niak_comfort"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "hestia_comfort"))
 from engine import horizon
 
 MODEL = {"thermal": {"a": 0.5 / 40, "b": 0.35, "c": 0.22, "d": 0.25, "e": 0.015, "f": 0.0, "x": 0.0, "z": 0.1},

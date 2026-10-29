@@ -14,7 +14,7 @@ from datetime import timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "custom_components" / "niak_comfort"))
+sys.path.insert(0, str(ROOT / "custom_components" / "hestia_comfort"))
 from engine.verdict import advice, humidity_label, verdict  # noqa: E402
 from engine.assessment import REASONS  # noqa: E402
 

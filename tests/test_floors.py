@@ -3,8 +3,8 @@ from test_home import view, opening
 from engine.home import synthesis
 from test_ha_adapter import AdapterFixture
 from homeassistant.helpers import area_registry as ar, floor_registry as fr
-from custom_components.niak_comfort.floors import room_floor, floor_catalog
-from custom_components.niak_comfort.configuration import Configuration
+from custom_components.hestia_comfort.floors import room_floor, floor_catalog
+from custom_components.hestia_comfort.configuration import Configuration
 import unittest
 
 
@@ -102,7 +102,7 @@ class FloorRegistryTests(AdapterFixture):
         service=Configuration(self.hass)
         from unittest.mock import patch
         config={'name':'Libre','sources':{'indoor_temperature':'sensor.inside'},'floor_id':f.floor_id}
-        with patch('custom_components.niak_comfort.configuration.candidate',return_value={'warnings':[]}):
+        with patch('custom_components.hestia_comfort.configuration.candidate',return_value={'warnings':[]}):
             clean,_=service.validate(config);self.assertEqual(clean['floor_id'],f.floor_id)
             clean,_=service.validate({**config,'floor_id':None});self.assertIsNone(clean['floor_id'])
             with self.assertRaises(ValueError):service.validate({**config,'floor_id':'removed'})
@@ -115,7 +115,7 @@ class FloorRegistryTests(AdapterFixture):
         service = Configuration(self.hass)
         payload = {'name': 'Libre', 'area_id': None, 'floor_id': floor.floor_id,
                    'sources': {'indoor_temperature': 'sensor.inside'}}
-        with patch('custom_components.niak_comfort.configuration.candidate', return_value={'warnings': []}):
+        with patch('custom_components.hestia_comfort.configuration.candidate', return_value={'warnings': []}):
             saved = await service.save(payload, service.revision(), self.entry.entry_id)
             self.assertEqual(self.entry.options['floor_id'], floor.floor_id)
             self.assertEqual(saved['rooms'][0]['floor']['name'], 'Premier')

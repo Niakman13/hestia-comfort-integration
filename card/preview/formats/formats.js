@@ -1,8 +1,8 @@
 // Maquette des formats et du panneau de réglages. La carte complète (pièce et logement) est la vraie carte compilée ;
-// les autres formats sont dessinés avec la charte commune et les styles de la carte (niak-charte.css, room.css).
-await import('../../../custom_components/niak_comfort/frontend/niak-comfort-card.js?t='+Date.now());
+// les autres formats sont dessinés avec la charte commune et les styles de la carte (hestia-charte.css, room.css).
+await import('../../../custom_components/hestia_comfort/frontend/hestia-comfort-card.js?t='+Date.now());
 const [charte,room,data]=await Promise.all([
-  fetch('../../src/ui/niak-charte.css').then(r=>r.text()),fetch('../../src/ui/room.css').then(r=>r.text()),
+  fetch('../../src/ui/hestia-charte.css').then(r=>r.text()),fetch('../../src/ui/room.css').then(r=>r.text()),
   fetch('../refonte/scenes.json').then(r=>r.json())]);
 const $=id=>document.getElementById(id);
 
@@ -87,11 +87,11 @@ const stack=(...items)=>{const w=document.createElement('div');w.style.display='
 const views=Object.fromEntries(data.scenes.map(s=>[s.id,s.view]));
 const fresh=v=>({...structuredClone(v),computed_at:new Date().toISOString()});
 const hass=()=>({themes:{darkMode:dark()},connection:{async subscribeMessage(cb,m){
-  if(m.type==='niak_comfort/home_subscribe')cb({...data.home,rooms:data.home.rooms.map(fresh)});else cb({version:1,view:fresh(views[m.entry_id])});return ()=>{};}},
+  if(m.type==='hestia_comfort/home_subscribe')cb({...data.home,rooms:data.home.rooms.map(fresh)});else cb({version:1,view:fresh(views[m.entry_id])});return ()=>{};}},
   async callWS(){return data.scenes.map(s=>({entry_id:s.id,title:s.view.title}));}});
 const roomSettings={format:'full',state:{},real:{}},homeSettings={format:'full',state:{},real:{}};
-const realRoom=(format='full',id='geste')=>{const c=document.createElement('niak-comfort-card');c.setConfig({type:'custom:niak-comfort-card',entry_id:id,format,...roomSettings.real});c.hass=hass();return c;};
-const realHome=(format='full')=>{const c=document.createElement('niak-comfort-home-card');c.setConfig({type:'custom:niak-comfort-home-card',format,...homeSettings.real});c.hass=hass();return c;};
+const realRoom=(format='full',id='geste')=>{const c=document.createElement('hestia-comfort-card');c.setConfig({type:'custom:hestia-comfort-card',entry_id:id,format,...roomSettings.real});c.hass=hass();return c;};
+const realHome=(format='full')=>{const c=document.createElement('hestia-comfort-home-card');c.setConfig({type:'custom:hestia-comfort-home-card',format,...homeSettings.real});c.hass=hass();return c;};
 
 /* Les formats de la carte pièce. */
 const ROOM={

@@ -185,6 +185,21 @@ Des pièces au même air (« Salon · Cuisine ») ont un seul appareil pour leur
 
 Par exemple : des LED aux couleurs de la carte, ou la VMC qui suit le conseil. [Le détail des entités](docs/guide.md#pour-vos-automatisations).
 
+## Noms techniques
+
+Le nom technique de l’intégration est `hestia_comfort` : les cartes `custom:hestia-comfort-card`, `custom:hestia-comfort-home-card` et `custom:hestia-comfort-review-card`, et le panneau `/hestia/confort`.
+
+Installée sous son nom technique d’origine, l’intégration passe seule au nouveau au premier démarrage de la mise à jour :
+
+- vos pièces, réglages, apprentissages, historiques et statistiques sont gardés ;
+- vos entités gardent leur nom, et donc vos automatisations et vos tableaux de bord aussi ;
+- les automatisations, scripts, scènes et tableaux de bord faits dans l’interface sont mis à jour ;
+- ce qui est écrit à la main en YAML n’est jamais modifié : une réparation dans **Paramètres** liste les fichiers et les lignes à changer.
+
+Mettez à jour Hestia Weather en même temps, si vous l’avez : la liaison entre les deux suit d’elle-même.
+
+Hestia Confort 2.x va avec Hestia Weather 3.x.
+
 ## Langues
 
 Hestia Confort parle **français** et **anglais**. Les cartes, le bilan, le panneau et les noms des entités suivent la langue de Home Assistant ; toute autre langue s’affiche en anglais pour l’instant.

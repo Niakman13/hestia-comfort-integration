@@ -25,7 +25,7 @@ class ComfortConfigFlow(ConfigFlow, domain=DOMAIN):
             # Rooms are added from the sidebar page, with explained proposals.
             return self.async_abort(reason="use_panel")
         if user_input is not None:
-            await self.async_set_unique_id("niak_home")
+            await self.async_set_unique_id("hestia_home")
             self._abort_if_unique_id_configured()
             return self.async_create_entry(title="Mon logement", data={"home": True})
         return self.async_show_form(step_id="home", data_schema=vol.Schema({}), last_step=True)

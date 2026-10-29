@@ -11,8 +11,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from homeassistant.config_entries import ConfigEntries, ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er, floor_registry as fr
-from custom_components.niak_comfort.configuration import get_configuration
-from custom_components.niak_comfort.diagnostics import async_get_config_entry_diagnostics
+from custom_components.hestia_comfort.configuration import get_configuration
+from custom_components.hestia_comfort.diagnostics import async_get_config_entry_diagnostics
 
 
 class Diagnostics(unittest.IsolatedAsyncioTestCase):
@@ -36,7 +36,7 @@ class Diagnostics(unittest.IsolatedAsyncioTestCase):
         self.hass.states.async_set("sensor.t", "18.2", {"unit_of_measurement": "°C", "device_class": "temperature", "entity_picture": "x"})
         self.hass.states.async_set("climate.vt", "off", {"hvac_mode": "off", "preset_mode": "eco", "temperature": 17,
                                                           "specific_states": {"hvac_off_reason": "hvac_off_manual"}})
-        entry = ConfigEntry(domain="niak_comfort", title="Chambre P", unique_id="p", version=1, minor_version=1, source="user",
+        entry = ConfigEntry(domain="hestia_comfort", title="Chambre P", unique_id="p", version=1, minor_version=1, source="user",
                             data={"name": "Chambre P", "area_id": None, "sources": {"indoor_temperature": "sensor.t", "heating": "climate.vt",
                                                                                      "co2": "sensor.gone"},
                                   "windows": ["binary_sensor.w"]},
@@ -84,7 +84,7 @@ class Diagnostics(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             await config.set_extension("scheduler", False)
         # Turned off, the room reads neither the thermostat's setpoints nor the covers' driver.
-        from custom_components.niak_comfort.coordinator import ComfortCoordinator
+        from custom_components.hestia_comfort.coordinator import ComfortCoordinator
         room = SimpleNamespace(home_configuration=config, hass=self.hass, sources={"heating": "climate.vt"}, config={"openings": {}}, logger=None)
         room._uses = lambda key: ComfortCoordinator._uses(room, key)
         self.assertFalse(room._uses("adaptive_cover_pro"))
@@ -92,14 +92,14 @@ class Diagnostics(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ComfortCoordinator._drivers(room), {})
 
     async def test_coordinates_are_removed(self):
-        from custom_components.niak_comfort.diagnostics import TO_REDACT
+        from custom_components.hestia_comfort.diagnostics import TO_REDACT
         from homeassistant.components.diagnostics import async_redact_data
         self.assertEqual(async_redact_data({"latitude": 43.5, "x": {"longitude": 5.4}}, TO_REDACT),
                          {"latitude": "**REDACTED**", "x": {"longitude": "**REDACTED**"}})
 
     async def test_people_are_counted_not_named_nor_placed(self):
         """A person's zone may be a town or an address (issue #41): only « at home » or « away » is kept."""
-        from custom_components.niak_comfort.diagnostics import TO_REDACT, _state, _without_names
+        from custom_components.hestia_comfort.diagnostics import TO_REDACT, _state, _without_names
         from homeassistant.components.diagnostics import async_redact_data
         self.hass.states.async_set("person.frank", "Bureau Marseille")
         self.hass.states.async_set("person.lea", "home")

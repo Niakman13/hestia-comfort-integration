@@ -36,7 +36,7 @@ jobs:
         working-directory: frontend
       - run: npm run validate
         working-directory: frontend
-      - run: git diff --exit-code -- custom_components/niak_comfort/frontend/
+      - run: git diff --exit-code -- custom_components/hestia_comfort/frontend/
   card:
     runs-on: ubuntu-latest
     steps:
@@ -50,7 +50,7 @@ jobs:
         working-directory: card
       - run: npm run validate
         working-directory: card
-      - run: git diff --exit-code -- custom_components/niak_comfort/frontend/niak-comfort-card.js
+      - run: git diff --exit-code -- custom_components/hestia_comfort/frontend/hestia-comfort-card.js
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
@@ -63,11 +63,11 @@ jobs:
       - run: npm run test:loading
         working-directory: card
         env:
-          NIAK_TEST_FIREFOX: "1"
+          HESTIA_TEST_FIREFOX: "1"
       - run: npm --prefix ../frontend run test:browser
         working-directory: card
         env:
-          NIAK_TEST_COMFORT_ONLY: "1"
+          HESTIA_TEST_COMFORT_ONLY: "1"
   hassfest:
     runs-on: ubuntu-latest
     steps:

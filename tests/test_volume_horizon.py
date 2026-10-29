@@ -5,9 +5,9 @@ import unittest
 from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "niak_comfort"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "hestia_comfort"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from custom_components.niak_comfort.coordinator import ComfortCoordinator  # noqa: E402
+from custom_components.hestia_comfort.coordinator import ComfortCoordinator  # noqa: E402
 from engine.assessment import assess  # noqa: E402
 from test_engine import zone  # noqa: E402
 

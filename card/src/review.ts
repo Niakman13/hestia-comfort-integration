@@ -123,7 +123,7 @@ export class ComfortReview extends LitElement {
  protected shouldUpdate(changed:PropertyValues){return hassMatters(changed,this.hass);}
  protected updated(){if(this.hass&&!this.asked)void this.load();}
  private async load(){this.asked=true;this.error='';
-  try{this.data=await this.hass!.callWS<Review>({type:'niak_comfort/review'});}
+  try{this.data=await this.hass!.callWS<Review>({type:'hestia_comfort/review'});}
   catch(e){this.error=typeof e==='object'&&e&&'message' in e?String((e as {message:string}).message):t('connexion indisponible');}
  }
  private go(room?:string){this.room=room;this.dispatchEvent(new CustomEvent('review-navigate',{detail:room?'bilan/'+room:'bilan',bubbles:true,composed:true}));}
@@ -295,5 +295,5 @@ export class ComfortReview extends LitElement {
 }
 
 // The hub's panel and the dashboard card may both load it: defined once.
-if(!customElements.get('niak-comfort-review'))customElements.define('niak-comfort-review',ComfortReview);
-declare global{interface HTMLElementTagNameMap{'niak-comfort-review':ComfortReview}}
+if(!customElements.get('hestia-comfort-review'))customElements.define('hestia-comfort-review',ComfortReview);
+declare global{interface HTMLElementTagNameMap{'hestia-comfort-review':ComfortReview}}

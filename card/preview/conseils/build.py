@@ -1,7 +1,7 @@
 """Builds maquette.html: the compiled card and the engine's situations in one file that opens anywhere."""
 from pathlib import Path
 here = Path(__file__).parent
-bundle = (here.parents[2] / "custom_components" / "niak_comfort" / "frontend" / "niak-comfort-card.js").read_text()
+bundle = (here.parents[2] / "custom_components" / "hestia_comfort" / "frontend" / "hestia-comfort-card.js").read_text()
 scenes = (here / "scenes.json").read_text()
 page = """<!doctype html>
 <html lang="fr" data-theme="light">
@@ -50,7 +50,7 @@ __BUNDLE__
 </script>
 <script type="module">
 const data=__SCENES__;
-await customElements.whenDefined('niak-comfort-card');
+await customElements.whenDefined('hestia-comfort-card');
 const views=Object.fromEntries(data.scenes.map(s=>[s.id,s.view]));
 const fresh=v=>({...structuredClone(v),computed_at:new Date().toISOString()});
 const dark=()=>document.documentElement.dataset.theme==='dark';
@@ -60,8 +60,8 @@ const grid=document.getElementById('grid'),cards=[];
 for(const s of data.scenes){
   const fig=document.createElement('figure');
   fig.innerHTML=`<figcaption><b>${s.title}</b><span>${s.note}</span></figcaption>`;
-  const card=document.createElement('niak-comfort-card');
-  card.setConfig({type:'custom:niak-comfort-card',entry_id:s.id,format:'tile'});
+  const card=document.createElement('hestia-comfort-card');
+  card.setConfig({type:'custom:hestia-comfort-card',entry_id:s.id,format:'tile'});
   fig.append(card);grid.append(fig);cards.push(card);
 }
 const apply=()=>{const h=hass();for(const c of cards)c.hass=h;};

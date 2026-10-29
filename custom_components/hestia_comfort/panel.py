@@ -15,8 +15,8 @@ from .configuration import get_configuration
 from .const import DOMAIN, VERSION
 from .socle import async_register_brick, async_register_card
 
-ASSETS = "/niak_comfort-assets"
-CARD_URL = f"{ASSETS}/niak-comfort-card.js"
+ASSETS = "/hestia_comfort-assets"
+CARD_URL = f"{ASSETS}/hestia-comfort-card.js"
 
 
 async def async_setup_panel(hass):
@@ -37,8 +37,8 @@ async def async_setup_panel(hass):
     await async_register_brick(hass, {
         "domain": DOMAIN, "name": "Hestia Confort", "slug": "confort", "version": VERSION,
         "icon": "mdi:home-thermometer-outline", "navigation": 3, "module_url": f"{ASSETS}/panel.js?v={VERSION}",
-        "element": "niak-comfort-setup", "status": comfort_status, "legacy_path": "niak-confort",
-    }, f"{ASSETS}/niak-socle.js?v={VERSION}")
+        "element": "hestia-comfort-setup", "status": comfort_status, "legacy_path": "hestia-confort",
+    }, f"{ASSETS}/hestia-socle.js?v={VERSION}")
 
 
 # The panel's language, sent with each of its commands (engine/i18n.py).
@@ -77,7 +77,7 @@ async def _status(hass):
     return {"level": "ok", "summary": f"{followed}, " + t("rien à régler."), "details": details, "links": links}
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/health", LANGUAGE: str})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/health", LANGUAGE: str})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def ws_health(hass, connection, msg):
@@ -86,7 +86,7 @@ async def ws_health(hass, connection, msg):
         connection.send_result(msg["id"], health.report(await health.facts(hass, VERSION)))
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/twins", LANGUAGE: str})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/twins", LANGUAGE: str})
 @websocket_api.require_admin
 @callback
 def ws_twins(hass, connection, msg):
@@ -117,7 +117,7 @@ def _questions(coordinator, lang):
         return coordinator.questions()
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/set_extension", LANGUAGE: str, vol.Required("key"): str, vol.Required("enabled"): bool})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/set_extension", LANGUAGE: str, vol.Required("key"): str, vol.Required("enabled"): bool})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def ws_extension(hass, connection, msg):
@@ -131,7 +131,7 @@ async def ws_extension(hass, connection, msg):
     connection.send_result(msg["id"], snapshot)
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/set_alarm", LANGUAGE: str, vol.Required("alarm"): vol.Any(None, str)})
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/set_alarm", LANGUAGE: str, vol.Required("alarm"): vol.Any(None, str)})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def ws_alarm(hass, connection, msg):
@@ -145,7 +145,7 @@ async def ws_alarm(hass, connection, msg):
     connection.send_result(msg["id"], snapshot)
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/answer", LANGUAGE: str, vol.Required("entry_id"): str,
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/answer", LANGUAGE: str, vol.Required("entry_id"): str,
                                   vol.Required("key"): str, vol.Required("answer"): vol.In(("yes", "no", "unknown"))})
 @websocket_api.require_admin
 @websocket_api.async_response

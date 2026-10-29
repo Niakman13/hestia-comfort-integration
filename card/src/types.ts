@@ -38,7 +38,7 @@ export const HOLD_ACTIONS = ['popup','page','none'] as const;
 export type HoldAction = typeof HOLD_ACTIONS[number];
 export const moduleLabels:Record<Module,string>={windows:fr('Fenêtres'),air:fr('Qualité de l’air'),temperature:fr('Température'),humidity:fr('Humidité'),shutters:fr('Soleil et volets'),coordination:fr('Chauffage')};
 export interface Config {
-  type: 'custom:niak-comfort-card'; entry_id?: string; title?: string; format?: Format;
+  type: 'custom:hestia-comfort-card'; entry_id?: string; title?: string; format?: Format;
   modules?: Module[]; animations?: boolean; glass_effect?: boolean; theme?: 'auto'|'light'|'dark';
   /** What the card shows and how it opens: the scale, the measures, the details, and whether advices scroll by themselves. */
   show_scale?: boolean; show_measures?: boolean; show_details?: boolean; measures_open?: boolean; details_open?: boolean; rotate?: boolean;
@@ -131,7 +131,7 @@ export interface HomeAssistant {
 }
 export interface Entry {entry_id:string; title:string; area_id:string|null; volume?:string[]; volume_name?:string|null}
 export function cleanConfig(input:Config):Config {
-  if(!input || input.type!=='custom:niak-comfort-card') throw new Error(t('Type de carte Hestia Comfort invalide.'));
+  if(!input || input.type!=='custom:hestia-comfort-card') throw new Error(t('Type de carte Hestia Comfort invalide.'));
   if(input.format && !FORMATS.includes(input.format)) throw new Error(t('Format de carte inconnu.'));
   if(input.entry_id!==undefined && typeof input.entry_id!=='string') throw new Error(t('Choisissez une pièce Hestia Comfort.'));
   if(input.title!==undefined && typeof input.title!=='string') throw new Error(t('Le titre doit être un texte.'));
@@ -154,7 +154,7 @@ export const HOME_FORMATS = ['full','tile','list','mini','alert'] as const;
 export type HomeFormat = typeof HOME_FORMATS[number];
 /** What scrolls in the home banner: the rooms' advice, and gestures for the whole house (cross ventilation). */
 export const HOME_BANNER = ['rooms','house'] as const;
-export interface HomeConfig {type:'custom:niak-comfort-home-card';title?:string;theme?:'auto'|'light'|'dark';format?:HomeFormat;
+export interface HomeConfig {type:'custom:hestia-comfort-home-card';title?:string;theme?:'auto'|'light'|'dark';format?:HomeFormat;
   rotate?:boolean;show_scale?:boolean;show_rooms?:boolean;rooms_open?:boolean;show_details?:boolean;details_open?:boolean;
   animations?:boolean;glass_effect?:boolean;banner_blocks?:(typeof HOME_BANNER[number])[];list_order?:'urgent'|'floor';
   hold_action?:HoldAction;hold_path?:string;
@@ -163,7 +163,7 @@ export interface HomeConfig {type:'custom:niak-comfort-home-card';title?:string;
 export const HOME_SECTIONS=['themes','rooms_chart','curve','rooms','details'] as const;
 export const HOME_FLAGS=['rotate','show_scale','show_rooms','rooms_open','show_details','details_open','more_open','animations','glass_effect'] as const;
 export function cleanHomeConfig(input:HomeConfig):HomeConfig {
-  if(!input||input.type!=='custom:niak-comfort-home-card')throw new Error(t('Type de carte invalide.'));
+  if(!input||input.type!=='custom:hestia-comfort-home-card')throw new Error(t('Type de carte invalide.'));
   if(input.title!==undefined&&typeof input.title!=='string')throw new Error(t('Le titre doit être un texte.'));
   if(input.theme&&!['auto','light','dark'].includes(input.theme))throw new Error(t('Thème inconnu.'));
   for(const k of HOME_FLAGS)if(input[k]!==undefined&&typeof input[k]!=='boolean')throw new Error(t('Réglage d’affichage invalide.'));
@@ -180,10 +180,10 @@ export const homeAction=(c:HomeConfig)=>c.hold_action??(c.hold_path?'page':(c.fo
 
 /** The review card (review-card.ts): a title and its format, « summary » unless « full » is chosen. */
 export type ReviewFormat='summary'|'full';
-export interface ReviewConfig {type:'custom:niak-comfort-review-card';title?:string;format?:ReviewFormat}
+export interface ReviewConfig {type:'custom:hestia-comfort-review-card';title?:string;format?:ReviewFormat}
 
 export function cleanReviewConfig(input:ReviewConfig):ReviewConfig {
-  if(!input||input.type!=='custom:niak-comfort-review-card')throw new Error(t('Type de carte Hestia Confort · bilan invalide.'));
+  if(!input||input.type!=='custom:hestia-comfort-review-card')throw new Error(t('Type de carte Hestia Confort · bilan invalide.'));
   const config:ReviewConfig={type:input.type,format:input.format==='full'?'full':'summary'};
   if(typeof input.title==='string'&&input.title.trim())config.title=input.title.trim();
   return config;

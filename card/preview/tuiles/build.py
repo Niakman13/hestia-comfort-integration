@@ -1,7 +1,7 @@
 """Builds maquette.html: out-of-range tiles with and without a gesture, five proposals (data: ../volume/scenes.json)."""
 from pathlib import Path
 here = Path(__file__).parent
-bundle = (here.parents[2] / "custom_components" / "niak_comfort" / "frontend" / "niak-comfort-card.js").read_text()
+bundle = (here.parents[2] / "custom_components" / "hestia_comfort" / "frontend" / "hestia-comfort-card.js").read_text()
 scenes = (here.parent / "volume" / "scenes.json").read_text()
 style = (here.parent / "conseils" / "build.py").read_text().split("<style>")[1].split("</style>")[0]
 VARIANTS = [
@@ -41,14 +41,14 @@ h2{font-size:19px;margin:34px 0 4px}
 </script>
 <script type="module">
 const data=__SCENES__,variants=[__VARIANTS__];
-await customElements.whenDefined('niak-comfort-card');
+await customElements.whenDefined('hestia-comfort-card');
 const views={};for(const s of data.scenes){views[s.salon.entry_id]=s.salon;views[s.cuisine.entry_id]=s.cuisine;}
 const fresh=v=>({...structuredClone(v),computed_at:new Date().toISOString()});
 const dark=()=>document.documentElement.dataset.theme==='dark';
 const hass=()=>({themes:{darkMode:dark()},connection:{async subscribeMessage(cb,m){const send=()=>cb({version:1,view:fresh(views[m.entry_id])});send();const t=setInterval(send,30000);return ()=>clearInterval(t);}},async callWS(){return data.entries;}});
 const cards=[];
 const make=(where,id,title,note,css)=>{const fig=document.createElement('figure');fig.innerHTML=`<figcaption><b>${title}</b><span>${note}</span></figcaption>`;
-  const c=document.createElement('niak-comfort-card');c.setConfig({type:'custom:niak-comfort-card',entry_id:id,format:'full',measures_open:true});
+  const c=document.createElement('hestia-comfort-card');c.setConfig({type:'custom:hestia-comfort-card',entry_id:id,format:'full',measures_open:true});
   fig.append(c);document.getElementById(where).append(fig);cards.push([c,css]);};
 make('action','aerer-salon','Avec un geste','Cadre orange, comme aujourd’hui.','');
 for(const v of variants)make('calm','calme-salon',`${v.id}. ${v.name}`,v.note,v.css);

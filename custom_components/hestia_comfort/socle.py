@@ -1,6 +1,6 @@
 """Hestia shared panel (socle v1): one sidebar entry « Hestia » for every installed Hestia brick.
 
-Copied unchanged into each brick from niak-ecosysteme/socle/ (see ECOSYSTEME.md § 8).
+Copied unchanged into each brick from hestia-ecosysteme/socle/ (see ECOSYSTEME.md § 8).
 Several copies may run side by side: the newest one shows the panel and every brick
 registers with it. Registrations are plain dicts, so copies of different versions
 understand each other; no brick ever reads another brick's settings.
@@ -18,12 +18,14 @@ from homeassistant.components.panel_custom import async_register_panel
 from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.storage import Store
 
-SOCLE_VERSION = (1, 14)
+from .engine import legacy
+
+SOCLE_VERSION = (1, 15)
 # 1.1: an optional `tab`, the tab's own name when it is not the brick's (« Météo » for Hestia Weather).
 # 1.2: async_register_card, the brick's card on every dashboard, also as a dashboard resource.
 # 1.3: the home page says « À découvrir » and « Voir » for the bricks not installed (same contract as 1.2).
 # 1.4: guarded card bundles, extra module only as fallback, encoded resource migration.
-# 1.5: the sidebar entry can be hidden (`niak/set_sidebar`, kept in .storage/niak_socle); the panel itself stays reachable at /niak.
+# 1.5: the sidebar entry can be hidden (`set_sidebar`, kept in .storage); the panel itself stays reachable by its address.
 # 1.6: grouped navigation and optional brick `navigation=1` capability; older bricks keep their overview link.
 # 1.7: full-height shell and a persisted HA/Hestia theme preference.
 # 1.8: Weather navigation=2 groups its configuration under general settings, like Comfort.
@@ -31,27 +33,30 @@ SOCLE_VERSION = (1, 14)
 # 1.10: a brick's first link is « Accueil »; Comfort navigation=2 adds « Bilan du logement » under it.
 # 1.11: the Hestia logo heads the menu (and the mobile bar).
 #       Same contract, later fixes: the panel settings are written one at a time; the bricks' states are read together.
-# 1.12: the panel is at /hestia (/niak leads there); the menu names each brick by its tab; ui.ts gives every brick the
+# 1.12: the panel is at /hestia (the former address leads there); the menu names each brick by its tab; ui.ts gives every brick the
 #       same pages (pageHead, todoFrame, itemsFrame, stepMenu, stepFooter, extensionsFrame, versionsFrame).
 #       A brick with `navigation: 3` also has its « Extensions » page (/hestia/<brique>/extensions): extensionCard, removeBlock.
 # 1.13: the hub speaks Home Assistant's language (i18n.ts: t(), one dictionary per language; English for any other).
 # 1.14: a brick's status may take the hub's language as a second argument: status(hass, language).
+# 1.15: every technical name says Hestia: websocket `hestia/…`, .storage/hestia_socle, the « hestia » appearance.
+#       The former names live in the brick's legacy.py only: its migration carries the settings over.
 # The shell's custom element carries its version: two copies never fight over one name.
-ELEMENT = "niak-socle-1-14"
-KEY = "niak_socle"
+ELEMENT = "hestia-socle-1-15"
+KEY = "hestia_socle"
 STORE_VERSION = 1
 PANEL = "hestia"
 # The address before 1.12: still opened from bookmarks, older dashboards and older copies; it leads to PANEL.
-LEGACY_PANEL = "niak"
+LEGACY_PANEL = legacy.PANEL
+THEMES = ("ha", "hestia")
 TITLE = "Hestia"
 ICON = "mdi:home-heart"
 LEVELS = ("ok", "action", "unknown")
 # Published bricks only: the home page never proposes a brick that does not exist yet.
 CATALOGUE = (
-    {"domain": "niak_weather", "name": "Hestia Weather",
+    {"domain": "hestia_weather", "name": "Hestia Weather",
      "pitch": "La météo de votre station : prévisions, alertes, qualité de l’air et pollens.",
      "url": "https://github.com/hestiaFB/hestia-weather-integration"},
-    {"domain": "niak_comfort", "name": "Hestia Confort",
+    {"domain": "hestia_comfort", "name": "Hestia Confort",
      "pitch": "Le confort de chaque pièce et le bon moment pour ouvrir, fermer ou aérer.",
      "url": "https://github.com/hestiaFB/hestia-comfort-integration"},
 )
@@ -87,7 +92,7 @@ async def _load_settings(hass, data):
         _LOGGER.warning("Réglages du panneau Hestia illisibles : menu affiché par défaut", exc_info=True)
     settings = stored if isinstance(stored, dict) else {}
     data["settings"] = {"sidebar": data.get("settings", {}).get("sidebar", settings.get("sidebar", True)) is not False,
-                        "theme": settings.get("theme") if settings.get("theme") in ("ha", "niak") else "niak"}
+                        "theme": settings.get("theme") if settings.get("theme") in THEMES else "hestia"}
 
 
 async def _show_panel(hass, shell_url, sidebar):
@@ -98,7 +103,7 @@ async def _show_panel(hass, shell_url, sidebar):
     await async_register_panel(hass, frontend_url_path=PANEL, webcomponent_name=ELEMENT,
                                sidebar_title=TITLE if sidebar else None, sidebar_icon=ICON if sidebar else None,
                                module_url=shell_url, require_admin=True)
-    # An older copy showed the panel at /niak: that address now leads to /hestia, hidden from the sidebar.
+    # An older copy showed the panel at the former address: it now leads to /hestia, hidden from the sidebar.
     await async_register_panel(hass, frontend_url_path=LEGACY_PANEL, webcomponent_name=ELEMENT, module_url=shell_url,
                                require_admin=True, config={"redirect": f"/{PANEL}"})
 
@@ -122,7 +127,7 @@ async def async_set_sidebar(hass, visible):
 
 async def async_set_theme(hass, theme):
     """Remember the hub appearance without changing the Home Assistant theme."""
-    if theme not in ("ha", "niak"):
+    if theme not in THEMES:
         raise ValueError("Thème Hestia inconnu")
     data = hass.data.setdefault(KEY, {"bricks": {}, "panel": None})
     async with _settings_lock(hass):
@@ -146,7 +151,7 @@ async def _legacy_panel(hass, brick, shell_url):
 
 
 async def async_register_card(hass, url, version):
-    """The brick's card on every dashboard, at the brick's version (`url` without query: /niak_x-assets/niak-x-card.js).
+    """The brick's card on every dashboard, at the brick's version (`url` without query: /hestia_x-assets/hestia-x-card.js).
 
     Prefer the dashboard resource collection. YAML collections cannot be edited:
     only there (or on registration failure) use an extra module. Every card bundle
@@ -244,24 +249,24 @@ async def async_overview(hass, language=None):
                "settings_path": f"/config/integrations/integration/{c['domain']}"}
               for c in CATALOGUE if c["domain"] not in bricks]
     sidebar = hass.data.get(KEY, {}).get("settings", {}).get("sidebar", True)
-    return {"version": 1, "socle": list(SOCLE_VERSION), "bricks": result, "others": others, "sidebar": sidebar, "theme": hass.data.get(KEY, {}).get("settings", {}).get("theme", "niak")}
+    return {"version": 1, "socle": list(SOCLE_VERSION), "bricks": result, "others": others, "sidebar": sidebar, "theme": hass.data.get(KEY, {}).get("settings", {}).get("theme", "hestia")}
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak/overview", vol.Optional("language"): str})
+@websocket_api.websocket_command({vol.Required("type"): "hestia/overview", vol.Optional("language"): str})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def _ws_overview(hass, connection, msg):
     connection.send_result(msg["id"], await async_overview(hass, msg.get("language")))
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak/set_sidebar", vol.Required("visible"): bool})
+@websocket_api.websocket_command({vol.Required("type"): "hestia/set_sidebar", vol.Required("visible"): bool})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def _ws_set_sidebar(hass, connection, msg):
     connection.send_result(msg["id"], {"sidebar": await async_set_sidebar(hass, msg["visible"])})
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak/set_theme", vol.Required("theme"): vol.In(("ha", "niak"))})
+@websocket_api.websocket_command({vol.Required("type"): "hestia/set_theme", vol.Required("theme"): vol.In(THEMES)})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def _ws_set_theme(hass, connection, msg):

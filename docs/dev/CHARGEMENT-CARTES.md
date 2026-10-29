@@ -2,7 +2,7 @@
 
 ## Défaut confirmé le 16 octobre 2026
 
-Dans l’onglet Home Assistant en erreur, `home-assistant` et `niak-weather-card` étaient enregistrés, tandis que `niak-comfort-card` et `niak-comfort-home-card` manquaient. Le fichier Confort avait pourtant été chargé et ses entrées figuraient encore dans `window.customCards`.
+Dans l’onglet Home Assistant en erreur, `home-assistant` et `hestia-weather-card` étaient enregistrés, tandis que `hestia-comfort-card` et `hestia-comfort-home-card` manquaient. Le fichier Confort avait pourtant été chargé et ses entrées figuraient encore dans `window.customCards`.
 
 Le serveur servait Confort 0.6.0-beta.1 sans protection au début du bundle. Weather 2.4.0 comportait déjà celle du socle 1.4. La correction préparée pour Confort n’avait pas été publiée avec la beta.1.
 

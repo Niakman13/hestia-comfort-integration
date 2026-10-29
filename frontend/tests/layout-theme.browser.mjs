@@ -4,10 +4,10 @@ import {readFileSync,existsSync,mkdirSync} from 'node:fs';
 import {once} from 'node:events';
 import {chromium,firefox} from '../../card/node_modules/playwright/index.mjs';
 import {harness,comfort,weather,SHELL} from './hub-harness.mjs';
-const root=new URL('../../custom_components/niak_comfort/frontend/',import.meta.url),other=new URL('../../../niak-weather-integration/custom_components/niak_weather/frontend/',import.meta.url);
-const legacy=process.env.NIAK_LEGACY_WEATHER_JS,withWeather=process.env.NIAK_TEST_COMFORT_ONLY!=='1'&&existsSync(other);
+const root=new URL('../../custom_components/hestia_comfort/frontend/',import.meta.url),other=new URL('../../../hestia-weather-integration/custom_components/hestia_weather/frontend/',import.meta.url);
+const legacy=process.env.HESTIA_LEGACY_WEATHER_JS,withWeather=process.env.HESTIA_TEST_COMFORT_ONLY!=='1'&&existsSync(other);
 const server=createServer((req,res)=>{const path=new URL(req.url,'http://localhost').pathname;let source;
- if(path==='/shell.js')source=readFileSync(new URL('niak-socle.js',root));
+ if(path==='/shell.js')source=readFileSync(new URL('hestia-socle.js',root));
  else if(path==='/comfort.js')source=readFileSync(new URL('panel.js',root));
  else if(path==='/weather.js')source=readFileSync(legacy??new URL('panel.js',other));
  else if(/^\/manrope-\d+\.ttf$/.test(path)){res.setHeader('Content-Type','font/ttf');res.end(readFileSync(new URL(path.slice(1),root)));return;}
@@ -16,7 +16,7 @@ const server=createServer((req,res)=>{const path=new URL(req.url,'http://localho
  res.setHeader('Content-Type','text/html');res.end(harness(withWeather));
 });
 server.listen(0,'127.0.0.1');await once(server,'listening');const origin='http://127.0.0.1:'+server.address().port;
-const output=process.env.NIAK_HUB_OUTPUT;if(output)mkdirSync(output,{recursive:true});let checks=0;
+const output=process.env.HESTIA_HUB_OUTPUT;if(output)mkdirSync(output,{recursive:true});let checks=0;
 async function nav(page,group,label){const shell=page.locator(SHELL);if(await shell.locator('.mobile-bar').isVisible())await shell.getByRole('button',{name:'Ouvrir la navigation Hestia',exact:true}).click();await shell.getByRole('navigation',{name:group,exact:true}).getByRole('link',{name:label,exact:true}).click();}
 async function height(page){await page.waitForFunction(()=>{const el=window.shell,r=el.getBoundingClientRect();return Math.abs(r.bottom-innerHeight)<2&&document.documentElement.scrollHeight<=innerHeight+2;});checks++;}
 try{for(const engine of [chromium,firefox]){const browser=await engine.launch();try{for(const width of [1440,390,320]){
@@ -30,15 +30,15 @@ try{for(const engine of [chromium,firefox]){const browser=await engine.launch();
  if(withWeather){assert.equal(await shell.locator('nav[aria-label="Météo"] a').count(),1);checks++;}
  // Unique HA colors and font must propagate through the shell and brick shadow roots.
  await page.evaluate(()=>{for(const [k,v]of Object.entries({'primary-background-color':'#263746','card-background-color':'#34495a','primary-text-color':'#f2eed8','secondary-text-color':'#bdc9b6','divider-color':'#74816a','primary-color':'#abcf84','secondary-background-color':'#405263','ha-font-family-body':'serif'}))document.body.style.setProperty('--'+k,v);});
- await nav(page,'Accueil Hestia','Réglages');const selector=shell.getByLabel('Apparence',{exact:true});assert.equal(await selector.inputValue(),'niak');await selector.selectOption('ha');await page.waitForFunction(()=>getComputedStyle(window.shell).backgroundColor==='rgb(38, 55, 70)').catch(async e=>{console.log(await shell.evaluate(e=>({appearance:e.getAttribute('data-appearance'),bg:getComputedStyle(e).backgroundColor,value:getComputedStyle(e).getPropertyValue('--primary-background-color'),parent:getComputedStyle(e.parentElement).getPropertyValue('--primary-background-color'),theme:e.overview.theme})));throw e;});checks++;
+ await nav(page,'Accueil Hestia','Réglages');const selector=shell.getByLabel('Apparence',{exact:true});assert.equal(await selector.inputValue(),'hestia');await selector.selectOption('ha');await page.waitForFunction(()=>getComputedStyle(window.shell).backgroundColor==='rgb(38, 55, 70)').catch(async e=>{console.log(await shell.evaluate(e=>({appearance:e.getAttribute('data-appearance'),bg:getComputedStyle(e).backgroundColor,value:getComputedStyle(e).getPropertyValue('--primary-background-color'),parent:getComputedStyle(e.parentElement).getPropertyValue('--primary-background-color'),theme:e.overview.theme})));throw e;});checks++;
  await page.reload();await shell.getByLabel('Apparence',{exact:true}).waitFor();assert.equal(await shell.getByLabel('Apparence',{exact:true}).inputValue(),'ha');checks++;
  await page.evaluate(()=>{document.body.style.setProperty('--primary-background-color','#263746');document.body.style.setProperty('--ha-font-family-body','serif');});
- await nav(page,'Confort','Accueil');const panel=page.locator('niak-comfort-setup');await panel.getByRole('heading',{name:'Confort',exact:true}).waitFor();assert.equal(await panel.evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(38, 55, 70)');assert.equal(await panel.evaluate(e=>getComputedStyle(e).fontFamily),'serif');checks+=2;await height(page);
+ await nav(page,'Confort','Accueil');const panel=page.locator('hestia-comfort-setup');await panel.getByRole('heading',{name:'Confort',exact:true}).waitFor();assert.equal(await panel.evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(38, 55, 70)');assert.equal(await panel.evaluate(e=>getComputedStyle(e).fontFamily),'serif');checks+=2;await height(page);
  await nav(page,'Confort','Réglages généraux');await panel.getByRole('button',{name:'Modifier Salon',exact:true}).click();await panel.getByRole('heading',{name:'Configurer Salon',exact:true}).waitFor();
  const rect=await panel.evaluate(e=>{const rows=[...e.shadowRoot.querySelectorAll('.room-menu-row')].map(x=>x.getBoundingClientRect().width);return {rows,field:e.shadowRoot.querySelector('.nk-field-section').getBoundingClientRect().width};});assert.ok(rect.rows.every(w=>Math.abs(w-rect.field)<2),JSON.stringify(rect));checks++;
  await page.setViewportSize({width,height:700});await height(page);await page.setViewportSize({width,height:940});await height(page);
- if(withWeather){await nav(page,'Météo','Accueil');await page.locator('niak-weather-setup').getByRole('heading',{name:'Météo',exact:true}).waitFor();assert.equal(await page.locator('niak-weather-setup').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(38, 55, 70)');checks++;await height(page);}
- await nav(page,'Accueil Hestia','Réglages');await shell.getByLabel('Apparence',{exact:true}).selectOption('niak');await page.waitForFunction(()=>getComputedStyle(window.shell).backgroundColor==='rgb(27, 28, 30)');checks++;await page.evaluate(()=>toggleTheme());await page.waitForFunction(()=>getComputedStyle(window.shell).backgroundColor==='rgb(250, 249, 247)');checks++;await height(page);
+ if(withWeather){await nav(page,'Météo','Accueil');await page.locator('hestia-weather-setup').getByRole('heading',{name:'Météo',exact:true}).waitFor();assert.equal(await page.locator('hestia-weather-setup').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(38, 55, 70)');checks++;await height(page);}
+ await nav(page,'Accueil Hestia','Réglages');await shell.getByLabel('Apparence',{exact:true}).selectOption('hestia');await page.waitForFunction(()=>getComputedStyle(window.shell).backgroundColor==='rgb(27, 28, 30)');checks++;await page.evaluate(()=>toggleTheme());await page.waitForFunction(()=>getComputedStyle(window.shell).backgroundColor==='rgb(250, 249, 247)');checks++;await height(page);
  if(output&&engine===chromium)await page.screenshot({path:output+'/theme-settings-'+width+'.png'});
  assert.deepEqual(errors,[]);checks++;page.on('dialog',d=>d.accept());await page.close();
  }}finally{await browser.close();}}}finally{server.close();}

@@ -1,7 +1,7 @@
 """Builds maquette.html: learned versus estimated advice on the card, and the « Apprentissage » box of the Confort home."""
 from pathlib import Path
 here = Path(__file__).parent
-bundle = (here.parents[2] / "custom_components" / "niak_comfort" / "frontend" / "niak-comfort-card.js").read_text()
+bundle = (here.parents[2] / "custom_components" / "hestia_comfort" / "frontend" / "hestia-comfort-card.js").read_text()
 scenes = (here / "scenes.json").read_text()
 twins = (here / "twins.json").read_text()
 style = (here.parent / "conseils" / "build.py").read_text().split("<style>")[1].split("</style>")[0]
@@ -49,7 +49,7 @@ h2{font-size:19px;margin:34px 0 4px}
 </script>
 <script type="module">
 const data=__SCENES__,twins=__TWINS__;
-await customElements.whenDefined('niak-comfort-card');
+await customElements.whenDefined('hestia-comfort-card');
 const views=Object.fromEntries(data.scenes.map(s=>[s.id,s.view]));
 {const e=structuredClone(views.appris);e.entry_id='estime';delete e.assessment.features.learned;e.twin={status:'ready',days:5,samples:240,next_hour:null,precision:null};views.estime=e;}
 const fresh=v=>({...structuredClone(v),computed_at:new Date().toISOString()});
@@ -58,7 +58,7 @@ const hass=()=>({themes:{darkMode:dark()},connection:{async subscribeMessage(cb,
 const MARKS=[['Conseil optimisé','Apprentissage optimal pour la cuisine : le conseil vient de son apprentissage.',''],['Conseil estimé, pour comparer','La même situation, apprentissage en cours : pas de chiffre promis.','']];
 const cards=[];
 const make=(where,id,title,note,css)=>{const fig=document.createElement('figure');fig.innerHTML=`<figcaption><b>${title}</b><span>${note}</span></figcaption>`;
-  const c=document.createElement('niak-comfort-card');c.setConfig({type:'custom:niak-comfort-card',entry_id:id,format:'tile'});fig.append(c);document.getElementById(where).append(fig);cards.push([c,css]);};
+  const c=document.createElement('hestia-comfort-card');c.setConfig({type:'custom:hestia-comfort-card',entry_id:id,format:'tile'});fig.append(c);document.getElementById(where).append(fig);cards.push([c,css]);};
 make('marks','appris',MARKS[0][0],MARKS[0][1],'');make('marks','estime',MARKS[1][0],MARKS[1][1],'');
 for(const s of data.scenes.slice(1))make('others',s.id,s.title,s.note,'');
 const apply=()=>{const h=hass();for(const [c] of cards)c.hass=h;setTimeout(()=>{for(const [c,css] of cards){if(!css||!c.shadowRoot)continue;let s=c.shadowRoot.querySelector('style[data-v]');if(!s){s=document.createElement('style');s.dataset.v='';c.shadowRoot.append(s);}s.textContent=css;}},300);};

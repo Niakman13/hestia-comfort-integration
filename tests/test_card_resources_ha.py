@@ -15,11 +15,11 @@ except ImportError:
 
 # Run from the tests folder too, like the other tests.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from custom_components.niak_comfort import socle
+from custom_components.hestia_comfort import socle
 
 
 class CardResourceTests(unittest.IsolatedAsyncioTestCase):
-    URL = '/niak_comfort-assets/niak-comfort-card.js'
+    URL = '/hestia_comfort-assets/hestia-comfort-card.js'
 
     async def asyncSetUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -77,6 +77,6 @@ class CardResourceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_only_the_exact_local_asset_is_owned(self):
         self.assertTrue(socle.is_card_resource(self.URL.replace('-', '%2d') + '?v=old#fragment', self.URL))
-        for value in ('https://example.org' + self.URL, '//example.org' + self.URL, self.URL + '.backup', '/hacsfiles/niak-comfort-card.js'):
+        for value in ('https://example.org' + self.URL, '//example.org' + self.URL, self.URL + '.backup', '/hacsfiles/hestia-comfort-card.js'):
             self.assertFalse(socle.is_card_resource(value, self.URL), value)
 

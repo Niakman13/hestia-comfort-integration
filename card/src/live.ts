@@ -31,7 +31,7 @@ export class LiveView {
         const age=Date.now()-Date.parse(view.computed_at);
         if(age>75000 || age< -60000){this.onClear();this.onProblem('stale');return;}
         this.last=Date.now();this.onView(view);
-      },{type:'niak_comfort/subscribe',...(this.entry?{entry_id:this.entry}:{})});
+      },{type:'hestia_comfort/subscribe',...(this.entry?{entry_id:this.entry}:{})});
       if(generation!==this.generation||!this.running) await remove(); else this.unsubscribe=remove;
     } catch(error) {
       if(generation!==this.generation||!this.running) return;

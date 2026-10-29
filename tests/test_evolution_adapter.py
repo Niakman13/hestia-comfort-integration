@@ -6,10 +6,10 @@ from test_ha_adapter import AdapterFixture
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import device_registry as dr
 from homeassistant.util import dt as dt_util
-from custom_components.niak_comfort.configuration import Configuration
-from custom_components.niak_comfort.coordinator import ComfortCoordinator
-from custom_components.niak_comfort.discovery import catalog, suggestions, candidate
-from custom_components.niak_comfort.air_references import apply_air_references, AIR_DEFAULTS
+from custom_components.hestia_comfort.configuration import Configuration
+from custom_components.hestia_comfort.coordinator import ComfortCoordinator
+from custom_components.hestia_comfort.discovery import catalog, suggestions, candidate
+from custom_components.hestia_comfort.air_references import apply_air_references, AIR_DEFAULTS
 
 
 class EvolutionAdapterTests(AdapterFixture):
@@ -169,7 +169,7 @@ class EvolutionAdapterTests(AdapterFixture):
         calls = []
         def capture(*args, **kwargs):
             calls.append((args, kwargs)); return SimpleNamespace(to_dict=lambda: {})
-        with patch('custom_components.niak_comfort.coordinator.assess', side_effect=capture):
+        with patch('custom_components.hestia_comfort.coordinator.assess', side_effect=capture):
             data = await coord._async_update_data()
         obs = data['observations']
         self.assertEqual(obs['pm25']['value'], 30)
@@ -184,11 +184,11 @@ class EvolutionAdapterTests(AdapterFixture):
         async def event(eid, value, old_value):
             self.hass.states.async_set(eid, value, dict(self.hass.states.get(eid).attributes))
             await coord._changed(SimpleNamespace(data={'entity_id': eid, 'old_state': SimpleNamespace(state=old_value), 'new_state': self.hass.states.get(eid)}))
-        with patch.object(coord, 'async_request_refresh'), patch('custom_components.niak_comfort.coordinator.dt_util.utcnow', return_value=self.now):
+        with patch.object(coord, 'async_request_refresh'), patch('custom_components.hestia_comfort.coordinator.dt_util.utcnow', return_value=self.now):
             await event('binary_sensor.w', 'on', 'off')
             await event('binary_sensor.occupied', 'off', 'on')
             await event('binary_sensor.motion', 'off', 'on')
-        with patch('custom_components.niak_comfort.coordinator.dt_util.utcnow', return_value=self.now + timedelta(minutes=12)):
+        with patch('custom_components.hestia_comfort.coordinator.dt_util.utcnow', return_value=self.now + timedelta(minutes=12)):
             context = coord._context(self.now + timedelta(minutes=12), {})
         self.assertEqual(context['opening_minutes']['binary_sensor.w'], 12)
         # Read from Home Assistant's own last change (right after a restart too): to the second.
@@ -201,14 +201,14 @@ class EvolutionAdapterTests(AdapterFixture):
 
     async def test_histories_are_bounded_and_only_usable(self):
         coord = self.coordinator()
-        from custom_components.niak_comfort.engine.sources import Reading
+        from custom_components.hestia_comfort.engine.sources import Reading
         for index in range(800):
             coord._context(self.now + timedelta(seconds=index * 30), {'indoor_temperature': Reading(25, 'valid', received_at=(self.now + timedelta(seconds=index * 30)).isoformat())})
         self.assertLessEqual(len(coord._context(self.now + timedelta(seconds=800 * 30), {})['temperature_history']), 360)
 
     async def test_startup_history_does_not_backdate_coverage(self):
         coord = self.coordinator()
-        from custom_components.niak_comfort.engine.sources import Reading
+        from custom_components.hestia_comfort.engine.sources import Reading
         previous = (self.now - timedelta(minutes=20)).isoformat()
         context = coord._context(self.now, {'indoor_temperature': Reading(25, 'valid', received_at=previous)})
         self.assertEqual(context['temperature_history'], [(self.now.isoformat(), 25)])
@@ -219,7 +219,7 @@ class EvolutionAdapterTests(AdapterFixture):
         from homeassistant.config_entries import ConfigEntryState
         coord = self.coordinator()
         self.entry._async_set_state(self.hass, ConfigEntryState.SETUP_IN_PROGRESS, None)
-        with patch('custom_components.niak_comfort.coordinator.async_track_state_change_event', return_value=lambda: None) as track:
+        with patch('custom_components.hestia_comfort.coordinator.async_track_state_change_event', return_value=lambda: None) as track:
             await coord.async_start()
         ids = track.call_args.args[1]
         for eid in ('cover.shutter', 'switch.override', 'binary_sensor.occupied', 'binary_sensor.motion', 'fan.purifier'):
@@ -259,8 +259,8 @@ class EvolutionAdapterTests(AdapterFixture):
         self.assertIsNone(coord._unsub_refresh)
 
     async def test_health_handles_lost_optional_sources(self):
-        from custom_components.niak_comfort.health import facts, report
-        from custom_components.niak_comfort.configuration import DATA_CONFIG
+        from custom_components.hestia_comfort.health import facts, report
+        from custom_components.hestia_comfort.configuration import DATA_CONFIG
         self.coordinator()
         self.hass.data[DATA_CONFIG] = self.service
         self.hass.states.async_set('sensor.pm', 'unavailable')

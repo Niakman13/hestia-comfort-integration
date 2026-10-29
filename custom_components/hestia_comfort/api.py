@@ -1,6 +1,6 @@
 """The interface Hestia Confort publishes for the other Hestia bricks (version 1).
 
-Other bricks read `hass.data["niak_comfort_api"]` and check `version` before using it. It only grows
+Other bricks read `hass.data["hestia_comfort_api"]` and check `version` before using it. It only grows
 compatibly within a major version. First reader in view: a « Maison » brick, for the house as a whole.
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ from homeassistant.core import HomeAssistant
 from .configuration import DATA_CONFIG, get_configuration
 from .const import DOMAIN
 
-API_KEY: Final = "niak_comfort_api"
+API_KEY: Final = "hestia_comfort_api"
 API_VERSION: Final = 1
 
 
@@ -25,7 +25,7 @@ class Room(TypedDict):
     volume: list[str]
 
 
-class NiakComfortApi:
+class HestiaComfortApi:
     version = API_VERSION
 
     def __init__(self, hass: HomeAssistant) -> None:

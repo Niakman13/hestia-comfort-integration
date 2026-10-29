@@ -142,7 +142,7 @@ Pour plus de détails, ajoutez dans `configuration.yaml`, puis redémarrez :
 logger:
   default: warning
   logs:
-    custom_components.niak_comfort: debug
+    custom_components.hestia_comfort: debug
 ```
 
 Retirez-le une fois le problème trouvé : les journaux grossissent vite.
