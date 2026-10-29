@@ -27,6 +27,8 @@ VALUES = {"niak_home": "hestia_home", "niak_weather": "hestia_weather", "niak_ai
 # Hestia Weather under its former name, until it is updated too: its entities' platform and its interface.
 WEATHER_DOMAIN = "niak_weather"
 WEATHER_API_KEY = "niak_weather_api"
+# Started by Hestia Confort once carried over, so that Hestia Weather carries itself over too (domain_migration._start_siblings).
+SIBLINGS = {"hestia_weather": WEATHER_DOMAIN}
 # Former names in what the user wrote (automations, scripts, scenes, dashboards), with the new one.
 # Whole words only; an entity id is never touched: ids stay as they are.
 TEXT = (

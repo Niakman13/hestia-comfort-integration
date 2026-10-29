@@ -23,7 +23,8 @@
     },
     "abort": {
       "already_configured": "This room already has a Hestia Comfort configuration.",
-      "use_panel": "Hestia Comfort is already enabled. Add and edit rooms from the Hestia Comfort page in the sidebar."
+      "use_panel": "Hestia Comfort is already enabled. Add and edit rooms from the Hestia Comfort page in the sidebar.",
+      "migrated": "Your installation was resumed under the new name. Follow the next steps in Hestia → Home."
     }
   },
   "options": {

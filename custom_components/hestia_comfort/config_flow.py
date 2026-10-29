@@ -6,6 +6,7 @@ from homeassistant.config_entries import ConfigFlow, OptionsFlow
 from homeassistant.core import callback
 
 from .const import DOMAIN
+from .domain_migration import async_resume
 
 
 class ComfortConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -21,6 +22,9 @@ class ComfortConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(values["area_id"] or "room_" + uuid.uuid4().hex)
             self._abort_if_unique_id_configured()
             return self.async_create_entry(title=values["name"], data=values)
+        if await async_resume(self.hass):
+            # A home installed under the former name is resumed, never set up a second time.
+            return self.async_abort(reason="migrated")
         if self.hass.config_entries.async_entries(DOMAIN):
             # Rooms are added from the sidebar page, with explained proposals.
             return self.async_abort(reason="use_panel")

@@ -194,5 +194,25 @@ class DomainMigrationTests(unittest.IsolatedAsyncioTestCase):
         await self.stop(hass)
 
 
+    async def test_add_an_integration_resumes_the_home(self):
+        """« Add an integration → Hestia Confort » with the former code running: the home is resumed, never set up twice."""
+        hass = await self.start()
+        for entry_id in self.ids.values():
+            if hass.config_entries.async_get_entry(entry_id).state is ConfigEntryState.NOT_LOADED:
+                await hass.config_entries.async_setup(entry_id)
+        await hass.async_block_till_done()
+        hass.set_state(CoreState.running)
+        hass.config.components.update({"frontend", "http", "websocket_api", "lovelace", "recorder"})  # there in a real home
+        with patch.object(integration, "async_setup_entry", AsyncMock(return_value=True)):
+            result = await hass.config_entries.flow.async_init("hestia_comfort", context={"source": "user"})
+            await hass.async_block_till_done()
+        self.assertEqual((result["type"], result["reason"]), ("abort", "migrated"))
+        self.assertEqual(hass.config_entries.async_entries(OLD), [])
+        self.assertEqual(sorted(e.title for e in hass.config_entries.async_entries("hestia_comfort")), ["Cuisine", "Mon logement", "Salon"])
+        from custom_components.hestia_comfort.panel import migration_status
+        status = await migration_status(hass)
+        self.assertEqual((status["state"], status["summary"], status["restart"]), ("done", {"rooms": 2, "learning": 1}, True))
+        await self.stop(hass)
+
 if __name__ == "__main__":
     unittest.main()

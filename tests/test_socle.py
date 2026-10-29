@@ -134,6 +134,28 @@ class SocleTests(unittest.IsolatedAsyncioTestCase):
             await socle.async_set_theme(self.hass, "unknown")
         self.assertEqual((await socle.async_overview(self.hass))["theme"], "hestia")
 
+    async def test_the_move_to_the_hestia_name_shows_until_closed(self):
+        async def moving(hass):
+            return {"domain": "hestia_comfort", "state": "done", "restart": False}
+        await socle.async_register_brick(self.hass, brick(migration=moving), "/a/hestia-socle.js")
+        self.assertEqual((await socle.async_overview(self.hass))["migration"], [{"domain": "hestia_comfort", "state": "done", "restart": False}])
+        self.assertIn("hestia/close_migration", self.hass.data[WS_DOMAIN])
+        await socle.async_close_migration(self.hass)
+        self.assertEqual((await socle.async_overview(self.hass))["migration"], [])
+        self.hass.data.pop(socle.KEY)  # as after a restart: closed for good
+        await socle.async_register_brick(self.hass, brick(migration=moving), "/a/hestia-socle.js")
+        self.assertEqual((await socle.async_overview(self.hass))["migration"], [])
+
+    async def test_a_brick_without_a_former_name_shows_nothing(self):
+        async def never(hass):
+            return None
+        async def broken(hass):
+            raise RuntimeError("unreadable")
+        await socle.async_register_brick(self.hass, brick(migration=never), "/a/hestia-socle.js")
+        await socle.async_register_brick(self.hass, brick(domain="hestia_other", slug="other", migration=broken), "/a/hestia-socle.js")
+        with self.assertLogs(socle.__name__, level="ERROR"):
+            self.assertEqual((await socle.async_overview(self.hass))["migration"], [])
+
     async def test_old_settings_keep_the_hestia_appearance(self):
         from homeassistant.helpers.storage import Store
         await Store(self.hass, socle.STORE_VERSION, socle.KEY).async_save({"sidebar": False})

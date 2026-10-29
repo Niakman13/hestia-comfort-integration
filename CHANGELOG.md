@@ -1,3 +1,29 @@
+## 2.0.0b2 — Bêta : le passage au nom Hestia, suivi pas à pas
+
+**En bref**
+
+- **Le passage au nom Hestia se suit dans le hub** : un encart dans Hestia → Accueil montre chaque étape, puis s’en va quand tout est fait.
+- **La 2.0.0b1 ne démarrait pas après la mise à jour** : c’est corrigé.
+
+### Avant de mettre à jour
+
+- Mettez à jour Hestia Weather en même temps (3.0.0b2), si vous l’avez.
+- Avec Hestia Confort 1.7.28 installée avant, tout démarre seul au redémarrage.
+- Sinon, après le redémarrage : **Paramètres → Ajouter une intégration → Hestia Confort**. Votre installation est reprise, rien n’est créé en double.
+- Si HACS affiche « No manifest.json file found », redémarrez Home Assistant puis relancez la mise à jour.
+
+### Nouveautés
+
+- L’encart « Passage au nom Hestia » dit ce qui a été repris : pièces, apprentissages, entités, tableaux de bord et automatisations.
+- Il liste les lignes à changer à la main, s’il y en a.
+- Il propose de redémarrer Home Assistant quand il le faut, en un bouton.
+- Un clic sur « J’ai compris » le ferme pour de bon.
+
+### Corrections
+
+- « Ajouter une intégration » reprend maintenant l’installation existante au lieu d’en créer une nouvelle.
+- Hestia Confort démarre Hestia Weather quand il le faut, et l’inverse : un seul geste suffit pour les deux.
+
 ## 2.0.0b1 — Bêta : le nom technique devient hestia_comfort
 
 **En bref**

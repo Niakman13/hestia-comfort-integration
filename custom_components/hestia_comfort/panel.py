@@ -7,7 +7,7 @@ import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import callback
-from . import health, weather_link
+from . import domain_migration, health, weather_link
 from .engine import feedback
 from .engine.i18n import language, speaking, t
 from homeassistant.util import dt as dt_util
@@ -38,7 +38,18 @@ async def async_setup_panel(hass):
         "domain": DOMAIN, "name": "Hestia Confort", "slug": "confort", "version": VERSION,
         "icon": "mdi:home-thermometer-outline", "navigation": 3, "module_url": f"{ASSETS}/panel.js?v={VERSION}",
         "element": "hestia-comfort-setup", "status": comfort_status, "legacy_path": "hestia-confort",
+        "migration": migration_status,
     }, f"{ASSETS}/hestia-socle.js?v={VERSION}")
+
+
+async def migration_status(hass):
+    """Hestia Confort's lines in the hub's « Passage au nom Hestia » (socle 1.16): its rooms and what they learned."""
+    status = await domain_migration.async_status(hass)
+    if status is None:
+        return None
+    rooms = [e for e in hass.config_entries.async_entries(DOMAIN) if not e.data.get("home")]
+    status["summary"] = {"rooms": len(rooms), "learning": 1 if status["stores"] else 0}
+    return status
 
 
 # The panel's language, sent with each of its commands (engine/i18n.py).
