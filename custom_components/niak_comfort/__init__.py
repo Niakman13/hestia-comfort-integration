@@ -11,6 +11,7 @@ from .socle import async_remove_card
 from .air_references import apply_air_references, apply_freshness
 from .api import API_KEY, NiakComfortApi
 from .entities import async_clean, home_clean
+from .bridge import async_setup_bridge
 
 PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR]
 
@@ -23,6 +24,8 @@ async def async_setup(hass, config):
     async_setup_websocket(hass)
     await get_configuration(hass)
     await async_setup_panel(hass)
+    # Hestia Confort 2, once installed next to this version, is started: it carries the home over to the Hestia name.
+    async_setup_bridge(hass)
     return True
 
 

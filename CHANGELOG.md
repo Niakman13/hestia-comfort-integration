@@ -1,3 +1,32 @@
+## 1.7.28 — Hestia Confort en anglais, un panneau plus léger, et le passage à la version 2 préparé
+
+**En bref**
+
+- **Hestia Confort parle anglais** : carte, panneau et bilan, quand Home Assistant n’est pas en français.
+- **Moins de charge pour Home Assistant** : l’historique est lu par petits morceaux et les cartes se redessinent moins souvent.
+- **Le passage à Hestia Confort 2 est préparé** : quand vous l’installerez, il se fera tout seul.
+
+### Nouveautés
+
+- Le panneau Hestia est rangé comme celui de Hestia Weather : Accueil, Réglages généraux, Extensions, puis les réglages de chaque pièce.
+- Une page « Extensions » à part, rangée par thème : chauffage, volets, présence.
+- Le panneau est à l’adresse `/hestia` ; l’ancienne adresse mène toujours au bon endroit.
+
+### Améliorations
+
+- L’apprentissage reprend là où il en était après un redémarrage.
+- Les diagnostics ne contiennent plus les noms ni les zones des personnes.
+- Quand Hestia Confort 2 sera installé, cette version le démarre : il reprend vos pièces, apprentissages, entités, historiques et tableaux de bord sous le nom Hestia.
+
+### Corrections
+
+- Un retour sur un conseil enregistré juste avant un rechargement n’est plus perdu.
+- Sur un téléphone étroit, une ligne « À régler » avec un raccourci redevient lisible.
+
+### À savoir
+
+- Home Assistant 2026.7 ou plus récent est demandé ; la version installée continue de fonctionner sur une version plus ancienne.
+
 ## 1.7.27 — Préversion : correctif d’affichage sur petit écran
 
 ### Corrections
