@@ -15,10 +15,10 @@
     "http",
     "websocket_api"
   ],
-  "documentation": "https://github.com/Niakman13/niak-comfort-integration",
+  "documentation": "https://github.com/Niakman13/hestia-comfort-integration",
   "integration_type": "service",
   "iot_class": "calculated",
-  "issue_tracker": "https://github.com/Niakman13/niak-comfort-integration/issues",
+  "issue_tracker": "https://github.com/Niakman13/hestia-comfort-integration/issues",
   "requirements": [],
   "version": "1.7.24"
 }

@@ -1,7 +1,7 @@
 # Hestia Comfort — intégration
 
-[![release](https://img.shields.io/github/v/release/Niakman13/niak-comfort-integration?cacheSeconds=3600)](https://github.com/Niakman13/niak-comfort-integration/releases)
-[![Validate](https://github.com/Niakman13/niak-comfort-integration/actions/workflows/validate.yml/badge.svg)](https://github.com/Niakman13/niak-comfort-integration/actions/workflows/validate.yml)
+[![release](https://img.shields.io/github/v/release/Niakman13/hestia-comfort-integration?cacheSeconds=3600)](https://github.com/Niakman13/hestia-comfort-integration/releases)
+[![Validate](https://github.com/Niakman13/hestia-comfort-integration/actions/workflows/validate.yml/badge.svg)](https://github.com/Niakman13/hestia-comfort-integration/actions/workflows/validate.yml)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange)](https://hacs.xyz)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -36,16 +36,16 @@ Toute la famille lit la même carte. Elle ne parle que quand un geste aide vraim
 - Home Assistant **2026.10** ou plus récent.
 - Un thermomètre dans chaque pièce à suivre. C’est le seul capteur obligatoire.
 - En plus, si vous en avez : humidité, CO₂, contacts de fenêtres, thermostat, VMC, purificateur, volets, présence. Les [extensions](#les-extensions) sont reconnues toutes seules.
-- Pour l’extérieur : [Hestia Weather](https://github.com/Niakman13/niak-weather-integration) (conseillé) ou vos propres capteurs.
+- Pour l’extérieur : [Hestia Weather](https://github.com/Niakman13/hestia-weather-integration) (conseillé) ou vos propres capteurs.
 
 ## Installation
 
-1. Dans HACS, ⋮ → **Dépôts personnalisés** : ajoutez `https://github.com/Niakman13/niak-comfort-integration`, catégorie **Intégration**.
+1. Dans HACS, ⋮ → **Dépôts personnalisés** : ajoutez `https://github.com/Niakman13/hestia-comfort-integration`, catégorie **Intégration**.
 2. Installez **Hestia Comfort**, puis redémarrez Home Assistant.
 3. **Paramètres → Appareils et services → Ajouter une intégration → Hestia Comfort.**
 4. Ouvrez **Hestia** dans la barre latérale, onglet **Confort**.
 
-[![Ouvrir dans HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Niakman13&repository=niak-comfort-integration&category=integration)
+[![Ouvrir dans HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Niakman13&repository=hestia-comfort-integration&category=integration)
 
 La carte est fournie par l’intégration : rien d’autre à installer.
 
@@ -120,7 +120,7 @@ Hestia Confort fonctionne seul. Chaque extension installée le rend plus juste, 
 
 | Extension | Ce qu’elle apporte |
 | --- | --- |
-| [Hestia Weather](https://github.com/Niakman13/niak-weather-integration) | Le dehors pour toutes les pièces, avec les prévisions, les vigilances et l’air |
+| [Hestia Weather](https://github.com/Niakman13/hestia-weather-integration) | Le dehors pour toutes les pièces, avec les prévisions, les vigilances et l’air |
 | [Versatile Thermostat](https://github.com/jmcollin78/versatile_thermostat) | La consigne et la raison d’un arrêt : plus de « Rallumez » quand le thermostat s’en charge |
 | [Adaptive Cover Pro](https://github.com/jrhubott/adaptive-cover-pro) | Les volets pilotés avec le soleil : Confort sait quand ils se ferment |
 | [Alarmo](https://github.com/nielsfaber/alarmo) | Maison vide, nuit, vacances : une fenêtre ouverte alarme armée est signalée |

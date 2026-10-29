@@ -129,7 +129,7 @@ export function changedAdvanced(settings:Record<string,number>):number{return Ob
 export interface Choice {value:string;label:string;hint:string;available:boolean;missing?:string;url?:string;badge?:string}
 /** An integration Confort reads (health.py EXTENSIONS): linked, installed but not used, or missing. */
 export interface Extension {key:string;name:string;official:boolean;state:'linked'|'found'|'missing'|'off';level:Level;role:string;use:string;without:string;url:string;text:string;rooms:string[]}
-export const links={atmofrance:'https://github.com/sebcaps/atmofrance',niak_weather:'https://github.com/Niakman13/niak-weather-integration'};
+export const links={atmofrance:'https://github.com/sebcaps/atmofrance',niak_weather:'https://github.com/Niakman13/hestia-weather-integration'};
 // The integration behind an outdoor air quality source.
 export function airSource(spec?:Spec):string{return !spec?'none':spec.adapter==='atmo_daily'?'atmo':spec.adapter==='niak_index'?'niak':'other';}
 // The air quality sources, by integration, « Pas de … » last.
