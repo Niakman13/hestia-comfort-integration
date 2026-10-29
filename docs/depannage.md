@@ -8,7 +8,7 @@ Puis ouvrez **Confort → Accueil**. Quand quelque chose est à régler, l’enc
 - [Mesures en chargement ou absentes](#mesures-en-chargement-ou-absentes)
 - [Calcul arrêté dans une pièce](#calcul-arrêté-dans-une-pièce)
 - [La carte est invisible](#la-carte-est-invisible)
-- [L’extérieur et Hestia Weather](#lextérieur-et-niak-weather)
+- [L’extérieur et Hestia Weather](#lextérieur-et-hestia-weather)
 - [La qualité de l’air](#la-qualité-de-lair)
 - [Un conseil semble faux](#un-conseil-semble-faux)
 - [Volets et Adaptive Cover Pro](#volets-et-adaptive-cover-pro)
@@ -54,7 +54,7 @@ La carte est fournie par l’intégration : rien à installer à part.
 
 - **Juste après une mise à jour** : redémarrez Home Assistant, puis rechargez la page.
 - **Dans l’application Home Assistant** : **Paramètres → Application compagnon → Dépannage → Réinitialiser le cache du frontend**.
-- **Vous aviez installé l’ancienne carte** (dépôt `niak-comfort`) : supprimez-la de HACS, puis rechargez la page. Vos cartes restent en place.
+- **Vous aviez installé l’ancienne carte Confort à part, dans HACS** : supprimez-la de HACS, puis rechargez la page. Vos cartes restent en place.
 - **« Ouvrez Hestia Confort dans la barre latérale »** : aucune pièce n’est encore créée.
 - **« Connexion indisponible »** : la carte réessaie seule. Vérifiez que Home Assistant répond.
 
@@ -134,7 +134,7 @@ Le bilan lit les statistiques à long terme de Home Assistant. Un capteur sans s
 
 ## Les journaux
 
-**Paramètres → Système → Journaux**, puis cherchez « niak ».
+**Paramètres → Système → Journaux**, puis cherchez « comfort ».
 
 Pour plus de détails, ajoutez dans `configuration.yaml`, puis redémarrez :
 
@@ -160,7 +160,7 @@ Ouvrez un ticket sur [GitHub](https://github.com/hestiaFB/hestia-comfort-integra
 - la pièce concernée et ce que dit la carte ;
 - une capture de **Détails** ;
 - le **fichier de diagnostic** de la pièce (ci-dessous) ;
-- les lignes des journaux qui contiennent « niak ».
+- les lignes des journaux qui contiennent « comfort ».
 
 Retirez vos informations personnelles avant d’envoyer.
 

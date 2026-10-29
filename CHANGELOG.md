@@ -27,7 +27,7 @@
 ### Corrections
 
 - Un retour sur un conseil enregistré juste avant un rechargement n’est plus perdu.
-- Le bilan ne parle plus de « niak » : cherchez « comfort » dans les journaux.
+- Le bilan dit de chercher « comfort » dans les journaux.
 
 ### À savoir
 
@@ -60,11 +60,11 @@
 
 - Fenêtre ouverte comme conseillé : « Au mieux » en bleu au lieu de « Geste conseillé » en orange, sur la carte de la pièce, la carte « Mon logement » et les entités.
 
-## 1.7.24 — Niak Confort devient Hestia Confort
+## 1.7.24 — Le nouveau nom, Hestia Confort
 
 **En bref**
 
-- **Niak Confort devient Hestia Confort.** Le nom change partout : cartes, panneau, textes et documentation.
+- **Le projet prend le nom Hestia Confort.** Le nom change partout : cartes, panneau, textes et documentation.
 - **Rien à refaire de votre côté.** Mêmes pièces, mêmes réglages, mêmes entités, mêmes cartes.
 
 ### Améliorations
@@ -94,16 +94,16 @@
 
 - Dans les Réglages généraux, « Créer » (pièce libre) ou le choix d'une pièce Home Assistant ne faisait que changer l'adresse : l'écran restait sur les réglages. La configuration de la nouvelle pièce s'ouvre maintenant.
 
-## 1.7.21 — Une seule liaison avec Niak Weather
+## 1.7.21 — Une seule liaison avec Hestia Weather
 
 **En bref**
 
-- **Liaison avec Niak Weather** : elle se coupe ou se rétablit depuis Confort comme depuis Niak Weather, et les deux disent toujours la même chose.
+- **Liaison avec Hestia Weather** : elle se coupe ou se rétablit depuis Confort comme depuis Hestia Weather, et les deux disent toujours la même chose.
 
 ### Améliorations
 
-- Dans Niak Weather 2.9.0, Réglages → Extensions → Niak Confort : un interrupteur relie le lieu à Confort. Allumé, Confort reprend les mesures de ce lieu. Éteint, Confort garde ces capteurs comme les siens, sans l’air de Niak Weather.
-- Choisir « Vos propres capteurs » dans les Réglages généraux de Confort coupe aussi la liaison côté Niak Weather.
+- Dans Hestia Weather 2.9.0, Réglages → Extensions → Hestia Confort : un interrupteur relie le lieu à Confort. Allumé, Confort reprend les mesures de ce lieu. Éteint, Confort garde ces capteurs comme les siens, sans l’air de Hestia Weather.
+- Choisir « Vos propres capteurs » dans les Réglages généraux de Confort coupe aussi la liaison côté Hestia Weather.
 
 ## 1.7.20 — Un indicateur de chauffe pour les thermostats muets
 
@@ -160,7 +160,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 
 - **Bilan du logement**, dans le menu de gauche du hub, sous « Accueil » : la note du logement, la chaleur, l’humidité et l’air en graphiques, puis la fiche de chaque pièce (mois par mois, journée type l’hiver et l’été).
 - **Conseils du bilan** : chauffer une pièce restée trop froide, faire tourner la VMC ou aérer une pièce trop humide, ouvrir la nuit après un été chaud. Rien quand tout va bien.
-- **Carte « Niak Confort · bilan »** : en résumé ou complète, pour toute la famille.
+- **Carte « Hestia Confort · bilan »** : en résumé ou complète, pour toute la famille.
 - **Nouvelles entités** pour chaque pièce :
   - **Conseil** : le titre de la carte (« Rien à faire », « Aérez 10 min », « Lancez la VMC »…).
   - **État** : la pastille de la carte (Tout va bien, Au mieux, Geste conseillé…).
@@ -169,8 +169,8 @@ Tout ce qui est nouveau depuis la 1.6.0.
   - **Humidité** et **Apprentissage**.
 - **Mon logement** : le geste le plus important, sa couleur, et le nombre de pièces qui demandent un geste.
 - **Un seul appareil « Salon · Cuisine »** pour les pièces au même air, avec leur conseil commun.
-- **Extensions dans les Réglages généraux** : Niak Weather, Versatile Thermostat, Adaptive Cover Pro et Alarmo, chacune avec son utilité et un interrupteur pour l’activer ou la couper.
-- **Versions et liens** sur l’accueil, comme dans Niak Weather, avec un bouton « Soutenez mon travail ».
+- **Extensions dans les Réglages généraux** : Hestia Weather, Versatile Thermostat, Adaptive Cover Pro et Alarmo, chacune avec son utilité et un interrupteur pour l’activer ou la couper.
+- **Versions et liens** sur l’accueil, comme dans Hestia Weather, avec un bouton « Soutenez mon travail ».
 - **Graphique « Prochaines heures »** sous l’échelle : la pièce sans le geste conseillé et avec, pour voir ce qu’il change.
 - **Les bonnes fenêtres à ouvrir** dans « À savoir », selon le vent, les façades et la taille des ouvrants. Une fenêtre où la pluie entrerait est écartée.
 - **« Ouvrez pour réchauffer »** quand il fait nettement plus doux dehors qu’une pièce fraîche.
@@ -182,7 +182,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 - **Un accueil Confort à lire** : tout ce qui se modifie est dans Réglages généraux. Une pièce s’ouvre sur son bilan.
 - **Une extension coupée** n’est plus lue dans aucune pièce, et les réglages des pièces le disent. Pour Alarmo, plus de liste à choisir : il est trouvé tout seul.
 - **VMC conseillée** reste allumée tant que la VMC assèche une pièce encore humide : une automatisation ne la coupe pas trop tôt.
-- **Le menu du hub** : le logo Niak en tête, et « Vue d’ensemble » devient « Accueil ».
+- **Le menu du hub** : le logo Hestia en tête, et « Vue d’ensemble » devient « Accueil ».
 - **Pas d’« Aérez » en pleine nuit** : la carte attend le réveil et dit à partir de quelle heure aérer.
 - **Aérer seulement si c’est mieux qu’attendre**, avec une durée d’aération apprise pièce par pièce.
 - **Nouvelle pastille « Au mieux »**, en bleu, quand rien ne peut améliorer une mesure.
@@ -264,19 +264,19 @@ Tout ce qui est nouveau depuis la 1.6.0.
 **En bref**
 
 - L’accueil Confort se lit seulement : tout ce qui se modifie est dans **Réglages généraux**.
-- Les réglages ont une rubrique **Extensions** : Niak Weather, puis Versatile Thermostat, Adaptive Cover Pro et Alarmo, chacune avec son utilité.
+- Les réglages ont une rubrique **Extensions** : Hestia Weather, puis Versatile Thermostat, Adaptive Cover Pro et Alarmo, chacune avec son utilité.
 
 ### Nouveautés
 
 - **Extensions tierces** : chacune dit si elle est liée, à lier (un bouton « Lier ») ou pas installée (un lien « Installer avec HACS » et ce que Confort fait sans elle).
 - **Extensions pas encore lues** : celles trouvées dans Home Assistant que Confort ne lit pas encore (Better Thermostat, SmartIR, Scheduler) ; « Demander » ouvre une demande toute prête sur GitHub.
-- **Versions et liens** sur l’accueil, comme dans Niak Weather : versions (dont le socle commun), liaisons, liens utiles et un bouton « Soutenez mon travail ».
-- **Logo Niak** en tête du menu de gauche (et de la barre du haut sur téléphone), lisible sur fond clair comme sur fond foncé.
+- **Versions et liens** sur l’accueil, comme dans Hestia Weather : versions (dont le socle commun), liaisons, liens utiles et un bouton « Soutenez mon travail ».
+- **Logo Hestia** en tête du menu de gauche (et de la barre du haut sur téléphone), lisible sur fond clair comme sur fond foncé.
 
 ### Améliorations
 
 - **Accueil plus simple** : plus de boutons « Modifier » ni « Ajouter une pièce », plus de courbe 24 h. Une pièce s’ouvre sur son bilan, et un bouton mène aux réglages.
-- **Niak Weather recommandé** : le choix dit pourquoi les conseils sont meilleurs avec lui, et ce qu’on perd avec ses propres capteurs. Ses mesures reprises sont repliées.
+- **Hestia Weather recommandé** : le choix dit pourquoi les conseils sont meilleurs avec lui, et ce qu’on perd avec ses propres capteurs. Ses mesures reprises sont repliées.
 - **Alarme** : réglée dans l’encart Alarmo.
 
 ### Après la mise à jour
@@ -340,7 +340,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 - **Bilan du logement dans le hub** : un bouton sur l’accueil Confort ouvre la note du logement, un graphique par thème (chaleur, humidité, air) et la liste des pièces.
 - **La fiche de chaque pièce** : sa note, sa température mois par mois face à la zone de confort, une journée type l’hiver et l’été, son humidité et son CO₂ heure par heure.
 - **Des conseils mesurés** : chauffer une pièce restée sous 18 °C, faire tourner la VMC ou aérer une pièce au-dessus de 70 % d’humidité, ouvrir la nuit après un été chaud. Rien quand tout va bien.
-- **Carte « Niak Confort · bilan »** : en résumé (la note, les thèmes et le conseil le plus important) ou complète. Un appui ouvre le bilan entier, pour toute la famille.
+- **Carte « Hestia Confort · bilan »** : en résumé (la note, les thèmes et le conseil le plus important) ou complète. Un appui ouvre le bilan entier, pour toute la famille.
 
 ### À savoir
 
@@ -456,7 +456,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 ### Améliorations
 
 - **Plus de « Un peu frais » à côté de « Rien à faire »** : la pastille dit « Tout va bien », ou nomme l’autre problème de la pièce (« Murs à surveiller », « Trop humide »). Le froid passe dans « À savoir » : « Un peu frais · le chauffage s’en charge ».
-- **« Rallumez le chauffage » aussi sans détecteur de présence** : une pièce nettement froide depuis 30 min, chauffage coupé à la main, le demande même quand Niak ne sait pas si quelqu’un est là.
+- **« Rallumez le chauffage » aussi sans détecteur de présence** : une pièce nettement froide depuis 30 min, chauffage coupé à la main, le demande même quand Hestia ne sait pas si quelqu’un est là.
 - **Carte « Mon logement »** : une pièce juste un peu fraîche n’est plus comptée « à surveiller ».
 
 ### Corrections
@@ -527,7 +527,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
   - le conseil cesse quand la moyenne repasse sous **le seuil moins 20 %** (120 pour un seuil de 150), comme pour le CO₂ ;
   - après une aération, il attend **45 minutes** avant de redemander, sauf si l’indice remonte nettement : si la source est encore là, rouvrir ne sert à rien.
 - Le texte dit ce qui se passe : « COV au-dessus de l’habituel depuis 12 min » (ou « au-dessus du seuil » pour un capteur avec unité). La tuile COV affiche « depuis 12 min ».
-- **Réglages** (panneau Niak, pièce, onglet Air intérieur, capteur COV) : le délai et la pause sont modifiables.
+- **Réglages** (panneau Hestia, pièce, onglet Air intérieur, capteur COV) : le délai et la pause sont modifiables.
 
 ### Corrections
 
@@ -576,7 +576,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 - **Alarmo devient une extension**, avec son réglage dans Réglages généraux : Alarmo trouvé tout seul, une autre alarme, ou aucune. Armée en absence ou en vacances avec une fenêtre ouverte : « Refermez », urgent. En mode nuit : « Refermez », sauf pour la fenêtre laissée ouverte exprès pour dormir au frais.
 - Une pièce vide alors que quelqu’un est à la maison : « Pièce vide · le bon moment pour aérer longuement ».
 - **« Un peu frais » au lieu de « Trop frais »** quand la pièce reste dans la tolérance de son chauffage (1 °C par défaut, réglable dans l’onglet Chauffage). « Trop frais » est gardé pour un vrai écart.
-- **La présence n’est plus « inconnue » pour rien.** Pendant le délai avant de dire la pièce vide, la carte affiche « personne depuis 4 min (vide après 5 min) ». Et après un redémarrage de Home Assistant, Niak sait tout de suite depuis quand personne n’a été détecté.
+- **La présence n’est plus « inconnue » pour rien.** Pendant le délai avant de dire la pièce vide, la carte affiche « personne depuis 4 min (vide après 5 min) ». Et après un redémarrage de Home Assistant, Hestia sait tout de suite depuis quand personne n’a été détecté.
 
 ### Corrections
 
@@ -591,11 +591,11 @@ Tout ce qui est nouveau depuis la 1.6.0.
 **En bref**
 
 - **La consigne de Versatile Thermostat sert de minimum** : en éco à 17 °C, une pièce à 18 °C n’est plus « trop fraîche ». Avant, seule sa température confort comptait. Le hors-gel protège sans être un confort : sa consigne (7 °C, ou 14 °C pour un poêle) ne sert pas de minimum, la température confort reste la référence, sans conseil de rallumer.
-- **Plus de « Refermez » quand l’air du dehors réchauffe la pièce.** Une pièce trop fraîche, fenêtre ouverte, avec un dehors plus chaud : Niak dit que vous pouvez laisser ouvert.
+- **Plus de « Refermez » quand l’air du dehors réchauffe la pièce.** Une pièce trop fraîche, fenêtre ouverte, avec un dehors plus chaud : Hestia dit que vous pouvez laisser ouvert.
 
 ### Améliorations
 
-- **Télécharger les diagnostics** : Paramètres → Appareils et services → Niak Comfort → ⋮ sur une pièce. Un fichier à joindre à un ticket : le conseil tel que la carte le reçoit, l’état brut des capteurs et du thermostat, ce que la pièce a appris, les premières heures de prévision. Les coordonnées de la maison sont retirées.
+- **Télécharger les diagnostics** : Paramètres → Appareils et services → Hestia Confort → ⋮ sur une pièce. Un fichier à joindre à un ticket : le conseil tel que la carte le reçoit, l’état brut des capteurs et du thermostat, ce que la pièce a appris, les premières heures de prévision. Les coordonnées de la maison sont retirées.
 - **La jauge de température montre toujours votre plage.** La barre se colore : bleu sous la plage (trop frais), vert dans la plage, orange au-dessus (trop chaud). Le min–max des 24 h devient un trait fin à deux extrémités, posé dessus sans la cacher.
 
 ### Corrections
@@ -611,7 +611,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 
 **En bref**
 
-- **« Vos pièces » s’adapte à l’écran.** Sur un grand écran, les colonnes restent alignées. Sur une tablette ou un téléphone, chaque pièce devient une fiche : son nom et « Modifier » en haut, puis ses mesures, ce que Niak a observé, ses conseils optimisés et sa courbe sur 24 h. Plus de tableau coupé à droite.
+- **« Vos pièces » s’adapte à l’écran.** Sur un grand écran, les colonnes restent alignées. Sur une tablette ou un téléphone, chaque pièce devient une fiche : son nom et « Modifier » en haut, puis ses mesures, ce que Hestia a observé, ses conseils optimisés et sa courbe sur 24 h. Plus de tableau coupé à droite.
 - **« Votre plage de confort »** remplace « Votre plage de température », avec une explication plus simple.
 
 ### Corrections
@@ -628,7 +628,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 **En bref**
 
 - **« Rallumez le chauffage » seulement quand ça vaut le coup.** Une pièce juste sous son minimum est dite dans « À savoir ». Le geste n’apparaît que si elle reste plus bas que la tolérance (1 °C par défaut) pendant 30 minutes, avec quelqu’un à la maison et le chauffage coupé, et qu’elle ne se réchauffe pas d’elle-même.
-- **Versatile Thermostat devient une extension**, reconnue toute seule : sa température confort sert de minimum à la pièce, et Niak comprend pourquoi il est arrêté.
+- **Versatile Thermostat devient une extension**, reconnue toute seule : sa température confort sert de minimum à la pièce, et Hestia comprend pourquoi il est arrêté.
 - **La nuit simulée sur le jumeau de chaque pièce**, d’après la méthode de NADIR : « Cette nuit : ouvrez de 22 h à 7 h · 1,8 °C de mieux demain au plus chaud ».
 - **Les cadres restent visibles avec les thèmes Home Assistant** dont les séparateurs ont la couleur du fond (Nordic et dérivés).
 
@@ -636,20 +636,20 @@ Tout ce qui est nouveau depuis la 1.6.0.
 
 - Tolérance du chauffage réglable de 0 à 5 °C (Modifier une pièce → Chauffage). 0 rend la règle d’avant.
 - Versatile Thermostat (reconnu par sa plateforme) : consigne confort comme minimum (désactivable), raison d’un arrêt (manuel, fenêtre, arrêt automatique, mode central, délestage…), préréglages éco, hors-gel et absence, pente de température, présence ou mouvement suivis, fenêtre ouverte détectée. Seul un arrêt manuel appelle « Rallumez ». En éco, hors-gel ou absence, ou arrêté par une fenêtre, la carte l’explique.
-- Une section **Extensions** sur l’accueil Confort : Niak Weather, Versatile Thermostat, Adaptive Cover Pro, et les pièces où chacune sert.
+- Une section **Extensions** sur l’accueil Confort : Hestia Weather, Versatile Thermostat, Adaptive Cover Pro, et les pièces où chacune sert.
 - Le jumeau apprend la masse des murs (second nœud qui suit l’air en environ 3 h) : une aération courte refroidit l’air, pas les murs, et la pièce remonte une fois fermée.
 - La simulation des 30 prochaines heures pèse le soleil qui entre volets relevés contre l’air frais, n’ouvre jamais sous la pluie ni sous le minimum, et signale un air humide (point de rosée au-dessus de 16 °C).
 
 ### Corrections
 
 - Un thermostat qui ne publie pas son action est lu « coupé » quand son mode est arrêt.
-- Un seul compte partout : le nombre de capteurs qui répondent inclut tous ceux vérifiés (présence, volets, extérieur…), et l’accueil Niak, le sous-titre et l’indicateur donnent le même nombre de points à régler. Les suggestions sont comptées à part.
+- Un seul compte partout : le nombre de capteurs qui répondent inclut tous ceux vérifiés (présence, volets, extérieur…), et l’accueil Hestia, le sous-titre et l’indicateur donnent le même nombre de points à régler. Les suggestions sont comptées à part.
 - Un capteur que Home Assistant affiche mais que le conseil ne peut pas utiliser (trop ancien, unité) est nommé « ne donne pas de mesure exploitable ».
 - « Pas de contact de fenêtre ici, c’est voulu » (Modifier une pièce → Ouvertures) arrête la suggestion pour un garage ou une pièce jamais aérée.
 
 ### Remerciements
 
-- La nuit simulée et la masse des murs s’inspirent de **NADIR**, de Solal Gendrin : [son dépôt](https://github.com/solal3105/NADIR2) et [sa méthodologie](https://solal3105.github.io/NADIR2/methodologie.html). Le code de Niak a été écrit indépendamment, à partir des équations publiées.
+- La nuit simulée et la masse des murs s’inspirent de **NADIR**, de Solal Gendrin : [son dépôt](https://github.com/solal3105/NADIR2) et [sa méthodologie](https://solal3105.github.io/NADIR2/methodologie.html). Le code de Hestia a été écrit indépendamment, à partir des équations publiées.
 - Merci à Gaël (@gael1980) d’avoir fait découvrir NADIR et partagé sa carte ([#2](https://github.com/hestiaFB/hestia-comfort-integration/issues/2)), et à Louis (@hellmer1234) pour ses retours sur l’affichage ([#1](https://github.com/hestiaFB/hestia-comfort-integration/issues/1)).
 
 ### Après la mise à jour
@@ -665,7 +665,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 
 ### Nouveautés
 
-- Même graduation pour l’air humide et l’air sec : jusqu’à 3 points hors de la plage, « Légèrement humide / sec » ; jusqu’à 10 points, « Air humide / sec » ; au-delà, « Très humide / sec ». Ce sont des paliers Niak, pas des seuils sanitaires.
+- Même graduation pour l’air humide et l’air sec : jusqu’à 3 points hors de la plage, « Légèrement humide / sec » ; jusqu’à 10 points, « Air humide / sec » ; au-delà, « Très humide / sec ». Ce sont des paliers Hestia, pas des seuils sanitaires.
 - Les cartes de pièce et de logement suivent la mesure actuelle, avec une indication d’amélioration ou d’écart durable dans « À savoir ».
 - Pour l’air sec, l’effet de l’air extérieur est expliqué quand les mesures permettent de le calculer ; sans ces mesures, cet effet reste inconnu.
 
@@ -676,13 +676,13 @@ Tout ce qui est nouveau depuis la 1.6.0.
 
 ### Après la mise à jour
 
-- Redémarrez Home Assistant, puis rechargez votre tableau de bord. Les deux limites se trouvent dans Niak → Confort → Modifier une pièce → Température et humidité.
+- Redémarrez Home Assistant, puis rechargez votre tableau de bord. Les deux limites se trouvent dans Hestia → Confort → Modifier une pièce → Température et humidité.
 
 ## 1.3.2 — Observé et conseils optimisés, chacun sa colonne
 
 **En bref**
 
-- **Le soleil à l’ombre est vraiment estimé.** La couverture nuageuse de Niak Weather est trouvée même quand sa prévision commence à l’heure suivante.
+- **Le soleil à l’ombre est vraiment estimé.** La couverture nuageuse de Hestia Weather est trouvée même quand sa prévision commence à l’heure suivante.
 - **« Observé » et « Conseils optimisés » en deux colonnes** sur l’accueil Confort : un pourcentage élevé et « pas encore » ne se contredisent plus.
 
 ### Améliorations
@@ -698,13 +698,13 @@ Tout ce qui est nouveau depuis la 1.6.0.
 
 **En bref**
 
-- **Le soleil est juste même quand la station est à l’ombre.** Confort apprend tout seul les heures où la maison cache le capteur, et y estime le soleil avec la couverture nuageuse de Niak Weather, corrigée par la mesure réelle.
+- **Le soleil est juste même quand la station est à l’ombre.** Confort apprend tout seul les heures où la maison cache le capteur, et y estime le soleil avec la couverture nuageuse de Hestia Weather, corrigée par la mesure réelle.
 - **Le soleil est lissé sur 15 minutes** : un nuage qui passe ne fait plus apparaître et disparaître les conseils.
 
 ### Nouveautés
 
 - Les directions du soleil où la station perd sa mesure chaque jour ensoleillé sont reconnues (par exemple une station côté est, à l’ombre de la maison l’après-midi). Rien n’est à régler ; une station bien dégagée ne change pas.
-- Station à l’ombre : soleil théorique × couverture nuageuse de Niak Weather (2.6.3), corrigée de l’écart mesuré juste avant ; sinon, la dernière mesure prise au soleil. La tuile Soleil indique « estimé, station à l’ombre ».
+- Station à l’ombre : soleil théorique × couverture nuageuse de Hestia Weather (2.6.3), corrigée de l’écart mesuré juste avant ; sinon, la dernière mesure prise au soleil. La tuile Soleil indique « estimé, station à l’ombre ».
 - L’apprentissage des pièces se fait sur l’historique corrigé : l’effet du soleil sur les fenêtres ouest n’est plus sous-estimé.
 
 ### Améliorations
@@ -716,7 +716,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 **En bref**
 
 - **Des conseils qui suivent la saison.** Été, hiver ou entre-saisons : les heures, la durée d’une aération, le soleil et la fenêtre ouverte la nuit ne se jugent plus de la même façon.
-- **La saison vient de Niak Weather** (2.6.2), ou d’un capteur Saison choisi dans « Extérieur ». Rien n’est deviné.
+- **La saison vient de Hestia Weather** (2.6.2), ou d’un capteur Saison choisi dans « Extérieur ». Rien n’est deviné.
 - **Plus d’« Aérez vers 3 h »** : une heure d’aération n’est proposée qu’à des heures où l’on peut ouvrir.
 
 ### Nouveautés
@@ -725,7 +725,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 - Hiver : une aération courte et franche (5 à 10 min), conseillée dès 3 points d’humidité à gagner. Une pièce trop chaude ne se rafraîchit pas en ouvrant : « baissez le chauffage plutôt que d’ouvrir ».
 - Soleil : toujours bienvenu en hiver ; en été, « baissez le volet » dès que la pièce approche du haut de sa plage.
 - Le haut de la plage de température suit la saison : votre valeur d’hiver, votre valeur d’été, entre les deux au printemps et en automne.
-- Nouvelle source « Saison » dans « Extérieur » quand Niak Weather n’est pas la source ; avec Niak Weather, sa saison est reprise et affichée.
+- Nouvelle source « Saison » dans « Extérieur » quand Hestia Weather n’est pas la source ; avec Hestia Weather, sa saison est reprise et affichée.
 - Le flacon d’apprentissage s’affiche dans la pastille dès qu’un chiffre vient des aérations apprises de la pièce, aussi sur la carte logement.
 
 ### Améliorations
@@ -833,20 +833,20 @@ Tout ce qui est nouveau depuis la 1.6.0.
 - Une pièce pouvait rester « À vérifier » sans fin : une demi-heure manquante après un redémarrage empêchait de vérifier ses prévisions.
 - Une porte ouverte quelques secondes n’est plus comptée comme une aération, et le résultat d’une aération est lu quelques minutes après la fermeture.
 
-## 1.2.6 — La qualité de l’air de Niak Weather gardée
+## 1.2.6 — La qualité de l’air de Hestia Weather gardée
 
 **En bref**
 
-- **La qualité de l’air de Niak Weather est bien gardée dans les Réglages généraux.**
+- **La qualité de l’air de Hestia Weather est bien gardée dans les Réglages généraux.**
 
 ### Corrections
 
-- Avec Niak Weather (air WAQI ou Atmo France), les Réglages généraux affichaient la pollution « non fournie », et l’enregistrer la retirait. Elle s’affiche maintenant avec sa source et son niveau (« Niak Weather · WAQI — Moyen »), et reste prise en compte.
+- Avec Hestia Weather (air WAQI ou Atmo France), les Réglages généraux affichaient la pollution « non fournie », et l’enregistrer la retirait. Elle s’affiche maintenant avec sa source et son niveau (« Hestia Weather · WAQI — Moyen »), et reste prise en compte.
 - Les valeurs longues ne sortent plus du cadre.
 
 ### Améliorations
 
-- Un sous-titre plus simple au-dessus des mesures de Niak Weather.
+- Un sous-titre plus simple au-dessus des mesures de Hestia Weather.
 
 ## 1.2.5 — Des conseils qui ne se contredisent plus, et l’apprentissage de chaque pièce
 
@@ -855,7 +855,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 - **Des conseils qui ne se contredisent plus** : une seule pluie pour tout le logement, et les pièces au même air (un salon ouvert sur sa cuisine) jugées ensemble, avec une seule carte.
 - **Chaque pièce apprend** : quand son apprentissage est optimal, le conseil annonce le résultat (« Aérez 15 min · 76 → 68 % »), aussi pour le CO₂ et les COV.
 - **Le bandeau dit le geste à faire ; l’encart « À savoir » dit le reste.**
-- **Un vrai accueil Confort dans le hub Niak**, et des réglages généraux plus simples.
+- **Un vrai accueil Confort dans le hub Hestia**, et des réglages généraux plus simples.
 
 ### Nouveautés
 
@@ -868,7 +868,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 
 ### Améliorations
 
-- Réglages généraux : avec Niak Weather, les mesures du dehors sont reprises de sa station et seulement affichées ; avec vos propres capteurs, un choix par mesure, avec sa valeur du moment.
+- Réglages généraux : avec Hestia Weather, les mesures du dehors sont reprises de sa station et seulement affichées ; avec vos propres capteurs, un choix par mesure, avec sa valeur du moment.
 - Chaque conseil est vérifié dans 32 400 situations (hiver, été, pluie, rafales, chauffage, présence…), à chaque mise à jour.
 - Une fenêtre ouverte après « Aérez » compte aussitôt.
 - Des messages plus justes ; une mesure hors plage n’a plus de cadre orange quand rien n’est à faire.
@@ -881,7 +881,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 ## 1.2.5-beta.9 — Préversion : l’accueil Confort
 
 **En bref**
-- **Un vrai accueil pour Confort dans le hub Niak : l’état technique du logement en un coup d’œil.**
+- **Un vrai accueil pour Confort dans le hub Hestia : l’état technique du logement en un coup d’œil.**
 
 ### Nouveautés
 - L’onglet Confort s’ouvre sur son accueil : « Tout fonctionne » et les versions, puis quatre compteurs (capteurs qui répondent, pièces en apprentissage optimal, points à régler, sources en place).
@@ -896,7 +896,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 ## 1.2.5-beta.8 — Préversion : le panneau et les cartes à jour
 
 **En bref**
-- **Le panneau Niak et les cartes s’affichent enfin dans leur dernière version.**
+- **Le panneau Hestia et les cartes s’affichent enfin dans leur dernière version.**
 
 ### Corrections
 - Depuis la 1.2.0-beta.1, le panneau et les cartes gardaient le numéro 1.1.4 : le navigateur et l’application mobile continuaient d’afficher leur ancienne version en mémoire. Le numéro suit maintenant chaque mise à jour.
@@ -923,7 +923,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 
 **En bref**
 - **Conseils optimisés : quand l’apprentissage d’une pièce est optimal, son conseil annonce le résultat (« Aérez 15 min · 76 → 68 % en 15 min »).**
-- **Nouvel encart Apprentissage en tête de l’accueil Confort du hub Niak.**
+- **Nouvel encart Apprentissage en tête de l’accueil Confort du hub Hestia.**
 
 ### Nouveautés
 - « Conseil optimisé » en haut à droite de la carte, à la place de « Geste conseillé », quand le conseil vient de l’apprentissage de la pièce : au moins 7 jours de mesures, des prévisions justes à ±0,5 °C et ±3 %, et au moins 5 aérations apprises. Sinon, le conseil reste estimé.
@@ -934,7 +934,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 
 ### Améliorations
 - Le soleil est compté fenêtre par fenêtre, selon son orientation et la position du soleil à chaque demi-heure, au lieu de la mesure à plat de la station.
-- Des phrases plus naturelles dans le panneau : Niak n’est plus le sujet des phrases.
+- Des phrases plus naturelles dans le panneau : Hestia n’est plus le sujet des phrases.
 
 ## 1.2.5-beta.5 — Préversion : des messages plus justes
 
@@ -961,7 +961,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 ## 1.2.5-beta.3 — Préversion : le conseil suivi se voit tout de suite
 
 ### Corrections
-- Vous ouvrez la fenêtre que Niak vient de conseiller : « Aération en cours » s’affiche aussitôt, au lieu d’attendre 30 secondes. Une fenêtre ouverte sans conseil garde ce court délai, pour ne pas crier « Refermez » au moindre courant d’air.
+- Vous ouvrez la fenêtre que Hestia vient de conseiller : « Aération en cours » s’affiche aussitôt, au lieu d’attendre 30 secondes. Une fenêtre ouverte sans conseil garde ce court délai, pour ne pas crier « Refermez » au moindre courant d’air.
 
 ## 1.2.5-beta.2 — Préversion : le bandeau pour les gestes, « À savoir » pour le reste
 
@@ -988,7 +988,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 - Une pièce froide dit pourquoi : « le chauffage est coupé » en orange quand quelqu’un est là, « Maison vide : pas besoin de chauffer » quand Alarmo est en absence ou que personne n’est à la maison, « le chauffage s’en charge » quand il tourne.
 - Murs humides : quand l’air touche les murs froids au-delà de 80 %, la carte le dit, avec le geste qui aide (VMC, un peu de chauffage, aérer quand le temps le permettra).
 - Fenêtre ouverte qui n’aide ni ne gêne : « Fenêtre ouverte · sans effet sur le confort », en bleu.
-- Panneau Niak, rubrique « Ce que Niak a appris » : pour chaque pièce, son inertie, ce que lui apportent le soleil et la vie de la maison, l’effet d’une fenêtre ouverte, le renouvellement d’air, et sa précision sur les dernières 24 heures.
+- Panneau Hestia, rubrique « Ce que Hestia a appris » : pour chaque pièce, son inertie, ce que lui apportent le soleil et la vie de la maison, l’effet d’une fenêtre ouverte, le renouvellement d’air, et sa précision sur les dernières 24 heures.
 - Deux capteurs de diagnostic par pièce, désactivés au départ : « Température prévue dans 1 h » et « Humidité prévue dans 1 h ».
 
 ### Améliorations
@@ -1014,10 +1014,10 @@ Tout ce qui est nouveau depuis la 1.6.0.
 ### Nouveautés
 - Réglage « Même air », page La pièce : cochez les pièces sans mur ni porte entre elles. Une fenêtre ouverte dans l’une aère l’autre.
 - Dans un même air, jamais deux gestes contraires : le plus important parle pour les deux pièces (« Laissez ouvert : Salon a besoin d’air »), et la carte logement n’en montre qu’un.
-- Risque de moisissure : Niak estime l’humidité contre le coin le plus froid des murs extérieurs. Au-delà de 80 % qui dure, il conseille d’assécher, même si la pièce semble dans votre plage.
+- Risque de moisissure : Hestia estime l’humidité contre le coin le plus froid des murs extérieurs. Au-delà de 80 % qui dure, il conseille d’assécher, même si la pièce semble dans votre plage.
 
 ### Améliorations
-- La pluie vient de Niak Weather 2.6.1, à la minute avec la pluie dans l’heure de Météo-France. Une pluie dans les 20 minutes fait refermer et empêche d’ouvrir ; une pluie plus tardive raccourcit l’aération : « Refermez avant 15 h 20 ».
+- La pluie vient de Hestia Weather 2.6.1, à la minute avec la pluie dans l’heure de Météo-France. Une pluie dans les 20 minutes fait refermer et empêche d’ouvrir ; une pluie plus tardive raccourcit l’aération : « Refermez avant 15 h 20 ».
 - Avec une station qui mesure la pluie, la prévision heure par heure ne fait plus refermer : la station dira quand il pleut.
 - Air humide dehors : « Aérer n’y changerait rien : 72 % au mieux », au lieu de « trop humide ». La tuile dit « humide dehors aussi ».
 
@@ -1027,7 +1027,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 
 ## 1.1.4 — La station avant la prévision
 
-- Quand Niak Weather a une station qui mesure la pluie et les rafales, ce sont ses mesures qui comptent. Sec, vent calme et pas de pluie dans l’heure : malgré un orage prévu ou une vigilance orange, Confort propose « Aérez 5 minutes » si l’air en a besoin.
+- Quand Hestia Weather a une station qui mesure la pluie et les rafales, ce sont ses mesures qui comptent. Sec, vent calme et pas de pluie dans l’heure : malgré un orage prévu ou une vigilance orange, Confort propose « Aérez 5 minutes » si l’air en a besoin.
 - Sans station, rien ne change : la prévision Météo-France garde le dernier mot.
 - Il pleut, le vent souffle fort, la pluie arrive dans l’heure ou la vigilance est rouge : tout reste fermé, comme avant.
 - Pas d’ouverture longue sous un orage prévu : seulement une aération courte.
@@ -1042,26 +1042,26 @@ Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
 
 ## 1.1.2 — Dimensions reprises d’Adaptive Cover Pro
 
-- La largeur, la hauteur et l’orientation de la fenêtre sont reprises des réglages d’Adaptive Cover Pro ; une valeur saisie dans Niak reste prioritaire.
+- La largeur, la hauteur et l’orientation de la fenêtre sont reprises des réglages d’Adaptive Cover Pro ; une valeur saisie dans Hestia reste prioritaire.
 - Quand Adaptive Cover Pro est détecté, le panneau ne propose plus de choisir d’autres signaux.
 
 Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
 
 ## 1.1.1 — Volets mieux compris
 
-- Le panneau montre, en pleine largeur, ce que Niak lit d’Adaptive Cover Pro : intégration, pilotage automatique, suivi du soleil, mode climat, détection de la reprise à la main, soleil devant la fenêtre, orientation exacte.
-- Si l’un de ces interrupteurs coupe le pilotage, Niak le dit et reprend ses conseils ; sans détection, il ignore le signal « repris à la main ».
+- Le panneau montre, en pleine largeur, ce que Hestia lit d’Adaptive Cover Pro : intégration, pilotage automatique, suivi du soleil, mode climat, détection de la reprise à la main, soleil devant la fenêtre, orientation exacte.
+- Si l’un de ces interrupteurs coupe le pilotage, Hestia le dit et reprend ses conseils ; sans détection, il ignore le signal « repris à la main ».
 - Le soleil sur la fenêtre est calculé avec l’orientation exacte donnée par Adaptive Cover Pro.
-- Niak prévient avant que le soleil n’arrive sur la fenêtre d’une pièce déjà trop chaude (« à fermer avant 13 h 50 »).
+- Hestia prévient avant que le soleil n’arrive sur la fenêtre d’une pièce déjà trop chaude (« à fermer avant 13 h 50 »).
 - Les détails donnent la raison d’Adaptive Cover Pro et l’heure de fin d’une reprise à la main.
-- Nouvelle icône Niak Confort dans HACS ; badge de version corrigé.
+- Nouvelle icône Hestia Confort dans HACS ; badge de version corrigé.
 
 Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
 
 ## 1.1.0 — Adaptive Cover Pro reconnu
 
-- **Adaptive Cover Pro est détecté tout seul** : pour un volet connecté qu’il pilote, Niak lit son pilotage automatique, la reprise à la main, le soleil devant la fenêtre et la position visée. Plus rien à renseigner.
-- Quand Adaptive Cover Pro pilote le volet, Niak ne vous demande plus de le fermer ; s’il est coupé, le conseil le dit.
+- **Adaptive Cover Pro est détecté tout seul** : pour un volet connecté qu’il pilote, Hestia lit son pilotage automatique, la reprise à la main, le soleil devant la fenêtre et la position visée. Plus rien à renseigner.
+- Quand Adaptive Cover Pro pilote le volet, Hestia ne vous demande plus de le fermer ; s’il est coupé, le conseil le dit.
 - Nouvelle tuile « Volet » sur la carte pièce : ouvert, fermé ou position, et qui le pilote. Les détails donnent les heures de soleil sur la fenêtre.
 - Carte logement : une pièce qui demande un geste fait défiler ses besoins mesurés (« 68 % trop humide », « 282 COV élevés ») au lieu de répéter le conseil.
 - Réglages du volet plus clairs, sans libellé en double.
@@ -1071,7 +1071,7 @@ Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
 
 ## 1.0.2 — Carte logement plus calme
 
-- Un capteur qui ne répond plus (présence, luminosité…) n’affiche plus « Bilan partiel » ni « À vérifier » sur la carte logement : elle reste sur « Rien à faire ». L’état des capteurs se consulte dans le panneau Niak.
+- Un capteur qui ne répond plus (présence, luminosité…) n’affiche plus « Bilan partiel » ni « À vérifier » sur la carte logement : elle reste sur « Rien à faire ». L’état des capteurs se consulte dans le panneau Hestia.
 
 Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
 
@@ -1083,30 +1083,30 @@ Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
 
 ## 1.0.0 — Première version stable
 
-Niak Confort conseille, pièce par pièce, le geste qui améliore vraiment le confort. Il ne commande aucun équipement.
+Hestia Confort conseille, pièce par pièce, le geste qui améliore vraiment le confort. Il ne commande aucun équipement.
 
 - **Des conseils utiles** : aérer, refermer, rafraîchir, assécher, lancer la VMC, attendre le bon moment. Sans geste utile, la carte reste calme.
-- **Chaque pièce apprend de ses aérations** : gain réaliste, durée propre à la pièce, meilleur moment selon la prévision de Niak Weather.
-- **La saison et la météo** : plage de confort qui suit la saison, pluie, rafales, orage, vigilance et qualité de l’air dehors, lien avec Niak Weather.
-- **Des cartes comme Niak Weather** : carte pièce (complète, tuile, tuile dépliée, mini, mesures, alerte) et carte logement (complète, tuile, liste, mini, alerte), avec le même panneau de réglages.
+- **Chaque pièce apprend de ses aérations** : gain réaliste, durée propre à la pièce, meilleur moment selon la prévision de Hestia Weather.
+- **La saison et la météo** : plage de confort qui suit la saison, pluie, rafales, orage, vigilance et qualité de l’air dehors, lien avec Hestia Weather.
+- **Des cartes comme Hestia Weather** : carte pièce (complète, tuile, tuile dépliée, mini, mesures, alerte) et carte logement (complète, tuile, liste, mini, alerte), avec le même panneau de réglages.
 - **Des couleurs qui disent s’il y a quelque chose à faire** : bleu tout va bien, vert à saisir, orange geste conseillé, rouge urgent ; une panne de capteur n’est jamais un conseil.
-- **Le panneau Niak** pour configurer les pièces, les capteurs et l’extérieur, avec l’état technique du logement.
+- **Le panneau Hestia** pour configurer les pièces, les capteurs et l’extérieur, avec l’état technique du logement.
 
 Depuis une préversion : mise à jour HACS, redémarrage de Home Assistant, puis rechargement de la page. Vos pièces et réglages sont conservés.
 
 ## 0.9.9.1 — Corrections
 
 - Juste après un démarrage de Home Assistant, un ou deux capteurs secondaires en retard (présence, luminosité…) ne bloquent plus la carte sur « Mesures en chargement » : le conseil s’affiche, seules leurs tuiles restent « en attente ».
-- Un logement relié à Niak Weather sans qualité de l’air choisie ne reprend plus l’indice de Weather.
+- Un logement relié à Hestia Weather sans qualité de l’air choisie ne reprend plus l’indice de Weather.
 
 Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
 
-## 0.9.9-beta.1 — Les formats de Niak Weather et des pannes qui ne sont plus des conseils
+## 0.9.9-beta.1 — Les formats de Hestia Weather et des pannes qui ne sont plus des conseils
 
-- **Six formats pour la carte pièce**, comme Niak Weather : complète, tuile (le conseil et ses pastilles, qui se déplie d’un appui), tuile dépliée, mini (une ligne), mesures (les tuiles seules) et alerte (visible seulement quand un geste est conseillé).
+- **Six formats pour la carte pièce**, comme Hestia Weather : complète, tuile (le conseil et ses pastilles, qui se déplie d’un appui), tuile dépliée, mini (une ligne), mesures (les tuiles seules) et alerte (visible seulement quand un geste est conseillé).
 - **Cinq formats pour la carte logement** : complète, tuile, liste des pièces, mini et alerte.
 - **Un appui long** sur une tuile (un appui sur mini et alerte) ouvre la carte complète en fenêtre, une page de votre choix, ou rien.
-- **Panneaux de réglages refaits comme celui de Niak Weather** : le format en liste, puis des groupes repliables qui changent avec lui (Visuel et performance, Bandeau, Échelle, Mesures, Détails, Fonctionnalités). Le contenu du bandeau, les repères de l’échelle, les pastilles et les rubriques se cochent et s’ordonnent. Le réglage du thème disparaît : la carte suit Home Assistant.
+- **Panneaux de réglages refaits comme celui de Hestia Weather** : le format en liste, puis des groupes repliables qui changent avec lui (Visuel et performance, Bandeau, Échelle, Mesures, Détails, Fonctionnalités). Le contenu du bandeau, les repères de l’échelle, les pastilles et les rubriques se cochent et s’ordonnent. Le réglage du thème disparaît : la carte suit Home Assistant.
 - **Une panne n’est plus un conseil** : juste après un démarrage, « Mesures en chargement » et des tuiles « en attente » ; si les capteurs restent muets, « Mesures absentes » en gris, avec leur nombre plutôt qu’une longue liste, et sans échelle vide ; un capteur secondaire muet laisse le bandeau calme et sa tuile passe en pointillés.
 - Le survol d’une section n’affiche plus de bande grise : c’est le chevron qui s’allume.
 
@@ -1114,12 +1114,12 @@ Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
 
 ## 0.9.8-beta.1 — Des conseils qui apportent un plus, des cartes plus vivantes
 
-- **Un conseil apporte toujours un plus.** Niak ne dit plus « gardez fermé » à quelqu’un qui n’allait pas ouvrir : sans geste utile, le bandeau reste calme (« Rien à faire »). Il parle pour un geste qui aide maintenant, une fenêtre à refermer, un mauvais réflexe à éviter (ouvrir quand il fait plus chaud dehors, ou pour aérer sous la pluie), un moment précis (« Ouvrez vers 22 h ») ou un autre équipement (« Lancez la VMC »).
+- **Un conseil apporte toujours un plus.** Hestia ne dit plus « gardez fermé » à quelqu’un qui n’allait pas ouvrir : sans geste utile, le bandeau reste calme (« Rien à faire »). Il parle pour un geste qui aide maintenant, une fenêtre à refermer, un mauvais réflexe à éviter (ouvrir quand il fait plus chaud dehors, ou pour aérer sous la pluie), un moment précis (« Ouvrez vers 22 h ») ou un autre équipement (« Lancez la VMC »).
 - **Les couleurs disent s’il y a quelque chose à faire**, comme sur vos autres cartes : bleu tout va bien, vert à saisir, orange geste conseillé, rouge urgent. Une mesure hors de votre plage, sans geste demandé, se repère en ambre.
 - **L’humidité compte quand elle gêne vraiment** : nettement au-dessus de votre seuil (5 points), ou au-dessus depuis trois heures.
 - **Des cartes plus vivantes** : une lumière douce qui se déplace dans le coin du bandeau, un anneau de lumière qui tourne autour du rond (lentement si tout va bien, plus vite pour un geste, très vite pour une alerte), des conseils qui se succèdent en glissant, des tuiles et une échelle qui arrivent en douceur. Tout se coupe avec le réglage « Animations » et respecte la réduction des animations de l’appareil.
 - Le rond du bandeau se tient en retrait du bord, et une mesure hors de votre plage se repère d’un coup d’œil : liseré ambre, et un point qui bat devant son état.
-- **L’air du dehors suit la source choisie dans Niak Weather** (Atmo France ou une station WAQI) quand le logement est relié à Niak Weather 2.5.7 ou plus : une panne d’Atmo France ne prive plus Niak Confort de l’indice du jour.
+- **L’air du dehors suit la source choisie dans Hestia Weather** (Atmo France ou une station WAQI) quand le logement est relié à Hestia Weather 2.5.7 ou plus : une panne d’Atmo France ne prive plus Hestia Confort de l’indice du jour.
 - **La carte logement a ses réglages**, comme les cartes pièce : titre, défilement des conseils, échelle, sections Pièces et Détails (affichées, dépliées au départ), thème, animations et effet de verre.
 - Sur la carte logement, une pièce qui demande un geste l’affiche sur sa tuile, même non chauffée.
 
@@ -1127,10 +1127,10 @@ Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
 
 ## 0.9.7-beta.1 — Chaque pièce apprend de ses aérations
 
-- **Les conseils d’aération apprennent de votre maison.** Niak relit les ouvertures des 10 derniers jours et retient, pour chaque pièce, ce qu’une aération y a vraiment donné : vitesse de séchage, humidité qui reste, humidité qui revient après la fermeture. Les nouvelles aérations s’ajoutent ensuite (jusqu’à 90 jours).
+- **Les conseils d’aération apprennent de votre maison.** Hestia relit les ouvertures des 10 derniers jours et retient, pour chaque pièce, ce qu’une aération y a vraiment donné : vitesse de séchage, humidité qui reste, humidité qui revient après la fermeture. Les nouvelles aérations s’ajoutent ensuite (jusqu’à 90 jours).
 - La promesse est réaliste : « 76 % d’humidité, environ 70 % après l’aération » au lieu d’un remplacement complet de l’air qui n’arrive jamais.
 - La durée est celle de la pièce : 20 min dans une buanderie qui sèche vite, une heure dans une chambre où l’air se renouvelle mal.
-- Si aérer ne gagnerait presque rien, Niak ne le demande plus : « Aérer ici : 76 → 74 % seulement », et propose la VMC quand la pièce en a une.
+- Si aérer ne gagnerait presque rien, Hestia ne le demande plus : « Aérer ici : 76 → 74 % seulement », et propose la VMC quand la pièce en a une.
 - Le meilleur moment : « Aérez vers 22 h » quand l’air du soir sera nettement plus sec, ou « Encore mieux vers 22 h » en second message.
 - Dans « Détails », la ligne « Séchage » dit sur combien d’aérations la pièce a appris.
 
@@ -1186,13 +1186,13 @@ Même contenu que la 0.9.0-beta.10, renumérotée : GitHub et HACS classaient «
 
 - Les conseils défilent vraiment : une mesure qui bouge (le CO₂ toutes les quelques secondes) ne relance plus le compte à rebours, qui restait bloqué sur le premier conseil.
 - La carte logement fait défiler les pièces qui demandent quelque chose, la plus urgente d’abord, avec le nom de la pièce.
-- L’échelle de température est posée sur un verre dépoli, comme la frise de Niak Weather ; le réglage « Effet de verre » le rend opaque.
+- L’échelle de température est posée sur un verre dépoli, comme la frise de Hestia Weather ; le réglage « Effet de verre » le rend opaque.
 
 Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
 
 ## 0.9.0-beta.9 — Les conseils défilent, la carte se règle
 
-- Quand il y a plusieurs conseils, ils défilent dans le bandeau, un toutes les 4,5 s, comme dans Niak Weather : le plus important d’abord, une barre par conseil, pause au survol, un appui pour passer au suivant. La carte garde la hauteur du conseil le plus long : plus de saut quand le texte change.
+- Quand il y a plusieurs conseils, ils défilent dans le bandeau, un toutes les 4,5 s, comme dans Hestia Weather : le plus important d’abord, une barre par conseil, pause au survol, un appui pour passer au suivant. La carte garde la hauteur du conseil le plus long : plus de saut quand le texte change.
 - Le purificateur qui tourne pendant que les particules sont élevées est un remède en cours : les particules seules ne demandent plus d’aérer, et la carte l’indique (« Le purificateur filtre »).
 - Nouvelle source « Ventilation (VMC) » dans l’étape Air intérieur, distincte du purificateur : la carte indique qu’elle renouvelle l’air et aide à assécher.
 - Réglages de la carte refaits, comme pour Weather : format (complète, tuile, mini), échelle, mesures et détails affichés ou non, dépliés ou repliés au départ, défilement automatique des conseils.
@@ -1201,9 +1201,9 @@ Si une VMC est déclarée comme purificateur dans une pièce, choisissez-la plut
 
 ## 0.9.0-beta.8 — Une panne d’Atmo ne bloque plus le conseil
 
-- Quand l’indice de qualité de l’air extérieur ne répond plus (panne d’Atmo France), le conseil reste valable au lieu de demander de « regarder dehors ». La panne est signalée dans « Détails » et dans l’état technique. La pluie reste une protection : si son capteur se tait, Niak demande toujours de vérifier.
+- Quand l’indice de qualité de l’air extérieur ne répond plus (panne d’Atmo France), le conseil reste valable au lieu de demander de « regarder dehors ». La panne est signalée dans « Détails » et dans l’état technique. La pluie reste une protection : si son capteur se tait, Hestia demande toujours de vérifier.
 - La carte distingue une source jamais configurée (« non suivie ») d’une source configurée qui ne répond pas (« indisponible »), et ne présente plus le chauffage comme une source extérieure.
-- L’Accueil Niak signale aussi une source qui ne répond pas, même quand le conseil reste valable.
+- L’Accueil Hestia signale aussi une source qui ne répond pas, même quand le conseil reste valable.
 
 Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
 
@@ -1211,9 +1211,9 @@ Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page.
 
 - Cartes pièce et logement refaites, moins de texte et plus visuelles : un bandeau avec le geste en quelques mots et sa raison en une ligne, un grand pictogramme, puis une échelle qui place la pièce dans votre plage (valeur actuelle, minimum et maximum des dernières 24 h, température dehors). Sur la carte logement, un point par pièce.
 - Les mesures deviennent des tuiles compactes, repliables ; celles qui sortent de votre plage restent visibles et s’encadrent. Les explications passent derrière le bouton « i » et dans « Détails ».
-- Même charte que Niak Weather : tailles de texte, étiquettes, couleurs, contours et sections repliables. La charte est désormais commune aux cartes Niak.
+- Même charte que Hestia Weather : tailles de texte, étiquettes, couleurs, contours et sections repliables. La charte est désormais commune aux cartes Hestia.
 - La température maximale de confort suit la saison : 24 °C l’hiver, 26 °C l’été par défaut, avec un passage progressif quand la température extérieure moyenne des 7 derniers jours monte de 12 à 20 °C. Sans historique extérieur, la plage enregistrée reste inchangée.
-- Nouveau réglage « Température maximum en été » ; les pièces existantes reçoivent 26 °C pour l’été, modifiable. Nouvelle option « Pièce non chauffée » : Niak ne conseille jamais de la réchauffer.
+- Nouveau réglage « Température maximum en été » ; les pièces existantes reçoivent 26 °C pour l’été, modifiable. Nouvelle option « Pièce non chauffée » : Hestia ne conseille jamais de la réchauffer.
 - Un contact qui s’ouvre moins d’une minute n’est plus compté comme une ouverture.
 
 Bêta en observation. Après mise à jour HACS, redémarrez Home Assistant, puis rechargez la page du navigateur ou de l’application.
@@ -1228,17 +1228,17 @@ Bêta en observation. Après mise à jour HACS, redémarrez Home Assistant, puis
 
 - L’accueil et le menu occupent toute la hauteur disponible dans Home Assistant, y compris lorsque seule une brique est à jour.
 - Le menu de configuration d’une pièce s’aligne sur toute la largeur du formulaire.
-- Dans Accueil Niak → Réglages, choix mémorisé entre les couleurs et la police du thème Home Assistant et la palette Niak. Niak conserve le suivi du mode clair ou sombre de Home Assistant.
+- Dans Accueil Hestia → Réglages, choix mémorisé entre les couleurs et la police du thème Home Assistant et la palette Hestia. Hestia conserve le suivi du mode clair ou sombre de Home Assistant.
 - La section Affichage reste toujours visible, sans repli.
 
-## 0.9.0-beta.4 — Le nouveau hub Niak
+## 0.9.0-beta.4 — Le nouveau hub Hestia
 
 - Interface claire ou sombre, menu par brique et mise en page adaptée au téléphone.
 - Vue d’ensemble des pièces avec Configurer. Les six rubriques restent dans la pièce choisie ; l’extérieur partagé est dans Réglages généraux.
 - Menu des pièces en deux rangées de boutons avec icônes, sans glissière horizontale.
 - Textes d’aide en info-bulles et valeurs par défaut explicites, avec possibilité de les rétablir ; recommandations et erreurs toujours visibles.
 - Ouverture de Confort stabilisée : la liste des pièces apparaît sans attendre le bilan technique. Liens directs, retours arrière et brouillons séparés par pièce.
-- Le menu ne propose que les briques installées ; l’entrée Niak du menu Home Assistant peut être masquée dans Réglages Niak.
+- Le menu ne propose que les briques installées ; l’entrée Hestia du menu Home Assistant peut être masquée dans Réglages Hestia.
 
 Bêta en observation. Les paramètres existants sont conservés. Après mise à jour HACS, redémarrez Home Assistant.
 
@@ -1267,7 +1267,7 @@ Après mise à jour HACS, redémarrez Home Assistant, puis recherchez à nouveau
 - PM2.5 et COV avec leurs unités et leurs seuils ; purificateur observé sans le confondre avec un renouvellement d’air.
 - Présence facultative : une pièce vide reste suivie et les besoins mesurés restent visibles.
 
-Bêta en observation. Niak conseille et ne commande aucun équipement. Après mise à jour HACS, redémarrez Home Assistant.
+Bêta en observation. Hestia conseille et ne commande aucun équipement. Après mise à jour HACS, redémarrez Home Assistant.
 
 - La roue de l’intégration mène directement à l’onglet Confort.
 
@@ -1285,46 +1285,46 @@ Bêta en observation. Niak conseille et ne commande aucun équipement. Après mi
 - Les conseils proposent, lorsque les conditions le permettent, deux ouvertures pour l’effet cheminée ou une aération traversante. Ils expliquent les conditions et les limites du passage de l’air.
 - Une pièce devenue indisponible reste visible ; sa température est exclue des moyennes. Les changements d’étage se répercutent sur la carte.
 
-Bêta en observation, vérifiée localement. Niak conseille, sans commander les équipements.
+Bêta en observation, vérifiée localement. Hestia conseille, sans commander les équipements.
 
 ## 0.5.0-beta.9 — Des étapes plus claires dans l’onglet Confort
 
 - Les étapes d’une pièce disent ce qu’on règle : Température et humidité, Fenêtres et portes, CO₂, Chauffage, Pièce et confort.
 - En haut de chaque étape, un cadre « À quoi sert cet onglet ? » ; replié, il le reste.
 - À l’extérieur, les mesures sont rangées en cadres : Température et humidité, Pluie et vent, Soleil.
-- Les mesures du dehors viennent de Niak Weather ou de vos capteurs ; la qualité de l’air, d’Atmo France ou de Niak Weather, puis sa zone.
+- Les mesures du dehors viennent de Hestia Weather ou de vos capteurs ; la qualité de l’air, d’Atmo France ou de Hestia Weather, puis sa zone.
 - Une intégration absente est grisée, avec un lien pour l’installer.
 
-## 0.5.0-beta.8 — Le lien avec Niak Weather des deux côtés
+## 0.5.0-beta.8 — Le lien avec Hestia Weather des deux côtés
 
-- Niak Weather affiche lui aussi « Relié à Niak Confort ».
-- Le lien avec Niak Weather tient dès le démarrage de Home Assistant.
+- Hestia Weather affiche lui aussi « Relié à Hestia Confort ».
+- Le lien avec Hestia Weather tient dès le démarrage de Home Assistant.
 
 ## 0.5.0-beta.7 — La carte visible dans l’application mobile
 
-- La carte Niak Confort s’affiche aussi dans l’application Home Assistant, même juste après une mise à jour.
-- Elle apparaît désormais dans Paramètres → Tableaux de bord → Ressources : c’est Niak Confort qui la tient à jour, rien à faire.
+- La carte Hestia Confort s’affiche aussi dans l’application Home Assistant, même juste après une mise à jour.
+- Elle apparaît désormais dans Paramètres → Tableaux de bord → Ressources : c’est Hestia Confort qui la tient à jour, rien à faire.
 - Carte toujours invisible dans l’application ? Paramètres → Application compagnon → Dépannage → Réinitialiser le cache du frontend, une seule fois.
 
 ## 0.5.0-beta.6 — L’état technique du logement
 
-- L’onglet Confort du panneau Niak s’ouvre sur l’état du logement, en cadres : ce qui fonctionne, ce qui est à régler, ce qu’on peut améliorer.
+- L’onglet Confort du panneau Hestia s’ouvre sur l’état du logement, en cadres : ce qui fonctionne, ce qui est à régler, ce qu’on peut améliorer.
 - À régler : un capteur d’une pièce ou de l’extérieur qui ne répond pas, avec ce que ça interrompt.
 - À améliorer : un capteur disponible dans une pièce, des fenêtres non mesurées, une pièce pas encore suivie.
 - Un tableau montre les capteurs de chaque pièce. Le bouton Modifier mène aux pièces ; chaque ligne ouvre la bonne pièce.
 
-## 0.5.0-beta.5 — Le panneau Niak
+## 0.5.0-beta.5 — Le panneau Hestia
 
-- Les réglages sont dans **Niak** (barre latérale), onglet **Confort**.
-- Un onglet **Accueil** montre l’état de Niak Confort : en bleu si tout est suivi, en orange s’il y a quelque chose à régler.
-- Les autres briques Niak installées (Niak Weather) y apparaissent aussi.
+- Les réglages sont dans **Hestia** (barre latérale), onglet **Confort**.
+- Un onglet **Accueil** montre l’état de Hestia Confort : en bleu si tout est suivi, en orange s’il y a quelque chose à régler.
+- Les autres briques Hestia installées (Hestia Weather) y apparaissent aussi.
 - L’ancienne adresse et le bouton « Configurer » mènent toujours aux réglages.
 
 ## 0.5.0-beta.4 — Fenêtres ouvertes depuis longtemps
 
 - Une fenêtre ouverte (ou fermée) depuis plus de 30 minutes n’est plus considérée comme « à vérifier » : un contact ne parle que quand il change.
 - Même chose pour l’état du chauffage.
-- L’indice ATMO sous votre seuil ne rend plus le bilan incomplet : Niak conseille normalement, et bloque toujours au-dessus du seuil.
+- L’indice ATMO sous votre seuil ne rend plus le bilan incomplet : Hestia conseille normalement, et bloque toujours au-dessus du seuil.
 - La carte nomme la fenêtre en cause (« Fenêtre Ouest ») au lieu de « Contact de fenêtre ».
 
 ## 0.5.0-beta.3 — Indice ATMO du matin
@@ -1338,21 +1338,21 @@ Bêta en observation, vérifiée localement. Niak conseille, sans commander les 
 - Vos capteurs et appareils Home Assistant ne sont pas touchés.
 - La pièce Home Assistant supprimée est de nouveau proposée dans Mon logement.
 
-## 0.5.0-beta.1 — Niak Weather et le vent
+## 0.5.0-beta.1 — Hestia Weather et le vent
 
-- Niak Weather est détecté : un clic reprend sa station pour l’extérieur (avec Niak Weather 2.1.0b1 ou plus récent).
-- Le vent compte : Niak dit quelles fenêtres ouvrir, au vent et sous le vent, pour faire traverser l’air.
+- Hestia Weather est détecté : un clic reprend sa station pour l’extérieur (avec Hestia Weather 2.1.0b1 ou plus récent).
+- Le vent compte : Hestia dit quelles fenêtres ouvrir, au vent et sous le vent, pour faire traverser l’air.
 - La pluie poussée par le vent est repérée, même sous un avant-toit.
 - Créneaux d’ouverture : « Ouvrez vers 21 h : il fera 18 °C, vent d’ouest ».
-- Orage, vigilance orange ou rouge, pluie qui arrive : Niak conseille de fermer à temps.
-- La nuit avant une journée chaude, Niak propose de stocker le frais.
+- Orage, vigilance orange ou rouge, pluie qui arrive : Hestia conseille de fermer à temps.
+- La nuit avant une journée chaude, Hestia propose de stocker le frais.
 
 ## 0.4.0-beta.4 — Logement et carte plus visuelle
 
 - Première installation : toutes les pièces détectées sont proposées, cochées, et créées d’un coup.
-- Nouvelle carte « Niak Confort · logement » : la pièce qui demande le plus d’attention, la plus chaude, la plus fraîche, ce qui est ouvert.
+- Nouvelle carte « Hestia Confort · logement » : la pièce qui demande le plus d’attention, la plus chaude, la plus fraîche, ce qui est ouvert.
 - Carte d’une pièce plus visuelle et deux fois plus courte : des bulles de mesures, les ouvrants en pastilles, les explications derrière « Pourquoi ? ».
-- Sans indice ATMO ni capteur de pluie, Niak conseille quand même et précise ce qu’il ne surveille pas.
+- Sans indice ATMO ni capteur de pluie, Hestia conseille quand même et précise ce qu’il ne surveille pas.
 
 ## 0.4.0-beta.3 — Récapitulatif allégé
 
@@ -1364,7 +1364,7 @@ Bêta en observation, vérifiée localement. Niak conseille, sans commander les 
 
 - Chaque capteur choisi peut être remplacé directement, sans le retirer d’abord ; un ouvrant garde son exposition.
 - Les anciennes pièces utilisent elles aussi l’extérieur commun dès qu’il est configuré.
-- La carte s’appelle « Niak Confort » dans la liste des cartes.
+- La carte s’appelle « Hestia Confort » dans la liste des cartes.
 - Un capteur qui ne répond pas est indiqué plus clairement.
 
 ## 0.4.0-beta.1 — Pièces, ouvrants et extérieur
@@ -1380,7 +1380,7 @@ Bêta en observation, vérifiée localement. Niak conseille, sans commander les 
 
 ## 0.3.0-beta.3 — Mon logement
 
-- Configuration dans une page Niak Confort de la barre latérale, avec Salon proposé et ajout des pièces Home Assistant.
+- Configuration dans une page Hestia Confort de la barre latérale, avec Salon proposé et ajout des pièces Home Assistant.
 - Parcours par catégories, propositions expliquées, correction manuelle et récapitulatif avant enregistrement.
 - Données extérieures communes sur activation explicite par pièce ; pluie actuelle et indice ATMO quotidien expliqués.
 - Les alias de capteurs, portes d’appareils et diagnostics ne sont plus sélectionnés automatiquement. Les choix existants et champs volontairement vides sont conservés.

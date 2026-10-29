@@ -1,4 +1,4 @@
-# Hestia Comfort — intégration
+# Hestia Confort — intégration
 
 [![release](https://img.shields.io/github/v/release/hestiaFB/hestia-comfort-integration?cacheSeconds=3600)](https://github.com/hestiaFB/hestia-comfort-integration/releases)
 [![Validate](https://github.com/hestiaFB/hestia-comfort-integration/actions/workflows/validate.yml/badge.svg)](https://github.com/hestiaFB/hestia-comfort-integration/actions/workflows/validate.yml)
@@ -9,7 +9,7 @@
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-frankblemont-FFDD00?logo=buymeacoffee&logoColor=black)](https://www.buymeacoffee.com/frankblemont)
 [![PayPal](https://img.shields.io/badge/PayPal-Donate-00457C?logo=paypal&logoColor=white)](https://paypal.me/frankblemont)
 
-<img src="custom_components/niak_comfort/brand/icon.png" alt="" width="96" align="right">
+<img src="docs/images/icon.png" alt="" width="96" align="right">
 
 **Le confort de chaque pièce, expliqué.** Hestia Confort regarde vos pièces et le temps dehors. Il dit en une phrase quoi faire : ouvrir, fermer, attendre ou rien. Et il dit pourquoi.
 
@@ -33,7 +33,7 @@ Toute la famille lit la même carte. Elle ne parle que quand un geste aide vraim
 
 ## Ce qu’il faut
 
-- Home Assistant **2026.10** ou plus récent.
+- Home Assistant **2026.7** ou plus récent.
 - Un thermomètre dans chaque pièce à suivre. C’est le seul capteur obligatoire.
 - En plus, si vous en avez : humidité, CO₂, contacts de fenêtres, thermostat, VMC, purificateur, volets, présence. Les [extensions](#les-extensions) sont reconnues toutes seules.
 - Pour l’extérieur : [Hestia Weather](https://github.com/hestiaFB/hestia-weather-integration) (conseillé) ou vos propres capteurs.
@@ -41,7 +41,7 @@ Toute la famille lit la même carte. Elle ne parle que quand un geste aide vraim
 ## Installation
 
 1. Dans HACS, ⋮ → **Dépôts personnalisés** : ajoutez `https://github.com/hestiaFB/hestia-comfort-integration`, catégorie **Intégration**.
-2. Installez **Hestia Comfort**, puis redémarrez Home Assistant.
+2. Installez **Hestia Comfort** (son nom dans HACS), puis redémarrez Home Assistant.
 3. **Paramètres → Appareils et services → Ajouter une intégration → Hestia Comfort.**
 4. Ouvrez **Hestia** dans la barre latérale, onglet **Confort**.
 
@@ -184,6 +184,16 @@ Les entités disent ce que dit la carte :
 Des pièces au même air (« Salon · Cuisine ») ont un seul appareil pour leur conseil. « Mon logement » donne le geste le plus important et sa couleur.
 
 Par exemple : des LED aux couleurs de la carte, ou la VMC qui suit le conseil. [Le détail des entités](docs/guide.md#pour-vos-automatisations).
+
+## Langues
+
+Hestia Confort parle **français** et **anglais**. Les cartes, le bilan, le panneau et les noms des entités suivent la langue de Home Assistant ; toute autre langue s’affiche en anglais pour l’instant.
+
+Les valeurs des entités (Conseil, État…) restent en français, pour que vos automatisations ne changent pas avec la langue.
+
+**D’autres langues arriveront, avec votre aide.** Hestia est un projet d’entraide : vous parlez allemand, néerlandais, italien, espagnol… ? [Proposez votre traduction](https://github.com/hestiaFB/hestia-comfort-integration/issues/new?title=Traduction%20%3A%20) : une liste de phrases à traduire, sans rien connaître au code. Votre nom sera cité. [Comment traduire](docs/dev/README.md#traduire).
+
+> **In English.** Hestia Comfort speaks French and English. More languages will come through mutual help: if you speak another language, [offer a translation](https://github.com/hestiaFB/hestia-comfort-integration/issues/new?title=Translation%3A%20). No coding needed.
 
 ## Documentation
 

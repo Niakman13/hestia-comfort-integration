@@ -22,6 +22,21 @@ Données fictives, aucune connexion à un Home Assistant réel :
 
 Les images de `docs/images/` viennent de ces bancs.
 
+## Traduire
+
+Hestia Confort parle français et anglais. Le français est écrit dans le code ; chaque autre langue est un dictionnaire « phrase française → traduction ». Pour ajouter une langue, traduisez ces fichiers en partant de l’anglais :
+
+| Fichier | Ce qu’il traduit |
+| --- | --- |
+| `card/src/i18n/en.ts` | Les cartes et le bilan |
+| `frontend/i18n-en.ts` et `frontend/socle/i18n-en.ts` | Le panneau Hestia |
+| `custom_components/niak_comfort/engine/i18n_en.py` | Les conseils et les textes calculés pour la carte et le panneau |
+| `custom_components/niak_comfort/translations/en.json` | L’assistant de Paramètres et les noms des entités |
+
+Les valeurs des entités restent en français : elles servent aux automatisations. Les tests vérifient qu’aucune phrase n’est oubliée et que les `{noms}` entre accolades sont gardés.
+
+Pas à l’aise avec ces fichiers ? [Ouvrez une demande « Traduction »](https://github.com/hestiaFB/hestia-comfort-integration/issues/new?title=Traduction%20%3A%20) : on vous envoie la liste des phrases, et on s’occupe du reste.
+
 ## Interfaces
 
 - API WebSocket v1 en lecture : `niak_comfort/entries`, `niak_comfort/view`, `niak_comfort/subscribe`, `niak_comfort/home_subscribe`.
