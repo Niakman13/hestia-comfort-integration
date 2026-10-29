@@ -1,3 +1,9 @@
+## 1.7.27 — Préversion : correctif d’affichage sur petit écran
+
+### Corrections
+
+- Sur un téléphone étroit (320 px), une ligne « À régler » avec un raccourci n’était plus lisible : le raccourci passe maintenant sous le texte.
+
 ## 1.7.26 — Préversion : Hestia Confort en anglais, un panneau plus clair et plus léger
 
 **En bref**
