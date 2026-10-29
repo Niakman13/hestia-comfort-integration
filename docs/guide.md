@@ -80,9 +80,9 @@ La rubrique **Extensions** des Réglages généraux a trois parties :
 - **Extensions tierces** : Versatile Thermostat, Adaptive Cover Pro et Alarmo. Chacune dit à quoi elle sert, dans quelles pièces, et a un interrupteur. Coupée, elle n’est lue dans aucune pièce, et les réglages des pièces le disent.
 - **Détectées, pas encore lues par Confort** : les intégrations de votre Home Assistant qui pourraient aider, Scheduler par exemple. **Demander** ouvre une demande toute prête sur GitHub ; rien n’est envoyé sans vous.
 
-![Les extensions dans les Réglages généraux : officielles, tierces avec leur interrupteur, et détectées à proposer](images/niak-comfort-extensions.png)
+![Les extensions dans les Réglages généraux : officielles, tierces avec leur interrupteur, et détectées à proposer](images/hestia-comfort-extensions.png)
 
-![Les réglages d’une pièce : l’onglet Ouvertures](images/niak-comfort-reglages.png)
+![Les réglages d’une pièce : l’onglet Ouvertures](images/hestia-comfort-reglages.png)
 
 ### Hestia part de vos pièces Home Assistant
 
@@ -308,7 +308,7 @@ La carte suit le thème de Home Assistant, clair ou sombre.
 
 Le bilan dit si le logement a été confortable sur les **douze derniers mois**. Il est dans le menu de gauche de l’onglet **Confort**, sous **Accueil**, et sur la carte **Hestia Confort · bilan**.
 
-![Le bilan du logement : la note, la chaleur, l’humidité et l’air, les conseils et la note de chaque pièce](images/niak-comfort-bilan.png)
+![Le bilan du logement : la note, la chaleur, l’humidité et l’air, les conseils et la note de chaque pièce](images/hestia-comfort-bilan.png)
 
 **La note, de A à E**, pour le logement et pour chaque pièce. Chaque heure est classée selon la norme européenne EN 16798-1 et reçoit des points : 100 en confort élevé, 75 en confort normal, 50 en confort modéré, 0 en dehors. La note est la moyenne, de 0 à 100 :
 

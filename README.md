@@ -79,7 +79,7 @@ La couleur dit s’il y a quelque chose à faire :
 - **orange** : un geste conseillé maintenant ;
 - **rouge** : urgent (la pluie entre).
 
-![Quatre pièces : au mieux, aérer vers 9 h, aérer maintenant, fermer car il pleut](docs/images/niak-comfort-situations.png)
+![Quatre pièces : au mieux, aérer vers 9 h, aérer maintenant, fermer car il pleut](docs/images/hestia-comfort-situations.png)
 
 Sous l’échelle, le graphique **« Prochaines heures »** montre la pièce sans le geste conseillé et avec : vous voyez ce qu’il change.
 
@@ -95,7 +95,7 @@ Une note de confort de **A à E**, pour le logement et pour chaque pièce, sur l
 - La fiche de chaque pièce : mois par mois, une journée type l’hiver et l’été.
 - Des conseils seulement s’il y a un problème qui dure : chauffer une pièce restée trop froide, faire tourner la VMC, ouvrir la nuit après un été chaud.
 
-![Le bilan du logement : la note B, la chaleur, l’humidité et l’air sur douze mois, puis les conseils et la note de chaque pièce](docs/images/niak-comfort-bilan.png)
+![Le bilan du logement : la note B, la chaleur, l’humidité et l’air sur douze mois, puis les conseils et la note de chaque pièce](docs/images/hestia-comfort-bilan.png)
 
 Il est dans le panneau **Hestia**, onglet **Confort**, sous **Accueil**. La carte **Hestia Confort · bilan** le montre à toute la famille. Il faut deux semaines de mesures pour noter un thème. [Le bilan en détail](docs/guide.md#le-bilan-du-logement).
 
@@ -103,7 +103,7 @@ Il est dans le panneau **Hestia**, onglet **Confort**, sous **Accueil**. La cart
 
 Tout se règle dans le panneau **Hestia** de la barre latérale, onglet **Confort**. Pas de YAML, pas de nom d’entité à connaître.
 
-![Le panneau Hestia, onglet Confort : l’accueil, avec chaque pièce, ce qu’elle a observé et ce qui lui reste à apprendre](docs/images/niak-comfort-panneau.png)
+![Le panneau Hestia, onglet Confort : l’accueil, avec chaque pièce, ce qu’elle a observé et ce qui lui reste à apprendre](docs/images/hestia-comfort-panneau.png)
 
 - **Accueil** : à lire seulement. L’état du logement, ce qui reste à régler, l’apprentissage de chaque pièce, l’état des extensions, puis **Versions et liens**. Une pièce s’ouvre sur son bilan.
 - **Bilan du logement** : la note et la fiche de chaque pièce.
@@ -116,7 +116,7 @@ Chaque réglage a son aide. Les seuils sont expliqués avec leurs sources ([les 
 
 Hestia Confort fonctionne seul. Chaque extension installée le rend plus juste, là où elle sert. Elles se règlent toutes au même endroit : **Réglages généraux → Extensions**.
 
-![Les extensions dans les Réglages généraux : Hestia Weather, puis Versatile Thermostat, Adaptive Cover Pro et Alarmo avec leur interrupteur, et Scheduler détecté, à proposer](docs/images/niak-comfort-extensions.png)
+![Les extensions dans les Réglages généraux : Hestia Weather, puis Versatile Thermostat, Adaptive Cover Pro et Alarmo avec leur interrupteur, et Scheduler détecté, à proposer](docs/images/hestia-comfort-extensions.png)
 
 | Extension | Ce qu’elle apporte |
 | --- | --- |
