@@ -1,15 +1,34 @@
 """Read-only view v1 for the future Lit card; no command endpoint."""
+import functools
+import json
+import time
+
 import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import callback
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers import area_registry as ar, floor_registry as fr
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .engine.home import synthesis
+from .engine.i18n import speaking
 from .engine.assessment import assess
 from .floors import room_floor
+
+
+# The panel's language, sent with each of its commands: its errors and words come back in it (engine/i18n.py).
+LANGUAGE = vol.Optional("language")
+
+
+def spoken(handler):
+    """A panel command answered in the panel's language."""
+    @functools.wraps(handler)
+    async def answer(hass, connection, msg):
+        with speaking(msg.get("language")):
+            await handler(hass, connection, msg)
+    return answer
 
 
 @callback
@@ -22,6 +41,37 @@ def async_setup_websocket(hass):
     websocket_api.async_register_command(hass, ws_periods)
     for command in (ws_configuration, ws_discover, ws_overview, ws_weather, ws_validate, ws_save, ws_remove):
         websocket_api.async_register_command(hass, command)
+
+
+# A view that did not change is sent again only this often: the cards call a view older than 75 s stale.
+HEARTBEAT_SECONDS = 30
+# The home card's rooms refreshing together (a shared air, a sensor seen by several) are sent in one message.
+HOME_GROUPING_SECONDS = 1.0
+
+
+def _stable(value):
+    """The message without its computing times, to tell a refresh that changed nothing."""
+    if isinstance(value, dict):
+        return {k: _stable(v) for k, v in value.items() if k != "computed_at"}
+    if isinstance(value, list):
+        return [_stable(v) for v in value]
+    return value
+
+
+class _Sender:
+    """Sends a subscription's message when it changed, or as a heartbeat when it did not for HEARTBEAT_SECONDS."""
+
+    def __init__(self, connection, msg_id):
+        self.connection, self.msg_id = connection, msg_id
+        self.last, self.sent_at = None, 0.0
+
+    def __call__(self, payload, force=False):
+        stable = json.dumps(_stable(payload), sort_keys=True, default=str, separators=(",", ":"))
+        now = time.monotonic()
+        if not force and stable == self.last and now - self.sent_at < HEARTBEAT_SECONDS:
+            return
+        self.last, self.sent_at = stable, now
+        self.connection.send_message(websocket_api.event_message(self.msg_id, payload))
 
 
 def loaded_entries(hass):
@@ -52,13 +102,14 @@ def ws_subscribe(hass, connection, msg):
         connection.send_error(msg["id"], code, "Choisissez une pièce Hestia Comfort chargée")
         return
     coordinator = entry.runtime_data
+    sender = _Sender(connection, msg["id"])
 
     @callback
     def send():
         if not coordinator.last_update_success or coordinator.data is None:
-            connection.send_message(websocket_api.event_message(msg["id"], {"version": 1, "unavailable": True}))
+            sender({"version": 1, "unavailable": True})
             return
-        connection.send_message(websocket_api.event_message(msg["id"], {"version": 1, "view": coordinator.data}))
+        sender({"version": 1, "view": coordinator.data})
 
     @callback
     def stopped():
@@ -91,9 +142,19 @@ def ws_home_subscribe(hass, connection, msg):
         connection.send_error(msg["id"], "not_configured", "Aucune pièce Hestia Comfort chargée")
         return
     coordinators = [e.runtime_data for e in entries]
+    sender = _Sender(connection, msg["id"])
+    pending = None
 
     @callback
-    def send():
+    def soon():
+        nonlocal pending
+        if pending is None:
+            pending = async_call_later(hass, HOME_GROUPING_SECONDS, send)
+
+    @callback
+    def send(_now=None):
+        nonlocal pending
+        pending = None
         views = []
         for entry in entries:
             c = entry.runtime_data
@@ -103,20 +164,24 @@ def ws_home_subscribe(hass, connection, msg):
                 "computed_at": dt_util.utcnow().isoformat(),
                 "observations": {}, "assessment": assess({}).to_dict()}
             views.append({**view, "floor": room_floor(hass, {**entry.data, **entry.options})})
-        connection.send_message(websocket_api.event_message(msg["id"], {"version": 1, "rooms": views, "home": synthesis(views)}))
+        sender({"version": 1, "rooms": views, "home": synthesis(views)})
 
     @callback
     def stopped():
         connection.send_message(websocket_api.event_message(msg["id"], {"version": 1, "reload": True}))
 
-    removers = [c.async_add_listener(send) for c in coordinators]
-    removers.extend(hass.bus.async_listen(event, callback(lambda _: send())) for event in
+    removers = [c.async_add_listener(soon) for c in coordinators]
+    removers.extend(hass.bus.async_listen(event, callback(lambda _: soon())) for event in
                     (ar.EVENT_AREA_REGISTRY_UPDATED, fr.EVENT_FLOOR_REGISTRY_UPDATED))
     for c in coordinators:
         c.stop_listeners.add(stopped)
 
     @callback
     def unsubscribe():
+        nonlocal pending
+        if pending is not None:
+            pending()
+            pending = None
         for remove in removers:
             remove()
         removers.clear()
@@ -167,17 +232,19 @@ async def ws_periods(hass, connection, msg):
 from .configuration import get_configuration
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/configuration"})
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/configuration", LANGUAGE: str})
 @websocket_api.require_admin
 @websocket_api.async_response
+@spoken
 async def ws_configuration(hass, connection, msg):
     service = await get_configuration(hass)
     connection.send_result(msg["id"], service.snapshot())
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/discover", vol.Optional("area_id"): str, vol.Optional("entry_id"): str})
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/discover", LANGUAGE: str, vol.Optional("area_id"): str, vol.Optional("entry_id"): str})
 @websocket_api.require_admin
 @websocket_api.async_response
+@spoken
 async def ws_discover(hass, connection, msg):
     service = await get_configuration(hass)
     try:
@@ -188,17 +255,19 @@ async def ws_discover(hass, connection, msg):
         connection.send_result(msg["id"], result)
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/overview"})
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/overview", LANGUAGE: str})
 @websocket_api.require_admin
 @websocket_api.async_response
+@spoken
 async def ws_overview(hass, connection, msg):
     service = await get_configuration(hass)
     connection.send_result(msg["id"], service.overview())
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/weather_proposal", vol.Optional("entry_id"): str})
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/weather_proposal", LANGUAGE: str, vol.Optional("entry_id"): str})
 @websocket_api.require_admin
 @websocket_api.async_response
+@spoken
 async def ws_weather(hass, connection, msg):
     service = await get_configuration(hass)
     try:
@@ -207,9 +276,10 @@ async def ws_weather(hass, connection, msg):
         connection.send_error(msg["id"], "not_available", str(err))
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/validate_config", vol.Required("config"): dict, vol.Optional("home", default=False): bool})
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/validate_config", LANGUAGE: str, vol.Required("config"): dict, vol.Optional("home", default=False): bool})
 @websocket_api.require_admin
 @websocket_api.async_response
+@spoken
 async def ws_validate(hass, connection, msg):
     service = await get_configuration(hass)
     try:
@@ -220,11 +290,12 @@ async def ws_validate(hass, connection, msg):
         connection.send_result(msg["id"], {"config": config, "warnings": warnings, "revision": service.revision()})
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/save_config", vol.Required("config"): dict,
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/save_config", LANGUAGE: str, vol.Required("config"): dict,
     vol.Required("revision"): str, vol.Optional("entry_id"): str, vol.Optional("home", default=False): bool,
     vol.Optional("acknowledged", default=[]): [str]})
 @websocket_api.require_admin
 @websocket_api.async_response
+@spoken
 async def ws_save(hass, connection, msg):
     service = await get_configuration(hass)
     try:
@@ -235,9 +306,10 @@ async def ws_save(hass, connection, msg):
         connection.send_result(msg["id"], result)
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/remove_room", vol.Required("entry_id"): str, vol.Required("revision"): str})
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/remove_room", LANGUAGE: str, vol.Required("entry_id"): str, vol.Required("revision"): str})
 @websocket_api.require_admin
 @websocket_api.async_response
+@spoken
 async def ws_remove(hass, connection, msg):
     service = await get_configuration(hass)
     try:

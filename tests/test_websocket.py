@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from homeassistant.core import HomeAssistant
@@ -71,6 +71,11 @@ class WebsocketTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_registry_changes_refresh_and_failed_room_remains(self):
         from custom_components.niak_comfort.websocket import ws_home_subscribe
+        # The rooms' refreshes are grouped for a second: here the grouped send runs at the loop's next turn.
+        grouped = patch('custom_components.niak_comfort.websocket.async_call_later',
+                        lambda hass, delay, action: (hass.loop.call_soon(action), lambda: None)[1])
+        grouped.start()
+        self.addCleanup(grouped.stop)
         entry = await self.add('salon')
         ar.async_get(self.hass).async_create('Salon')
         floor = fr.async_get(self.hass).async_create('RDC', level=0)
@@ -80,6 +85,7 @@ class WebsocketTests(unittest.IsolatedAsyncioTestCase):
         await self.hass.async_block_till_done()
         self.assertEqual(self.conn.send_message.call_args.args[0]['event']['home']['floors'][0]['name'],'RDC')
         entry.runtime_data.async_set_update_error(ValueError('fixture unavailable'))
+        await self.hass.async_block_till_done()
         event=self.conn.send_message.call_args.args[0]['event']
         self.assertEqual(len(event['rooms']),1)
         self.assertTrue(event['home']['partial'])
@@ -89,6 +95,22 @@ class WebsocketTests(unittest.IsolatedAsyncioTestCase):
         fr.async_get(self.hass).async_update(floor.floor_id,name='Renommé')
         await self.hass.async_block_till_done()
         self.assertEqual(self.conn.send_message.call_count,count)
+
+    def test_a_refresh_that_changed_nothing_is_not_sent_again_before_the_heartbeat(self):
+        from custom_components.niak_comfort import websocket
+        conn = Mock()
+        sender = websocket._Sender(conn, 7)
+        view = {"version": 1, "view": {"computed_at": "2026-10-29T10:00:00", "assessment": {"action": "rien"}}}
+        with patch.object(websocket.time, "monotonic", return_value=100.0):
+            sender(view)
+            sender({"version": 1, "view": {**view["view"], "computed_at": "2026-10-29T10:00:10"}})
+            self.assertEqual(conn.send_message.call_count, 1)
+            sender({"version": 1, "view": {**view["view"], "assessment": {"action": "ouvrir"}}})
+            self.assertEqual(conn.send_message.call_count, 2)
+        # Unchanged, it still goes out every HEARTBEAT_SECONDS: the card calls a view older than 75 s stale.
+        with patch.object(websocket.time, "monotonic", return_value=100.0 + websocket.HEARTBEAT_SECONDS):
+            sender({"version": 1, "view": {**view["view"], "assessment": {"action": "ouvrir"}}})
+        self.assertEqual(conn.send_message.call_count, 3)
 
 
 if __name__ == "__main__":

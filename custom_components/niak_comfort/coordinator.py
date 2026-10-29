@@ -1,44 +1,43 @@
 """Event-driven inputs plus a clock tick for freshness, per configured zone."""
 from collections import deque
-from functools import partial
 from dataclasses import asdict, replace
-from datetime import datetime, timedelta
+from datetime import timedelta
 import logging
+import random
 
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 from homeassistant.core import callback
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, LEARNING_REFRESH_SECONDS, OPEN_DEBOUNCE_SECONDS, SEASON_REFRESH_SECONDS, SOURCES, STARTUP_GRACE_SECONDS, VIEW_VERSION
-from .engine.assessment import Opening, Settings, Sun, assess
-from .engine import airflow, feedback, habits, horizon, learning, night, people, sunlight, thermostat as thermostats, twin, voc as vocs
-from .engine.volume import arbitrate
-from .engine.sources import indicator_state, normalize, Reading
+from .const import DOMAIN, LEARNING_REFRESH_SECONDS, OPEN_DEBOUNCE_SECONDS, SOURCES, STARTUP_GRACE_SECONDS, VIEW_VERSION
+from .engine.assessment import Opening, Settings, assess
+from .engine import feedback, habits, horizon, learning, night, twin, voc as vocs
+from .engine.sources import Reading
 from .engine.verdict import verdict
 from .configuration import DATA_CONFIG
 from .exterior import exterior_reading
-from .discovery import voc_device_class
 from . import cover_link, weather_link
+from .room.constants import FULL_SPAN, MEASURES, MEASURE_COOLDOWN, SHARED_SOURCES, SHORT_SPAN, STATE_KINDS, SUN_SMOOTHING, TWIN_FORMAT  # noqa: F401 - also read by the tests
+from .room.learning import LearningMixin
+from .room.volume import VolumeMixin
+from .room.presence import PresenceMixin
+from .room.sun import SunMixin
+from .room.airings import AiringsMixin
+from .room.readings import ReadingsMixin
 
-STATE_KINDS = ("window", "heating", "rain", "pollution", "presence", "purifier", "ventilation", "cover", "cover_state", "shutter_auto", "shutter_override", "shutter_sun", "shutter_target", "purifier_speed")
-# The sunshine is read as its mean over this long: clouds come and go faster than a shutter is moved.
-SUN_SMOOTHING = timedelta(minutes=15)
-# Twin samples stored before 1.2.9 counted the other room's windows as this room's own: rebuilt from the history.
-TWIN_FORMAT = 3
-# What belongs to an air shared by rooms open onto each other: a room without its own reads its partner's.
-SHARED_SOURCES = ("heating", "heating_indicator", "co2", "voc", "pm25", "purifier", "ventilation", "ventilation_boost")
 
-
-class ComfortCoordinator(DataUpdateCoordinator):
+class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, AiringsMixin, ReadingsMixin, DataUpdateCoordinator):
     def __init__(self, hass, entry):
         logger = logging.getLogger(__name__)
-        # A contact or a sensor that changes is shown within a second, not after the default 10 s grouping.
-        super().__init__(hass, logger, name=DOMAIN, config_entry=entry, update_interval=timedelta(seconds=30),
+        # A contact or a sensor that changes is shown within a second, not after the default 10 s grouping: the
+        # minute tick only ages the readings and moves the clock (night, countdowns), all in memory.
+        super().__init__(hass, logger, name=DOMAIN, config_entry=entry, update_interval=timedelta(seconds=60),
                          request_refresh_debouncer=Debouncer(hass, logger, cooldown=1.0, immediate=True))
+        self._measure_refresh = Debouncer(hass, logger, cooldown=MEASURE_COOLDOWN, immediate=False, function=self.async_refresh)
+        self._measure_ids = set()
         self.config = {**entry.data, **entry.options}
         self.settings = Settings(**self.config.get("settings", {}))
         self.home_configuration = hass.data.get(DATA_CONFIG)
@@ -76,8 +75,12 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.drying_model = {**learning.fit([]), **learning.settling([])}
         # How fast each combination of openings renews the air, from the CO₂ (engine/airflow.py).
         self.flow_model = {}
+        # The next full pass (ten days), and the next short one asked for by a window shut (the last day).
+        self._full_due = None
         self._learning_due = None
         self._learning_failed = False
+        # The history read during one learning pass, shared by the airing model and the twin: {(entity, attribute): rows}.
+        self._history_pass = {}
         self._learning_store = Store(hass, 1, f"{DOMAIN}.learning.{entry.entry_id}")
         # The room's twin (engine/twin.py): it observes and learns, it never decides an advice.
         self._twin_store = Store(hass, 1, f"{DOMAIN}.twin.{entry.entry_id}")
@@ -86,6 +89,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         # The feedback loop (engine/feedback.py): airings followed and measured, advice left aside.
         self._feedback_store = Store(hass, 1, f"{DOMAIN}.feedback.{entry.entry_id}")
         self.feedback = []
+        self._feedback_unsaved = False
         self._experiment = None
         self._advice_since = None
         self._advice_followed = False
@@ -102,58 +106,9 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.own = None
         self._own_gesture = None
 
-    def _partners(self):
-        if not self.home_configuration or not hasattr(self.home_configuration, "volume"):
-            return []
-        found = []
-        for entry_id in self.home_configuration.volume(self.entry_id):
-            entry = self.hass.config_entries.async_get_entry(entry_id)
-            if entry is None:
-                continue
-            config = {**entry.data, **entry.options}
-            sheltered = config.get("rain_exposed") is False
-            declared = config.get("openings", {})
-            # Only what the weather needs: the partner room keeps its covers to itself.
-            found.append({"entry_id": entry_id, "title": config.get("name") or entry.title, "windows": list(config.get("windows", [])),
-                          "sources": len(config.get("sources", {})),
-                          "shared": {k: v for k, v in config.get("sources", {}).items() if k in SHARED_SOURCES and v},
-                          # Its own temperature and humidity: the twin learns how much they weigh here.
-                          "indoor": [config.get("sources", {}).get(k) for k in ("indoor_temperature", "indoor_humidity")],
-                          "openings": {e: Opening(**{"sheltered": sheltered, **{k: v for k, v in declared.get(e, {}).items()
-                                                                               if k in ("exposure", "kind", "sheltered")}})
-                                       for e in config.get("windows", [])}})
-        return found
-
-    def _sources(self):
-        """Its own sources, plus those of the shared air it has none of: the kitchen open onto the living room is heated
-        by its thermostat and breathes the air its CO₂ sensor measures. Its temperature and humidity stay its own."""
-        own = dict(self.config.get("sources", {}))
-        for partner in self.partners:
-            for key, entity_id in partner.get("shared", {}).items():
-                if key in ("heating", "heating_indicator") and self.config.get("heated") is False:
-                    continue
-                # The indicator goes with its thermostat: never laid over the room's own.
-                if key == "heating_indicator" and own.get("heating") and "heating" not in partner["shared"]:
-                    continue
-                own.setdefault(key, entity_id)
-        return own
-
-    def inherited(self):
-        """The sources this room reads from its shared air, by key: {"heating": "Salon"}."""
-        own = self.config.get("sources", {})
-        return {key: p["title"] for p in reversed(self.partners) for key in p.get("shared", {}) if key not in own and key in self.sources}
-
-    @property
-    def volume_name(self):
-        """« Salon · Cuisine »: the rooms sharing one air, the best equipped first; None for a room on its own."""
-        if not self.partners:
-            return None
-        rooms = [(len(self.config.get("sources", {})), self.config.get("name") or self.config_entry.title),
-                 *((p["sources"], p["title"]) for p in self.partners)]
-        return " · ".join(title for _, title in sorted(rooms, key=lambda r: (-r[0], r[1].casefold())))
-
     async def async_start(self):
         self.config_entry.async_on_unload(self.async_stopped)
+        self.config_entry.async_on_unload(self._save_feedback)
         ids = set(self.sources.values()) | set(self.windows) | set(self.config.get("presence", []))
         for meta in self.config.get("openings", {}).values():
             ids.update(meta[k] for k in ("cover_entity", "auto_entity", "override_entity") if meta.get(k))
@@ -161,9 +116,12 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.drivers = self._drivers()
         for roles in self.drivers.values():
             ids.update(v for k, v in roles.items() if k in cover_link.ROLES)
-        ids.add("sun.sun")
-        if self.home_configuration:
-            ids |= {s["entity_id"] for s in self.home_configuration.effective_sources(self.config).values()}
+        # The sun is read at each refresh: the minute tick follows it, its own changes would only add refreshes.
+        shared = self.home_configuration.effective_sources(self.config) if self.home_configuration else {}
+        ids |= {s["entity_id"] for s in shared.values()}
+        self._measure_ids = ({v for k, v in self.sources.items() if k in MEASURES} |
+                             {s["entity_id"] for k, s in shared.items() if k in MEASURES}) - set(self.windows)
+        self.config_entry.async_on_unload(self._measure_refresh.async_shutdown)
         # Who is at home: the alarm panels (Alarmo) and the home zone.
         ids |= set(self._occupancy_entities())
         ids.discard("")
@@ -174,6 +132,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
             self.config_entry.async_on_unload(weather_link.listen(self.hass, place, lambda: self.hass.async_create_task(self.async_request_refresh())))
         stored = await self._feedback_store.async_load() or {}
         self.feedback = feedback.keep(stored.get("records"), dt_util.utcnow())
+        await self._restore_learning()
         await self.async_config_entry_first_refresh()
 
     @callback
@@ -216,6 +175,11 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 # Recompute right when the bounce delay ends, not at the next periodic refresh.
                 cancel = async_call_later(self.hass, OPEN_DEBOUNCE_SECONDS + 1, self._bounce_over)
                 self.stop_listeners.add(cancel)
+        if entity_id in self._measure_ids:
+            # An attribute that changed alone (a friendly name, an icon) changes nothing in the advice.
+            if before != after:
+                await self._measure_refresh.async_call()
+            return
         await self.async_request_refresh()
 
     def _context(self, now, readings):
@@ -360,9 +324,17 @@ class ComfortCoordinator(DataUpdateCoordinator):
         if (solar := readings.get("solar")) is not None:
             readings["solar"] = self._steady_sun(self._unshaded_sun(solar, now, outlook), now)
         await self._refresh_season(now)
-        if self._learning_due is None or now >= self._learning_due:
-            self._learning_due = now + timedelta(seconds=LEARNING_REFRESH_SECONDS)
-            self.config_entry.async_create_background_task(self.hass, self._learn(now), f"{DOMAIN} learning {self.entry_id}")
+        if self._full_due is None:
+            # Spread over the first minutes: rooms started together do not all read ten days of history at once.
+            self._full_due = now + timedelta(seconds=random.uniform(30, 300))
+        span = None
+        if now >= self._full_due:
+            span, self._full_due = FULL_SPAN, now + timedelta(seconds=LEARNING_REFRESH_SECONDS)
+        elif self._learning_due is not None and now >= self._learning_due:
+            span = SHORT_SPAN
+        if span is not None:
+            self._learning_due = None
+            self.config_entry.async_create_background_task(self.hass, self._learn(now, span), f"{DOMAIN} learning {self.entry_id}")
         # The card shows a contact as it is; the advice ignores an opening younger than the bounce delay.
         advice_readings = {k: (replace(r, value=False, detail="debounce") if k.startswith("window:") and self._bouncing(k[7:], r, now) else r)
                            for k, r in readings.items()}
@@ -431,184 +403,12 @@ class ComfortCoordinator(DataUpdateCoordinator):
             view["verdict"] = None
         return view
 
-    def _uses(self, key):
-        """False when the person turned this integration off in the general settings."""
-        home = self.home_configuration.home if self.home_configuration is not None else {}
-        return key not in (home.get("disabled") or [])
-
-    def _alarm_entity(self):
-        """The home's alarm panel: the one chosen in the general settings, else Alarmo found by itself; None for none."""
-        chosen = (self.home_configuration.home.get("alarm") if self.home_configuration is not None else None)
-        if isinstance(chosen, str):
-            return chosen or None
-        entities = getattr(er.async_get(self.hass), "entities", None) or {}
-        return next((e.entity_id for e in entities.values() if e.domain == "alarm_control_panel" and e.platform == people.PLATFORM
-                     and not e.disabled_by), None)
-
-    def _occupancy_entities(self):
-        alarm = self._alarm_entity()
-        return [*([alarm] if alarm else []), "zone.home", *self.config.get("persons", [])]
-
-    def _people(self):
-        """The room's people at home or away (engine/people.py); None when none are chosen."""
-        chosen = [e for e in self.config.get("persons", []) if isinstance(e, str)]
-        if not chosen:
-            return None
-        states = [self.hass.states.get(e) for e in chosen]
-        return people.people([(str(s.attributes.get("friendly_name") or e) if s else e, s.state if s else None)
-                              for e, s in zip(chosen, states)])
-
-    def _alarm(self):
-        entity_id = self._alarm_entity()
-        state = self.hass.states.get(entity_id) if entity_id else None
-        found = people.alarm(state.state if state else None)
-        return {**found, "entity_id": entity_id, "name": str(state.attributes.get("friendly_name") or entity_id)} if found else None
-
-    def _off_minutes(self, entity_id, now):
-        """Minutes a presence sensor has said « nobody », read from Home Assistant: right even after a restart."""
-        state = self.hass.states.get(entity_id)
-        if not state or state.state != "off" or state.attributes.get("device_class") not in ("occupancy", "presence"):
-            return None
-        return max(0.0, (now - state.last_changed).total_seconds() / 60)
-
-    def _occupied(self):
-        """True when the room's people (or, without any chosen, the household) are at home, False when not, None when
-        nothing says it. An alarm armed « away » or « vacation » means an empty home (engine/people.py)."""
-        zone = self.hass.states.get("zone.home")
-        count = None
-        if zone and zone.attributes.get("persons"):
-            try:
-                count = float(zone.state)
-            except (TypeError, ValueError):
-                count = None
-        return people.occupied(self._people(), self._alarm(), count)
-
-    def _volume_air(self, readings):
-        """The air shared with the rooms open onto this one: mean water and temperature, and the drying model learned
-        from the most openings. None without partners or without humidity on both sides."""
-        if not self.partners:
-            return None
-        def water(t, h):
-            return 6.112 * 2.718281828 ** (17.67 * t / (t + 243.5)) * h * 2.1674 / (273.15 + t)
-        samples, models = [], [self.drying_model]
-        own_t, own_h = readings.get("indoor_temperature"), readings.get("indoor_humidity")
-        if own_t and own_h and own_t.usable and own_h.usable:
-            samples.append((own_t.value, own_h.value))
-        for partner in self.partners:
-            entry = self.hass.config_entries.async_get_entry(partner["entry_id"])
-            coordinator = getattr(entry, "runtime_data", None)
-            data = getattr(coordinator, "data", None) or {}
-            obs = data.get("observations", {})
-            t, h = obs.get("indoor_temperature") or {}, obs.get("indoor_humidity") or {}
-            if t.get("quality") == "valid" and h.get("quality") == "valid" and isinstance(t.get("value"), (int, float)) and isinstance(h.get("value"), (int, float)):
-                samples.append((t["value"], h["value"]))
-            if coordinator is not None and getattr(coordinator, "drying_model", None):
-                models.append(coordinator.drying_model)
-        if len(samples) < 2:
-            return None
-        return {"water": sum(water(t, h) for t, h in samples) / len(samples), "temperature": sum(t for t, _ in samples) / len(samples),
-                "rooms": len(samples), "drying_model": max(models, key=lambda m: m.get("openings", 0))}
-
-    def _beside_now(self):
-        """The temperature and humidity measured now in the rooms sharing this air, averaged; None without them."""
-        found = []
-        for partner in self.partners:
-            entry = self.hass.config_entries.async_get_entry(partner["entry_id"])
-            obs = (getattr(getattr(entry, "runtime_data", None), "data", None) or {}).get("observations", {})
-            t, h = obs.get("indoor_temperature") or {}, obs.get("indoor_humidity") or {}
-            if t.get("quality") == "valid" and h.get("quality") == "valid" and isinstance(t.get("value"), (int, float)) and isinstance(h.get("value"), (int, float)):
-                found.append((t["value"], h["value"]))
-        return (sum(t for t, _ in found) / len(found), sum(h for _, h in found) / len(found)) if found else None
-
-    def _thermostat(self):
-        """What the room's Versatile Thermostat says (engine/thermostat.py); None for any other heating."""
-        entity_id = self.sources.get("heating")
-        entry = er.async_get(self.hass).async_get(entity_id) if entity_id else None
-        state = self.hass.states.get(entity_id) if entity_id else None
-        if not self._uses(thermostats.PLATFORM) or not entry or entry.platform != thermostats.PLATFORM or not state or state.state in ("unknown", "unavailable"):
-            return None
-        return thermostats.read(state.state, dict(state.attributes))
-
-    def _settle(self, own):
-        """One gesture per shared air: this room follows a partner whose reason outweighs its own."""
-        self.own = own
-        gesture = (own.get("action"), own.get("reason"))
-        if gesture != self._own_gesture and self._own_gesture is not None:
-            # The partners settle against this room's new advice at once, not at their next refresh.
-            for partner in self.partners:
-                entry = self.hass.config_entries.async_get_entry(partner["entry_id"])
-                if (coordinator := getattr(entry, "runtime_data", None)) is not None:
-                    self.hass.async_create_task(coordinator.async_request_refresh())
-        self._own_gesture = gesture
-        others = []
-        for partner in self.partners:
-            entry = self.hass.config_entries.async_get_entry(partner["entry_id"])
-            coordinator = getattr(entry, "runtime_data", None)
-            if coordinator is not None and getattr(coordinator, "own", None):
-                others.append((partner["title"], coordinator.own))
-        settled = arbitrate(own, others)
-        lead = (settled.get("features", {}).get("volume") or {}).get("lead")
-        if lead:
-            # The card writes the leading room's advice with its own measures (its CO₂, its humidity).
-            partner = next(p for p in self.partners if p["title"] == lead)
-            entry = self.hass.config_entries.async_get_entry(partner["entry_id"])
-            leader = getattr(entry, "runtime_data", None)
-            data = getattr(leader, "data", None) or {}
-            settled["features"]["volume"]["observations"] = {k: v for k, v in data.get("observations", {}).items()
-                                                             if not k.startswith(("shutter", "cover"))}
-            # « Prochaines heures » follows the advice too: drawn on the leading room, for its gesture. This room's own
-            # graph answers its own advice, which the card no longer shows.
-            led = ((getattr(leader, "own", None) or {}).get("features") or {}).get("horizon")
-            if led is not None:
-                settled["features"] = {**settled["features"], "horizon": led}
-        return settled
+    def outdoor_entity(self):
+        """The outdoor temperature sensor this room reads, for the home's review (review_source.py)."""
+        return self._outdoor_entity()
 
     def _outdoor_entity(self):
         return self._source_entity("outdoor_temperature")
-
-    async def _refresh_season(self, now):
-        stamp = self.season[0]
-        if stamp and (now - stamp).total_seconds() < SEASON_REFRESH_SECONDS:
-            return
-        self.season = (now, await self._outdoor_mean(now))
-        self.day_range = await self._indoor_range(now)
-        self.humidity_floor = await self._humidity_floor(now)
-
-    async def _statistics(self, entity_id, start, end, types):
-        """Hourly statistics rows of one entity; None when the recorder cannot answer."""
-        try:
-            from homeassistant.components.recorder import get_instance
-            from homeassistant.components.recorder.statistics import statistics_during_period
-            stats = await get_instance(self.hass).async_add_executor_job(
-                statistics_during_period, self.hass, start, end, {entity_id}, "hour", None, types)
-        except Exception:  # the card then simply shows less
-            if not self._season_failed:
-                self._season_failed = True
-                self.logger.warning("Home Assistant statistics could not be read", exc_info=True)
-            return None
-        return stats.get(entity_id, [])
-
-    async def _outdoor_mean(self, now):
-        """Seven-day mean of the outdoor temperature from hourly statistics; None when not known."""
-        entity_id = self._outdoor_entity()
-        rows = await self._statistics(entity_id, now - timedelta(days=7), now, {"mean"}) if entity_id else None
-        means = [row["mean"] for row in rows or [] if isinstance(row.get("mean"), (int, float))]
-        # Three days of hourly means at least: a recent sensor must not set the season alone.
-        if len(means) < 72:
-            return None
-        value = sum(means) / len(means)
-        return value if -40 <= value <= 60 else None
-
-    async def _indoor_range(self, now):
-        """Lowest and highest hourly indoor temperature over the last 24 hours."""
-        entity_id = self.config.get("sources", {}).get("indoor_temperature")
-        rows = await self._statistics(entity_id, now - timedelta(hours=24), now, {"min", "max"}) if entity_id else None
-        lows = [row["min"] for row in rows or [] if isinstance(row.get("min"), (int, float))]
-        highs = [row["max"] for row in rows or [] if isinstance(row.get("max"), (int, float))]
-        # Half a day of hours at least, so a fresh sensor does not draw a misleading range.
-        if len(lows) < 12 or len(highs) < 12:
-            return None
-        return {"min": round(min(lows), 1), "max": round(max(highs), 1)}
 
     def _source_entity(self, key):
         """The entity behind a room source, chosen in the room or shared by the home (outdoor ones)."""
@@ -616,174 +416,9 @@ class ComfortCoordinator(DataUpdateCoordinator):
             return spec["entity_id"]
         return self.sources.get(key)
 
-    async def _learn(self, now):
-        """Refit the room's airing model from the stored openings plus the recorder's recent history."""
-        stored = await self._learning_store.async_load() or {}
-        episodes = stored.get("episodes") if isinstance(stored.get("episodes"), list) else []
-        flows = stored.get("flows") if isinstance(stored.get("flows"), list) else []
-        shed = stored.get("peaks") if isinstance(stored.get("peaks"), list) else []
-        keys = ("indoor_temperature", "indoor_humidity", "outdoor_temperature", "outdoor_humidity")
-        sources = {k: self._source_entity(k) for k in keys}
-        co2 = self.sources.get("co2")
-        # The partner rooms' windows air this room too: their openings teach it as well.
-        windows = self.windows
-        humidity = all(sources.values())
-        if windows and (humidity or co2) and "recorder" in self.hass.config.components:
-            try:
-                from homeassistant.components.recorder import get_instance, history
-                states = await get_instance(self.hass).async_add_executor_job(
-                    history.get_significant_states, self.hass, now - timedelta(days=10), now,
-                    [*windows, *(v for v in sources.values() if v), *([co2] if co2 else [])], None, True, False, False, True)
-                points = lambda entity_id: self._points(states, entity_id)
-                contacts = {e: [(row.last_changed, {"on": True, "off": False}.get(row.state)) for row in states.get(e, [])] for e in windows}
-                if humidity:
-                    fresh = await self.hass.async_add_executor_job(learning.episodes, contacts, *(points(sources[k]) for k in keys))
-                    episodes = learning.merge(episodes, fresh, now)
-                    # The peaks of water the room sheds by itself, windows shut: what waiting brings.
-                    fresh = await self.hass.async_add_executor_job(learning.peaks, contacts, *(points(sources[k]) for k in keys))
-                    shed = learning.merge(shed, fresh, now)[-learning.KEEP_PEAKS:]
-                if co2:
-                    fresh = await self.hass.async_add_executor_job(airflow.flows, contacts, points(co2))
-                    flows = airflow.merge(flows, fresh, now)
-                await self._learning_store.async_save({"episodes": episodes, "flows": flows, "peaks": shed})
-            except Exception:  # the room then keeps what it learned before, or the default model
-                if not self._learning_failed:
-                    self._learning_failed = True
-                    self.logger.warning("Past openings could not be read for %s", self.config.get("name"), exc_info=True)
-        model, flow_model = {**learning.fit(episodes), **learning.settling(shed)}, airflow.fit(flows)
-        # The twin only observes: the next periodic refresh shows it, no extra one that would delay a sensor change.
-        await self._learn_twin(now)
-        if model != self.drying_model or flow_model != self.flow_model:
-            self.drying_model, self.flow_model = model, flow_model
-            await self.async_request_refresh()
-
-    def _sun_history(self, states, entity_id):
-        """The station's sunshine over the last days, with the hours it is shaded learned and estimated."""
-        points, latitude, longitude = self._points(states, entity_id), self.hass.config.latitude, self.hass.config.longitude
-        self.sun_shade = sunlight.learn(points, latitude, longitude, dt_util.get_default_time_zone())
-        return sunlight.corrected(points, latitude, longitude, self.sun_shade)
-
-    def _points(self, states, entity_id):
-        """Numeric (time, value) points of one entity from a recorder answer, in °C for temperatures."""
-        state = self.hass.states.get(entity_id)
-        fahrenheit = bool(state) and state.attributes.get("unit_of_measurement") == "°F"
-        out = []
-        for row in states.get(entity_id, []):
-            try:
-                value = float(row.state)
-            except (TypeError, ValueError):
-                continue
-            out.append((row.last_changed, (value - 32) * 5 / 9 if fahrenheit else value))
-        return out
-
-    async def _learn_twin(self, now):
-        """Add the last ten days to the twin's half-hour samples (thirty days kept) and refit it."""
-        stored = await self._twin_store.async_load() or {}
-        # Samples kept before the sun was counted on the windows and the air was learned are rebuilt from the history.
-        rows = stored.get("samples") if isinstance(stored.get("samples"), list) and stored.get("format") == TWIN_FORMAT else []
-        keys = ("indoor_temperature", "indoor_humidity", "outdoor_temperature", "outdoor_humidity")
-        sources = {k: self._source_entity(k) for k in keys}
-        if all(sources.values()) and "recorder" in self.hass.config.components:
-            try:
-                from homeassistant.components.recorder import get_instance, history
-                solar, heating = self._source_entity("solar"), self.sources.get("heating")
-                # The air as well: how CO₂ and VOC go down, windows shut and open.
-                air = {k: self.sources.get(k) for k in ("co2", "voc")}
-                start = now - timedelta(days=10)
-                recorder = get_instance(self.hass)
-                beside = [p["indoor"] for p in self.partners if all(p.get("indoor") or [None])]
-                states = await recorder.async_add_executor_job(
-                    history.get_significant_states, self.hass, start, now,
-                    [*self.windows, *sources.values(), *([solar] if solar else []), *(e for e in air.values() if e),
-                     *(e for pair in beside for e in pair)], None, True, False, False, True)
-                # The thermostat's running state is an attribute: its own query keeps them.
-                # An indicator chosen beside it says it in its state, and is what the room reads now.
-                indicator = self.sources.get("heating_indicator") if heating else None
-                running = await recorder.async_add_executor_job(
-                    history.get_significant_states, self.hass, start, now, [indicator or heating], None, True, False, False, not indicator) if heating else {}
-                contacts = {e: [(row.last_changed, {"on": True, "off": False}.get(row.state)) for row in states.get(e, [])] for e in self.windows}
-                heat = [(row.last_changed, indicator_state(row.state) == "heating") for row in running.get(indicator, [])] if indicator else \
-                    [(row.last_updated, row.attributes.get("hvac_action") == "heating") for row in running.get(heating, [])
-                     if hasattr(row, "attributes")]
-                fresh = await self.hass.async_add_executor_job(
-                    partial(twin.samples, start, now, *(self._points(states, sources[k]) for k in keys),
-                            self._sun_history(states, solar) if solar else [], contacts, heat,
-                            facades=self._facades(), location=(self.hass.config.latitude, self.hass.config.longitude),
-                            co2=self._points(states, air["co2"]) if air["co2"] else [], voc=self._points(states, air["voc"]) if air["voc"] else [],
-                            near=set(self.config.get("windows", [])) if self.partners else None,
-                            beside=[(self._points(states, t), self._points(states, h)) for t, h in beside]))
-                rows = twin.merge(rows, fresh, now)
-                # What the openings did to the VOC in their first minutes: the hours when the air outside brings it.
-                if air["voc"] and (threshold := self._voc_threshold()):
-                    self.voc_airings = vocs.airings(contacts, self._points(states, air["voc"]), threshold, dt_util.get_default_time_zone())
-                    self.voc_slots = vocs.outdoor_slots(self.voc_airings)
-                await self._twin_store.async_save({"samples": rows, "format": TWIN_FORMAT})
-            except Exception:  # the twin then keeps what it learned before
-                if not self._twin_failed:
-                    self._twin_failed = True
-                    self.logger.warning("The twin of %s could not read the history", self.config.get("name"), exc_info=True)
-        self.twin = await self.hass.async_add_executor_job(twin.summary, rows, now)
-        self.habits = await self.hass.async_add_executor_job(habits.detect, rows, dt_util.get_default_time_zone())
-
-    async def _humidity_floor(self, now):
-        """Lowest indoor humidity of the last three full hours: above the threshold, the excess lasts."""
-        entity_id = self.config.get("sources", {}).get("indoor_humidity")
-        rows = await self._statistics(entity_id, now - timedelta(hours=4), now, {"min", "max"}) if entity_id else None
-        lows = [row["min"] for row in rows or [] if isinstance(row.get("min"), (int, float))][-3:]
-        highs = [row["max"] for row in rows or [] if isinstance(row.get("max"), (int, float))][-3:]
-        self.humidity_ceiling = max(highs) if len(highs) == 3 else None
-        return min(lows) if len(lows) == 3 else None
-
     async def _bounce_over(self, _now):
         # A coroutine, so Home Assistant runs it in its own loop (a plain function would run in a worker thread).
         await self.async_refresh()
-
-    def _bouncing(self, entity_id, reading, now):
-        since = self.opened_since.get(entity_id)
-        return (reading.value is True and since is not None and entity_id not in self.followed
-                and (now - since).total_seconds() < OPEN_DEBOUNCE_SECONDS)
-
-    def _heard(self, entity_id, state):
-        """When the device last spoke: an unchanged humidity is current if its thermometer just reported."""
-        latest = state.last_reported
-        registry = er.async_get(self.hass)
-        entry = registry.async_get(entity_id)
-        if entry and entry.device_id:
-            for sibling in er.async_entries_for_device(registry, entry.device_id):
-                other = self.hass.states.get(sibling.entity_id)
-                if other and other.state not in ("unknown", "unavailable") and other.last_reported > latest:
-                    latest = other.last_reported
-        return latest
-
-    def _unshaded_sun(self, reading, now, outlook):
-        """The sun at the station, estimated while its sensor is in the shade of the house (engine/sunlight.py)."""
-        if reading.quality != "valid" or not isinstance(reading.value, (int, float)) or not self.sun_shade:
-            return reading
-        latitude, longitude = self.hass.config.latitude, self.hass.config.longitude
-        sky = sunlight.sky_factor(sunlight.nearest_hour((outlook or {}).get("hours"), now))
-        seen = sunlight.share(float(reading.value), now, latitude, longitude, self.sun_shade)
-        if seen is not None:
-            # In the open, the station is the truth: it also says how far the forecast cloud cover is from it.
-            self._sun_before = (now, seen)
-            if sky is not None and sky >= 0.1:
-                self._sky_bias = (now, max(0.3, min(2.0, seen / sky)))
-            return reading
-        recent = lambda kept: kept[1] if kept and now - kept[0] <= timedelta(hours=3) else None
-        bias, before = recent(self._sky_bias), recent(self._sun_before)
-        # In the shade: Hestia Weather's cloud cover, set right by what the station measured in the open just before.
-        factor = sky * bias if sky is not None and bias is not None else sky
-        value, estimated = sunlight.estimate(float(reading.value), now, latitude, longitude, self.sun_shade, factor, before)
-        return replace(reading, value=value, detail="shaded_estimate") if estimated else reading
-
-    def _steady_sun(self, reading, now):
-        """The sunshine averaged over the last 15 minutes (SUN_SMOOTHING): the advice and the card's tile read the same."""
-        if reading.quality != "valid" or not isinstance(reading.value, (int, float)):
-            return reading
-        self._sun_samples.append((now, float(reading.value)))
-        while self._sun_samples and now - self._sun_samples[0][0] > SUN_SMOOTHING:
-            self._sun_samples.popleft()
-        mean = sum(v for _, v in self._sun_samples) / len(self._sun_samples)
-        return replace(reading, value=round(mean, 1), detail=reading.detail if reading.detail == "shaded_estimate" else "mean_15_min")
 
     def _remember_season(self, name):
         self.season_name = name
@@ -798,196 +433,20 @@ class ComfortCoordinator(DataUpdateCoordinator):
         home = self.home_configuration.home if self.home_configuration else {}
         return home.get("weather") if home.get("configured") else None
 
-    def _drivers(self):
-        """{opening: Adaptive Cover Pro's entities} for each connected cover it drives; none when it is turned off."""
-        if not self._uses("adaptive_cover_pro"):
-            return {}
-        try:
-            driven = cover_link.find_all(self.hass)
-        except Exception:  # A changed Adaptive Cover Pro must never stop the room.
-            self.logger.warning("Adaptive Cover Pro could not be read", exc_info=True)
-            return {}
-        return {e: driven[m["cover_entity"]] for e, m in self.config.get("openings", {}).items()
-                if m.get("shutter") == "connected" and m.get("cover_entity") in driven}
 
-    def _answers(self):
-        """The person's answers to this room's questions (Oui / Non / Je ne sais pas), kept with the home settings."""
-        home = getattr(self.home_configuration, "home", None) or {}
-        return (home.get("answers") or {}).get(self.entry_id, {})
 
-    def learning_progress(self, alone=False):
-        """How much of the room is learned: only what it has (a window, a heating, CO₂ or VOC sensors) is asked.
 
-        Rooms sharing one air are learned together: one percentage for all of them, complete once each one is."""
-        # The airings are learned for the whole air (the volume reads the model learned from the most openings).
-        airings = max([(self.drying_model or {}).get("openings", 0)]
-                      + [(getattr(getattr(self.hass.config_entries.async_get_entry(p["entry_id"]), "runtime_data", None), "drying_model", None)
-                          or {}).get("openings", 0) for p in self.partners])
-        air = tuple(k for k in ("co2", "voc") if self.sources.get(k))
-        own = twin.progress(self.twin, airings, windows=bool(self.windows), heating=bool(self.sources.get("heating")), air=air)
-        # What the advice can already promise, measure by measure, before the whole room is learned.
-        own["ready"] = twin.categories(self.twin, airings, air)
-        if alone or not self.partners:
-            return own
-        others = []
-        for partner in self.partners:
-            entry = self.hass.config_entries.async_get_entry(partner["entry_id"])
-            if (coordinator := getattr(entry, "runtime_data", None)) is not None and hasattr(coordinator, "learning_progress"):
-                others.append(coordinator.learning_progress(alone=True))
-        return twin.together([own, *others])
 
-    def questions(self):
-        return habits.questions(self.config.get("name") or self.config_entry.title, self.config.get("area_id"), self.habits, self._answers(),
-                                self.season_name)
 
-    def _intended_open(self, now):
-        """At night, a window the person said is open on purpose is not an oversight."""
-        local = dt_util.as_local(now)
-        # The answer holds for the season it was given in (an older answer, without one, for the summer).
-        answers = self._answers()
-        given = answers.get(habits.night_key(self.season_name)) or (answers.get("night_open") if habits.season_group(self.season_name) == "summer" else None)
-        # In winter a window open at night is always said: no answer covers it.
-        return given == "yes" and habits.season_group(self.season_name) != "winter" and (local.hour >= 21 or local.hour < 8)
 
-    def _track(self, assessment, current, now):
-        """The feedback loop: close an airing followed, and note an advice left aside half an hour."""
-        opened = current.get("opened", 0.0) > 0
-        if self._experiment and opened:
-            # Opened again before the result was read: the same airing goes on.
-            self._experiment.pop("closed", None)
-        elif self._experiment:
-            # The result is read a few minutes after closing: a slow sensor has spoken again by then.
-            closed = datetime.fromisoformat(self._experiment.setdefault("closed", now.isoformat()))
-            if now - closed >= feedback.SETTLE:
-                values = {"indoor_humidity": current.get("hi"), "indoor_temperature": current.get("ti"), "co2": current.get("co2"), "voc": current.get("voc")}
-                record = feedback.finish(self._experiment, values, now)
-                self._experiment = None
-                if record:
-                    self._remember(record, now)
-        if assessment.get("action") == "ouvrir" and not opened:
-            self._advice_since = self._advice_since or now
-        else:
-            since, followed = self._advice_since, self._advice_followed
-            self._advice_since, self._advice_followed = None, False
-            if since and not followed and not opened and now - since >= feedback.IGNORED_AFTER:
-                self._remember(feedback.ignored(since, now), now)
 
-    def _voc_threshold(self):
-        threshold = (self.config.get("evolution") or {}).get("voc_threshold") or {}
-        value = threshold.get("value") if isinstance(threshold, dict) else None
-        return value if isinstance(value, (int, float)) and value > 0 else None
 
-    def _voc_learned(self, now):
-        """The VOC against waiting and against what opening brought (engine/voc.py), for the advice."""
-        threshold, shut = self._voc_threshold(), not any(e in self.opened_since for e in self.windows)
-        if threshold is None:
-            return {}
-        local = now.astimezone(dt_util.get_default_time_zone())
-        air = (self.previous.features.get("air") or {}) if self.previous else {}
-        # The climb with a window open is watched over the first minutes of the airing only (engine/voc.py WATCH).
-        begun = min((self.opened_since[e] for e in self.windows if e in self.opened_since), default=None)
-        watched = begun is not None and now - begun <= vocs.WATCH
-        return {"voc_shut": shut,
-                "voc_falling": shut and vocs.is_falling(list(self.voc_points), now, threshold, was=air.get("voc_falling") is True),
-                "voc_going": self.voc_going,
-                "voc_outdoor": vocs.slot(local.hour) in self.voc_slots,
-                "voc_opened_level": self.voc_opened_level if watched else None}
 
-    def _note_voc_airing(self, began, now):
-        """A window of the room shut after an airing while the VOC called for air: the pause after it starts now."""
-        air = (self.previous.features.get("air") or {}) if self.previous else {}
-        about_voc = air.get("voc_status") == "high" or (self._experiment or {}).get("measure") == "voc"
-        if began is None or now - began < vocs.AIRING or not about_voc:
-            return
-        if any(e in self.opened_since for e in self.windows):
-            return
-        level = vocs.mean(list(self.voc_points), now)
-        if isinstance(level, (int, float)):
-            self.voc_aired = {"end": now.isoformat(), "after": round(level, 1)}
 
-    def _remember(self, record, now):
-        self.feedback = feedback.keep([*self.feedback, record], now)
-        self._feedback_store.async_delay_save(lambda: {"records": self.feedback}, 5)
 
-    def _facades(self):
-        """The bearings the room's windows face: the exact angle when known, else the declared exposure."""
-        from .engine.assessment import EXPOSURES
-        declared = {**{e: o for p in self.partners for e, o in p["openings"].items()}}
-        out = []
-        for entity_id in self.windows:
-            meta = self.config.get("openings", {}).get(entity_id)
-            opening = declared.get(entity_id)
-            azimuth = (meta or {}).get("azimuth") if meta else getattr(opening, "azimuth", None)
-            exposure = (meta or {}).get("exposure") if meta else getattr(opening, "exposure", None)
-            if azimuth is None and getattr(self, "drivers", None) and entity_id in self.drivers:
-                azimuth = cover_link.facts(self.hass, self.drivers[entity_id]).get("azimuth")
-            bearing = azimuth if isinstance(azimuth, (int, float)) else EXPOSURES.get(exposure)
-            if bearing is not None:
-                out.append(float(bearing))
-        return out
 
-    def _sun_now(self, solar):
-        """The sun on the room's windows now, in kW/m², counted as the twin learned it."""
-        sun = self._sun()
-        light = solar or 0.0
-        return (twin.on_facades(light, sun.elevation, sun.azimuth, self._facades()) if sun else light) / 1000
 
-    def _sun_ahead(self):
-        """The sun on the room's windows at a forecast time, in kW/m² as the twin learned it: the clear sky, on the
-        station's own scale, times what the forecast sky lets through."""
-        latitude, longitude, facades = self.hass.config.latitude, self.hass.config.longitude, self._facades()
-        scale = (self.sun_shade or {}).get("scale") or 1.0
-        def at(when, hour):
-            elevation, azimuth = twin.sun_position(when, latitude, longitude)
-            sky = sunlight.sky_factor(hour)
-            light = sunlight.clear_sky(when, latitude, longitude) * scale * (1.0 if sky is None else sky)
-            return (twin.on_facades(light, elevation, azimuth, facades) if facades else light) / 1000
-        return at
 
-    def _sun(self):
-        state = self.hass.states.get("sun.sun")
-        try:
-            return Sun(float(state.attributes["elevation"]), float(state.attributes["azimuth"])) if state else None
-        except (KeyError, TypeError, ValueError):
-            return None
 
-    # Contacts and heating report only when they change; Home Assistant marks them
-    # unavailable when the device is lost, so their age says nothing about validity.
-    def _reading(self, entity_id, kind, now):
-        state = self.hass.states.get(entity_id)
-        raw = state.state if state else None
-        unit = state.attributes.get("unit_of_measurement") if state else None
-        if state:
-            if kind == "voc":
-                voc_class = voc_device_class(self.hass, entity_id)
-                if voc_class is None or (unit is None and voc_class != "volatile_organic_compounds_index"):
-                    return Reading(None, "unknown", entity_id, state.last_reported.isoformat(), "incompatible_unit")
-            if kind == "heating":
-                raw, detail = self._heating_action(state)
-            elif kind in ("cover", "purifier_speed"):
-                raw = state.attributes.get("current_position" if kind == "cover" else "percentage") if state.state not in ("unknown", "unavailable") else None
-                unit = "%"
-        # HA last_reported tracks reception even when the measured value is unchanged.
-        # It is not the sensor's physical sampling time.
-        reading = normalize(kind, raw, unit,
-                            source=entity_id, reported_at=self._heard(entity_id, state) if state else None,
-                            now=now, max_age=None if kind in STATE_KINDS else self.settings.max_age_seconds)
-        # Where « heating » or « idle » came from: the thermostat's own action, or the indicator chosen beside it.
-        if kind == "heating" and state and reading.usable:
-            reading = replace(reading, detail=detail)
-        return reading
 
-    def _heating_action(self, state):
-        """What the heating does, and from where: off when the thermostat is off; then the indicator chosen
-        beside it (a valve, a relay, a « work state »), which the person trusts more; then its own hvac_action."""
-        if state.state in ("unknown", "unavailable"):
-            return None, None
-        if state.state == "off":
-            return "off", "hvac_mode"
-        indicator = self.sources.get("heating_indicator")
-        said = self.hass.states.get(indicator) if indicator else None
-        running = indicator_state(said.state) if said else None
-        if running is not None:
-            return ("cooling" if running == "heating" and state.state == "cool" else running), "indicator"
-        action = state.attributes.get("hvac_action")
-        return action, "hvac_action" if action is not None else None
+

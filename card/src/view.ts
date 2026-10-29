@@ -1,3 +1,4 @@
+import {currentLocale} from './i18n';
 import {ACTIONS, LEVELS, type View, type Reading} from './types';
 const record = (x:unknown):x is Record<string,unknown> => !!x && typeof x==='object' && !Array.isArray(x);
 const strings = (x:unknown):x is string[] => Array.isArray(x) && x.every(i=>typeof i==='string');
@@ -18,19 +19,19 @@ export function isView(x:unknown):x is View {
     && !(r.quality==='unknown'&&r.value!==null));
 }
 export const numeric = (r:Reading|undefined):number|null => r?.quality==='valid'&&typeof r.value==='number'&&Number.isFinite(r.value)?r.value:null;
-export const number = (v:number|null) => v===null?'—':new Intl.NumberFormat('fr-FR',{maximumFractionDigits:1}).format(v);
+// In the user's language: « 21,5 » in French, « 21.5 » in English.
+export const number = (v:number|null) => v===null?'—':new Intl.NumberFormat(currentLocale(),{maximumFractionDigits:1}).format(v);
 export const levelLabels = {calm:'Tout va bien',benefit:'Potentiel détecté',action:'Geste conseillé',urgent:'Attention nécessaire',neutral:'Information incomplète'};
 export const needs:Record<string,string> = {air:'Renouveler l’air',cool:'Rafraîchir',heat:'Préserver la chaleur',dry:'Réduire l’humidité'};
 export const heatingLabels:Record<string,string> = {heating:'Chauffe en cours',idle:'Au repos',off:'Arrêté',cooling:'Rafraîchit',unknown:'Action indisponible',not_configured:'Non configuré'};
 export const sourceLabels:Record<string,string> = {indoor_temperature:'Température intérieure',outdoor_temperature:'Température extérieure',indoor_humidity:'Humidité intérieure',outdoor_humidity:'Humidité extérieure',co2:'CO₂',pm25:'Particules fines PM2.5',voc:'COV',illuminance:'Luminosité',purifier:'Purificateur observé',purifier_speed:'Vitesse du purificateur',rain:'Pluie sur les ouvrants',wind_gust:'Rafales',solar:'Ensoleillement',pollution:'Qualité de l’air dehors',wind_bearing:'Direction du vent',heating:'Chauffage observé'};
 export const constraintLabels:Record<string,string> = {rain:'Pluie sur les ouvrants exposés',rain_soon:'Pluie imminente',storm:'Orage',vigilance:'Vigilance météo orange ou rouge',gust:'Rafales trop fortes',pollution:'Air extérieur défavorable',frost:'Gel dehors',heating_running:'Chauffage en marche'};
 export const exposureLabels:Record<string,string> = {N:'nord',NE:'nord-est',E:'est',SE:'sud-est',S:'sud',SO:'sud-ouest',O:'ouest',NO:'nord-ouest'};
-const compass=['nord','nord-est','est','sud-est','sud','sud-ouest','ouest','nord-ouest'];
-/** « vent d’ouest », « vent du nord » : where the wind comes from. */
+/** « vent d’ouest », « vent du nord » : where the wind comes from, from the north clockwise. */
+const WINDS=['vent du nord','vent de nord-est','vent d’est','vent de sud-est','vent du sud','vent de sud-ouest','vent d’ouest','vent de nord-ouest'];
 export function windFrom(bearing:number|null|undefined):string {
   if(bearing==null||!Number.isFinite(bearing)) return '';
-  const name=compass[Math.round(((bearing%360)+360)%360/45)%8];
-  return 'vent '+(name==='est'||name==='ouest'?'d’'+name:name==='nord'||name==='sud'?'du '+name:'de '+name);
+  return WINDS[Math.round(((bearing%360)+360)%360/45)%8];
 }
 export const kindLabels:Record<string,string> = {window:'Fenêtre',french:'Porte-fenêtre',skylight:'Vasistas',door:'Porte'};
 export const reasons:Record<string,[string,string]> = {

@@ -9,6 +9,7 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import callback
 from . import health, weather_link
 from .engine import feedback
+from .engine.i18n import language, speaking, t
 from homeassistant.util import dt as dt_util
 from .configuration import get_configuration
 from .const import DOMAIN, VERSION
@@ -22,8 +23,9 @@ async def async_setup_panel(hass):
     if not hass.http or not hasattr(hass.http, "async_register_static_paths"):
         return  # Isolated engine tests and headless HA setups have no frontend.
     if not hass.data.get(DOMAIN + "_panel_asset"):
+        # Cached by the browser: every script is asked for with `?v=<version>`, the fonts never change.
         await hass.http.async_register_static_paths([StaticPathConfig(
-            ASSETS, str(Path(__file__).parent / "frontend"), False)])
+            ASSETS, str(Path(__file__).parent / "frontend"), True)])
         # The versioned dashboard resource, with a guarded extra module only as fallback.
         await async_register_card(hass, CARD_URL, VERSION)
         websocket_api.async_register_command(hass, ws_health)
@@ -34,47 +36,57 @@ async def async_setup_panel(hass):
         hass.data[DOMAIN + "_panel_asset"] = True
     await async_register_brick(hass, {
         "domain": DOMAIN, "name": "Hestia Confort", "slug": "confort", "version": VERSION,
-        "icon": "mdi:home-thermometer-outline", "navigation": 2, "module_url": f"{ASSETS}/panel.js?v={VERSION}",
+        "icon": "mdi:home-thermometer-outline", "navigation": 3, "module_url": f"{ASSETS}/panel.js?v={VERSION}",
         "element": "niak-comfort-setup", "status": comfort_status, "legacy_path": "niak-confort",
     }, f"{ASSETS}/niak-socle.js?v={VERSION}")
 
 
-def _plural(n, word):
-    return f"{n} {word}{'s' if n > 1 else ''}"
+# The panel's language, sent with each of its commands (engine/i18n.py).
+LANGUAGE = vol.Optional("language")
 
 
-async def comfort_status(hass):
-    """What the « Hestia » home page says about Hestia Confort, from its own settings only."""
+def _count(n, one, many):
+    return t(one, n=n) if n == 1 or n == 0 and language() == "fr" else t(many, n=n)
+
+
+async def comfort_status(hass, lang=None):
+    """What the « Hestia » home page says about Hestia Confort, from its own settings only, in the hub's language (socle 1.14)."""
+    with speaking(lang):
+        return await _status(hass)
+
+
+async def _status(hass):
     service = await get_configuration(hass)
     rooms = [{"title": e.title, "loaded": e.state.value == "loaded", "entry": e} for e in service.entries()]
     weather = weather_link.status(hass)
     if not rooms:
-        return {"level": "action", "summary": "Aucune pièce suivie pour l’instant.",
-                "details": ["Commencez par le Salon dans l’onglet Confort."], "links": []}
-    followed = _plural(len(rooms), "pièce") + (" suivies" if len(rooms) > 1 else " suivie")
+        return {"level": "action", "summary": t("Aucune pièce suivie pour l’instant."),
+                "details": [t("Commencez par le Salon dans l’onglet Confort.")], "links": []}
+    followed = _count(len(rooms), "{n} pièce suivie", "{n} pièces suivies")
     # The same points as the « Confort » tab's technical report: one count everywhere.
     checked = health.report(await health.facts(hass, VERSION))
     todo, details, links = [line["text"] for line in checked["todo"]], [], []
     linked = next((p for p in weather.get("places", []) if p["entry_id"] == service.home.get("weather")), None)
     if linked:
-        links.append(f"Relié à Hestia Weather · {linked['title']}")
+        links.append(t("Relié à Hestia Weather · {place}", place=linked["title"]))
     elif weather.get("installed") and weather.get("places"):
-        details.append("Hestia Weather est installé : il peut remplir l’extérieur pour vous.")
+        details.append(t("Hestia Weather est installé : il peut remplir l’extérieur pour vous."))
     if todo:
-        return {"level": "action", "summary": f"{followed}, " + _plural(len(todo), "point") + " à régler.",
+        return {"level": "action", "summary": f"{followed}, " + _count(len(todo), "{n} point à régler.", "{n} points à régler."),
                 "details": todo + details, "links": links}
-    return {"level": "ok", "summary": f"{followed}, rien à régler.", "details": details, "links": links}
+    return {"level": "ok", "summary": f"{followed}, " + t("rien à régler."), "details": details, "links": links}
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/health"})
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/health", LANGUAGE: str})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def ws_health(hass, connection, msg):
     """The home page of the « Confort » tab: what works, what to fix, what could be set better."""
-    connection.send_result(msg["id"], health.report(await health.facts(hass, VERSION)))
+    with speaking(msg.get("language")):
+        connection.send_result(msg["id"], health.report(await health.facts(hass, VERSION)))
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/twins"})
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/twins", LANGUAGE: str})
 @websocket_api.require_admin
 @callback
 def ws_twins(hass, connection, msg):
@@ -94,44 +106,54 @@ def ws_twins(hass, connection, msg):
                       "sun_shade": getattr(coordinator, "sun_shade", None),
                       # The air it has learned: CO₂ and VOC with enough open half hours to promise a result.
                       "air": [name for name, model in air.items() if model and model.get("open_samples", 0) >= 6],
-                      "questions": coordinator.questions() if hasattr(coordinator, "questions") else []})
+                      "questions": _questions(coordinator, msg.get("language"))})
     connection.send_result(msg["id"], {"version": 1, "rooms": rooms})
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/set_extension", vol.Required("key"): str, vol.Required("enabled"): bool})
+def _questions(coordinator, lang):
+    if not hasattr(coordinator, "questions"):
+        return []
+    with speaking(lang):
+        return coordinator.questions()
+
+
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/set_extension", LANGUAGE: str, vol.Required("key"): str, vol.Required("enabled"): bool})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def ws_extension(hass, connection, msg):
     """A third-party integration used or not (general settings), for every room."""
     try:
-        snapshot = await (await get_configuration(hass)).set_extension(msg["key"], msg["enabled"])
+        with speaking(msg.get("language")):
+            snapshot = await (await get_configuration(hass)).set_extension(msg["key"], msg["enabled"])
     except ValueError as err:
         connection.send_error(msg["id"], "invalid", str(err))
         return
     connection.send_result(msg["id"], snapshot)
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/set_alarm", vol.Required("alarm"): vol.Any(None, str)})
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/set_alarm", LANGUAGE: str, vol.Required("alarm"): vol.Any(None, str)})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def ws_alarm(hass, connection, msg):
     """The home's alarm (general settings): found by itself, chosen, or none."""
     try:
-        snapshot = await (await get_configuration(hass)).set_alarm(msg["alarm"])
+        with speaking(msg.get("language")):
+            snapshot = await (await get_configuration(hass)).set_alarm(msg["alarm"])
     except ValueError as err:
         connection.send_error(msg["id"], "invalid", str(err))
         return
     connection.send_result(msg["id"], snapshot)
 
 
-@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/answer", vol.Required("entry_id"): str,
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/answer", LANGUAGE: str, vol.Required("entry_id"): str,
                                   vol.Required("key"): str, vol.Required("answer"): vol.In(("yes", "no", "unknown"))})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def ws_answer(hass, connection, msg):
     """An answer to a learning question: it names a cause, or stops a window being taken for an oversight."""
     try:
-        await (await get_configuration(hass)).answer(msg["entry_id"], msg["key"], msg["answer"])
+        with speaking(msg.get("language")):
+            await (await get_configuration(hass)).answer(msg["entry_id"], msg["key"], msg["answer"])
     except ValueError as err:
         connection.send_error(msg["id"], "invalid", str(err))
         return

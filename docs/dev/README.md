@@ -5,6 +5,8 @@ Pour les développeurs. Le guide pour les utilisateurs est [ici](../guide.md).
 ## Tests et compilation
 
 - Tests Python : Python 3.14, `pip install -r requirements-test.txt`, puis `python -m unittest discover -s tests -p 'test_*.py'`.
+- Types : `pip install mypy`, puis `python -m mypy --follow-imports=silent --ignore-missing-imports custom_components/niak_comfort/api.py custom_components/niak_comfort/recorder_history.py custom_components/niak_comfort/room/constants.py` (les fichiers déjà typés ; la liste grandit avec eux).
+- Le coordinateur d’une pièce (`coordinator.py`) garde son cycle de vie et son calcul ; ses parties sont dans `room/` : `learning.py` (apprentissage, historique, statistiques), `volume.py` (même air), `presence.py`, `sun.py`, `airings.py` (aérations suivies, COV), `readings.py` (lecture des capteurs), `constants.py`.
 - Panneau : `cd frontend && npm ci && npm run validate` (produit `custom_components/niak_comfort/frontend/panel.js`).
 - Carte : `cd card && npm ci && npm run validate` (produit `custom_components/niak_comfort/frontend/niak-comfort-card.js`).
 - Chargement des cartes : `cd card && npx playwright install chromium firefox && NIAK_TEST_FIREFOX=1 npm run test:loading`. Vérifie les cartes logement et pièce, et leur éditeur, avant et après l’initialisation de Home Assistant, sur deux onglets, avec cache et rechargement.

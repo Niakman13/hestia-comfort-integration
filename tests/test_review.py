@@ -141,7 +141,7 @@ class Source(unittest.IsolatedAsyncioTestCase):
             def __init__(self, config):
                 self.config = config
 
-            def _outdoor_entity(self):
+            def outdoor_entity(self):
                 return "sensor.outdoor"
 
         for title, config in (("Salon", {"sources": {"indoor_temperature": "sensor.t_salon", "co2": "sensor.co2"}}),
@@ -172,6 +172,17 @@ class Source(unittest.IsolatedAsyncioTestCase):
             again = await review_source.async_review(self.hass, now + timedelta(minutes=30))
         self.assertEqual(calls, [{"sensor.t_salon", "sensor.co2", "sensor.t_b", "sensor.h_b", "sensor.outdoor"}])
         self.assertIs(first, again)
+        # Cards opened together wait for one reading of the year; a room changed reads it again.
+        import asyncio
+        later = now + timedelta(hours=2)
+        with patch.object(review_source, "_statistics", statistics):
+            together = await asyncio.gather(*(review_source.async_review(self.hass, later) for _ in range(3)))
+            self.assertEqual(len(calls), 2)
+            self.assertTrue(all(r is together[0] for r in together))
+            entry = next(e for e in review_source._rooms(self.hass) if e.title == "Buanderie")
+            entry.runtime_data.config = {**entry.runtime_data.config, "sources": {"indoor_temperature": "sensor.t_b"}}
+            await review_source.async_review(self.hass, later)
+        self.assertEqual(len(calls), 3)
         rooms = {r["title"]: r for r in first["rooms"]}
         self.assertEqual(rooms["Salon"]["letter"], "A")
         self.assertEqual(set(rooms["Buanderie"]["themes"]), {"humidity"})

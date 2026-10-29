@@ -2,6 +2,7 @@
 from pathlib import Path
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, patch
 from datetime import timedelta
@@ -106,11 +107,11 @@ class AdapterTests(AdapterFixture):
         now = dt_util.utcnow()
         registry = SimpleNamespace(async_get=lambda eid: SimpleNamespace(device_id="probe"))
         siblings = [SimpleNamespace(entity_id="sensor.hum"), SimpleNamespace(entity_id="sensor.thermo")]
-        with patch("custom_components.niak_comfort.coordinator.er.async_get", return_value=registry), \
-             patch("custom_components.niak_comfort.coordinator.er.async_entries_for_device", return_value=siblings):
+        with patch("homeassistant.helpers.entity_registry.async_get", return_value=registry), \
+             patch("homeassistant.helpers.entity_registry.async_entries_for_device", return_value=siblings):
             self.assertEqual(coordinator._reading("sensor.hum", "humidity", now).quality, "valid")
         lonely = SimpleNamespace(async_get=lambda eid: SimpleNamespace(device_id=None))
-        with patch("custom_components.niak_comfort.coordinator.er.async_get", return_value=lonely):
+        with patch("homeassistant.helpers.entity_registry.async_get", return_value=lonely):
             self.assertEqual(coordinator._reading("sensor.hum", "humidity", now).quality, "stale")
 
     async def test_a_contact_shows_at_once_but_advice_waits_for_a_real_opening(self):
@@ -166,6 +167,20 @@ class AdapterTests(AdapterFixture):
             await coordinator._changed(event)
         self.assertIsNone(coordinator.voc_aired)
 
+    async def test_a_chatty_measure_is_grouped_and_a_window_is_shown_at_once(self):
+        coordinator = ComfortCoordinator(self.hass, self.entry)
+        coordinator._measure_ids = {"sensor.co2"}
+        def event(entity_id, before, after):
+            return SimpleNamespace(data={"entity_id": entity_id, "old_state": SimpleNamespace(state=before),
+                                         "new_state": SimpleNamespace(state=after)})
+        with patch.object(coordinator, "async_request_refresh", AsyncMock()) as now, \
+                patch.object(coordinator._measure_refresh, "async_call", AsyncMock()) as grouped:
+            await coordinator._changed(event("sensor.co2", "640", "655"))
+            await coordinator._changed(event("sensor.co2", "655", "655"))  # an attribute alone
+            self.assertEqual((now.await_count, grouped.await_count), (0, 1))
+            await coordinator._changed(event("climate.vt", "heat", "off"))
+            self.assertEqual(now.await_count, 1)
+
     async def test_past_openings_are_learned_and_remembered(self):
         from homeassistant.core import State
         sources = {**self.entry.data["sources"], "indoor_humidity": "sensor.hum", "outdoor_humidity": "sensor.out_hum"}
@@ -184,17 +199,35 @@ class AdapterTests(AdapterFixture):
                    "sensor.outside": [row("sensor.outside", "12", 0)], "sensor.out_hum": [row("sensor.out_hum", "80", 0)]}
         class FakeRecorder:
             async def async_add_executor_job(self, function, *args):
-                return history
+                return function(*args)
+        begins = []
+        def significant(hass, begin, end, entity_ids, *args):
+            begins.append(begin)
+            return {e: [r for r in history.get(e, []) if r.last_changed < end] for e in entity_ids}
         coordinator = ComfortCoordinator(self.hass, self.entry)
-        with patch("homeassistant.components.recorder.get_instance", return_value=FakeRecorder()):
+        # The history is read through recorder_history.py: entity by entity, compacted.
+        with patch("homeassistant.components.recorder.get_instance", return_value=FakeRecorder()), \
+                patch("homeassistant.components.recorder.history.get_significant_states", significant):
             await coordinator._learn(now)
         self.assertEqual(coordinator.drying_model["openings"], 1)
         self.assertEqual(len((await coordinator._learning_store.async_load())["episodes"]), 1)
+        # A window shut asks for the last day only: the opening already learned stays, merged by its start.
+        from custom_components.niak_comfort.coordinator import SHORT_SPAN
+        begins.clear()
+        with patch("homeassistant.components.recorder.get_instance", return_value=FakeRecorder()), \
+                patch("homeassistant.components.recorder.history.get_significant_states", significant):
+            await coordinator._learn(now, SHORT_SPAN)
+        self.assertGreaterEqual(min(begins), now - SHORT_SPAN)
+        self.assertEqual(coordinator.drying_model["openings"], 1)
         # Without the recorder, what was stored is still known.
         self.hass.config.components.remove("recorder")
         again = ComfortCoordinator(self.hass, self.entry)
         await again._learn(now)
         self.assertEqual(again.drying_model, coordinator.drying_model)
+        # After a restart, the room knows it at once, before the history is read again.
+        restored = ComfortCoordinator(self.hass, self.entry)
+        await restored._restore_learning()
+        self.assertEqual(restored.drying_model, coordinator.drying_model)
 
     async def _season(self, rows):
         class FakeRecorder:

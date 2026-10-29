@@ -2,7 +2,9 @@
 
 Everything the card is sent (the advice, the measures as read), what the room has learned, the raw state of each
 chosen sensor and the first forecast hours, so that a strange advice can be explained without access to the home.
-The home's coordinates are removed; entity names stay, they are what the person will recognise.
+The home's coordinates are removed, and so are the people: their names and where they are (a `person` or a tracker
+is in a zone whose name may be a town or an address) are reduced to how many are at home or away.
+Entity names stay, they are what the person will recognise.
 """
 from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.util import dt as dt_util
@@ -11,7 +13,9 @@ from . import health, weather_link
 from .const import VERSION
 from .engine import feedback
 
-TO_REDACT = {"latitude", "longitude", "elevation", "location"}
+TO_REDACT = {"latitude", "longitude", "elevation", "location", "persons", "gps_accuracy"}
+# Entities whose state is a zone's name: only « at home » or « away » is kept.
+WHEREABOUTS = ("person", "device_tracker")
 # The attributes of a sensor or a thermostat that explain a reading; the rest (icons, pictures) is left out.
 ATTRIBUTES = ("unit_of_measurement", "device_class", "state_class", "friendly_name", "hvac_action", "hvac_mode",
               "hvac_modes", "preset_mode", "temperature", "current_temperature", "current_position", "percentage",
@@ -24,7 +28,10 @@ def _state(hass, entity_id):
     state = hass.states.get(entity_id) if isinstance(entity_id, str) else None
     if state is None:
         return {"entity_id": entity_id, "state": None, "missing": True}
-    return {"entity_id": entity_id, "state": state.state, "last_updated": state.last_updated.isoformat(),
+    value = state.state
+    if entity_id.split(".")[0] in WHEREABOUTS and value not in ("home", "not_home", "unknown", "unavailable"):
+        value = "not_home"
+    return {"entity_id": entity_id, "state": value, "last_updated": state.last_updated.isoformat(),
             "last_reported": getattr(state, "last_reported", state.last_updated).isoformat(),
             "attributes": {k: state.attributes[k] for k in ATTRIBUTES if k in state.attributes}}
 
@@ -41,6 +48,16 @@ def _entities(config, home_sources):
     found.update({f"exterior:{k}": spec["entity_id"] for k, spec in (home_sources or {}).items()
                   if isinstance(spec, dict) and isinstance(spec.get("entity_id"), str)})
     return found
+
+
+def _without_names(value):
+    """The room's view with its people counted instead of named, wherever « people » appears in it."""
+    if isinstance(value, list):
+        return [_without_names(v) for v in value]
+    if not isinstance(value, dict):
+        return value
+    return {k: ({group: len(names) for group, names in v.items() if isinstance(names, list)}
+                if k == "people" and isinstance(v, dict) else _without_names(v)) for k, v in value.items()}
 
 
 async def async_get_config_entry_diagnostics(hass, entry):
@@ -61,7 +78,7 @@ async def async_get_config_entry_diagnostics(hass, entry):
         "version": VERSION,
         "generated_at": now.isoformat(),
         "room": {"title": entry.title, "state": entry.state.value, "config": config},
-        "view": getattr(coordinator, "data", None),
+        "view": _without_names(getattr(coordinator, "data", None)),
         "thermostat": coordinator._thermostat() if coordinator is not None and hasattr(coordinator, "_thermostat") else None,
         "learning": {
             "twin": {**{k: twin.get(k) for k in ("status", "days", "samples", "open_samples", "mass", "room", "computed_at")},

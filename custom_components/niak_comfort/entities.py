@@ -26,12 +26,12 @@ HUMID = ("slightly_humid", "humid", "very_humid")
 
 def room_device(entry):
     return {"identifiers": {(DOMAIN, entry.entry_id)}, "name": entry.title, "manufacturer": "Hestia",
-            "model": "Comfort · observation", "configuration_url": "homeassistant://niak/confort"}
+            "model": "Comfort · observation", "configuration_url": "homeassistant://hestia/confort"}
 
 
 def volume_device(coordinator):
     return {"identifiers": {(DOMAIN, volume_id(coordinator))}, "name": coordinator.volume_name, "manufacturer": "Hestia",
-            "model": "Comfort · même air", "configuration_url": "homeassistant://niak/confort"}
+            "model": "Comfort · même air", "configuration_url": "homeassistant://hestia/confort"}
 
 
 def volume_id(coordinator):
@@ -198,15 +198,16 @@ class HomeEntity:
     _attr_should_poll = False
 
     def __init__(self, entry, key):
+        super().__init__()
         self.key = key
         self._attr_unique_id = f"{entry.entry_id}_{key}"
         self._attr_translation_key = f"home_{key}"
         self._attr_device_info = {"identifiers": {(DOMAIN, entry.entry_id)}, "name": entry.title, "manufacturer": "Hestia",
-                                  "model": "Comfort · logement", "configuration_url": "homeassistant://niak/confort"}
+                                  "model": "Comfort · logement", "configuration_url": "homeassistant://hestia/confort"}
         self._listening = {}
 
     async def async_added_to_hass(self):
-        self.async_on_remove(async_track_time_interval(self.hass, callback(lambda _now: self._attach()), timedelta(seconds=30)))
+        self.async_on_remove(async_track_time_interval(self.hass, callback(lambda _now: self._attach()), timedelta(seconds=60)))
         self.async_on_remove(lambda: [remove() for remove in self._listening.values()])
         self._attach()
 

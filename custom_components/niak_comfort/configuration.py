@@ -11,7 +11,8 @@ from homeassistant.helpers import area_registry as ar
 from . import cover_link, weather_link
 from .floors import floor_catalog, room_floor
 from .const import DOMAIN, OUTDOOR_AREAS, SOURCES
-from .discovery import INDOOR, OUTDOOR, candidate, catalog, overview, suggestions, voc_device_class
+from .engine.i18n import t
+from .discovery import OUTDOOR, candidate, catalog, overview, suggestions, voc_device_class
 from .engine.assessment import EXPOSURES, KINDS, Settings
 from .air_references import AIR_DEFAULTS, AIR_REFERENCE_VERSION
 
@@ -30,8 +31,10 @@ class Configuration:
 
     async def load(self):
         saved = await self.store.async_load()
+        # Over the defaults: a file written by an older version may lack a key read later (« revision », « sources »).
+        # A file that cannot be read stops the setup, so that nothing is ever saved over the person's settings.
         if saved:
-            self.home = saved
+            self.home = {**self.home, **saved}
 
     def entries(self):
         return [e for e in self.hass.config_entries.async_entries(DOMAIN) if not e.data.get("home")]
@@ -68,12 +71,12 @@ class Configuration:
 
     def discover(self, area_id=None, entry_id=None):
         if area_id and not ar.async_get(self.hass).async_get_area(area_id):
-            raise ValueError("Pièce Home Assistant introuvable.")
+            raise ValueError(t("Pièce Home Assistant introuvable."))
         selected = {}
         if entry_id:
             entry = self.hass.config_entries.async_get_entry(entry_id)
             if not entry or entry.domain != DOMAIN or entry.data.get("home"):
-                raise ValueError("Pièce Hestia Confort introuvable.")
+                raise ValueError(t("Pièce Hestia Confort introuvable."))
             config = {**entry.data, **entry.options}
             selected = {**config.get("sources", {}), "windows": config.get("windows", []), "presence": config.get("presence", [])}
         for key, spec in self.home_sources().items():
@@ -102,7 +105,7 @@ class Configuration:
         """Hestia Weather's station as exterior sources, ready for the exterior page."""
         found = weather_link.exterior(self.hass, entry_id)
         if not found:
-            raise ValueError("Hestia Weather n’a pas de lieu disponible.")
+            raise ValueError(t("Hestia Weather n’a pas de lieu disponible."))
         sources = {}
         for key, entity_id in found["proposals"].items():
             if c := candidate(self.hass, entity_id, key):
@@ -122,32 +125,32 @@ class Configuration:
 
     def validate(self, payload, *, home=False):
         if not isinstance(payload, dict):
-            raise ValueError("Configuration invalide.")
+            raise ValueError(t("Configuration invalide."))
         warnings = []
         if home:
             sources = payload.get("sources", {})
             if not isinstance(sources, dict) or set(sources) - set(OUTDOOR):
-                raise ValueError("Sources extérieures invalides.")
+                raise ValueError(t("Sources extérieures invalides."))
             cleaned = {"sources": {}}
             for key, spec in sources.items():
                 if not isinstance(spec, dict) or not isinstance(spec.get("entity_id"), str):
-                    raise ValueError("Choisissez une source extérieure existante.")
+                    raise ValueError(t("Choisissez une source extérieure existante."))
                 threshold = spec.get("block_from", 4)
                 if spec.get("adapter") == "niak_air":
                     # The air of the linked Hestia Weather place, whatever its source; read again on every update.
                     air = weather_link.air(self.hass, payload.get("weather"))
                     if key != "pollution" or not air or air["entity_id"] != spec["entity_id"]:
-                        raise ValueError("La qualité de l’air de Hestia Weather n’est plus disponible : rechargez la page.")
+                        raise ValueError(t("La qualité de l’air de Hestia Weather n’est plus disponible : rechargez la page."))
                     if isinstance(threshold, bool) or not isinstance(threshold, int) or not 2 <= threshold <= 6:
-                        raise ValueError("Choisissez un niveau ATMO entre Moyen et Extrêmement mauvais.")
+                        raise ValueError(t("Choisissez un niveau ATMO entre Moyen et Extrêmement mauvais."))
                     cleaned["sources"][key] = {"entity_id": spec["entity_id"], "adapter": "niak_air", "block_from": threshold}
                     continue
                 c = candidate(self.hass, spec["entity_id"], key, include_legacy=True)
                 if not c or spec.get("adapter") != c["adapter"]:
-                    raise ValueError("Source extérieure incompatible : " + key)
+                    raise ValueError(t("Source extérieure incompatible : {name}", name=key))
                 daily = c["adapter"] in ("atmo_daily", "niak_index")
                 if daily and (isinstance(threshold, bool) or not isinstance(threshold, int) or not 2 <= threshold <= 6):
-                    raise ValueError("Choisissez un niveau ATMO entre Moyen et Extrêmement mauvais.")
+                    raise ValueError(t("Choisissez un niveau ATMO entre Moyen et Extrêmement mauvais."))
                 cleaned["sources"][key] = {"entity_id": c["entity_id"], "adapter": c["adapter"]}
                 if daily:
                     cleaned["sources"][key]["block_from"] = threshold
@@ -155,39 +158,39 @@ class Configuration:
                     warnings.append({"key": key, "entity_id": c["entity_id"], "warnings": c["warnings"]})
             weather = payload.get("weather")
             if weather is not None and weather not in {p["entry_id"] for p in weather_link.status(self.hass)["places"]}:
-                raise ValueError("Ce lieu Hestia Weather n’est plus disponible.")
+                raise ValueError(t("Ce lieu Hestia Weather n’est plus disponible."))
             cleaned["weather"] = weather
             return cleaned, warnings
         area_id = payload.get("area_id") or None
         area = ar.async_get(self.hass).async_get_area(area_id) if isinstance(area_id, str) else None
         if area_id is not None and not area:
-            raise ValueError("Cette pièce Home Assistant n’existe plus. Choisissez-en une autre ou une pièce libre.")
+            raise ValueError(t("Cette pièce Home Assistant n’existe plus. Choisissez-en une autre ou une pièce libre."))
         floor_id = payload.get("floor_id") or None
         if area_id:
             floor_id = None  # Home Assistant owns the floor of a linked area.
         elif floor_id is not None and (not isinstance(floor_id, str) or floor_id not in {f["floor_id"] for f in floor_catalog(self.hass)}):
-            raise ValueError("Cet étage n’existe plus. Choisissez un étage existant ou aucun étage.")
+            raise ValueError(t("Cet étage n’existe plus. Choisissez un étage existant ou aucun étage."))
         sources = payload.get("sources", {})
         if not isinstance(sources, dict) or set(sources) - set(SOURCES):
-            raise ValueError("Sources de pièce invalides.")
+            raise ValueError(t("Sources de pièce invalides."))
         if not sources.get("indoor_temperature"):
-            raise ValueError("Choisissez la température intérieure de cette pièce.")
+            raise ValueError(t("Choisissez la température intérieure de cette pièce."))
         windows = payload.get("windows", [])
         if not isinstance(windows, list) or any(not isinstance(e, str) for e in windows):
-            raise ValueError("Contacts de fenêtres invalides.")
+            raise ValueError(t("Contacts de fenêtres invalides."))
         presence = payload.get("presence", [])
         if not isinstance(presence, list) or any(not isinstance(e, str) for e in presence):
-            raise ValueError("Capteurs de présence invalides.")
+            raise ValueError(t("Capteurs de présence invalides."))
         evolution = payload.get("evolution", {})
         if not isinstance(evolution, dict) or set(evolution) - {"voc_threshold", "glazing_factor", "presence_delay_minutes",
                                                                    "voc_delay_minutes", "voc_pause_minutes"}:
-            raise ValueError("Préférences avancées invalides.")
+            raise ValueError(t("Préférences avancées invalides."))
         cleaned_evolution = {}
         for key, default, low, high in (("glazing_factor", 0.7, 0, 1), ("presence_delay_minutes", 5, 0, 120),
                                          ("voc_delay_minutes", 10, 0, 120), ("voc_pause_minutes", 45, 0, 240)):
             value = evolution.get(key, default)
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not low <= value <= high:
-                raise ValueError("Valeur avancée invalide : " + key)
+                raise ValueError(t("Valeur avancée invalide : {name}", name=key))
             cleaned_evolution[key] = value
         threshold = evolution.get("voc_threshold")
         if threshold is not None:
@@ -199,62 +202,62 @@ class Configuration:
             expected_unit = "" if source_unit is None and explicit_index else source_unit
             if (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0
                 or not isinstance(unit, str) or not state or unit != expected_unit):
-                raise ValueError("Le seuil COV doit correspondre à l’unité exacte du capteur choisi.")
+                raise ValueError(t("Le seuil COV doit correspondre à l’unité exacte du capteur choisi."))
             cleaned_evolution["voc_threshold"] = {"value": value, "unit": unit}
         name = payload.get("name", area.name if area else "")
         if not isinstance(name, str) or not name.strip() or len(name) > 100:
-            raise ValueError("Donnez un nom à la pièce (1 à 100 caractères).")
+            raise ValueError(t("Donnez un nom à la pièce (1 à 100 caractères)."))
         settings = payload.get("settings", {})
         if not isinstance(settings, dict):
-            raise ValueError("Préférences de confort invalides.")
+            raise ValueError(t("Préférences de confort invalides."))
         settings = asdict(Settings(**{**AIR_DEFAULTS, **settings}))
         heated = payload.get("heated", True)
         if not isinstance(heated, bool):
-            raise ValueError("« Pièce chauffée » doit être oui ou non.")
+            raise ValueError(t("« Pièce chauffée » doit être oui ou non."))
         # A Versatile Thermostat's comfort temperature stands as the room's minimum unless the person says otherwise.
         thermostat_reference = payload.get("thermostat_reference", True)
         if not isinstance(thermostat_reference, bool):
-            raise ValueError("« Minimum repris du thermostat » doit être oui ou non.")
+            raise ValueError(t("« Minimum repris du thermostat » doit être oui ou non."))
         # The people the room is for (`person` entities): a bedroom's one, a living room's several, or none for everyone.
         persons = payload.get("persons", [])
         if not isinstance(persons, list) or any(not isinstance(p, str) or not p.startswith("person.") for p in persons):
-            raise ValueError("Choisissez les personnes parmi celles de Home Assistant.")
+            raise ValueError(t("Choisissez les personnes parmi celles de Home Assistant."))
         # No contact on the windows, on purpose (a garage, a room that is never aired): not suggested again.
         windows_unmeasured = payload.get("windows_unmeasured", False)
         if not isinstance(windows_unmeasured, bool):
-            raise ValueError("« Pas de contact, c’est voulu » doit être oui ou non.")
+            raise ValueError(t("« Pas de contact, c’est voulu » doit être oui ou non."))
         # Rooms with no wall between them (a salon open onto its kitchen) share one air.
         open_to = payload.get("open_to", [])
         known = {e.entry_id for e in self.entries()}
         if not isinstance(open_to, list) or any(not isinstance(e, str) for e in open_to):
-            raise ValueError("Pièces ouvertes l’une sur l’autre invalides.")
+            raise ValueError(t("Pièces ouvertes l’une sur l’autre invalides."))
         # A room removed since is simply forgotten.
         open_to = [e for e in open_to if e in known]
         legacy_sheltered = payload.get("rain_exposed") is False
         openings = payload.get("openings", {})
         if not isinstance(openings, dict):
-            raise ValueError("Description des ouvrants invalide.")
+            raise ValueError(t("Description des ouvrants invalide."))
         cleaned_openings = {}
         for entity_id in windows:
             meta = openings.get(entity_id, {})
             if not isinstance(meta, dict):
-                raise ValueError("Description des ouvrants invalide.")
+                raise ValueError(t("Description des ouvrants invalide."))
             exposure = meta.get("exposure")
             kind = meta.get("kind", "window")
             sheltered = meta.get("sheltered", legacy_sheltered)
             if exposure is not None and exposure not in EXPOSURES:
-                raise ValueError("Exposition inconnue pour " + entity_id)
+                raise ValueError(t("Exposition inconnue pour {name}", name=entity_id))
             if kind not in KINDS or not isinstance(sheltered, bool):
-                raise ValueError("Type d’ouvrant invalide pour " + entity_id)
+                raise ValueError(t("Type d’ouvrant invalide pour {name}", name=entity_id))
             shutter = meta.get("shutter", "none")
             if shutter not in ("none", "manual", "connected"):
-                raise ValueError("Type de volet invalide pour " + entity_id)
+                raise ValueError(t("Type de volet invalide pour {name}", name=entity_id))
             item = {"exposure": exposure, "kind": kind, "sheltered": sheltered}
             # A precise angle, when the person knows it: 0 north, 90 east, 180 south, 270 west.
             azimuth = meta.get("azimuth")
             if azimuth is not None:
                 if isinstance(azimuth, bool) or not isinstance(azimuth, (int, float)) or not math.isfinite(azimuth) or not 0 <= azimuth < 360:
-                    raise ValueError("Angle invalide pour " + entity_id + " : entre 0 et 359 degrés.")
+                    raise ValueError(t("Angle invalide pour {name} : entre 0 et 359 degrés.", name=entity_id))
                 item["azimuth"] = azimuth
             if "shutter" in meta:
                 item["shutter"] = shutter
@@ -263,7 +266,7 @@ class Configuration:
                 if value:
                     found = candidate(self.hass, value, role, area_id) if isinstance(value, str) else None
                     if shutter != "connected" or not found:
-                        raise ValueError("Source du volet incompatible : " + field)
+                        raise ValueError(t("Source du volet incompatible : {name}", name=field))
                     if found["warnings"]:
                         warnings.append({"key": role, "entity_id": value, "warnings": found["warnings"]})
                     item[field] = value
@@ -272,7 +275,7 @@ class Configuration:
                 if value is not None:
                     minimum = 0 if field.startswith("overhang") else 0.01
                     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not minimum <= value <= 20:
-                        raise ValueError("Dimension invalide : " + field)
+                        raise ValueError(t("Dimension invalide : {name}", name=field))
                     item[field] = value
             cleaned_openings[entity_id] = item
         # Rooms use the shared exterior. Older rooms keep their own sources only until it is configured.
@@ -284,10 +287,10 @@ class Configuration:
             ids = value if key in ("windows", "presence") else [value]
             for entity_id in ids:
                 if not isinstance(entity_id, str):
-                    raise ValueError("Choisissez une entité existante pour chaque source.")
+                    raise ValueError(t("Choisissez une entité existante pour chaque source."))
                 c = candidate(self.hass, entity_id, key, area_id, include_legacy=True)
                 if not c:
-                    raise ValueError("Capteur incompatible ou retiré : " + entity_id)
+                    raise ValueError(t("Capteur incompatible ou retiré : {name}", name=entity_id))
                 # Exterior sources kept by an older room are not shown in the page: never ask to confirm them.
                 if c["warnings"] and key not in OUTDOOR:
                     warnings.append({"key": key, "entity_id": entity_id, "warnings": c["warnings"]})
@@ -304,17 +307,17 @@ class Configuration:
     @staticmethod
     def ensure_acknowledged(warnings, acknowledged):
         if not isinstance(acknowledged, list) or any(not isinstance(item, str) for item in acknowledged):
-            raise ValueError("Confirmez les sources dont le rôle est à vérifier.")
+            raise ValueError(t("Confirmez les sources dont le rôle est à vérifier."))
         needed = {w["key"] + ":" + w["entity_id"] for w in warnings}
         if needed - set(acknowledged):
-            raise ValueError("Confirmez la provenance et le rôle des sources signalées avant d’enregistrer.")
+            raise ValueError(t("Confirmez la provenance et le rôle des sources signalées avant d’enregistrer."))
         # Only confirmations that still apply are remembered, so a later change asks again.
         return sorted(needed)
 
     async def save(self, payload, revision, entry_id=None, *, home=False, acknowledged=None):
         async with self.lock:
             if revision != self.revision():
-                raise ValueError("La configuration a changé ailleurs. Rechargez les pièces avant d’enregistrer.")
+                raise ValueError(t("La configuration a changé ailleurs. Rechargez les pièces avant d’enregistrer."))
             cleaned, warnings = self.validate(payload, home=home)
             remembered = self.ensure_acknowledged(warnings, acknowledged or [])
             if home:
@@ -329,11 +332,11 @@ class Configuration:
             cleaned["acknowledged"] = remembered
             unique_id = cleaned["area_id"]
             if unique_id and any(e.unique_id == unique_id and e.entry_id != entry_id for e in self.entries()):
-                raise ValueError("Cette pièce Home Assistant est déjà utilisée par une autre pièce Hestia Confort.")
+                raise ValueError(t("Cette pièce Home Assistant est déjà utilisée par une autre pièce Hestia Confort."))
             if entry_id:
                 entry = self.hass.config_entries.async_get_entry(entry_id)
                 if not entry or entry.domain != DOMAIN or entry.data.get("home"):
-                    raise ValueError("Cette pièce Hestia Confort n’existe plus.")
+                    raise ValueError(t("Cette pièce Hestia Confort n’existe plus."))
                 cleaned["open_to"] = [e for e in cleaned["open_to"] if e != entry_id]
                 before = set(self.volume(entry_id))
                 # Preserve unknown future settings only at the top level; explicit sources
@@ -347,17 +350,17 @@ class Configuration:
             else:
                 result = await self.hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"}, data={"panel_config": cleaned, "acknowledged": acknowledged or []})
                 if result["type"] != "create_entry":
-                    raise ValueError("La pièce n’a pas pu être ajoutée.")
+                    raise ValueError(t("La pièce n’a pas pu être ajoutée."))
             return self.snapshot()
 
     async def remove(self, entry_id, revision):
         """Deletes one room; its Home Assistant area becomes a proposal again on the home page."""
         async with self.lock:
             if revision != self.revision():
-                raise ValueError("La configuration a changé ailleurs. Rechargez les pièces avant de supprimer.")
+                raise ValueError(t("La configuration a changé ailleurs. Rechargez les pièces avant de supprimer."))
             entry = self.hass.config_entries.async_get_entry(entry_id)
             if not entry or entry.domain != DOMAIN or entry.data.get("home"):
-                raise ValueError("Cette pièce Hestia Confort n’existe plus.")
+                raise ValueError(t("Cette pièce Hestia Confort n’existe plus."))
             partners = set(self.volume(entry_id))
             await self.hass.config_entries.async_remove(entry_id)
             await self._reload_rooms(partners)
@@ -366,7 +369,7 @@ class Configuration:
     async def set_alarm(self, value):
         """The home's alarm: None to find Alarmo by itself, "" for none, or an `alarm_control_panel` entity."""
         if value is not None and not (isinstance(value, str) and (value == "" or value.startswith("alarm_control_panel."))):
-            raise ValueError("Choisissez une alarme de Home Assistant.")
+            raise ValueError(t("Choisissez une alarme de Home Assistant."))
         async with self.lock:
             self.home = {**self.home, "alarm": value}
             await self.store.async_save(self.home)
@@ -378,7 +381,7 @@ class Configuration:
     async def set_extension(self, key, enabled):
         """Uses a third-party integration or not, for every room: Alarmo found by itself or no alarm; the others listed when off."""
         if key not in SWITCHABLE:
-            raise ValueError("Extension inconnue.")
+            raise ValueError(t("Extension inconnue."))
         async with self.lock:
             if key == "alarmo":
                 self.home = {**self.home, "alarm": None if enabled else ""}
@@ -410,9 +413,9 @@ class Configuration:
     async def answer(self, entry_id, key, value):
         """Keeps the person's answer to a learning question (« yes », « no », « unknown »)."""
         if value not in ("yes", "no", "unknown") or not isinstance(key, str) or not key:
-            raise ValueError("Réponse invalide.")
+            raise ValueError(t("Réponse invalide."))
         if not any(e.entry_id == entry_id for e in self.entries()):
-            raise ValueError("Cette pièce Hestia Confort n’existe plus.")
+            raise ValueError(t("Cette pièce Hestia Confort n’existe plus."))
         async with self.lock:
             answers = {**(self.home.get("answers") or {})}
             answers[entry_id] = {**answers.get(entry_id, {}), key: value}

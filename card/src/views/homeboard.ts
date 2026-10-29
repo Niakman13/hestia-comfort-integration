@@ -3,10 +3,11 @@ import {number} from '../view';
 import {icon} from '../ui/icons';
 import {pills,type Slide} from './room';
 import type {Level} from '../types';
+import {t,t as tr,tx,tl,fr,currentLocale} from '../i18n';
 
 /** The home card as a light review: the rotating advice of the rooms, then the last day, week or month. */
 export type Period='day'|'week'|'month';
-export const PERIODS:[Period,string][]=[['day','Jour'],['week','Semaine'],['month','Mois']];
+export const PERIODS:[Period,string][]=[['day',fr('Jour')],['week',fr('Semaine')],['month',fr('Mois')]];
 type Grade={score:number|null;letter:string|null;share?:number|null};
 export interface PeriodRoom {entry_id:string;title:string;heated:boolean;score:number|null;min:number|null;max:number|null;mean:number|null;themes:Record<string,Grade>}
 export interface PeriodData {period:Period;start:string;step_hours:number;themes:{comfort:Grade;warmth:Grade;humidity:Grade;air:Grade};rooms:PeriodRoom[];
@@ -15,44 +16,46 @@ export type Periods={version:number;computed_at:string}&Record<Period,PeriodData
 
 export const SECTIONS=['themes','rooms_chart','curve','rooms','details'] as const;
 export type Section=typeof SECTIONS[number];
-export const SECTION_LABELS:Record<Section,string>={themes:'Les 4 thèmes du bilan',rooms_chart:'Températures des pièces',curve:'Courbe dedans et dehors',
-  rooms:'Pièces (tuiles)',details:'Détails'};
+export const SECTION_LABELS:Record<Section,string>={themes:fr('Les 4 thèmes du bilan'),rooms_chart:fr('Températures des pièces'),curve:fr('Courbe dedans et dehors'),
+  rooms:fr('Pièces (tuiles)'),details:fr('Détails')};
 export const SHOWN_SECTIONS:Section[]=[...SECTIONS];
 export const FOLDED_SECTIONS:Section[]=['curve','rooms','details'];
 
-const KIND:Partial<Record<Level,string>>={action:'Geste conseillé',urgent:'Attention',benefit:'À saisir'};
+const KIND:Partial<Record<Level,string>>={action:fr('Geste conseillé'),urgent:fr('Attention'),benefit:fr('À saisir')};
 
 /** The banner: one advice at a time, the room named first, bars to pick one. */
 export function band(o:{slides:Slide[];index:number;pick:(i:number)=>void;title:string}):TemplateResult {
   const s=o.slides[o.index%o.slides.length],many=o.slides.length>1,asking=!!KIND[s.level];
   return html`<div class="nh-band" data-level=${s.level}>
-    <div class="nh-band-top"><span class="nh-room">${asking?s.pill:o.title}</span>${asking?html`<span class="nh-kind">${KIND[s.level]}</span>`:html`<span class="nh-kind">${s.pill??pills[s.level]}</span>`}
-      ${many?html`<span class="nh-pos">${o.index%o.slides.length+1} sur ${o.slides.length}</span>`:nothing}</div>
+    <div class="nh-band-top"><span class="nh-room">${asking?tx(s.pill):o.title}</span>${asking?html`<span class="nh-kind">${t(KIND[s.level]!)}</span>`:html`<span class="nh-kind">${tx(s.pill??pills[s.level])}</span>`}
+      ${many?html`<span class="nh-pos">${t('{i} sur {n}',{i:o.index%o.slides.length+1,n:o.slides.length})}</span>`:nothing}</div>
     <div class="nh-band-main"><span class="nh-disk">${icon(s.disk??'check')}</span>
-      <div class="nh-band-text"><p class="nh-title">${s.title}</p>${s.line?html`<p class="nh-line">${s.line}</p>`:nothing}${s.cap?html`<p class="nh-cap">${s.cap}</p>`:nothing}</div></div>
-    ${many?html`<div class="nh-bars">${o.slides.map((x,k)=>html`<button type="button" aria-label=${`Conseil ${k+1} : ${x.pill}`} aria-current=${k===o.index%o.slides.length?'true':'false'} data-level=${x.level} @click=${()=>o.pick(k)}><span></span></button>`)}</div>`:nothing}
+      <div class="nh-band-text"><p class="nh-title">${tx(s.title)}</p>${s.line?html`<p class="nh-line">${tl(s.line)}</p>`:nothing}${s.cap?html`<p class="nh-cap">${tx(s.cap)}</p>`:nothing}</div></div>
+    ${many?html`<div class="nh-bars">${o.slides.map((x,k)=>html`<button type="button" aria-label=${t('Conseil {n} : {title}',{n:k+1,title:tx(x.pill)})} aria-current=${k===o.index%o.slides.length?'true':'false'} data-level=${x.level} @click=${()=>o.pick(k)}><span></span></button>`)}</div>`:nothing}
   </div>`;
 }
 
 export function tabs(period:Period,pick:(p:Period)=>void):TemplateResult {
-  return html`<div class="nh-tabs" role="group" aria-label="Période">${PERIODS.map(([p,label])=>html`<button type="button" aria-pressed=${p===period?'true':'false'} @click=${()=>pick(p)}>${label}</button>`)}</div>`;
+  return html`<div class="nh-tabs" role="group" aria-label=${t('Période')}>${PERIODS.map(([p,label])=>html`<button type="button" aria-pressed=${p===period?'true':'false'} @click=${()=>pick(p)}>${t(label)}</button>`)}</div>`;
 }
 
+/** A value not known yet. */
+const DASH='—';
 const goodness=(l:string|null)=>l==='A'||l==='B'?'calm':l==='C'?'neutral':l?'action':'neutral';
-const comfortWord=(s:number)=>s>=85?'Très bon':s>=70?'Bon dans l’ensemble':s>=55?'Correct':'À améliorer';
-const PERIOD_WORD:Record<Period,string>={day:'sur 24 h',week:'sur 7 jours',month:'sur 30 jours'};
+const comfortWord=(s:number)=>s>=85?fr('Très bon'):s>=70?fr('Bon dans l’ensemble'):s>=55?fr('Correct'):fr('À améliorer');
+const PERIOD_WORD:Record<Period,string>={day:fr('sur 24 h'),week:fr('sur 7 jours'),month:fr('sur 30 jours')};
 
 /** The review's four themes over the period: a letter each, and the figure behind it. */
 export function themes(d:PeriodData|undefined,period:Period):TemplateResult {
-  const t=d?.themes,none='pas assez de mesures';
+  const th=d?.themes,none=fr('pas assez de mesures');
   const tiles:[string,Grade|undefined,string,string,string][]=[
-    ['Confort',t?.comfort,t?.comfort.score!=null?String(t.comfort.score):'—',' / 100',t?.comfort.score!=null?comfortWord(t.comfort.score):none],
-    ['Chaleur',t?.warmth,t?.warmth.share!=null?String(t.warmth.share):'—',' %',t?.warmth.share!=null?'du temps confortable':'aucune pièce chauffée mesurée'],
-    ['Humidité',t?.humidity,t?.humidity.share!=null?String(t.humidity.share):'—',' %',t?.humidity.share!=null?'du temps trop humide':'pas de capteur d’humidité'],
-    ['Air',t?.air,t?.air.share!=null?String(t.air.share):'—',' %',t?.air.share!=null?'du temps air correct':'pas de capteur de CO₂']];
-  return html`<div class="nh-themes" aria-label=${'Bilan '+PERIOD_WORD[period]}>${tiles.map(([label,g,value,unit,note])=>html`<div class="nh-theme">
-    <span class="nw-label">${label}</span><span class="nh-letter" data-level=${goodness(g?.letter??null)}>${g?.letter??'–'}</span>
-    <b>${d?value:'…'}${d&&value!=='—'?html`<small>${unit}</small>`:nothing}</b><span class="nh-note">${d?(g?.letter||value!=='—'?note:none):'chargement'}</span></div>`)}</div>`;
+    [fr('Confort'),th?.comfort,th?.comfort.score!=null?String(th.comfort.score):'—',' / 100',th?.comfort.score!=null?comfortWord(th.comfort.score):none],
+    [fr('Chaleur'),th?.warmth,th?.warmth.share!=null?String(th.warmth.share):'—',' %',th?.warmth.share!=null?fr('du temps confortable'):fr('aucune pièce chauffée mesurée')],
+    [fr('Humidité'),th?.humidity,th?.humidity.share!=null?String(th.humidity.share):'—',' %',th?.humidity.share!=null?fr('du temps trop humide'):fr('pas de capteur d’humidité')],
+    [fr('Air'),th?.air,th?.air.share!=null?String(th.air.share):'—',' %',th?.air.share!=null?fr('du temps air correct'):fr('pas de capteur de CO₂')]];
+  return html`<div class="nh-themes" aria-label=${t('Bilan {period}',{period:t(PERIOD_WORD[period])})}>${tiles.map(([label,g,value,unit,note])=>html`<div class="nh-theme">
+    <span class="nw-label">${t(label)}</span><span class="nh-letter" data-level=${goodness(g?.letter??null)}>${g?.letter??'–'}</span>
+    <b>${d?value:'…'}${d&&value!=='—'?html`<small>${unit}</small>`:nothing}</b><span class="nh-note">${d?t(g?.letter||value!==DASH?note:none):t('chargement')}</span></div>`)}</div>`;
 }
 
 export interface ChartRoom {entry_id:string;title:string;level:Level|'neutral';now:number|null}
@@ -78,28 +81,28 @@ export function roomsChart(o:{floors:ChartFloor[];data:PeriodData|undefined;peri
     <span class="nh-val">${l.dot!=null?number(Math.round(l.dot*10)/10)+'°':'—'}</span></div>`;
   let i=0;
   return html`<div class="nh-chart">
-    <div class="nh-chart-head"><span class="nw-label">Températures ${PERIOD_WORD[o.period]}</span>
-      <span class="nh-legend">${o.band?html`<span><i class="nh-key-band"></i>votre plage</span>`:nothing}<span><i class="nh-key-range"></i>mini–maxi</span><span><i class="nh-key-dot"></i>${o.period==='day'?'maintenant':'moyenne'}</span></span></div>
+    <div class="nh-chart-head"><span class="nw-label">${t('Températures {period}',{period:t(PERIOD_WORD[o.period])})}</span>
+      <span class="nh-legend">${o.band?html`<span><i class="nh-key-band"></i>${t('votre plage')}</span>`:nothing}<span><i class="nh-key-range"></i>${t('mini–maxi')}</span><span><i class="nh-key-dot"></i>${o.period==='day'?t('maintenant'):t('moyenne')}</span></span></div>
     <div class="nh-row nh-axis"><span></span><span class="nh-track">${ticks.map(t=>html`<em class=${o.band&&t>=o.band[0]&&t<=o.band[1]?'in':''} style=${`left:${at(t)}`}>${t}°</em>`)}</span><span></span></div>
     ${o.floors.map(f=>{const rows=lines.slice(i,i+=f.rooms.length);
       return html`${o.floors.length>1?html`<div class="nh-floor"><span class="nw-label">${f.name}</span><span>${f.mean!=null?number(f.mean)+'°':''}</span></div>`:nothing}${rows.map(row)}`;})}
-    ${outValue!=null?html`<div class="nh-row nh-out"><span class="nh-name">Dehors</span><span class="nh-out-text">${out?html`${number(out.min)} → ${number(out.max)} °C`:nothing}</span><span class="nh-val">${number(Math.round(outValue*10)/10)}°</span></div>`:nothing}
+    ${outValue!=null?html`<div class="nh-row nh-out"><span class="nh-name">${t('Dehors')}</span><span class="nh-out-text">${out?html`${number(out.min)} → ${number(out.max)} °C`:nothing}</span><span class="nh-val">${number(Math.round(outValue*10)/10)}°</span></div>`:nothing}
   </div>`;
 }
 
 /** The home inside (heated rooms' mean) and the outdoor air over the period, the comfort range behind. */
 export function curve(d:PeriodData|undefined,period:Period,band:[number,number]|null):TemplateResult {
-  if(!d)return html`<p class="nh-empty">Chargement de l’historique…</p>`;
+  if(!d)return html`<p class="nh-empty">${t('Chargement de l’historique…')}</p>`;
   const ins=d.curve.inside,outs=d.curve.outside,all=[...ins,...outs].filter((x):x is number=>x!=null).concat(band??[]);
-  if(!ins.some(x=>x!=null))return html`<p class="nh-empty">Pas encore d’historique pour cette période.</p>`;
+  if(!ins.some(x=>x!=null))return html`<p class="nh-empty">${t('Pas encore d’historique pour cette période.')}</p>`;
   const W=320,H=120,lo=Math.floor(Math.min(...all))-1,hi=Math.ceil(Math.max(...all))+1,n=Math.max(ins.length-1,1);
   const x=(k:number)=>(k/n*W).toFixed(1),y=(t:number)=>((hi-t)/(hi-lo)*H).toFixed(1);
   const path=(s:(number|null)[])=>s.map((v,k)=>v==null?'':`${k&&s[k-1]!=null?'L':'M'}${x(k)} ${y(v)}`).join(' ');
-  const start=new Date(d.start),labels=[0,.25,.5,.75,1].map(f=>{const t=new Date(start.getTime()+f*(ins.length*d.step_hours)*3600000);
-    return f===1?'maint.':period==='day'?`${t.getHours()} h`:period==='week'?t.toLocaleDateString('fr-FR',{weekday:'short'}):t.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});});
+  const start=new Date(d.start),labels=[0,.25,.5,.75,1].map(f=>{const at=new Date(start.getTime()+f*(ins.length*d.step_hours)*3600000);
+    return f===1?tr('maint.'):period==='day'?tr('{n} h',{n:at.getHours()}):period==='week'?at.toLocaleDateString(currentLocale(),{weekday:'short'}):at.toLocaleDateString(currentLocale(),{day:'numeric',month:'short'});});
   return html`<div class="nh-curve">
-    <div class="nh-chart-head"><span class="nw-label">Dedans et dehors</span><span class="nh-legend"><span><i class="nh-key-in"></i>dedans</span><span><i class="nh-key-out"></i>dehors</span></span></div>
-    <svg viewBox=${`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label=${'Température moyenne des pièces et dehors '+PERIOD_WORD[period]}>
+    <div class="nh-chart-head"><span class="nw-label">${tr('Dedans et dehors')}</span><span class="nh-legend"><span><i class="nh-key-in"></i>${tr('dedans')}</span><span><i class="nh-key-out"></i>${tr('dehors')}</span></span></div>
+    <svg viewBox=${`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label=${tr('Température moyenne des pièces et dehors {period}',{period:tr(PERIOD_WORD[period])})}>
       ${band?svg`<rect class="nh-c-band" x="0" width=${W} y=${y(band[1])} height=${Number(y(band[0]))-Number(y(band[1]))}></rect>`:nothing}
       <path class="nh-c-out" d=${path(outs)}></path><path class="nh-c-in" d=${path(ins)}></path></svg>
     <div class="nh-yaxis" aria-hidden="true"><span>${hi}°</span><span>${lo}°</span></div>

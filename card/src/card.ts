@@ -7,21 +7,23 @@ import {cleanConfig,type Config,type View,type HomeAssistant} from './types';
 import {icon} from './ui/icons';
 import {roomCard,asking,type CardState} from './views/room';
 import {LiveView} from './live';
+import {hassMatters} from './hass-change';
+import {setLanguage,guessLanguage,t,fr} from './i18n';
 import './editor';
 import './review-card';
 import './home';
 
 let instances=0;
 const problems:Record<string,[string,string]>={
-  choose_entry:['Choisissez une pièce','Plusieurs pièces Hestia Comfort sont configurées. Choisissez celle de cette carte dans ses réglages.'],
-  not_configured:['Ajoutez Hestia Comfort','Ouvrez Hestia Confort dans la barre latérale pour configurer votre première pièce après installation de l’intégration.'],
-  not_found:['Pièce introuvable','Cette pièce a été supprimée ou n’est pas chargée. Choisissez une autre pièce dans les réglages de la carte.'],
-  unknown_command:['Installez la version compatible de l’intégration','La carte nécessite l’intégration Hestia Comfort avec la vue v1. Installez ou mettez à jour les deux fichiers ensemble, puis redémarrez Home Assistant.'],
-  version:['Vue incompatible','La réponse reçue ne correspond pas à cette carte. Mettez à jour la carte et l’intégration ensemble.'],
-  stale:['Le conseil n’est plus actuel','Le lien n’a pas fourni de résultat récent. Les anciennes mesures sont retirées jusqu’au retour des mises à jour.'],
-  unavailable:['Calcul indisponible','Le moteur n’a pas de résultat utilisable. Vérifiez l’intégration et ses journaux.'],
-  reload:['La pièce se recharge','Les réglages ont changé. Le conseil reviendra après reconnexion.'],
-  connection:['Connexion indisponible','Le conseil est retiré. La carte réessaie automatiquement ; vérifiez la connexion et les journaux de l’intégration.'],
+  choose_entry:[fr('Choisissez une pièce'),fr('Plusieurs pièces Hestia Comfort sont configurées. Choisissez celle de cette carte dans ses réglages.')],
+  not_configured:[fr('Ajoutez Hestia Comfort'),fr('Ouvrez Hestia Confort dans la barre latérale pour configurer votre première pièce après installation de l’intégration.')],
+  not_found:[fr('Pièce introuvable'),fr('Cette pièce a été supprimée ou n’est pas chargée. Choisissez une autre pièce dans les réglages de la carte.')],
+  unknown_command:[fr('Installez la version compatible de l’intégration'),fr('La carte nécessite l’intégration Hestia Comfort avec la vue v1. Installez ou mettez à jour les deux fichiers ensemble, puis redémarrez Home Assistant.')],
+  version:[fr('Vue incompatible'),fr('La réponse reçue ne correspond pas à cette carte. Mettez à jour la carte et l’intégration ensemble.')],
+  stale:[fr('Le conseil n’est plus actuel'),fr('Le lien n’a pas fourni de résultat récent. Les anciennes mesures sont retirées jusqu’au retour des mises à jour.')],
+  unavailable:[fr('Calcul indisponible'),fr('Le moteur n’a pas de résultat utilisable. Vérifiez l’intégration et ses journaux.')],
+  reload:[fr('La pièce se recharge'),fr('Les réglages ont changé. Le conseil reviendra après reconnexion.')],
+  connection:[fr('Connexion indisponible'),fr('Le conseil est retiré. La carte réessaie automatiquement ; vérifiez la connexion et les journaux de l’intégration.')],
 };
 export class NiakComfortCard extends LitElement {
   static styles=[unsafeCSS(style),unsafeCSS(charte),unsafeCSS(roomStyle)];
@@ -62,6 +64,9 @@ export class NiakComfortCard extends LitElement {
   getGridOptions(){return {columns:this.config?.format==='full'?'full':12,rows:'auto',min_columns:6};}
   connectedCallback(){super.connectedCallback();this.connect();}
   disconnectedCallback(){super.disconnectedCallback();this.live.stop();this.stopPartners();this.closeFull();}
+  protected shouldUpdate(changed:PropertyValues){return hassMatters(changed,this.hass);}
+  // The words follow Home Assistant's language, set before each drawing.
+  protected willUpdate(){setLanguage(this.hass?.language);}
   protected updated(changed:PropertyValues){
     if(changed.has('hass')||changed.has('config')) this.connect();
     const theme=this.config?.theme==='auto'||!this.config?.theme?(this.hass?.themes?.darkMode===false?'light':'dark'):this.config.theme;
@@ -92,7 +97,7 @@ export class NiakComfortCard extends LitElement {
     this.openingControl?.focus();this.openingControl=undefined;
   }
   private configure(){
-    const path="/niak/confort"+(this.view?.entry_id?"/"+encodeURIComponent(this.view.entry_id):"");
+    const path="/hestia/confort"+(this.view?.entry_id?"/"+encodeURIComponent(this.view.entry_id):"");
     // Navigate inside Home Assistant, without reloading the whole page.
     history.pushState(null,'',path);window.dispatchEvent(new CustomEvent('location-changed',{detail:{replace:false}}));
   }
@@ -115,21 +120,21 @@ export class NiakComfortCard extends LitElement {
     const partners=(this.view!.volume??[]).map(p=>this.partnerViews[p.entry_id]).filter((p):p is View=>!!p);
     const card=roomCard(this.view!,this.config!,this.state(modal),format,partners);
     // The alert format has nothing to say: hidden on the dashboard, a short note in the card editor's preview.
-    if(card===null)return this.preview||this.editMode?html`<ha-card class="nc-c nc-alert-note" data-level="calm"><p>Alerte · ${this.view!.title} : rien à signaler. La carte n’apparaît que lorsqu’un geste est conseillé.</p></ha-card>`:nothing;
+    if(card===null)return this.preview||this.editMode?html`<ha-card class="nc-c nc-alert-note" data-level="calm"><p>${t('Alerte · {room} : rien à signaler. La carte n’apparaît que lorsqu’un geste est conseillé.',{room:this.view!.title})}</p></ha-card>`:nothing;
     if(format==='full')return card;
     const tap=format==='mini'||format==='alert';
-    const label=tap?'Ouvrir la carte complète':undefined;
+    const label=tap?t('Ouvrir la carte complète'):undefined;
     return html`<div class="nc-hold" role=${tap?'button':'group'} tabindex=${tap?0:-1} aria-label=${label??this.view!.title}
       @click=${tap?this.act:this.swallow} @pointerdown=${tap?undefined:this.press} @pointerup=${this.release} @pointerleave=${this.release} @pointercancel=${this.release} @contextmenu=${(e:Event)=>{if(this.held)e.preventDefault();}}
       @keydown=${(e:KeyboardEvent)=>{if(tap&&(e.key==='Enter'||e.key===' ')){e.preventDefault();this.act(e);}}}>${card}</div>`;
   }
   protected render(){
     if(!this.config)return nothing;
-    if(!this.view){const [title,text]=this.problem?(problems[this.problem]??problems.connection):['Chargement du confort','En attente des observations de la pièce.'];
-      return html`<ha-card class="nc-card problem" data-level="neutral" role="status"><h2>${title}</h2><p>${text}</p>${this.problem?html`<button @click=${()=>{this.live.stop();this.problem=undefined;this.connect();}}>Réessayer</button>${this.hass?.user?.is_admin?html`<button @click=${()=>this.configure()}>Ouvrir Hestia Confort</button>`:nothing}`:nothing}</ha-card>`;}
+    if(!this.view){const [title,text]=this.problem?(problems[this.problem]??problems.connection):[fr('Chargement du confort'),fr('En attente des observations de la pièce.')];
+      return html`<ha-card class="nc-card problem" data-level="neutral" role="status"><h2>${t(title)}</h2><p>${t(text)}</p>${this.problem?html`<button @click=${()=>{this.live.stop();this.problem=undefined;this.connect();}}>${t('Réessayer')}</button>${this.hass?.user?.is_admin?html`<button @click=${()=>this.configure()}>${t('Ouvrir Hestia Confort')}</button>`:nothing}`:nothing}</ha-card>`;}
     return html`${this.panel(this.config.format==='full')}
       <dialog aria-labelledby=${this.uid+'-dialog-title'} @cancel=${()=>{this.dialogOpen=false;}} @close=${()=>{this.dialogOpen=false;}}>
-        <div class="dialog-top"><span id=${this.uid+'-dialog-title'}>${this.view.volume_name??this.view.title}</span><button class="icon-button" aria-label="Fermer la carte complète" @click=${()=>this.closeFull()}>${icon('close')}</button></div><div>${this.dialogOpen?this.panel(true,true):nothing}</div>
+        <div class="dialog-top"><span id=${this.uid+'-dialog-title'}>${this.view.volume_name??this.view.title}</span><button class="icon-button" aria-label=${t('Fermer la carte complète')} @click=${()=>this.closeFull()}>${icon('close')}</button></div><div>${this.dialogOpen?this.panel(true,true):nothing}</div>
       </dialog>`;
   }
 }
@@ -137,4 +142,6 @@ export class NiakComfortCard extends LitElement {
 if(!customElements.get('niak-comfort-card'))customElements.define('niak-comfort-card',NiakComfortCard);
 declare global {interface Window {customCards?:Array<Record<string,unknown>>}}
 window.customCards??=[];
-if(!window.customCards.some(c=>c.type==='niak-comfort-card'))window.customCards.push({type:'niak-comfort-card',name:'Hestia Confort',description:'Hestia Comfort : le confort par pièce, avec des conseils expliqués et des sources visibles.'});
+// The « Add card » list is written at load, before the card gets Home Assistant: the page's language then.
+guessLanguage();
+if(!window.customCards.some(c=>c.type==='niak-comfort-card'))window.customCards.push({type:'niak-comfort-card',name:t('Hestia Confort'),description:t('Hestia Comfort : le confort par pièce, avec des conseils expliqués et des sources visibles.')});

@@ -1,9 +1,12 @@
-export const labels:Record<string,string>={season:'Saison',indoor_temperature:'Température de la pièce',indoor_humidity:'Humidité de la pièce',co2:'CO₂',pm25:'Particules fines PM2.5',voc:'Composés organiques volatils (COV)',purifier:'Purificateur',ventilation:'Ventilation (VMC)',ventilation_boost:'Vitesse rapide de la VMC (Turbo)',presence:'Présence dans la pièce',illuminance:'Luminosité',windows:'Fenêtres et portes vers l’extérieur',heating:'Chauffage',heating_indicator:'Indicateur de chauffe',outdoor_temperature:'Température dehors',outdoor_humidity:'Humidité dehors',rain:'Pluie actuelle',wind_gust:'Rafales de vent',wind_bearing:'Direction du vent',solar:'Ensoleillement',pollution:'Qualité de l’air extérieur'};
+import {t,fr,currentLocale} from './socle/i18n';
+/** A map of French texts read in the user's language: each value is translated when it is read. */
+export function words<T extends Record<string,string>>(map:T):T{return new Proxy(map,{get:(o,k)=>{const v=Reflect.get(o,k);return typeof v==='string'?t(v):v;}});}
+export const labels:Record<string,string>=words({season:fr('Saison'),indoor_temperature:fr('Température de la pièce'),indoor_humidity:fr('Humidité de la pièce'),co2:fr('CO₂'),pm25:fr('Particules fines PM2.5'),voc:fr('Composés organiques volatils (COV)'),purifier:fr('Purificateur'),ventilation:fr('Ventilation (VMC)'),ventilation_boost:fr('Vitesse rapide de la VMC (Turbo)'),presence:fr('Présence dans la pièce'),illuminance:fr('Luminosité'),windows:fr('Fenêtres et portes vers l’extérieur'),heating:fr('Chauffage'),heating_indicator:fr('Indicateur de chauffe'),outdoor_temperature:fr('Température dehors'),outdoor_humidity:fr('Humidité dehors'),rain:fr('Pluie actuelle'),wind_gust:fr('Rafales de vent'),wind_bearing:fr('Direction du vent'),solar:fr('Ensoleillement'),pollution:fr('Qualité de l’air extérieur')});
 export const indoor=['indoor_temperature','indoor_humidity'] as const;
 export const outdoor=['outdoor_temperature','outdoor_humidity','rain','wind_gust','wind_bearing','solar','pollution','season'] as const;
 export const multiple=new Set(['windows','presence']);
-export const exposures:[string,string][]=[['N','Nord'],['NE','Nord-est'],['E','Est'],['SE','Sud-est'],['S','Sud'],['SO','Sud-ouest'],['O','Ouest'],['NO','Nord-ouest']];
-export const kinds:[string,string][]=[['window','Fenêtre'],['french','Porte-fenêtre ou baie'],['skylight','Vasistas ou petite fenêtre'],['door','Porte']];
+export const exposures:[string,string][]=[['N',fr('Nord')],['NE',fr('Nord-est')],['E',fr('Est')],['SE',fr('Sud-est')],['S',fr('Sud')],['SO',fr('Sud-ouest')],['O',fr('Ouest')],['NO',fr('Nord-ouest')]];
+export const kinds:[string,string][]=[['window',fr('Fenêtre')],['french',fr('Porte-fenêtre ou baie')],['skylight',fr('Vasistas ou petite fenêtre')],['door',fr('Porte')]];
 export interface Candidate {
  entity_id:string;name:string;value:string;unit:string|null;area_id:string|null;
  local:boolean;outside:boolean;reference:boolean;available:boolean;adapter:string;warnings:string[];
@@ -38,28 +41,28 @@ export interface Twins {version:1;rooms:{entry_id:string;title:string;twin:Twin;
  /** Where the station's sun sensor is shaded, learned (engine/sunlight.py): azimuths by 10°. */ sun_shade?:{scale:number;shaded:number[];sunny_days:number}|null}[]}
 export interface HealthLine {level:Level;text:string;why:string;target?:Target|null}
 export interface Health {level:'ok'|'action';summary:string;tips_summary:string;rooms_summary:string;todo:HealthLine[];tips:HealthLine[];
- sources:{label:string;level:Level;text:string}[];sensors?:{answering:number;total:number};extensions?:Extension[];others?:{key:string;name:string;use:string}[];socle?:string;columns:string[];rooms:{entry_id:string;title:string;cells:{level:Level;text:string}[]}[];versions:HealthLine[]}
-export interface Hass {callWS<T>(msg:Record<string,unknown>):Promise<T>;user?:{is_admin:boolean};themes?:{darkMode?:boolean};connection?:unknown;states?:Record<string,{state:string;attributes?:Record<string,unknown>}>}
-export const warningText:Record<string,string>={
- alias:'Cette entité recopie une autre mesure. Vérifiez sa provenance ci-dessous.',
- other_area:'La mesure ou sa source est rattachée à une autre pièce. Confirmez qu’elle représente bien celle-ci.',
- contact_role:'Ce contact peut être une porte d’appareil, de meuble ou une porte intérieure. Gardez-le seulement s’il donne sur l’extérieur.',
- derived:'Il s’agit d’une donnée calculée ou regroupée. Vérifiez ce qu’elle mesure réellement.',
- no_hvac_action:'Cet équipement dit son mode mais pas s’il chauffe réellement : choisissez un indicateur de chauffe ci-dessous (vanne, relais, état de marche).',
- binary_meaning:'Signal avancé : « actif » doit signifier pluie ou aération déconseillée. Un diagnostic de panne ne convient pas.',
- outdoor_role:'Ce capteur n’est pas rattaché à une pièce extérieure. Vérifiez qu’il mesure bien l’air du dehors.',
- used_indoor:'Ce capteur sert déjà de mesure intérieure pour une de vos pièces : il ne mesure sans doute pas l’air du dehors.',
- daily_forecast:'Indice régional prévu pour la journée. Il peut déclencher votre précaution, mais ne prouve pas la qualité de l’air maintenant à vos fenêtres.'
-};
+ sources:{label:string;level:Level;text:string}[];version?:string;column_keys?:string[];sensors?:{answering:number;total:number};extensions?:Extension[];others?:{key:string;name:string;use:string}[];socle?:string;columns:string[];rooms:{entry_id:string;title:string;cells:{level:Level;text:string}[]}[];versions:HealthLine[]}
+export interface Hass {callWS<T>(msg:Record<string,unknown>):Promise<T>;language?:string;user?:{is_admin:boolean};themes?:{darkMode?:boolean};connection?:unknown;states?:Record<string,{state:string;attributes?:Record<string,unknown>}>}
+export const warningText:Record<string,string>=words({
+ alias:fr('Cette entité recopie une autre mesure. Vérifiez sa provenance ci-dessous.'),
+ other_area:fr('La mesure ou sa source est rattachée à une autre pièce. Confirmez qu’elle représente bien celle-ci.'),
+ contact_role:fr('Ce contact peut être une porte d’appareil, de meuble ou une porte intérieure. Gardez-le seulement s’il donne sur l’extérieur.'),
+ derived:fr('Il s’agit d’une donnée calculée ou regroupée. Vérifiez ce qu’elle mesure réellement.'),
+ no_hvac_action:fr('Cet équipement dit son mode mais pas s’il chauffe réellement : choisissez un indicateur de chauffe ci-dessous (vanne, relais, état de marche).'),
+ binary_meaning:fr('Signal avancé : « actif » doit signifier pluie ou aération déconseillée. Un diagnostic de panne ne convient pas.'),
+ outdoor_role:fr('Ce capteur n’est pas rattaché à une pièce extérieure. Vérifiez qu’il mesure bien l’air du dehors.'),
+ used_indoor:fr('Ce capteur sert déjà de mesure intérieure pour une de vos pièces : il ne mesure sans doute pas l’air du dehors.'),
+ daily_forecast:fr('Indice régional prévu pour la journée. Il peut déclencher votre précaution, mais ne prouve pas la qualité de l’air maintenant à vos fenêtres.')
+});
 // Names of Home Assistant areas that usually mean "living room".
 const livingNames=['salon','séjour','sejour','living','living room','pièce de vie','piece de vie'];
 export function livingArea(areas:Area[],used:Set<string>):Area|undefined {return areas.find(a=>!a.outdoor&&!used.has(a.area_id)&&livingNames.includes(a.name.trim().toLowerCase()));}
 export function measurement(c:Candidate):string {
- if(!c.available)return 'Ne répond pas en ce moment';
- if(c.atmo_label)return c.atmo_label+' · indice du jour';
- if(c.value==='on'||c.value==='off')return c.device_class==='window'||c.device_class==='door'||c.device_class==='opening'?(c.value==='on'?'Ouvert':'Fermé'):(c.value==='on'?'Actif':'Inactif');
+ if(!c.available)return t('Ne répond pas en ce moment');
+ if(c.atmo_label)return c.atmo_label+' · '+t('indice du jour');
+ if(c.value==='on'||c.value==='off')return c.device_class==='window'||c.device_class==='door'||c.device_class==='opening'?(c.value==='on'?t('Ouvert'):t('Fermé')):(c.value==='on'?t('Actif'):t('Inactif'));
  const n=Number(c.value);
- return (c.value!==''&&Number.isFinite(n)?new Intl.NumberFormat('fr-FR',{maximumFractionDigits:1}).format(n):c.value)+(c.unit?' '+c.unit:'');
+ return (c.value!==''&&Number.isFinite(n)?new Intl.NumberFormat(currentLocale(),{maximumFractionDigits:1}).format(n):c.value)+(c.unit?' '+c.unit:'');
 }
 export function defaultOpening():OpeningMeta {return {exposure:null,kind:'window',sheltered:false};}
 export function newRoom(area:{area_id:string;name:string}|null,name:string,d:Discovery):RoomConfig {
@@ -83,45 +86,45 @@ export const thresholdSources={
  humidity:'https://agirpourlatransition.ademe.fr/particuliers/proteger-sante/eviter-polluants/respirer-air-sain-chez-soi',
 };
 export function coverage(room:RoomConfig):string {
- const parts=[];if(room.sources.indoor_temperature)parts.push('Température');if(room.sources.indoor_humidity)parts.push('humidité');if(room.sources.co2)parts.push('CO₂');
+ const parts=[];if(room.sources.indoor_temperature)parts.push(t('Température'));if(room.sources.indoor_humidity)parts.push(t('humidité'));if(room.sources.co2)parts.push('CO₂');
  const n=room.windows.length;
- return (parts.join(', ')||'Mesures à compléter')+' · '+(n?n+' ouvrant'+(n>1?'s':''):'fenêtres non mesurées');
+ return (parts.join(', ')||t('Mesures à compléter'))+' · '+(n>1?t('{n} ouvrants',{n}):n?t('{n} ouvrant',{n}):t('fenêtres non mesurées'));
 }
-const shortNames:Record<string,string>={season:'saison',outdoor_temperature:'température',outdoor_humidity:'humidité',rain:'pluie',wind_gust:'rafales',wind_bearing:'direction du vent',solar:'ensoleillement',pollution:'qualité de l’air'};
+const shortNames:Record<string,string>=words({season:fr('saison'),outdoor_temperature:fr('température'),outdoor_humidity:fr('humidité'),rain:fr('pluie'),wind_gust:fr('rafales'),wind_bearing:fr('direction du vent'),solar:fr('ensoleillement'),pollution:fr('qualité de l’air')});
 export function exteriorSummary(sources:Record<string,Spec>):string {
  const names=outdoor.filter(k=>sources[k]).map(k=>shortNames[k]);
- return names.length?names.join(', ').replace(/^./,c=>c.toUpperCase()):'Rien de configuré';
+ return names.length?names.join(', ').replace(/^./,c=>c.toUpperCase()):t('Rien de configuré');
 }
 export function warningId(key:string,id:string){return key+':'+id;}
 
 // The steps of a room, named by what they set (charte des onglets de réglage, ECOSYSTEME.md § 8).
-export const stages=['Température et humidité','Fenêtres et portes','Qualité de l’air','Chauffage','La pièce et ses réglages','Récapitulatif'];
+export const stages=[fr('Température et humidité'),fr('Fenêtres et portes'),fr('Qualité de l’air'),fr('Chauffage'),fr('La pièce et ses réglages'),fr('Récapitulatif')];
 // What each step is for, shown on top of it in a frame that folds: one idea per line.
 export const intros:Record<string,string[]>={
- 0:['La température de la pièce : la seule mesure obligatoire.',
-  'L’humidité est facultative : elle repère un air trop humide.',
-  'Les capteurs de la pièce sont proposés ; vous les gardez, les changez ou les retirez.'],
- 1:['Les contacts des fenêtres et portes qui donnent dehors.',
-  'Les contacts disent ce qui est ouvert ; l’exposition dit quand le soleil entre.',
-  'Facultatif : sans contact, les conseils ne savent pas ce qui est ouvert.'],
- 2:['Le CO₂, les particules et les COV suivent chacun une partie de la qualité de l’air.',
-  'Tout est facultatif. Un purificateur ne retire pas le CO₂.'],
- 3:['Le thermostat ou la vanne de la pièce, pour savoir si le chauffage tourne.',
-  'Le conseil évite alors d’ouvrir pendant qu’il chauffe. Il ne commande rien.',
-  'Facultatif.'],
- 4:['Le nom de la pièce et sa pièce Home Assistant.',
-  'Les précautions et les autres paramètres de fonctionnement, facultatifs.',
-  'Chaque seuil d’interprétation se règle avec son capteur, dans les étapes précédentes.'],
- 5:['Tout ce que vous avez choisi, onglet par onglet.',
-  'Rien ne change tant que vous n’avez pas enregistré ; un oubli, revenez à l’onglet voulu.'],
- exterior:['Les mesures du dehors : température, humidité, pluie, vent, soleil et pollution.',
-  'Avec Hestia Weather, elles sont reprises de sa station ; sinon, vous choisissez vos capteurs.',
-  'Réglées une fois, elles servent à toutes vos pièces.'],
+ 0:[fr('La température de la pièce : la seule mesure obligatoire.'),
+  fr('L’humidité est facultative : elle repère un air trop humide.'),
+  fr('Les capteurs de la pièce sont proposés ; vous les gardez, les changez ou les retirez.')],
+ 1:[fr('Les contacts des fenêtres et portes qui donnent dehors.'),
+  fr('Les contacts disent ce qui est ouvert ; l’exposition dit quand le soleil entre.'),
+  fr('Facultatif : sans contact, les conseils ne savent pas ce qui est ouvert.')],
+ 2:[fr('Le CO₂, les particules et les COV suivent chacun une partie de la qualité de l’air.'),
+  fr('Tout est facultatif. Un purificateur ne retire pas le CO₂.')],
+ 3:[fr('Le thermostat ou la vanne de la pièce, pour savoir si le chauffage tourne.'),
+  fr('Le conseil évite alors d’ouvrir pendant qu’il chauffe. Il ne commande rien.'),
+  fr('Facultatif.')],
+ 4:[fr('Le nom de la pièce et sa pièce Home Assistant.'),
+  fr('Les précautions et les autres paramètres de fonctionnement, facultatifs.'),
+  fr('Chaque seuil d’interprétation se règle avec son capteur, dans les étapes précédentes.')],
+ 5:[fr('Tout ce que vous avez choisi, onglet par onglet.'),
+  fr('Rien ne change tant que vous n’avez pas enregistré ; un oubli, revenez à l’onglet voulu.')],
+ exterior:[fr('Les mesures du dehors : température, humidité, pluie, vent, soleil et pollution.'),
+  fr('Avec Hestia Weather, elles sont reprises de sa station ; sinon, vous choisissez vos capteurs.'),
+  fr('Réglées une fois, elles servent à toutes vos pièces.')],
 };
 // The exterior sensors, by frame: title and keys.
-export const outdoorGroups:[string,string[]][]=[['Température et humidité',['outdoor_temperature','outdoor_humidity']],['Pluie et vent',['rain','wind_gust','wind_bearing']],['Soleil',['solar']],['Saison',['season']]];
+export const outdoorGroups:[string,string[]][]=[[fr('Température et humidité'),['outdoor_temperature','outdoor_humidity']],[fr('Pluie et vent'),['rain','wind_gust','wind_bearing']],[fr('Soleil'),['solar']],[fr('Saison'),['season']]];
 /** A season sensor's state, in words: the Season integration speaks English. */
-export const seasonNames:Record<string,string>={spring:'Printemps',printemps:'Printemps',summer:'Été',ete:'Été','été':'Été',autumn:'Automne',fall:'Automne',automne:'Automne',winter:'Hiver',hiver:'Hiver'};
+export const seasonNames:Record<string,string>=words({spring:fr('Printemps'),printemps:fr('Printemps'),summer:fr('Été'),ete:fr('Été'),'été':fr('Été'),autumn:fr('Automne'),fall:fr('Automne'),automne:fr('Automne'),winter:fr('Hiver'),hiver:fr('Hiver')});
 // Only the settings still displayed inside the "Autres réglages" advanced frame.
 export const advancedDefaults:Record<string,number>={illuminance_low:100,gust_max:45,frost:1,sun_facade:250,max_age_seconds:10800};
 export function changedAdvanced(settings:Record<string,number>):number{return Object.entries(advancedDefaults).filter(([k,v])=>settings[k]!==undefined&&settings[k]!==v).length;}
@@ -136,18 +139,18 @@ export function airSource(spec?:Spec):string{return !spec?'none':spec.adapter===
 export function airChoices(s:Pick<Snapshot,'niak_weather'|'integrations'>,all:Candidate[],current:string):Choice[]{
  const atmo=all.some(c=>c.adapter==='atmo_daily'),niak=all.some(c=>c.adapter==='niak_index'),nw=!!s.niak_weather?.installed;
  const list:Choice[]=[
-  {value:'atmo',label:'Atmo France',hint:'L’indice ATMO du jour, pour votre zone.',available:atmo,
-   ...(atmo?{}:s.integrations?.atmofrance?{missing:'Aucune zone trouvée : ajoutez-en une dans l’intégration Atmo France.'}:{missing:'Pas encore installée',url:links.atmofrance})},
-  {value:'niak',label:'Hestia Weather',hint:'L’indice de qualité de l’air de votre lieu Hestia Weather.',available:niak,
-   ...(niak?{}:nw?{missing:'Activez la qualité de l’air dans l’onglet Météo.'}:{missing:'Pas encore installée',url:links.niak_weather})}];
- if(current==='other')list.push({value:'other',label:'Autre signal',hint:'Un capteur choisi avant cette version.',available:true});
- list.push({value:'none',label:'Pas de qualité de l’air',hint:'Les conseils ne tiennent pas compte de la pollution.',available:true});
+  {value:'atmo',label:'Atmo France',hint:t('L’indice ATMO du jour, pour votre zone.'),available:atmo,
+   ...(atmo?{}:s.integrations?.atmofrance?{missing:t('Aucune zone trouvée : ajoutez-en une dans l’intégration Atmo France.')}:{missing:t('Pas encore installée'),url:links.atmofrance})},
+  {value:'niak',label:'Hestia Weather',hint:t('L’indice de qualité de l’air de votre lieu Hestia Weather.'),available:niak,
+   ...(niak?{}:nw?{missing:t('Activez la qualité de l’air dans l’onglet Météo.')}:{missing:t('Pas encore installée'),url:links.niak_weather})}];
+ if(current==='other')list.push({value:'other',label:t('Autre signal'),hint:t('Un capteur choisi avant cette version.'),available:true});
+ list.push({value:'none',label:t('Pas de qualité de l’air'),hint:t('Les conseils ne tiennent pas compte de la pollution.'),available:true});
  return list;
 }
 // Where the exterior measures come from: Hestia Weather's station, or the person's own sensors.
 export function exteriorChoices(s:Pick<Snapshot,'niak_weather'>):Choice[]{
  const nw=s.niak_weather,ready=!!nw?.installed&&!!nw.places.length;
- return [{value:'weather',label:'Hestia Weather',hint:'Meilleurs conseils : Confort sait s’il va pleuvoir, quand le soleil arrive et quand l’air dehors est mauvais.',badge:'recommandé',available:ready,
-   ...(ready?{}:nw?.installed?{missing:'Aucun lieu dans l’onglet Météo pour l’instant.'}:{missing:'Pas encore installée',url:links.niak_weather})},
-  {value:'own',label:'Vos propres capteurs',hint:'Une mesure à la fois, toutes facultatives. Sans prévisions ni alertes, les conseils seront moins justes.',available:true}];
+ return [{value:'weather',label:'Hestia Weather',hint:t('Meilleurs conseils : Confort sait s’il va pleuvoir, quand le soleil arrive et quand l’air dehors est mauvais.'),badge:t('recommandé'),available:ready,
+   ...(ready?{}:nw?.installed?{missing:t('Aucun lieu dans l’onglet Météo pour l’instant.')}:{missing:t('Pas encore installée'),url:links.niak_weather})},
+  {value:'own',label:t('Vos propres capteurs'),hint:t('Une mesure à la fois, toutes facultatives. Sans prévisions ni alertes, les conseils seront moins justes.'),available:true}];
 }

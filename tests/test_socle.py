@@ -36,17 +36,20 @@ class SocleTests(unittest.IsolatedAsyncioTestCase):
         self.temp.cleanup()
 
     def module(self):
-        return self.hass.data[DATA_PANELS]["niak"].config["_panel_custom"]["module_url"]
+        return self.hass.data[DATA_PANELS]["hestia"].config["_panel_custom"]["module_url"]
 
-    async def test_one_brick_opens_the_niak_panel_and_keeps_its_old_address(self):
+    async def test_one_brick_opens_the_hestia_panel_and_keeps_its_old_addresses(self):
         await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
         panels = self.hass.data[DATA_PANELS]
-        self.assertEqual(panels["niak"].sidebar_title, "Hestia")
+        self.assertEqual(panels["hestia"].sidebar_title, "Hestia")
         self.assertEqual(self.module(), "/a/niak-socle.js")
-        self.assertTrue(panels["niak"].require_admin)
+        self.assertTrue(panels["hestia"].require_admin)
+        # /niak, the panel's address before socle 1.12, leads to /hestia, hidden from the sidebar.
+        self.assertIsNone(panels["niak"].sidebar_title)
+        self.assertEqual(panels["niak"].config["redirect"], "/hestia")
         legacy = panels["niak-confort"]
         self.assertIsNone(legacy.sidebar_title)  # hidden from the sidebar
-        self.assertEqual(legacy.config["redirect"], "/niak/confort")
+        self.assertEqual(legacy.config["redirect"], "/hestia/confort")
         self.assertEqual(legacy.config_panel_domain, "niak_comfort")  # « Configurer » still works
         self.assertIn("niak/overview", self.hass.data[WS_DOMAIN])
 
@@ -98,19 +101,19 @@ class SocleTests(unittest.IsolatedAsyncioTestCase):
         await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
         self.assertTrue((await socle.async_overview(self.hass))["sidebar"])
         await socle.async_set_sidebar(self.hass, False)
-        panel = self.hass.data[DATA_PANELS]["niak"]
-        self.assertIsNone(panel.sidebar_title)  # gone from the sidebar, still served at /niak
+        panel = self.hass.data[DATA_PANELS]["hestia"]
+        self.assertIsNone(panel.sidebar_title)  # gone from the sidebar, still served at /hestia
         self.assertEqual(self.module(), "/a/niak-socle.js")
         self.assertFalse((await socle.async_overview(self.hass))["sidebar"])
         await socle.async_set_sidebar(self.hass, True)
-        self.assertEqual(self.hass.data[DATA_PANELS]["niak"].sidebar_title, "Hestia")
+        self.assertEqual(self.hass.data[DATA_PANELS]["hestia"].sidebar_title, "Hestia")
 
     async def test_the_choice_survives_a_restart_and_applies_to_the_next_brick(self):
         await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
         await socle.async_set_sidebar(self.hass, False)
         self.hass.data.pop(socle.KEY)  # as after a restart: the file is all that remains
         await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
-        self.assertIsNone(self.hass.data[DATA_PANELS]["niak"].sidebar_title)
+        self.assertIsNone(self.hass.data[DATA_PANELS]["hestia"].sidebar_title)
         self.assertIn("niak/set_sidebar", self.hass.data[WS_DOMAIN])
 
     async def test_theme_and_sidebar_survive_restart_without_overwriting_each_other(self):

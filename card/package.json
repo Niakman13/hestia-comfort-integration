@@ -1,15 +1,16 @@
 {
   "name": "niak-comfort-card",
-  "version": "1.7.25",
+  "version": "1.7.26",
   "private": true,
   "type": "module",
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "node --test tests/card.test.mjs",
+    "test": "node --test tests/card.test.mjs tests/i18n.test.mjs",
     "test:loading": "node scripts/test-loading.mjs",
     "build": "node scripts/build_card.mjs",
     "validate": "npm run check && npm run test && npm run build",
-    "audit": "node scripts/audit-coherence.mjs"
+    "audit": "node scripts/audit-coherence.mjs",
+    "test:i18n": "node scripts/i18n-collect.mjs --check"
   },
   "dependencies": {
     "lit": "3.3.3"

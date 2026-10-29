@@ -6,12 +6,13 @@ import {join} from 'node:path';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 const root=new URL('../',import.meta.url),temp=await mkdtemp(join(tmpdir(),'niak-comfort-card-'));
-await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts','src/views/room.ts','src/views/horizon.ts','src/editor.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
+await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts','src/views/room.ts','src/views/horizon.ts','src/editor.ts','src/hass-change.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
   bundle:true,platform:'node',format:'esm',outExtension:{'.js':'.mjs'},logLevel:'silent'});
 const {cleanConfig,cleanHomeConfig,homeAction,cleanReviewConfig}=await import(pathToFileURL(join(temp,'types.mjs')));
 const {isView,numeric,summary,readingStatus,coverageText,windFrom,evolutionLines,co2Metric,solarMetric}=await import(pathToFileURL(join(temp,'view.mjs')));
 const {LiveView}=await import(pathToFileURL(join(temp,'live.mjs')));
 const {roomChoices}=await import(pathToFileURL(join(temp,'editor.mjs')));
+const {hassMatters}=await import(pathToFileURL(join(temp,'hass-change.mjs')));
 const {outsideGaps,advice,slides,roomCard,facts,factList}=await import(pathToFileURL(join(temp,'views/room.mjs')));
 const fixtures=JSON.parse(await readFile(new URL('../preview/card-fixtures.json',import.meta.url),'utf8'));
 const fresh=()=>({...structuredClone(fixtures[0].view),computed_at:new Date().toISOString()});
@@ -637,4 +638,13 @@ test('the full home card chooses its sections, what folds away and the period sh
   assert.deepEqual([c.sections,c.folded,c.period,c.more_open],[['themes','rooms_chart','curve'],['curve'],'week',true]);
   assert.throws(()=>cleanHomeConfig({type:'custom:niak-comfort-home-card',sections:['graphique']}));
   assert.throws(()=>cleanHomeConfig({type:'custom:niak-comfort-home-card',period:'année'}));
+});
+test('a new hass from an unrelated state change does not redraw the cards',()=>{
+  const connection={},hass={connection,themes:{darkMode:true},user:{is_admin:true}};
+  const changed=old=>new Map([['hass',old]]);
+  assert.equal(hassMatters(changed({...hass,states:{}}),{...hass,states:{a:1}}),false);
+  assert.equal(hassMatters(changed(hass),{...hass,themes:{darkMode:false}}),true);
+  assert.equal(hassMatters(changed(hass),{...hass,connection:{}}),true);
+  assert.equal(hassMatters(changed(undefined),hass),true);
+  assert.equal(hassMatters(new Map([['hass',hass],['config',{}]]),hass),true);
 });

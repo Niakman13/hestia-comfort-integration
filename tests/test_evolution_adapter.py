@@ -215,17 +215,48 @@ class EvolutionAdapterTests(AdapterFixture):
         context = coord._context(self.now + timedelta(minutes=2), {'indoor_temperature': Reading(25, 'valid', received_at=previous)})
         self.assertEqual(len(context['temperature_history']), 1)
 
-    async def test_metadata_callbacks_and_sun_are_observed(self):
+    async def test_metadata_callbacks_are_observed_and_the_sun_read(self):
         from homeassistant.config_entries import ConfigEntryState
         coord = self.coordinator()
         self.entry._async_set_state(self.hass, ConfigEntryState.SETUP_IN_PROGRESS, None)
         with patch('custom_components.niak_comfort.coordinator.async_track_state_change_event', return_value=lambda: None) as track:
             await coord.async_start()
         ids = track.call_args.args[1]
-        for eid in ('cover.shutter', 'switch.override', 'binary_sensor.occupied', 'binary_sensor.motion', 'sun.sun', 'fan.purifier'):
+        for eid in ('cover.shutter', 'switch.override', 'binary_sensor.occupied', 'binary_sensor.motion', 'fan.purifier'):
             self.assertIn(eid, ids)
+        # The sun is read at each refresh (the minute tick): its own changes would only add refreshes.
+        self.assertNotIn('sun.sun', ids)
         await self.entry._async_process_on_unload(self.hass)
         await coord.async_shutdown()
+
+    async def test_a_room_unloaded_leaves_no_listener_nor_timer(self):
+        """Reloaded at every settings change: nothing of the old room may keep running beside the new one."""
+        from homeassistant.config_entries import ConfigEntryState
+        before = dict(self.hass.bus.async_listeners())
+        coord = self.coordinator()
+        self.entry._async_set_state(self.hass, ConfigEntryState.SETUP_IN_PROGRESS, None)
+        await coord.async_start()
+        # A measure that moves (a grouped refresh waiting) and a window shut (its bounce timer).
+        self.hass.states.async_set('sensor.t', '26', {'device_class': 'temperature', 'unit_of_measurement': '°C'})
+        self.hass.states.async_set('binary_sensor.w', 'on', {'device_class': 'window'})
+        await self.hass.async_block_till_done()
+        self.hass.states.async_set('binary_sensor.w', 'off', {'device_class': 'window'})
+        await self.hass.async_block_till_done()
+        self.assertTrue(coord.stop_listeners)
+        # An airing just recorded, its write still waiting: written at unload, read back by the room reloaded.
+        record = {"start": self.now.isoformat(), "end": (self.now + timedelta(minutes=10)).isoformat(), "measure": "humidity"}
+        coord._remember(record, self.now)
+        await self.entry._async_process_on_unload(self.hass)
+        await coord.async_shutdown()
+        # Home Assistant's Store lets go of its final-write listener when its own short timer fires, write done.
+        after = {k: v for k, v in self.hass.bus.async_listeners().items() if k != "homeassistant_final_write"}
+        self.assertEqual(after, {k: v for k, v in before.items() if k != "homeassistant_final_write"})
+        self.assertFalse(coord._feedback_unsaved)
+        self.assertEqual(len(coord.feedback), 1)
+        self.assertEqual((await coord._feedback_store.async_load())["records"], coord.feedback)
+        self.assertFalse(coord.stop_listeners)
+        self.assertIsNone(coord._measure_refresh._timer_task)
+        self.assertIsNone(coord._unsub_refresh)
 
     async def test_health_handles_lost_optional_sources(self):
         from custom_components.niak_comfort.health import facts, report

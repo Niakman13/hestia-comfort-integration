@@ -1,3 +1,4 @@
+import {t,fr} from './i18n';
 export const LEVELS = ['calm','benefit','action','urgent','neutral'] as const;
 export const ACTIONS = ['ok','ouvrir','fermer','attendre','unknown'] as const;
 export const MODULES = ['windows','air','temperature','humidity','shutters','coordination'] as const;
@@ -35,7 +36,7 @@ export interface Horizon {subject:HorizonSubject;kind:'cool'|'air'|'sun'|'dry'|'
   bands:string[][];extra:string[][];result:Record<string,string|number|null>}
 export const HOLD_ACTIONS = ['popup','page','none'] as const;
 export type HoldAction = typeof HOLD_ACTIONS[number];
-export const moduleLabels:Record<Module,string>={windows:'Fenêtres',air:'Qualité de l’air',temperature:'Température',humidity:'Humidité',shutters:'Soleil et volets',coordination:'Chauffage'};
+export const moduleLabels:Record<Module,string>={windows:fr('Fenêtres'),air:fr('Qualité de l’air'),temperature:fr('Température'),humidity:fr('Humidité'),shutters:fr('Soleil et volets'),coordination:fr('Chauffage')};
 export interface Config {
   type: 'custom:niak-comfort-card'; entry_id?: string; title?: string; format?: Format;
   modules?: Module[]; animations?: boolean; glass_effect?: boolean; theme?: 'auto'|'light'|'dark';
@@ -51,12 +52,12 @@ export interface Config {
 /** A list setting: only known values, each once, in the given order. */
 function list<T extends string>(value:unknown,known:readonly T[],name:string):T[]|undefined{
   if(value===undefined)return undefined;
-  if(!Array.isArray(value)||value.some(v=>!known.includes(v)))throw new Error(`Réglage « ${name} » invalide.`);
+  if(!Array.isArray(value)||value.some(v=>!known.includes(v)))throw new Error(t('Réglage « {name} » invalide.',{name}));
   return [...new Set(value as T[])];
 }
 function hold(input:{hold_action?:unknown;hold_path?:unknown}){
-  if(input.hold_action!==undefined&&!HOLD_ACTIONS.includes(input.hold_action as HoldAction))throw new Error('Appui long inconnu.');
-  if(input.hold_path!==undefined&&typeof input.hold_path!=='string')throw new Error('La page à ouvrir doit être un chemin.');
+  if(input.hold_action!==undefined&&!HOLD_ACTIONS.includes(input.hold_action as HoldAction))throw new Error(t('Appui long inconnu.'));
+  if(input.hold_path!==undefined&&typeof input.hold_path!=='string')throw new Error(t('La page à ouvrir doit être un chemin.'));
 }
 export interface Reading {
   value: number|boolean|string|null; quality:'valid'|'unknown'|'stale'|'estimated';
@@ -125,26 +126,26 @@ export interface Connection {
   subscribeMessage<T>(callback:(event:T)=>void, message:Record<string,unknown>):Promise<Unsubscribe>;
 }
 export interface HomeAssistant {
-  connection:Connection; user?:{is_admin:boolean}; themes?:{darkMode?:boolean};
+  connection:Connection; user?:{is_admin:boolean}; themes?:{darkMode?:boolean}; language?:string;
   callWS<T>(message:Record<string,unknown>):Promise<T>;
 }
 export interface Entry {entry_id:string; title:string; area_id:string|null; volume?:string[]; volume_name?:string|null}
 export function cleanConfig(input:Config):Config {
-  if(!input || input.type!=='custom:niak-comfort-card') throw new Error('Type de carte Hestia Comfort invalide.');
-  if(input.format && !FORMATS.includes(input.format)) throw new Error('Format de carte inconnu.');
-  if(input.entry_id!==undefined && typeof input.entry_id!=='string') throw new Error('Choisissez une pièce Hestia Comfort.');
-  if(input.title!==undefined && typeof input.title!=='string') throw new Error('Le titre doit être un texte.');
-  if(input.theme && !['auto','light','dark'].includes(input.theme)) throw new Error('Thème inconnu.');
+  if(!input || input.type!=='custom:niak-comfort-card') throw new Error(t('Type de carte Hestia Comfort invalide.'));
+  if(input.format && !FORMATS.includes(input.format)) throw new Error(t('Format de carte inconnu.'));
+  if(input.entry_id!==undefined && typeof input.entry_id!=='string') throw new Error(t('Choisissez une pièce Hestia Comfort.'));
+  if(input.title!==undefined && typeof input.title!=='string') throw new Error(t('Le titre doit être un texte.'));
+  if(input.theme && !['auto','light','dark'].includes(input.theme)) throw new Error(t('Thème inconnu.'));
   for(const key of ['animations','glass_effect','show_scale','show_measures','show_details','measures_open','details_open','rotate'] as const)
-    if(input[key]!==undefined && typeof input[key]!=='boolean') throw new Error('Réglage d’affichage invalide.');
-  if(input.modules && (!Array.isArray(input.modules) || input.modules.some(m=>!MODULES.includes(m)))) throw new Error('Rubrique inconnue.');
-  if(input.horizon_mode!==undefined&&!HORIZON_MODES.includes(input.horizon_mode))throw new Error('Réglage « graphique » invalide.');
+    if(input[key]!==undefined && typeof input[key]!=='boolean') throw new Error(t('Réglage d’affichage invalide.'));
+  if(input.modules && (!Array.isArray(input.modules) || input.modules.some(m=>!MODULES.includes(m)))) throw new Error(t('Rubrique inconnue.'));
+  if(input.horizon_mode!==undefined&&!HORIZON_MODES.includes(input.horizon_mode))throw new Error(t('Réglage « graphique » invalide.'));
   hold(input);
   const lists={banner_blocks:list(input.banner_blocks,BANNER_BLOCKS,'bandeau'),scale_marks:list(input.scale_marks,SCALE_MARKS,'échelle'),
     tile_chips:list(input.tile_chips,CHIPS,'pastilles'),tile_blocks:list(input.tile_blocks,TILE_BLOCKS,'tuile dépliée'),mini_values:list(input.mini_values,CHIPS,'ligne'),
     horizon_subjects:list(input.horizon_subjects,HORIZON_SUBJECTS,'sujets du graphique'),insight_topics:list(input.insight_topics,INSIGHT_TOPICS,'sujets À savoir'),
     detail_rows:list(input.detail_rows,DETAIL_ROWS,'lignes des détails')};
-  if(input.insight_max!==undefined&&!(Number.isInteger(input.insight_max)&&input.insight_max>=1&&input.insight_max<=8))throw new Error('Réglage « lignes À savoir » invalide : de 1 à 8.');
+  if(input.insight_max!==undefined&&!(Number.isInteger(input.insight_max)&&input.insight_max>=1&&input.insight_max<=8))throw new Error(t('Réglage « lignes À savoir » invalide : de 1 à 8.'));
   return {...input,...Object.fromEntries(Object.entries(lists).filter(([,v])=>v!==undefined)), format:input.format??'tile', modules:[...new Set(input.modules??MODULES)]};
 }
 
@@ -162,15 +163,15 @@ export interface HomeConfig {type:'custom:niak-comfort-home-card';title?:string;
 export const HOME_SECTIONS=['themes','rooms_chart','curve','rooms','details'] as const;
 export const HOME_FLAGS=['rotate','show_scale','show_rooms','rooms_open','show_details','details_open','more_open','animations','glass_effect'] as const;
 export function cleanHomeConfig(input:HomeConfig):HomeConfig {
-  if(!input||input.type!=='custom:niak-comfort-home-card')throw new Error('Type de carte invalide.');
-  if(input.title!==undefined&&typeof input.title!=='string')throw new Error('Le titre doit être un texte.');
-  if(input.theme&&!['auto','light','dark'].includes(input.theme))throw new Error('Thème inconnu.');
-  for(const k of HOME_FLAGS)if(input[k]!==undefined&&typeof input[k]!=='boolean')throw new Error('Réglage d’affichage invalide.');
-  if(input.format&&!HOME_FORMATS.includes(input.format))throw new Error('Format de carte inconnu.');
-  if(input.list_order!==undefined&&!['urgent','floor'].includes(input.list_order))throw new Error('Ordre des pièces inconnu.');
+  if(!input||input.type!=='custom:niak-comfort-home-card')throw new Error(t('Type de carte invalide.'));
+  if(input.title!==undefined&&typeof input.title!=='string')throw new Error(t('Le titre doit être un texte.'));
+  if(input.theme&&!['auto','light','dark'].includes(input.theme))throw new Error(t('Thème inconnu.'));
+  for(const k of HOME_FLAGS)if(input[k]!==undefined&&typeof input[k]!=='boolean')throw new Error(t('Réglage d’affichage invalide.'));
+  if(input.format&&!HOME_FORMATS.includes(input.format))throw new Error(t('Format de carte inconnu.'));
+  if(input.list_order!==undefined&&!['urgent','floor'].includes(input.list_order))throw new Error(t('Ordre des pièces inconnu.'));
   hold(input);
   const banner=list(input.banner_blocks,HOME_BANNER,'bandeau');
-  if(input.period!==undefined&&!['day','week','month'].includes(input.period))throw new Error('Période inconnue.');
+  if(input.period!==undefined&&!['day','week','month'].includes(input.period))throw new Error(t('Période inconnue.'));
   const sections=list(input.sections,HOME_SECTIONS,'sections'),folded=list(input.folded,HOME_SECTIONS,'sections');
   return {...input,...(banner?{banner_blocks:banner}:{}),...(sections?{sections}:{}),...(folded?{folded}:{})};
 }
@@ -182,7 +183,7 @@ export type ReviewFormat='summary'|'full';
 export interface ReviewConfig {type:'custom:niak-comfort-review-card';title?:string;format?:ReviewFormat}
 
 export function cleanReviewConfig(input:ReviewConfig):ReviewConfig {
-  if(!input||input.type!=='custom:niak-comfort-review-card')throw new Error('Type de carte Hestia Confort · bilan invalide.');
+  if(!input||input.type!=='custom:niak-comfort-review-card')throw new Error(t('Type de carte Hestia Confort · bilan invalide.'));
   const config:ReviewConfig={type:input.type,format:input.format==='full'?'full':'summary'};
   if(typeof input.title==='string'&&input.title.trim())config.title=input.title.trim();
   return config;

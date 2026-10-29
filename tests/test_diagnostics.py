@@ -97,6 +97,19 @@ class Diagnostics(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(async_redact_data({"latitude": 43.5, "x": {"longitude": 5.4}}, TO_REDACT),
                          {"latitude": "**REDACTED**", "x": {"longitude": "**REDACTED**"}})
 
+    async def test_people_are_counted_not_named_nor_placed(self):
+        """A person's zone may be a town or an address (issue #41): only « at home » or « away » is kept."""
+        from custom_components.niak_comfort.diagnostics import TO_REDACT, _state, _without_names
+        from homeassistant.components.diagnostics import async_redact_data
+        self.hass.states.async_set("person.frank", "Bureau Marseille")
+        self.hass.states.async_set("person.lea", "home")
+        self.assertEqual(_state(self.hass, "person.frank")["state"], "not_home")
+        self.assertEqual(_state(self.hass, "person.lea")["state"], "home")
+        view = {"assessment": {"extended": {"people": {"home": ["Léa"], "away": ["Frank"]}}}, "context": [{"people": {"home": []}}]}
+        self.assertEqual(_without_names(view), {"assessment": {"extended": {"people": {"home": 1, "away": 1}}},
+                                                "context": [{"people": {"home": 0}}]})
+        self.assertEqual(async_redact_data({"config": {"persons": ["person.frank"]}}, TO_REDACT), {"config": {"persons": "**REDACTED**"}})
+
 
 if __name__ == "__main__":
     unittest.main()

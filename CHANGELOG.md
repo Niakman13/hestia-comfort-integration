@@ -1,3 +1,32 @@
+## 1.7.26 — Préversion : Hestia Confort en anglais, un panneau plus clair et plus léger
+
+**En bref**
+
+- **Hestia Confort parle anglais** : carte, panneau et bilan s’affichent en anglais quand Home Assistant n’est pas en français.
+- **Le panneau Hestia est rangé comme celui de Hestia Weather** : Accueil, Réglages généraux, Extensions, puis les réglages de chaque pièce.
+- **Moins de charge pour Home Assistant** : l’historique est lu par petits morceaux et les cartes se redessinent moins souvent.
+
+### Nouveautés
+
+- Une page « Extensions » à part dans le menu, rangée par thème : chauffage, volets, présence.
+- Le panneau est maintenant à l’adresse `/hestia` ; l’ancienne adresse mène toujours au bon endroit.
+
+### Améliorations
+
+- L’historique de 10 jours est lu pièce par pièce et jour par jour, sans tout garder en mémoire.
+- L’apprentissage reprend là où il en était après un redémarrage.
+- Les cartes ne se redessinent plus à chaque changement sans rapport dans la maison.
+- Les diagnostics ne contiennent plus les noms ni les zones des personnes.
+
+### Corrections
+
+- Un retour sur un conseil enregistré juste avant un rechargement n’est plus perdu.
+- Le bilan ne parle plus de « niak » : cherchez « comfort » dans les journaux.
+
+### À savoir
+
+- Home Assistant 2026.7 ou plus récent est demandé (2026.10 jusqu’ici) : Hestia Confort est maintenant testé sur ces deux versions.
+
 ## 1.7.25 — Mon logement devient un petit bilan
 
 **En bref**

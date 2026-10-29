@@ -10,6 +10,8 @@ from datetime import datetime
 import math
 import unicodedata
 
+from .i18n import N_, t
+
 # Water (g/m³) gained in half an hour, windows shut, that counts as a rise.
 RISE = 1.0
 # A habit: on at least this share of the days, and at least this many times.
@@ -63,11 +65,11 @@ def cause(title, area=None):
     name = unicodedata.normalize("NFD", f"{title} {area or ''}".lower())
     name = "".join(c for c in name if unicodedata.category(c) != "Mn")
     if any(w in name for w in ("salle de bain", "salle d'eau", "salle d’eau", "sdb", "douche")):
-        return "la douche"
+        return N_("la douche")
     if "cuisine" in name:
-        return "la cuisine"
+        return N_("la cuisine")
     if any(w in name for w in ("buanderie", "lingerie", "cellier")):
-        return "le linge qui sèche"
+        return N_("le linge qui sèche")
     return None
 
 
@@ -76,7 +78,7 @@ def season_group(name):
     return name if name in ("summer", "winter") else "between"
 
 
-SEASON_WORDS = {"summer": "cet été", "winter": "cet hiver", "between": "en cette saison"}
+SEASON_WORDS = {"summer": N_("cet été"), "winter": N_("cet hiver"), "between": N_("en cette saison")}
 
 
 def night_key(season):
@@ -93,15 +95,18 @@ def questions(title, area, habits, answers, season=None):
         if key in (answers or {}) or key == "night_open:winter":
             continue
         if habit["kind"] == "humidity":
-            when = {"weekdays": " en semaine", "weekend": " le week-end"}.get(habit["days"], "")
+            rises = {"weekdays": N_("L’humidité de la pièce « {room} » monte souvent vers {hour} h en semaine."),
+                     "weekend": N_("L’humidité de la pièce « {room} » monte souvent vers {hour} h le week-end.")}.get(
+                habit["days"], N_("L’humidité de la pièce « {room} » monte souvent vers {hour} h."))
             guess = cause(title, area)
-            text = f"L’humidité de la pièce « {title} » monte souvent vers {habit['hour']} h{when}. " + (
-                f"Est-ce {guess} ?" if guess else "Est-ce une habitude de la maison ?")
-            hint = "Votre réponse précise la cause ; sans elle, aucune cause n’est affichée."
+            text = t(rises, room=title, hour=habit["hour"]) + " " + (
+                t("Est-ce {cause} ?", cause=t(guess)) if guess else t("Est-ce une habitude de la maison ?"))
+            hint = t("Votre réponse précise la cause ; sans elle, aucune cause n’est affichée.")
         else:
-            text = f"Une fenêtre de la pièce « {title} » est souvent ouverte la nuit {SEASON_WORDS[season_group(season)]}. Est-ce voulu, pour l’air frais ?"
-            hint = ("Si oui, elle ne sera plus signalée comme un oubli tant qu’elle rafraîchit la pièce. Si l’air du dehors "
-                    "la réchauffe, la refroidit trop ou l’humidifie, Confort conseillera toujours de fermer. Question reposée à chaque saison.")
+            text = t("Une fenêtre de la pièce « {room} » est souvent ouverte la nuit {season}. Est-ce voulu, pour l’air frais ?",
+                     room=title, season=t(SEASON_WORDS[season_group(season)]))
+            hint = t("Si oui, elle ne sera plus signalée comme un oubli tant qu’elle rafraîchit la pièce. Si l’air du dehors "
+                     "la réchauffe, la refroidit trop ou l’humidifie, Confort conseillera toujours de fermer. Question reposée à chaque saison.")
         out.append({"key": key, "text": text, "hint": hint})
     return out
 
