@@ -7,7 +7,7 @@
     "recorder"
   ],
   "codeowners": [
-    "@Niakman13"
+    "@hestiaFB"
   ],
   "config_flow": true,
   "dependencies": [
@@ -15,10 +15,10 @@
     "http",
     "websocket_api"
   ],
-  "documentation": "https://github.com/Niakman13/hestia-comfort-integration",
+  "documentation": "https://github.com/hestiaFB/hestia-comfort-integration",
   "integration_type": "service",
   "iot_class": "calculated",
-  "issue_tracker": "https://github.com/Niakman13/hestia-comfort-integration/issues",
+  "issue_tracker": "https://github.com/hestiaFB/hestia-comfort-integration/issues",
   "requirements": [],
   "version": "1.7.24"
 }

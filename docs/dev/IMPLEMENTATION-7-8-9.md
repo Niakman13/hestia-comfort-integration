@@ -33,4 +33,4 @@ Les règles de sécurité existantes gardent priorité. Un besoin PM2.5/COV haut
 1. Moteur : sources.py, assessment.py, engine/evolution.py et tests unitaires nouveaux. Tests d’abord.
 2. Adaptation HA : const SOURCES, discovery, configuration, coordinator, health si nécessaire et tests correspondants. Tests d’abord.
 3. Interface : frontend/model.ts et panel.ts, card/src/types.ts et views/panel.ts, view.ts si nécessaire ; tests UI modèles. Réemploi de la charte et de la carte ; pas de redesign.
-4. Assemblage : tests Python, validations frontend/carte, banque de situations réelles du moteur, navigateur mobile/bureau, revue de code et des entrées utilisateur, documentation, version et compilation, commit Niakman13 seul, contrôles GitHub avant publication bêta.
+4. Assemblage : tests Python, validations frontend/carte, banque de situations réelles du moteur, navigateur mobile/bureau, revue de code et des entrées utilisateur, documentation, version et compilation, commit hestiaFB seul, contrôles GitHub avant publication bêta.

@@ -198,7 +198,7 @@ def report(f):
 
 
 EXTENSIONS = (
-    {"key": "niak_weather", "name": "Hestia Weather", "official": True, "url": "https://github.com/Niakman13/hestia-weather-integration",
+    {"key": "niak_weather", "name": "Hestia Weather", "official": True, "url": "https://github.com/hestiaFB/hestia-weather-integration",
      "role": "Extérieur, prévisions, pluie, vigilances",
      "use": "Le dehors pour toutes les pièces : température, humidité, pluie, vent, soleil, saison, pollution, alertes et prévisions.",
      "without": "Sans lui : vos propres capteurs, sans prévisions ni alertes.",

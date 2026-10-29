@@ -154,7 +154,7 @@ Deux messages connus, sans gravité :
 
 ## Signaler un problème
 
-Ouvrez un ticket sur [GitHub](https://github.com/Niakman13/hestia-comfort-integration/issues), avec :
+Ouvrez un ticket sur [GitHub](https://github.com/hestiaFB/hestia-comfort-integration/issues), avec :
 
 - les versions de Home Assistant, Hestia Confort et Hestia Weather ;
 - la pièce concernée et ce que dit la carte ;

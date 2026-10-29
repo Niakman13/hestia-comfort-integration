@@ -32,7 +32,7 @@ L’extérieur se règle une seule fois, dans **Confort → Réglages généraux
 
 ### Avec Hestia Weather
 
-Si [Hestia Weather](https://github.com/Niakman13/hestia-weather-integration) est installé, choisissez **Hestia Weather** puis votre lieu.
+Si [Hestia Weather](https://github.com/hestiaFB/hestia-weather-integration) est installé, choisissez **Hestia Weather** puis votre lieu.
 
 Confort reprend alors, sans rien à choisir :
 

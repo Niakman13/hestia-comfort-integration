@@ -11,7 +11,7 @@ const extState:Record<Extension['state'],[string,string]>={linked:['liée','ok']
 const extIcon:Record<string,string>={niak_weather:'weather',versatile_thermostat:'heating',adaptive_cover_pro:'openings',alarmo:'presence'};
 /** HACS opens the repository from its GitHub address. */
 const hacsUrl=(url:string)=>{const [owner,repository]=url.replace('https://github.com/','').split('/');return `https://my.home-assistant.io/redirect/hacs_repository/?owner=${owner}&repository=${repository}&category=integration`;};
-const askUrl=(name:string,use:string)=>`https://github.com/Niakman13/hestia-comfort-integration/issues/new?title=${encodeURIComponent('Lire l’extension '+name)}&body=${encodeURIComponent(`J’utilise ${name}. ${use}`)}`;
+const askUrl=(name:string,use:string)=>`https://github.com/hestiaFB/hestia-comfort-integration/issues/new?title=${encodeURIComponent('Lire l’extension '+name)}&body=${encodeURIComponent(`J’utilise ${name}. ${use}`)}`;
 const fr=(v:number,d=1)=>v.toLocaleString('fr-FR',{maximumFractionDigits:d,minimumFractionDigits:0});
 const days=(d:number)=>{const n=Math.max(1,Math.floor(d));return `${n} jour${n>1?'s':''}`;};
 /** Where a room's learning stands: 100 % once it has seen everything it has (engine/twin.py progress). */
@@ -158,7 +158,7 @@ export class ComfortSetup extends LitElement {
  private versionsBox(){const h=this.health!,version=h.versions.find(l=>l.text.startsWith('Intégration'))?.text.replace(/^Intégration\s*/,'')??'';
   const bricks=(h.extensions??[]).filter(x=>x.official&&x.state==='linked').map(x=>x.name);
   const row=(label:string,text:string)=>html`<div class="ac-row"><b>${label}</b><span>${text}</span></div>`;
-  const repo='https://github.com/Niakman13/hestia-comfort-integration';
+  const repo='https://github.com/hestiaFB/hestia-comfort-integration';
   return frame('Versions et liens',html`<div class="ac-meta"><div>${row('Intégration',version||'Version non reçue')}${row('Carte',version||'Version non reçue')}${row('API','niak_comfort_api v1')}${row('Socle commun',h.socle||'Version non reçue')}${row('Liaisons',bricks.length?bricks.join(' · '):'Aucune brique reliée')}</div>
    <nav class="ac-links" aria-label="Liens utiles"><a href="/config/integrations/integration/niak_comfort">Intégration Home Assistant</a><a href="/config/logs">Journaux Home Assistant</a>
     <a href=${repo+'#readme'} target="_blank" rel="noreferrer">Documentation</a><a href=${repo+'/releases'} target="_blank" rel="noreferrer">Versions publiées</a><a href=${repo+'/issues'} target="_blank" rel="noreferrer">Signaler un problème</a>
@@ -614,7 +614,7 @@ export class ComfortSetup extends LitElement {
   return html`<div class="actions"><button class="link" @click=${()=>this.cancel()}>← Accueil Confort</button></div><h1 tabindex="-1">Réglages généraux</h1><p class="muted">Vos pièces, le dehors et les extensions.</p>
   ${this.roomsSettings()}
   <h2 class="ex-sec">Extensions officielles Hestia</h2>
-  ${this.extensionCard({...(weather??{key:'niak_weather',name:'Hestia Weather',official:true,level:'none',role:'',use:'Le dehors pour toutes les pièces : température, humidité, pluie, vent, soleil, saison, pollution, alertes et prévisions.',without:'',url:'https://github.com/Niakman13/hestia-weather-integration',text:'',rooms:[]}),
+  ${this.extensionCard({...(weather??{key:'niak_weather',name:'Hestia Weather',official:true,level:'none',role:'',use:'Le dehors pour toutes les pièces : température, humidité, pluie, vent, soleil, saison, pollution, alertes et prévisions.',without:'',url:'https://github.com/hestiaFB/hestia-weather-integration',text:'',rooms:[]}),
     state:this.weatherEntry?'linked':this.snapshot?.niak_weather?.installed&&this.snapshot.niak_weather.places.length?'found':'missing'},
     html`${this.exteriorSource()}${this.weatherEntry?this.exteriorRows():nothing}`)}
   ${this.weatherEntry?nothing:html`${this.exteriorRows()}${this.airBlock()}`}

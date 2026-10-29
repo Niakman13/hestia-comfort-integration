@@ -588,7 +588,7 @@ Tout ce qui est nouveau depuis la 1.6.0.
 ### Remerciements
 
 - La nuit simulée et la masse des murs s’inspirent de **NADIR**, de Solal Gendrin : [son dépôt](https://github.com/solal3105/NADIR2) et [sa méthodologie](https://solal3105.github.io/NADIR2/methodologie.html). Le code de Niak a été écrit indépendamment, à partir des équations publiées.
-- Merci à Gaël (@gael1980) d’avoir fait découvrir NADIR et partagé sa carte ([#2](https://github.com/Niakman13/hestia-comfort-integration/issues/2)), et à Louis (@hellmer1234) pour ses retours sur l’affichage ([#1](https://github.com/Niakman13/hestia-comfort-integration/issues/1)).
+- Merci à Gaël (@gael1980) d’avoir fait découvrir NADIR et partagé sa carte ([#2](https://github.com/hestiaFB/hestia-comfort-integration/issues/2)), et à Louis (@hellmer1234) pour ses retours sur l’affichage ([#1](https://github.com/hestiaFB/hestia-comfort-integration/issues/1)).
 
 ### Après la mise à jour
 
