@@ -54,6 +54,13 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self.histories = {"temperature_history": deque(maxlen=360), "outdoor_history": deque(maxlen=360)}
         # The VOC index of the last minutes, for its mean (engine/voc.py).
         self.voc_points = deque(maxlen=240)
+        # The last airing while the VOC called for air, noted the moment the room is shut: the pause starts there.
+        self.voc_aired = None
+        # The index when the room was opened, while it stays open: climbing well above it, the air outside brings VOC.
+        self.voc_opened_level = None
+        self.voc_going = False
+        # What each airing did to the index, read in the history, and the times of day when opening made it climb.
+        self.voc_airings, self.voc_slots = [], []
         # The sun of the last quarter of an hour: a passing cloud does not make « Soleil » come and go.
         self._sun_samples = deque(maxlen=120)
         # Where the station's sensor is shaded, learned from its history; the sky's share seen just before the shade.
@@ -181,10 +188,16 @@ class ComfortCoordinator(DataUpdateCoordinator):
         before, after = old.state if old else None, new.state if new else None
         now = dt_util.utcnow()
         if entity_id in self.windows:
+            began = self.opened_since.get(entity_id)
             if after != "on" or before not in ("on", "off"):
                 self.opened_since.pop(entity_id, None)
                 self.followed.discard(entity_id)
             elif before == "off":
+                if not any(e in self.opened_since for e in self.windows):
+                    # The reading at the opening, not the mean: a mean still coming down from a peak would hide the climb.
+                    self.voc_opened_level = self.voc_points[-1][1] if self.voc_points else None
+                    threshold = self._voc_threshold()
+                    self.voc_going = bool(threshold) and vocs.is_going(list(self.voc_points), now, threshold)
                 self.opened_since[entity_id] = now
                 shown = (self.data or {}).get("assessment") or {}
                 if shown.get("action") == "ouvrir":
@@ -195,6 +208,9 @@ class ComfortCoordinator(DataUpdateCoordinator):
                         values = {k: (v or {}).get("value") for k, v in ((self.data or {}).get("observations") or {}).items()}
                         self._experiment = feedback.start(shown, values, now)
             if before == "on" and after == "off":
+                self._note_voc_airing(began, now)
+                if not any(e in self.opened_since for e in self.windows):
+                    self.voc_opened_level = None
                 # Learn from this opening once the room has had time to give its water back.
                 self._learning_due = now + learning.REBOUND_AFTER + timedelta(minutes=5)
                 # Recompute right when the bounce delay ends, not at the next periodic refresh.
@@ -228,10 +244,13 @@ class ComfortCoordinator(DataUpdateCoordinator):
         if voc_reading and voc_reading.usable and isinstance(voc_reading.value, (int, float)):
             if not self.voc_points or self.voc_points[-1][1] != voc_reading.value or now - self.voc_points[-1][0] > timedelta(minutes=1):
                 self.voc_points.append((now, voc_reading.value))
-        while self.voc_points and now - self.voc_points[0][0] > timedelta(minutes=2 * vocs.MEAN_MINUTES):
+        # Two means apart and the reading before them: whether the index is falling by itself.
+        while self.voc_points and now - self.voc_points[0][0] > timedelta(minutes=3 * vocs.MEAN_MINUTES):
             self.voc_points.popleft()
-        # The last airing about the VOC: what it left, for the pause that follows.
-        aired = next((r for r in reversed(self.feedback) if r.get("measure") == "voc" and r.get("end")), None)
+        # The last airing about the VOC: what it left, for the pause that follows. The one noted at the closing counts at
+        # once; the measured record only comes a few minutes later, and not for a short or unadvised airing.
+        recorded = next((r for r in reversed(self.feedback) if r.get("measure") == "voc" and r.get("end")), None)
+        aired = max((a for a in (recorded, self.voc_aired) if a), key=lambda a: a["end"], default=None)
         # The season first: the hours of airing and the answers about a window open at night depend on it.
         self._remember_season(weather_link.season(self.hass, self._weather_place()) or self._season(readings))
         return {**self.config.get("evolution", {}), "occupied": self._occupied(), "people": self._people(), "alarm": self._alarm(),
@@ -247,6 +266,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
                 "presence_off_minutes": {e: self._off_minutes(e, now) for e in self.config.get("presence", [])},
                 "voc_mean": vocs.mean(list(self.voc_points), now) if voc_reading and voc_reading.usable else None,
                 "voc_aired_at": aired["end"] if aired else None, "voc_aired_after": aired.get("after") if aired else None,
+                **self._voc_learned(now),
                 **{k: list(v) for k, v in self.histories.items()}}
 
     async def _async_update_data(self):
@@ -391,7 +411,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
                      "progress": self.learning_progress()}
         view = {"version": VIEW_VERSION, "entry_id": self.entry_id,
                 "area_id": self.config.get("area_id"), "title": self.config.get("name"),
-                "comfort_minimum": self.settings.minimum,
+                "comfort_minimum": self.settings.minimum, "comfort_maximum": self.settings.maximum,
                 "computed_at": now.isoformat(), "assessment": assessment,
                 "volume": [{"entry_id": p["entry_id"], "title": p["title"]} for p in self.partners], "volume_name": self.volume_name,
                 # Measures read from the room sharing this air: the card shows them once, under the room that has them.
@@ -693,6 +713,10 @@ class ComfortCoordinator(DataUpdateCoordinator):
                             near=set(self.config.get("windows", [])) if self.partners else None,
                             beside=[(self._points(states, t), self._points(states, h)) for t, h in beside]))
                 rows = twin.merge(rows, fresh, now)
+                # What the openings did to the VOC in their first minutes: the hours when the air outside brings it.
+                if air["voc"] and (threshold := self._voc_threshold()):
+                    self.voc_airings = vocs.airings(contacts, self._points(states, air["voc"]), threshold, dt_util.get_default_time_zone())
+                    self.voc_slots = vocs.outdoor_slots(self.voc_airings)
                 await self._twin_store.async_save({"samples": rows, "format": TWIN_FORMAT})
             except Exception:  # the twin then keeps what it learned before
                 if not self._twin_failed:
@@ -847,6 +871,39 @@ class ComfortCoordinator(DataUpdateCoordinator):
             self._advice_since, self._advice_followed = None, False
             if since and not followed and not opened and now - since >= feedback.IGNORED_AFTER:
                 self._remember(feedback.ignored(since, now), now)
+
+    def _voc_threshold(self):
+        threshold = (self.config.get("evolution") or {}).get("voc_threshold") or {}
+        value = threshold.get("value") if isinstance(threshold, dict) else None
+        return value if isinstance(value, (int, float)) and value > 0 else None
+
+    def _voc_learned(self, now):
+        """The VOC against waiting and against what opening brought (engine/voc.py), for the advice."""
+        threshold, shut = self._voc_threshold(), not any(e in self.opened_since for e in self.windows)
+        if threshold is None:
+            return {}
+        local = now.astimezone(dt_util.get_default_time_zone())
+        air = (self.previous.features.get("air") or {}) if self.previous else {}
+        # The climb with a window open is watched over the first minutes of the airing only (engine/voc.py WATCH).
+        begun = min((self.opened_since[e] for e in self.windows if e in self.opened_since), default=None)
+        watched = begun is not None and now - begun <= vocs.WATCH
+        return {"voc_shut": shut,
+                "voc_falling": shut and vocs.is_falling(list(self.voc_points), now, threshold, was=air.get("voc_falling") is True),
+                "voc_going": self.voc_going,
+                "voc_outdoor": vocs.slot(local.hour) in self.voc_slots,
+                "voc_opened_level": self.voc_opened_level if watched else None}
+
+    def _note_voc_airing(self, began, now):
+        """A window of the room shut after an airing while the VOC called for air: the pause after it starts now."""
+        air = (self.previous.features.get("air") or {}) if self.previous else {}
+        about_voc = air.get("voc_status") == "high" or (self._experiment or {}).get("measure") == "voc"
+        if began is None or now - began < vocs.AIRING or not about_voc:
+            return
+        if any(e in self.opened_since for e in self.windows):
+            return
+        level = vocs.mean(list(self.voc_points), now)
+        if isinstance(level, (int, float)):
+            self.voc_aired = {"end": now.isoformat(), "after": round(level, 1)}
 
     def _remember(self, record, now):
         self.feedback = feedback.keep([*self.feedback, record], now)

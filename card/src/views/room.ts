@@ -54,6 +54,9 @@ export function humidityLabel(v:View):string|null {
 // Mirrored word for word by custom_components/niak_comfort/engine/verdict.py for the entities: tests/test_verdict_parity.py.
 export function advice(v:View):Advice {
   const out=withLearning(v,gesture(v));
+  // The gesture made, the window open while it still helps: nothing better to do, in blue. « Vous pouvez refermer » is orange again.
+  if((/^(Encore |Laissez ouvert)/.test(out.title)||out.title==='Aération en cours')&&['action','benefit'].includes(v.assessment.level))
+    return {...out,pill:'Au mieux',level:'calm'};
   const humidity=v.assessment.features?.humidity,label=humidityLabel(v);
   if(label&&humidity?.status&&v.assessment.reason!=='shared_volume'&&['calm','neutral'].includes(v.assessment.level)&&!unreadable(v)
       &&v.assessment.action!=='fermer'&&!v.assessment.needs.some(need=>need!=='dry'&&need!=='precool'&&(need!=='heat'||!coldSettled(v.assessment)))){
@@ -187,6 +190,7 @@ function gesture(v:View):Advice {
     case 'ventilation_possible': return {title:'Lancez la VMC',line:html`${b(number(hi)+' %')} d’humidité, la fenêtre la baisse à peine`,disk:'vmc',cap:'Elle assèchera mieux'};
     case 'exchange_harmful': return {title:'Refermez',line:html`L’air du dehors ${b(a.temperature_delta!==null&&a.temperature_delta>0?'réchauffe la pièce':'refroidit la pièce')}`,disk:'shut'};
     case 'rehumidification_risk': return {title:'Refermez',line:incoming!=null?water:html`L’air du dehors ${b('est plus humide')}`,disk:'shut'};
+    case 'voc_outdoor': return {title:'Refermez',line:html`L’air du dehors ${b('fait monter le COV')}`,disk:'shut'};
     // A cold room asks for a gesture only when someone is home and the heating is off.
     case 'warm_walls': {const w=a.features?.warm_walls;
       return {title:'Chauffez un peu plus',line:w?html`Visez ${b(deg(w.target))} : des murs plus chauds ne moisissent pas`:html`Des murs plus chauds ${b('ne moisissent pas')}`,disk:'heat',cap:'Risque de moisissure'};}
@@ -336,6 +340,9 @@ export function facts(v:View):Fact[] {
   else if(a.reason==='drying_alone'&&f?.drying?.alone!=null)out.push({ic:'drop',title:'Humidité',text:`redescend seule : environ ${Math.round(f.drying.alone)} % dans ${f.drying.minutes} min`});
   else if(a.reason==='drying_night')out.push({ic:'clock',title:'Aération',text:f?.drying?.morning!=null?`dès ${f.drying.morning} h, si l’humidité reste haute`:'au réveil, si l’humidité reste haute'});
   if(hum?.local)out.push({ic:'drop',title:'Vapeur',text:'plus humide ici qu’à côté : cuisson ou douche'});
+  // A high VOC that calls for nothing says why: it falls by itself, or opening makes it climb (engine/voc.py).
+  if(air?.voc_falling)out.push({ic:'flask',title:'COV',text:'en baisse, il retombe seul : pas besoin d’aérer'});
+  else if(air?.voc_outdoor)out.push({ic:'flask',title:'COV',text:'élevé, mais à cette heure l’air du dehors le fait monter : aérer n’aide pas'});
   if(air?.purifier?.on===true)out.push({ic:'fan',title:'Purificateur',text:'en marche, il filtre l’air'});
   if(air?.ventilation?.on===true)out.push({ic:'vmc',title:'VMC',text:a.needs.includes('dry')?'en marche, elle aide à assécher':'en marche'});
   // The season's rules, said where they change the advice.
@@ -424,7 +431,7 @@ const TOPICS:Record<string,string>={'Humidité':'humidity','Air sec':'humidity',
   'Air humide':'humidity','Légèrement humide':'humidity','Très humide':'humidity','Humidité élevée':'humidity','Air humide dehors':'humidity','Vapeur':'humidity',
   'Pièce fraîche':'heating','Un peu frais':'heating','Pièce chaude':'heating','Soleil':'sun','Fenêtres':'windows','Autres fenêtres':'windows','Fenêtre ouverte':'windows',
   'Aération':'windows','Aération d’hiver':'windows','Pièce vide':'household','Nuit':'household','Purificateur':'equipment','VMC':'equipment',
-  'Cette nuit':'forecast','Dernière aération':'learning'};
+  'Cette nuit':'forecast','Dernière aération':'learning','COV':'windows'};
 /** The « À savoir » lines of a card, rooms sharing one air merged, by priority. */
 export function factList(v:View,partners:View[]=[],config:Config={type:'custom:niak-comfort-card'}):Fact[] {
   if(config.show_insights===false)return [];
@@ -459,7 +466,7 @@ export function factBox(v:View,partners:View[]=[],config:Config={type:'custom:ni
 /** Why the room that leads a shared air asks for its gesture, after its name. */
 const SHARED:Record<string,string>={air_needed:'a besoin d’air',short_air_change:'a besoin d’air',cooling_possible:'se rafraîchit',warming_possible:'se réchauffe',
   drying_possible:'s’assèche',precool_possible:'stocke le frais',rain_soon:'attend la pluie',rain_open_windows:'prend la pluie',
-  gust_open_windows:'prend le vent',alarm_open:'est ouverte, alarme armée',opening_blocked:'doit rester fermé',exchange_harmful:'se dérègle',rehumidification_risk:'reprend l’humidité',
+  gust_open_windows:'prend le vent',alarm_open:'est ouverte, alarme armée',opening_blocked:'doit rester fermé',exchange_harmful:'se dérègle',rehumidification_risk:'reprend l’humidité',voc_outdoor:'prend le COV du dehors',
   heat_needed:'est trop fraîche',sun_entering:'prend le soleil'};
 /** When the rain starts: to the minute from the radar, only « within the hour » from the hourly forecast. */
 function rainWhen(a:View['assessment']):string {
@@ -585,7 +592,7 @@ export function tiles(v:View,config:Config):Tile[] {
     list.push({ic:'air',label:'CO₂',value:number(c),unit:'ppm',note:c===null?gone(o.co2):high?'à renouveler':'normal',level:high?(a.level==='urgent'?'urgent':'watch'):'calm',out:high});}
   if(mods.has('air'))for(const [key,ic,label,status] of [['pm25','pm','Particules',air?.pm25_status],['voc','flask','COV',air?.voc_status]] as const){
     if(!o[key])continue;const x=numeric(o[key]),high=status==='high',treated=key==='pm25'&&high&&air?.pm25_treated===true;
-    list.push({ic,label,value:number(x),unit:o[key].unit??'',note:x===null?gone(o[key]):treated?'filtrées':high?(key==='voc'&&typeof air?.voc_minutes==='number'&&air.voc_minutes>0?`depuis ${air.voc_minutes} min`:'élevés'):status==='uninterpreted'?'sans seuil':key==='pm25'?'normales':'normaux',level:treated?'calm':high?'watch':status==='ok'?'calm':'neutral',out:high});}
+    list.push({ic,label,value:number(x),unit:o[key].unit??'',note:x===null?gone(o[key]):treated?'filtrées':key==='voc'&&air?.voc_falling?'en baisse':key==='voc'&&(air?.voc_outdoor||air?.voc_rising_open)?'élevés':high?(key==='voc'&&typeof air?.voc_minutes==='number'&&air.voc_minutes>0?`depuis ${air.voc_minutes} min`:'élevés'):status==='uninterpreted'?'sans seuil':key==='pm25'?'normales':'normaux',level:treated?'calm':high?'watch':status==='ok'?'calm':'neutral',out:high});}
   if(mods.has('windows')){const contacts=Object.entries(o).filter(([k])=>k.startsWith('window:')).map(([,r])=>r);
     if(contacts.length){const open=contacts.filter(r=>r.quality==='valid'&&r.value===true).length,flagged=(a.openings??[]).some(x=>x.flags.length>0&&x.open===true);
       list.push({ic:open?'open':'window',label:'Fenêtres',value:`${open}/${contacts.length}`,note:flagged?'à refermer':open?(open>1?`${open} ouvertes`:'1 ouverte'):'toutes fermées',level:flagged?'action':'neutral',out:flagged});}}

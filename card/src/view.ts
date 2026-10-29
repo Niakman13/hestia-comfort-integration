@@ -39,6 +39,7 @@ export const reasons:Record<string,[string,string]> = {
   opening_blocked:['L’aération doit attendre','Une contrainte extérieure empêche une ouverture favorable. Un besoin intérieur éventuel reste à traiter.'],
   verify_exterior:['L’extérieur reste à vérifier','Le besoin intérieur est connu. Les conditions manquantes empêchent de confirmer le bénéfice ou les contraintes d’une ouverture.'],
   air_needed:['Aérez quelques minutes','Les mesures de qualité de l’air appellent un renouvellement d’air. Surveillez les mesures pour décider de la suite ; aucune durée ne garantit le résultat.'],
+  voc_outdoor:['Refermez, le COV monte','Depuis l’ouverture, le COV monte : l’air du dehors en apporte. Rester ouvert ne fait que l’augmenter ; la pièce apprend à quelles heures c’est le cas.'],
   rehumidification_risk:['Refermez pour éviter de réhumidifier','L’air extérieur contient davantage d’eau. Rester ouvert ne permet plus d’assécher la pièce ; les besoins de renouvellement d’air restent évalués séparément.'],
   shutter_protection:['Adaptez la protection solaire','Un geste sur les volets peut aider. Consultez le conseil par ouvrant ; une position non mesurée reste inconnue.'],
   warming_possible:['Profitez de la douceur','L’air extérieur est plus doux : il réchauffe cette pièce sans chauffage.'],

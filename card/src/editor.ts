@@ -1,5 +1,6 @@
 import {LitElement,html,css,nothing} from 'lit';
 import {property,state} from 'lit/decorators.js';
+import {SECTIONS,SECTION_LABELS,SHOWN_SECTIONS,FOLDED_SECTIONS} from './views/homeboard';
 import {cleanConfig,cleanHomeConfig,MODULES,moduleLabels,SCALE_MARKS,CHIPS,TILE_BLOCKS,HORIZON_SUBJECTS,INSIGHT_TOPICS,DETAIL_ROWS,homeAction,type Config,type HomeConfig,type HomeAssistant,type Entry} from './types';
 
 /* The editors are built like Hestia Weather's: the room (or title) and the format on top, then folding groups that
@@ -44,7 +45,7 @@ const labels:Record<string,string>={entry_id:'Pièce',title:'Titre facultatif',f
   rotate:'Faire défiler les conseils',banner_blocks:'Contenu du bandeau',scale_marks:'Repères de l’échelle',modules:'Rubriques',measures_open:'Mesures dépliées au départ',
   show_details:'Afficher la section',details_open:'Dépliés au départ',show_measures:'Afficher la section',show_insights:'Afficher la section',
   show_horizon:'Graphique « Prochaines heures »',horizon_mode:'Quand l’afficher',horizon_subjects:'Sujets du graphique',insight_topics:'Sujets',insight_max:'Lignes au plus',detail_rows:'Lignes',tile_chips:'Pastilles de la tuile repliée',tile_blocks:'Contenu de la tuile dépliée',
-  mini_values:'Valeurs de la ligne',hold_action:'Appui long',hold_path:'Page à ouvrir',show_scale:'Échelle des pièces',show_rooms:'Section Pièces',rooms_open:'Pièces dépliées au départ',
+  mini_values:'Valeurs de la ligne',hold_action:'Appui long',hold_path:'Page à ouvrir',show_scale:'Échelle des pièces',show_rooms:'Section Pièces',sections:'Sections affichées',folded:'Dans « Plus de détails »',more_open:'« Plus de détails » déplié au départ',period:'Période au départ',rooms_open:'Pièces dépliées au départ',
   list_order:'Ordre des pièces'};
 const helpers:Record<string,string>={
   animations:'Coupées, la lumière et l’anneau restent fixes et les conseils ne défilent plus seuls.',
@@ -59,7 +60,8 @@ const helpers:Record<string,string>={
   measures_open:'Repliées, les mesures à surveiller restent visibles.',
   tile_chips:'Sous le conseil ; une mesure à surveiller passe en ambre.',tile_blocks:'Ce qui s’ouvre d’un appui, dans l’ordre.',
   mini_values:'À droite du conseil.',hold_action:'La carte complète par-dessus la page, une page de votre tableau de bord, ou rien.',
-  hold_path:'Le chemin de la page, par exemple /confort ou /lovelace/confort.',rooms_open:'Repliées, les pièces qui demandent un geste restent visibles.'};
+  hold_path:'Le chemin de la page, par exemple /confort ou /lovelace/confort.',rooms_open:'Repliées, les pièces qui demandent un geste restent visibles.',
+  folded:'Les sections cochées ici passent dans la partie dépliable, sous les autres.'};
 const styles=css`.note{color:var(--secondary-text-color);font-size:13px;line-height:1.6;margin:0 0 16px}.note.warn{color:var(--primary-text-color)}a{color:var(--primary-color)}`;
 /** A link inside Home Assistant opens there, without reloading the page. */
 const follow=(e:MouseEvent)=>{e.preventDefault();history.pushState(null,'',(e.currentTarget as HTMLAnchorElement).getAttribute('href')??'/niak/confort');
@@ -149,7 +151,7 @@ export class ComfortEditor extends LitElement {
 }
 if(!customElements.get('niak-comfort-card-editor'))customElements.define('niak-comfort-card-editor',ComfortEditor);
 
-const HOME_DEFAULTS:Record<string,unknown>={format:'full',animations:true,glass_effect:true,rotate:true,show_scale:true,show_rooms:true,rooms_open:false,show_details:true,details_open:false,
+const HOME_DEFAULTS:Record<string,unknown>={format:'full',sections:[...SHOWN_SECTIONS],folded:[...FOLDED_SECTIONS],more_open:false,period:'day',animations:true,glass_effect:true,rotate:true,show_scale:true,show_rooms:true,rooms_open:false,show_details:true,details_open:false,
   banner_blocks:['rooms','house'],list_order:'urgent',hold_action:'popup'};
 /** The home card's editor, built the same way. */
 export class ComfortHomeEditor extends LitElement {
@@ -161,7 +163,7 @@ export class ComfortHomeEditor extends LitElement {
   private schema(){
     const c=this.config!,f=c.format??'full',action=homeAction(c);
     const format={name:'format',selector:{select:{mode:'list',options:[
-      {value:'full',label:'Complète : bandeau, échelle des pièces, pièces et détails'},{value:'tile',label:'Tuile : le conseil de la pièce qui demande le plus, l’échelle des pièces'},
+      {value:'full',label:'Complète : les conseils des pièces, puis le bilan du jour, de la semaine ou du mois'},{value:'tile',label:'Tuile : le conseil de la pièce qui demande le plus, l’échelle des pièces'},
       {value:'list',label:'Liste des pièces : une ligne par pièce'},{value:'mini',label:'Mini : une ligne pour toute la maison'},
       {value:'alert',label:'Alerte : visible seulement si une pièce demande un geste'}]}}};
     const head=[{name:'title',selector:{text:{}}},format];
@@ -170,8 +172,10 @@ export class ComfortHomeEditor extends LitElement {
     if(f==='alert')return [...head,look(),banner,hold(action)];
     if(f==='list')return [...head,look(),group('Contenu','mdi:format-list-bulleted',[dropdown('list_order',[['urgent','Celles qui demandent un geste d’abord'],['floor','Par étage']])],true),hold(action)];
     if(f==='tile')return [...head,look(),banner,group('Pièces','mdi:view-grid-outline',[toggle('show_scale'),toggle('show_rooms'),toggle('rooms_open')]),hold(action)];
-    return [...head,look(),banner,group('Échelle des pièces','mdi:thermometer',[toggle('show_scale')]),
-      group('Pièces','mdi:view-grid-outline',[toggle('show_rooms'),toggle('rooms_open')]),group('Détails','mdi:text-box-outline',[toggle('show_details'),toggle('details_open')]),hold(action,true)];
+    const sections=SECTIONS.map(k=>[k,SECTION_LABELS[k]] as [string,string]);
+    return [...head,look(),banner,
+      group('Bilan','mdi:chart-box-outline',[dropdown('period',[['day','Jour'],['week','Semaine'],['month','Mois']]),choices('sections',sections),choices('folded',sections),toggle('more_open')],true),
+      group('Pièces et détails','mdi:view-grid-outline',[toggle('rooms_open'),toggle('details_open')]),hold(action,true)];
   }
   private changed(e:CustomEvent<{value:Record<string,unknown>}>){
     e.stopPropagation();if(!this.config)return;

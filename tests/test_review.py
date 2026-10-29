@@ -178,5 +178,39 @@ class Source(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(first["home"]["score"], round((100 + 75) / 2))
 
 
+class Periods(unittest.TestCase):
+    """The home card's day, week and month: the review's themes over a short window, each room's range."""
+
+    def rooms(self, now):
+        start = now - timedelta(days=30)
+        salon = {"entry_id": "s", "title": "Salon", "heated": True,
+                 "series": {"temperature": hourly(start, 30, lambda t: 21.0 if t.hour >= 8 else 19.0),
+                            "humidity": hourly(start, 30, 65.0), "co2": hourly(start, 30, 700.0)}}
+        laundry = {"entry_id": "b", "title": "Buanderie", "heated": False,
+                   "series": {"temperature": hourly(start, 30, 17.5)}}
+        return [salon, laundry]
+
+    def test_a_day_is_graded_on_its_own_hours(self):
+        now = JANUARY + timedelta(days=40)
+        day = review.period(self.rooms(now), hourly(JANUARY, 40, 6.0), now, "day")
+        salon, laundry = day["rooms"]
+        self.assertEqual((salon["min"], salon["max"]), (19.0, 21.0))
+        self.assertIsNotNone(day["themes"]["warmth"]["letter"])
+        self.assertEqual(day["themes"]["humidity"]["share"], 100)
+        self.assertIsNotNone(day["themes"]["comfort"]["score"])
+        # An unheated room shows its range but is not graded on its warmth.
+        self.assertEqual(laundry["min"], 17.5)
+        self.assertNotIn("warmth", laundry["themes"])
+        self.assertEqual(len(day["curve"]["inside"]), 24)
+        self.assertEqual(day["outdoor"]["mean"], 6.0)
+
+    def test_the_month_steps_by_six_hours_and_needs_ten_days(self):
+        now = JANUARY + timedelta(days=40)
+        month = review.period(self.rooms(now), hourly(JANUARY, 40, 6.0), now, "month")
+        self.assertEqual((month["step_hours"], len(month["curve"]["inside"])), (6, 120))
+        short = [{**r, "series": {k: v[-5 * 24:] for k, v in r["series"].items()}} for r in self.rooms(now)]
+        self.assertIsNone(review.period(short, [], now, "month")["themes"]["warmth"]["score"])
+
+
 if __name__ == "__main__":
     unittest.main()

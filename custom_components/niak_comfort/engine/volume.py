@@ -9,7 +9,7 @@ other room says whom it follows instead of contradicting it.
 SAFETY = ("rain_open_windows", "gust_open_windows", "rain_soon")
 HARD = {"storm", "vigilance", "pollution", "rain", "rain_soon"}
 AIR = ("air_needed", "short_air_change")
-COMFORT_CLOSE = ("exchange_harmful", "rehumidification_risk", "heat_needed", "sun_entering", "opening_blocked")
+COMFORT_CLOSE = ("exchange_harmful", "rehumidification_risk", "heat_needed", "sun_entering", "opening_blocked", "voc_outdoor")
 OPEN = ("cooling_possible", "drying_possible", "precool_possible", "warming_possible")
 
 

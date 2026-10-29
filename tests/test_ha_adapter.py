@@ -142,6 +142,30 @@ class AdapterTests(AdapterFixture):
             await coordinator._changed(event)
         self.assertNotIn("binary_sensor.window", coordinator.followed)
 
+    async def test_closing_after_a_voc_airing_starts_the_pause_at_once(self):
+        # 28 Oct.: Fenêtre Ouest shut at 23:14:26 after an airing for the VOC, « Aérez » back at 23:14:33: the pause
+        # waited for the measured record, written four minutes after the closing.
+        from types import SimpleNamespace
+        coordinator = ComfortCoordinator(self.hass, self.entry)
+        now = dt_util.utcnow()
+        coordinator.previous = SimpleNamespace(features={"air": {"voc_status": "high"}})
+        coordinator.voc_points.extend([(now - timedelta(minutes=4), 340), (now - timedelta(minutes=2), 323)])
+        coordinator.opened_since["binary_sensor.window"] = now - timedelta(minutes=7)
+        event = SimpleNamespace(data={"entity_id": "binary_sensor.window", "old_state": SimpleNamespace(state="on"),
+                                      "new_state": SimpleNamespace(state="off", attributes={})})
+        with patch.object(coordinator, "async_request_refresh", AsyncMock()), patch("custom_components.niak_comfort.coordinator.async_call_later", lambda *a: (lambda: None)):
+            await coordinator._changed(event)
+        self.assertIsNotNone(coordinator.voc_aired)
+        self.assertGreater(coordinator.voc_aired["after"], 300)
+        context = coordinator._context(dt_util.utcnow(), {})
+        self.assertEqual(context["voc_aired_at"], coordinator.voc_aired["end"])
+        # Someone going through the door is not an airing.
+        coordinator.voc_aired = None
+        coordinator.opened_since["binary_sensor.window"] = dt_util.utcnow() - timedelta(seconds=40)
+        with patch.object(coordinator, "async_request_refresh", AsyncMock()), patch("custom_components.niak_comfort.coordinator.async_call_later", lambda *a: (lambda: None)):
+            await coordinator._changed(event)
+        self.assertIsNone(coordinator.voc_aired)
+
     async def test_past_openings_are_learned_and_remembered(self):
         from homeassistant.core import State
         sources = {**self.entry.data["sources"], "indoor_humidity": "sensor.hum", "outdoor_humidity": "sensor.out_hum"}

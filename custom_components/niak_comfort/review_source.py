@@ -14,6 +14,9 @@ from .engine import review
 REVIEW_DAYS = 365
 REVIEW_REFRESH = timedelta(hours=1)
 DATA_REVIEW = f"{DOMAIN}_review"
+DATA_PERIODS = f"{DOMAIN}_periods"
+# The home card's periods: a month of hourly means, and a week before it for the running mean outdoors.
+PERIODS_DAYS = 37
 MEASURES = {"temperature": "indoor_temperature", "humidity": "indoor_humidity", "co2": "co2"}
 
 
@@ -67,4 +70,28 @@ async def async_review(hass, now=None):
     result = {"version": 1, "computed_at": now.isoformat(), "start": start.isoformat(), "outdoor": bool(outside),
               "home": {**review.home(rooms), "advice": review.home_advice(rooms)}, "rooms": rooms}
     hass.data[DATA_REVIEW] = (now, result)
+    return result
+
+
+async def async_periods(hass, now=None):
+    """The home card's last day, week and month (engine/review.period); kept an hour like the review."""
+    now = now or dt_util.utcnow()
+    cached = hass.data.get(DATA_PERIODS)
+    if cached and now - cached[0] < REVIEW_REFRESH:
+        return cached[1]
+    entries = _rooms(hass)
+    wanted = {e.entry_id: {k: e.runtime_data.config.get("sources", {}).get(source) for k, source in MEASURES.items()} for e in entries}
+    outdoor = next((e.runtime_data._outdoor_entity() for e in entries if e.runtime_data._outdoor_entity()), None)
+    ids = {i for sources in wanted.values() for i in sources.values() if i} | ({outdoor} if outdoor else set())
+    stats = await _statistics(hass, ids, now - timedelta(days=PERIODS_DAYS), now) if ids else {}
+    zone = dt_util.get_default_time_zone()
+    outside = _points(stats.get(outdoor)) if outdoor else []
+    rooms = [{"entry_id": e.entry_id, "title": e.title, "heated": e.runtime_data.config.get("heated", True) is not False,
+              "series": {k: _points(stats.get(i)) for k, i in wanted[e.entry_id].items() if i}} for e in entries]
+
+    def build():
+        return {name: review.period(rooms, outside, now, name, zone) for name in review.PERIODS}
+
+    result = {"version": 1, "computed_at": now.isoformat(), **await hass.async_add_executor_job(build)}
+    hass.data[DATA_PERIODS] = (now, result)
     return result

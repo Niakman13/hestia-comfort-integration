@@ -47,7 +47,7 @@ REASONS = ("within_comfort", "rain_open_windows", "opening_blocked", "verify_ext
            "drying_possible", "exchange_harmful", "cooling_unavailable", "heat_needed", "drying_unavailable", "drying_later", "drying_slow",
            "drying_night", "drying_alone", "ventilation_possible", "incomplete_data", "optional_air_change", "gust_open_windows",
            "short_air_change", "sun_entering", "rain_soon", "precool_possible", "precool_later", "shared_volume", "humid_outdoor",
-           "open_neutral", "rehumidification_risk", "alarm_open", "warm_walls")
+           "open_neutral", "rehumidification_risk", "alarm_open", "warm_walls", "voc_outdoor")
 
 
 @dataclass(frozen=True)
@@ -564,6 +564,10 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     if (opened and optional_wet_exchange and not air and not hard and not soft
             and action != "fermer" and not rain_coming):
         action, reason, level = "fermer", "rehumidification_risk", "action"
+    # The VOC climbing since the window was opened: the air outside brings it in, staying open only adds to it.
+    if (opened and air_detail.get("voc_rising_open") and not air and not hard and action != "fermer" and not rain_coming
+            and reason in ("within_comfort", "open_neutral", "drying_slow", "drying_unavailable", "drying_later", "humid_outdoor")):
+        action, reason, level = "fermer", "voc_outdoor", "action"
     # A window the person said is open on purpose at night, to let the cool air in: while it does just that (cooler
     # outside, the room not below its range), it is no oversight. A warmer outside, a room getting too cold or damp
     # still get their « Refermez »: on purpose does not mean right.

@@ -20,6 +20,7 @@ falls out of every category (under 18 °C) for a sixth of the heating season, an
 Confort already calls a mould risk.
 """
 from collections import defaultdict
+from datetime import timedelta
 from statistics import mean
 
 POINTS = {1: 100, 2: 75, 3: 50, 4: 0}
@@ -86,9 +87,9 @@ def air_category(value):
     return next((category for category, limit in CO2_ABOVE if above <= limit), 4)
 
 
-def _grade(categories):
-    """Score, letter and share of hours in categories I and II; no grade under two weeks of hours."""
-    if len(categories) < MIN_HOURS:
+def _grade(categories, minimum=MIN_HOURS):
+    """Score, letter and share of hours in categories I and II; no grade under `minimum` hours (two weeks)."""
+    if not categories or len(categories) < minimum:
         return {"score": None, "letter": None, "comfortable": None, "hours": len(categories)}
     score = mean(POINTS[c] for c in categories)
     return {"score": round(score), "letter": letter(score), "hours": len(categories),
@@ -241,3 +242,72 @@ def home(rooms):
     scores = [r["score"] for r in rooms if r["score"] is not None]
     value = mean(scores) if scores else None
     return {"score": round(value) if value is not None else None, "letter": letter(value), "themes": themes}
+
+
+# The home card's periods: their length in days, the hours a theme needs to be graded, the curve's step in hours.
+PERIODS = {"day": (1, 12, 1), "week": (7, 3 * 24, 2), "month": (30, 10 * 24, 6)}
+
+
+def _share(flags):
+    return round(100 * sum(flags) / len(flags)) if flags else None
+
+
+def period(rooms, outdoor, now, name, zone=None):
+    """The home over its last day, week or month, for the home card: the four themes of the review, each room's range,
+    and the curves inside and outside. `rooms`: [{"entry_id", "title", "series", "heated"}], series and `outdoor` as for room()."""
+    days, minimum, step = PERIODS[name]
+    since = now - timedelta(days=days)
+
+    def local(points):
+        return [(t.astimezone(zone) if zone else t, float(v)) for t, v in points or ()
+                if isinstance(v, (int, float)) and not isinstance(v, bool)]
+    outside_all = local(outdoor)
+    running = running_means(outside_all)
+    outside = [(t, v) for t, v in outside_all if t >= since]
+    out, pooled, buckets = [], {"warmth": [], "humidity": [], "air": []}, defaultdict(list)
+    for room in rooms:
+        series = {k: [(t, v) for t, v in local(room["series"].get(k)) if t >= since] for k in ("temperature", "humidity", "co2")}
+        temps = series["temperature"]
+        themes = {}
+        if room.get("heated", True) and temps:
+            categories = [_category(v, warmth_bands(t, running)) for t, v in temps]
+            pooled["warmth"] += categories
+            themes["warmth"] = _grade(categories, minimum)
+            for t, v in temps:
+                buckets[int((t - since).total_seconds() // (step * 3600))].append(v)
+        if series["humidity"]:
+            categories = [humidity_category(v) for _, v in series["humidity"]]
+            pooled["humidity"] += [v > HUMIDITY[1][2] for _, v in series["humidity"]]
+            themes["humidity"] = _grade(categories, minimum)
+        if series["co2"]:
+            categories = [air_category(v) for _, v in series["co2"]]
+            pooled["air"] += categories
+            themes["air"] = _grade(categories, minimum)
+        scores = [t["score"] for t in themes.values() if t["score"] is not None]
+        values = [v for _, v in temps]
+        out.append({"entry_id": room["entry_id"], "title": room["title"], "heated": room.get("heated", True),
+                    "score": round(mean(scores)) if scores else None,
+                    "themes": {k: {"score": v["score"], "letter": v["letter"]} for k, v in themes.items()},
+                    "min": round(min(values), 1) if values else None, "max": round(max(values), 1) if values else None,
+                    "mean": round(mean(values), 1) if values else None})
+    themes = {}
+    for key in THEMES:
+        scores = [r["themes"][key]["score"] for r in out if (r["themes"].get(key) or {}).get("score") is not None]
+        value = mean(scores) if scores else None
+        # The figure under each letter: hours comfortable (warmth, air) or too humid (humidity), all rooms together.
+        share = _share(pooled[key]) if key == "humidity" else _share([c <= 2 for c in pooled[key]])
+        themes[key] = {"score": round(value) if value is not None else None, "letter": letter(value), "share": share}
+    scores = [r["score"] for r in out if r["score"] is not None]
+    value = mean(scores) if scores else None
+    themes["comfort"] = {"score": round(value) if value is not None else None, "letter": letter(value)}
+    values = [v for _, v in outside]
+    outdoor_buckets = defaultdict(list)
+    for t, v in outside:
+        outdoor_buckets[int((t - since).total_seconds() // (step * 3600))].append(v)
+    count = days * 24 // step
+
+    def curve(source):
+        return [round(mean(source[i]), 1) if source.get(i) else None for i in range(count)]
+    return {"period": name, "start": since.isoformat(), "step_hours": step, "themes": themes, "rooms": out,
+            "outdoor": {"min": round(min(values), 1), "max": round(max(values), 1), "mean": round(mean(values), 1)} if values else None,
+            "curve": {"inside": curve(buckets), "outside": curve(outdoor_buckets)}}

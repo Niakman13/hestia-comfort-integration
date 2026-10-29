@@ -173,7 +173,7 @@ test('an open contact with no reliable timer keeps its unknown duration visible'
  assert.match(evolutionLines(v,['windows']).map(l=>l.text).join(' '),/durée inconnue/);
 });
 test('humidity and shutter reasons introduced by the engine have readable summaries',()=>{
- const v=fresh();for(const reason of ['rehumidification_risk','shutter_protection']){v.assessment.reason=reason;assert.notEqual(summary(v)[0],'Conseil à vérifier');}
+ const v=fresh();for(const reason of ['rehumidification_risk','shutter_protection','voc_outdoor']){v.assessment.reason=reason;assert.notEqual(summary(v)[0],'Conseil à vérifier');}
 });
 const evolutionFixtures=JSON.parse(await readFile(new URL('../preview/evolution/real-fixtures.json',import.meta.url),'utf8'));
 test('the sixteen evolution engine scenes keep a readable compatible card',()=>{
@@ -630,4 +630,11 @@ test('the review card is a summary unless « full » is chosen, its title trimme
   assert.deepEqual(cleanReviewConfig({type:'custom:niak-comfort-review-card',format:'full',title:'  Maison  '}),{type:'custom:niak-comfort-review-card',format:'full',title:'Maison'});
   assert.equal(cleanReviewConfig({type:'custom:niak-comfort-review-card',format:'grand',title:' '}).format,'summary');
   assert.throws(()=>cleanReviewConfig({type:'custom:niak-comfort-card'}));
+});
+
+test('the full home card chooses its sections, what folds away and the period shown first',()=>{
+  const c=cleanHomeConfig({type:'custom:niak-comfort-home-card',sections:['themes','rooms_chart','curve'],folded:['curve'],period:'week',more_open:true});
+  assert.deepEqual([c.sections,c.folded,c.period,c.more_open],[['themes','rooms_chart','curve'],['curve'],'week',true]);
+  assert.throws(()=>cleanHomeConfig({type:'custom:niak-comfort-home-card',sections:['graphique']}));
+  assert.throws(()=>cleanHomeConfig({type:'custom:niak-comfort-home-card',period:'année'}));
 });

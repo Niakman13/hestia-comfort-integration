@@ -113,6 +113,9 @@ def advice(v, local=lambda d: d.astimezone()):
     """The banner of the card for this view: title, disk, cap, and the pill and level when they are not the engine's."""
     a = v["assessment"]
     out = _with_learning(v, _gesture(v, local))
+    # The gesture made, the window open while it still helps: nothing better to do, in blue. « Vous pouvez refermer » is orange again.
+    if gesture_key(out["title"], out["disk"]) == "keep_open" and a["level"] in ("action", "benefit"):
+        return {**out, "pill": "Au mieux", "level": "calm"}
     humidity, label = _get(a, "features", "humidity"), humidity_label(v)
     if (label and humidity and humidity.get("status") and a["reason"] != "shared_volume" and a["level"] in ("calm", "neutral")
             and not unreadable(v) and a["action"] != "fermer"
@@ -183,7 +186,7 @@ def _gesture(v, local):
         return {"title": "Fermez, il pleut", "disk": "rain"}
     if reason == "gust_open_windows":
         return {"title": "Fermez, vent fort", "disk": "shut"}
-    if reason in ("alarm_open", "exchange_harmful", "rehumidification_risk"):
+    if reason in ("alarm_open", "exchange_harmful", "rehumidification_risk", "voc_outdoor"):
         return {"title": "Refermez", "disk": "shut"}
     if reason == "rain_soon":
         return {"title": "Refermez avant la pluie", "disk": "rain"}

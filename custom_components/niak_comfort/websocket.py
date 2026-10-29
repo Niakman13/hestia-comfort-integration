@@ -19,6 +19,7 @@ def async_setup_websocket(hass):
     websocket_api.async_register_command(hass, ws_subscribe)
     websocket_api.async_register_command(hass, ws_home_subscribe)
     websocket_api.async_register_command(hass, ws_review)
+    websocket_api.async_register_command(hass, ws_periods)
     for command in (ws_configuration, ws_discover, ws_overview, ws_weather, ws_validate, ws_save, ws_remove):
         websocket_api.async_register_command(hass, command)
 
@@ -145,6 +146,19 @@ async def ws_review(hass, connection, msg):
     try:
         result = await async_review(hass)
     except Exception as err:  # the recorder may be missing or busy: the page says so instead of hanging
+        connection.send_error(msg["id"], "not_available", str(err))
+    else:
+        connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command({vol.Required("type"): "niak_comfort/home_periods"})
+@websocket_api.async_response
+async def ws_periods(hass, connection, msg):
+    """The home card's last day, week and month (review_source.py)."""
+    from .review_source import async_periods
+    try:
+        result = await async_periods(hass)
+    except Exception as err:  # the recorder may be missing or busy: the card says so instead of hanging
         connection.send_error(msg["id"], "not_available", str(err))
     else:
         connection.send_result(msg["id"], result)

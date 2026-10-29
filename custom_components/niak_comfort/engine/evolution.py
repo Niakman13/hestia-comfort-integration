@@ -50,7 +50,10 @@ def air_features(readings, settings, context):
                             was_high=context.get('voc_was_high') is True, above_since=context.get('voc_above_since'),
                             delay=setting('voc_delay_minutes', vocs.DELAY_MINUTES),
                             pause=setting('voc_pause_minutes', vocs.PAUSE_MINUTES),
-                            aired_at=context.get('voc_aired_at'), aired_after=context.get('voc_aired_after'))
+                            aired_at=context.get('voc_aired_at'), aired_after=context.get('voc_aired_after'),
+                            falling=context.get('voc_falling') is True, outdoor=context.get('voc_outdoor') is True,
+                            opened_at_level=context.get('voc_opened_level'), going=context.get('voc_going') is True,
+                            shut=context.get('voc_shut') if isinstance(context.get('voc_shut'), bool) else None)
         vs = 'high' if judged['high'] else 'ok'
     covered = [label for key, label in (('co2','CO₂'),('pm25','PM2.5'),('voc','COV')) if _value(readings,key) is not None]
     missing = [label for key, label in (('co2','CO₂'),('pm25','PM2.5'),('voc','COV')) if _value(readings,key) is None]
@@ -70,6 +73,10 @@ def air_features(readings, settings, context):
     return dict(pm25_status=pm,voc_status=vs,voc_unit=voc.unit if voc else None,
                 voc_above_since=judged.get('above_since'),voc_minutes=judged.get('minutes'),voc_mean=judged.get('mean'),
                 voc_paused=judged.get('paused', False),
+                # What holds a high index back: falling by itself, opening makes it climb at this hour, or it climbs
+                # with the window open now (engine/voc.py).
+                voc_falling=judged.get('falling', False),voc_outdoor=judged.get('outdoor', False),
+                voc_rising_open=judged.get('rising', False),
                 purifier={'on':_value(readings,'purifier'),'speed':_value(readings,'purifier_speed')},pm25_treated=pm_treated,
                 ventilation=_ventilation(readings),
                 coverage=coverage,message=' '.join(messages) or 'Les mesures d’air restent distinctes.')

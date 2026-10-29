@@ -19,7 +19,10 @@ def synthesis(views):
         a = view["assessment"]
         names = view.get("names", {})
         openings = a.get("openings", [])
-        rooms.append({"entry_id": view["entry_id"], "title": view["title"], "level": a["level"], "action": a["action"],
+        # A room airing as advised asks nothing more: its banner is blue, it does not lead the home.
+        verdict = view.get("verdict") or {}
+        level = verdict["level"] if verdict.get("gesture") == "keep_open" else a["level"]
+        rooms.append({"entry_id": view["entry_id"], "title": view["title"], "level": level, "action": a["action"],
                       "floor": view.get("floor"), "temperature": _value(view, "indoor_temperature"), "needs": list(a["needs"]),
                       "open": [names.get(o["entity_id"], o["entity_id"]) for o in openings if o.get("open")],
                       "open_exposures": [o["exposure"] for o in openings if o.get("open") and o.get("exposure")],

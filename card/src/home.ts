@@ -8,6 +8,7 @@ import {isView,number,numeric} from './view';
 import {advice,needs,coldSettled,scale,fold,hero,tileSummary,pills,moreInfo,type CardState,type Advice,type Slide} from './views/room';
 import {cleanHomeConfig,homeAction,type Connection,type HomeAssistant,type HomeConfig,type HomeFormat,type Unsubscribe,type View,type Level} from './types';
 import {icon} from './ui/icons';
+import {band,tabs,themes,roomsChart,curve,homeboardStyles,SHOWN_SECTIONS,FOLDED_SECTIONS,type Period,type Periods,type Section,type ChartFloor} from './views/homeboard';
 
 interface FloorRef {floor_id:string|null;name:string;level:number|null}
 interface Floor extends FloorRef {room_ids:string[];mean:number|null;measured:number;total:number;hottest:{title:string;temperature:number}|null}
@@ -23,7 +24,7 @@ interface Home {
 
 /** The home card: a synthesis of every room. It never replaces the room cards' advice. */
 export class NiakComfortHomeCard extends LitElement {
-  static styles=[unsafeCSS(style),unsafeCSS(charte),unsafeCSS(roomStyle)];
+  static styles=[unsafeCSS(style),unsafeCSS(charte),unsafeCSS(roomStyle),homeboardStyles];
   @property({attribute:false}) hass?:HomeAssistant;
   @state() private config?:HomeConfig;
   @state() private rooms:View[]=[];
@@ -31,6 +32,13 @@ export class NiakComfortHomeCard extends LitElement {
   @state() private problem?:string;
   @state() private folds:Record<string,boolean>={};
   @state() private dialogOpen=false;
+  /** The last day, week and month of the home (niak_comfort/home_periods), read every quarter of an hour. */
+  @state() private periods?:Periods;
+  @state() private period?:Period;
+  @state() private slide=0;
+  private paused=false;
+  private ticker?:ReturnType<typeof setInterval>;
+  private reader?:ReturnType<typeof setInterval>;
   @property({type:Boolean}) preview=false;
   @property({type:Boolean}) editMode=false;
   private uid=`nch-${Math.random().toString(36).slice(2,8)}`;
@@ -52,7 +60,7 @@ export class NiakComfortHomeCard extends LitElement {
     const dialog=this.renderRoot.querySelector<HTMLDialogElement>('dialog');if(this.dialogOpen&&dialog&&!dialog.open)dialog.showModal();
     if(this.config?.theme==='light'||this.config?.theme==='dark')this.setAttribute('forced',this.config.theme);else this.removeAttribute('forced');
   }
-  private stop(){this.generation++;if(this.retry)clearTimeout(this.retry);this.retry=undefined;const remove=this.unsubscribe;this.unsubscribe=undefined;this.connection=undefined;if(remove)void Promise.resolve().then(()=>remove()).catch(()=>{});}
+  private stop(){this.generation++;if(this.retry)clearTimeout(this.retry);this.retry=undefined;clearInterval(this.ticker);clearInterval(this.reader);this.ticker=this.reader=undefined;const remove=this.unsubscribe;this.unsubscribe=undefined;this.connection=undefined;if(remove)void Promise.resolve().then(()=>remove()).catch(()=>{});}
   private connect(){
     const connection=this.hass?.connection;if(!this.isConnected||!connection||!this.config||connection===this.connection)return;
     this.stop();this.connection=connection;const generation=this.generation;
@@ -63,6 +71,11 @@ export class NiakComfortHomeCard extends LitElement {
       this.rooms=event.rooms.filter(isView);this.home=event.home;this.problem=undefined;
     },{type:'niak_comfort/home_subscribe'}).then(remove=>{if(generation!==this.generation)void remove();else this.unsubscribe=remove;})
       .catch((e:{code?:string})=>{if(generation===this.generation){this.problem=e?.code??'connection';this.later();}});
+    if((this.config.format??'full')==='full'){
+      const read=()=>{this.hass?.callWS<Periods>({type:'niak_comfort/home_periods'}).then(p=>{if(generation===this.generation&&p?.version===1)this.periods=p;},()=>{});};
+      read();this.reader=setInterval(read,15*60000);
+      this.ticker=setInterval(()=>{if(!this.paused&&this.config?.rotate!==false&&this.config?.animations!==false)this.slide++;},6000);
+    }
   }
   private later(){if(this.retry)return;this.retry=setTimeout(()=>{this.retry=undefined;this.connection=undefined;this.connect();},4000);}
   private open(view:View){history.pushState(null,'','/niak/confort/'+encodeURIComponent(view.entry_id));window.dispatchEvent(new CustomEvent('location-changed',{detail:{replace:false}}));}
@@ -127,7 +140,8 @@ export class NiakComfortHomeCard extends LitElement {
     const rank:Record<string,number>={urgent:0,action:1,benefit:2};
     // A room that only follows its shared air comes after the one it follows.
     const follows=(r:View)=>r.assessment.reason==='shared_volume'?1:0;
-    return this.rooms.filter(r=>levels.includes(r.assessment.level)).sort((a,b)=>rank[a.assessment.level]-rank[b.assessment.level]||follows(a)-follows(b));
+    // A room airing as advised asks nothing more: its banner is blue.
+    return this.rooms.filter(r=>levels.includes(advice(r).level??r.assessment.level)).sort((a,b)=>rank[a.assessment.level]-rank[b.assessment.level]||follows(a)-follows(b));
   }
   private slides(h:Home,calmAdvice:Advice):Slide[]{
     const blocks=this.config?.banner_blocks??['rooms','house'];
@@ -219,6 +233,7 @@ export class NiakComfortHomeCard extends LitElement {
         <div class="nc-rows">${order.map(r=>{const t=numeric(r.observations.indoor_temperature),a=advice(r),id=r.observations.indoor_temperature?.source;
           return html`<button type="button" class="nc-row" data-level=${r.assessment.level} title=${'Détails : '+r.title} @click=${(e:Event)=>{if(id)moreInfo(e,id);}}><i></i><b>${r.title}</b><span>${a.title}</span><em>${number(t)}<small> °C</small></em></button>`;})}</div></ha-card>`;
     }
+    if(format==='full')return this.board(h,homeSlides,body,all,outside,floors,season);
     const small=format==='tile'||format==='alert';
     return html`<ha-card class="nc-c" data-level=${top} ?data-starting=${this.rooms.some(r=>r.starting)}>
       ${hero({name,level:top,slides:homeSlides,small,compact:c.show_scale===false||format==='alert',still,scaleLabel:'Les pièces',scale:scale({band:season?[season.minimum,season.maximum]:null,out:h.outdoor_temperature,rooms,outEntity:this.rooms[0]?.observations.outdoor_temperature?.source??undefined}),st,why:h2`<p><b>Pièce suivie de près</b> · ${focus?focus.title:'aucune'}</p>`})}
@@ -226,6 +241,40 @@ export class NiakComfortHomeCard extends LitElement {
         ${c.show_rooms===false?nothing:fold({label:'Pièces',summary:tileSummary(all.length,outside.length,'pièce'),open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:this.uid+'-rooms',body,keep:outside.map(r=>this.roomTile(r))})}
         ${c.show_details===false||format==='tile'?nothing:fold({label:'Détails',summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:this.uid+'-details',body:h2`<ul class="nc-list">${this.details(h)}</ul>`})}
       </div>`}
+    </ha-card>`;
+  }
+  /** The full card: the rooms' advice in turn, then the last day, week or month like a light review. */
+  private board(h:Home,slides:Slide[],tiles:ReturnType<typeof h2>,all:unknown[],outside:View[],floors:{name:string;mean:number|null;room_ids:string[]}[],
+      season:{minimum:number;maximum:number}|undefined){
+    const c=this.config!,st=this.state(),name=c.title||'Mon logement',period=this.period??c.period??'day',data=this.periods?.[period];
+    const legacy:Record<string,boolean|undefined>={rooms_chart:c.show_scale,rooms:c.show_rooms,details:c.show_details};
+    // The old switches still hide a section until sections are chosen in the editor.
+    const shown=c.sections??SHOWN_SECTIONS.filter(s=>legacy[s]!==false),folded=c.folded??FOLDED_SECTIONS;
+    // The comfort range: the season's when the engine knows it, else the rooms' own settings.
+    const own=this.rooms.find(r=>r.comfort_minimum!=null&&r.comfort_maximum!=null);
+    const bandRange:[number,number]|null=season?[season.minimum,season.maximum]:own?[own.comfort_minimum!,own.comfort_maximum!]:null;
+    const chartFloors:ChartFloor[]=floors.map(f=>({name:f.name,mean:f.mean,rooms:this.rooms.filter(r=>f.room_ids.includes(r.entry_id)).map(r=>{
+      const lvl=(advice(r).level??r.assessment.level) as Level;
+      return {entry_id:r.entry_id,title:r.title,now:numeric(r.observations.indoor_temperature),level:r.assessment.features?.season?.heated===false&&!['action','urgent'].includes(lvl)?'neutral':lvl};})}));
+    const render=(s:Section,inside:boolean)=>{switch(s){
+      case 'themes':return themes(data,period);
+      case 'rooms_chart':return roomsChart({floors:chartFloors,data,period,band:bandRange,outNow:h.outdoor_temperature});
+      case 'curve':return curve(data,period,bandRange);
+      case 'rooms':return inside?h2`<div><span class="nw-label">Pièces</span>${tiles}</div>`
+        :fold({label:'Pièces',summary:tileSummary(all.length,outside.length,'pièce'),open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:this.uid+'-rooms',body:tiles,keep:outside.map(r=>this.roomTile(r))});
+      case 'details':{const list=h2`<ul class="nc-list">${this.details(h)}</ul>`;
+        return inside?h2`<div><span class="nw-label">Détails</span>${list}</div>`:fold({label:'Détails',summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:this.uid+'-details',body:list});}
+    }};
+    const open=shown.filter(s=>!folded.includes(s)),more=shown.filter(s=>folded.includes(s));
+    const pick=(i:number)=>{this.paused=true;this.slide=i;};
+    return html`<ha-card class="nc-c" data-level=${slides[0]?.level??h.level} ?data-starting=${this.rooms.some(r=>r.starting)}>
+      ${band({slides,index:this.slide,pick,title:name})}
+      <div class="nh-body">
+        <div class="nh-head"><h2>${name}</h2>${tabs(period,p=>{this.period=p;})}</div>
+        ${open.map(s=>render(s,false))}
+        ${more.length?fold({label:'Plus de détails',summary:more.length+' section'+(more.length>1?'s':''),open:this.folds.moreOpen??c.more_open??false,onToggle:()=>{this.folds={...this.folds,moreOpen:!(this.folds.moreOpen??c.more_open??false)};},id:this.uid+'-more',
+          body:h2`<div class="nh-more">${more.map(s=>render(s,true))}</div>`}):nothing}
+      </div>
     </ha-card>`;
   }
 }

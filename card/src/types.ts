@@ -66,7 +66,7 @@ export interface Features {
  shutters?:{entity_id:string;mode:'none'|'manual'|'connected';position:number|null;state:string|null;advice:'close'|'open'|null;message:string;shade_fraction:number|null;shade_model:'geometry'|'simple'|'unknown';manual_override:boolean|null;automatic:boolean|null;
   cover?:string|null;driver?:'adaptive_cover_pro'|null;sun_front?:boolean|null;target?:number|null;sun_start?:string|null;sun_end?:string|null;soon?:boolean;driving?:boolean;off?:'disabled'|'auto'|'tracking'|null;detection?:boolean|null;climate?:boolean|null;reason?:string|null;override_end?:string|null}[];
  presence?:{state:'occupied'|'empty'|'leaving'|'unknown'|'not_configured';message:string;minutes?:number;delay?:number};
- air?:{co2_status?:'high'|'ok'|'unknown'|'not_configured';pm25_status:'high'|'ok'|'unknown'|'not_configured';voc_status:'high'|'ok'|'uninterpreted'|'unknown'|'not_configured';voc_unit:string|null;voc_minutes?:number|null;voc_mean?:number|null;voc_paused?:boolean;purifier:{on:boolean|null;speed:number|null};pm25_treated?:boolean;ventilation?:{on:boolean|null;boost?:boolean}|null;coverage:string;message:string};
+ air?:{co2_status?:'high'|'ok'|'unknown'|'not_configured';pm25_status:'high'|'ok'|'unknown'|'not_configured';voc_status:'high'|'ok'|'uninterpreted'|'unknown'|'not_configured';voc_unit:string|null;voc_minutes?:number|null;voc_mean?:number|null;voc_paused?:boolean;voc_falling?:boolean;voc_outdoor?:boolean;voc_rising_open?:boolean;purifier:{on:boolean|null;speed:number|null};pm25_treated?:boolean;ventilation?:{on:boolean|null;boost?:boolean}|null;coverage:string;message:string};
  ventilation?:{opened_minutes:number|null;duration_minutes:{min:number;max:number}|null;message:string;capacity:number|null};
  humidity?:{dew_point:number|null;incoming_relative:number|null;glass_temperature:number|null;condensation_risk:boolean|null;message:string;
   status?:'unknown'|'normal'|'low'|'high';degree?:number;measured?:number|null;minimum?:number;maximum?:number;lasting?:boolean;trend?:'improving'|'worsening'|'stable'|null;
@@ -110,7 +110,7 @@ export interface Opening {
   sun_share:number; sun_wm2:number|null; wind_side?:string|null; flags:string[];
 }
 export interface View {
-  version:1; entry_id:string; area_id:string|null; title:string; computed_at:string;
+  version:1; entry_id:string; area_id:string|null; title:string; computed_at:string; /** The room's comfort range from its settings. */ comfort_minimum?:number; comfort_maximum?:number;
   assessment:Assessment; observations:Record<string,Reading>; names?:Record<string,string>; /** Rooms open onto this one: one air, shared openings. */ volume?:{entry_id:string;title:string}[]; /** Sources read from the room sharing this air, by key: {heating:'Salon'}. */ inherited?:Record<string,string>; /** « Salon · Cuisine », the best equipped first. */ volume_name?:string|null;
   /** The feedback loop: the last airing followed (within a day) and the week (engine/feedback.py). */
   feedback?:{last:{measure:'humidity'|'temperature'|'co2'|'voc';before:number;after:number;predicted:number|null;minutes:number}|null;week:{followed:number;ignored:number;evaluated:number;held:number;gains:Record<string,number>}};
@@ -156,8 +156,11 @@ export const HOME_BANNER = ['rooms','house'] as const;
 export interface HomeConfig {type:'custom:niak-comfort-home-card';title?:string;theme?:'auto'|'light'|'dark';format?:HomeFormat;
   rotate?:boolean;show_scale?:boolean;show_rooms?:boolean;rooms_open?:boolean;show_details?:boolean;details_open?:boolean;
   animations?:boolean;glass_effect?:boolean;banner_blocks?:(typeof HOME_BANNER[number])[];list_order?:'urgent'|'floor';
-  hold_action?:HoldAction;hold_path?:string}
-export const HOME_FLAGS=['rotate','show_scale','show_rooms','rooms_open','show_details','details_open','animations','glass_effect'] as const;
+  hold_action?:HoldAction;hold_path?:string;
+  /** The full card: its sections, those inside « Plus de détails », that fold opened, and the period shown first. */
+  sections?:(typeof HOME_SECTIONS[number])[];folded?:(typeof HOME_SECTIONS[number])[];more_open?:boolean;period?:'day'|'week'|'month'}
+export const HOME_SECTIONS=['themes','rooms_chart','curve','rooms','details'] as const;
+export const HOME_FLAGS=['rotate','show_scale','show_rooms','rooms_open','show_details','details_open','more_open','animations','glass_effect'] as const;
 export function cleanHomeConfig(input:HomeConfig):HomeConfig {
   if(!input||input.type!=='custom:niak-comfort-home-card')throw new Error('Type de carte invalide.');
   if(input.title!==undefined&&typeof input.title!=='string')throw new Error('Le titre doit être un texte.');
@@ -167,7 +170,9 @@ export function cleanHomeConfig(input:HomeConfig):HomeConfig {
   if(input.list_order!==undefined&&!['urgent','floor'].includes(input.list_order))throw new Error('Ordre des pièces inconnu.');
   hold(input);
   const banner=list(input.banner_blocks,HOME_BANNER,'bandeau');
-  return {...input,...(banner?{banner_blocks:banner}:{})};
+  if(input.period!==undefined&&!['day','week','month'].includes(input.period))throw new Error('Période inconnue.');
+  const sections=list(input.sections,HOME_SECTIONS,'sections'),folded=list(input.folded,HOME_SECTIONS,'sections');
+  return {...input,...(banner?{banner_blocks:banner}:{}),...(sections?{sections}:{}),...(folded?{folded}:{})};
 }
 /** What a long press does on the home card: a page when one is set, else a window, except on the full card (nothing). */
 export const homeAction=(c:HomeConfig)=>c.hold_action??(c.hold_path?'page':(c.format??'full')==='full'?'none':'popup');

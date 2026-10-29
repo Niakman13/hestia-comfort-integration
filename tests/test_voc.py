@@ -49,6 +49,20 @@ class Judge(unittest.TestCase):
         # A shorter pause chosen by the person.
         self.assertTrue(voc.judge(170, 150, NOW, above_since=since, aired_at=ago(20), aired_after=140, pause=15)["high"])
 
+    def test_the_pause_holds_right_after_closing_even_while_high(self):
+        # The home, 28 Oct.: cooking, « Aérez » from 22:45, Fenêtre Ouest open 23:07–23:14, the index still 323 at the
+        # closing. Seven seconds later « Aérez » came back: it was already high, and a strong peak.
+        just_shut = (NOW - timedelta(seconds=7)).isoformat()
+        again = voc.judge(323, 150, NOW, mean=330, was_high=True, above_since=ago(29), aired_at=just_shut, aired_after=330)
+        self.assertFalse(again["high"])
+        self.assertTrue(again["paused"])
+        # Climbing well above what the airing left still calls for air.
+        self.assertTrue(voc.judge(400, 150, NOW, mean=390, was_high=True, above_since=ago(29), aired_at=just_shut,
+                                  aired_after=330)["high"])
+        # Still high once the pause is over: asked again.
+        self.assertTrue(voc.judge(323, 150, NOW, mean=330, was_high=True, above_since=ago(80), aired_at=ago(46),
+                                  aired_after=330)["high"])
+
     def test_mean_weighs_each_reading_by_its_time(self):
         points = [(NOW - timedelta(minutes=30), 100), (NOW - timedelta(minutes=5), 200), (NOW - timedelta(minutes=1), 100)]
         self.assertAlmostEqual(voc.mean(points, NOW), (100 * 5 + 200 * 4 + 100 * 1) / 10)
@@ -74,6 +88,61 @@ class InAssessment(unittest.TestCase):
     def test_delay_from_settings(self):
         first = assess(self.rows, now=NOW, context={**self.context, "voc_delay_minutes": 0})
         self.assertEqual(first.features["air"]["voc_status"], "high")
+
+    def test_falling_by_itself_or_learned_outdoor_calls_for_nothing(self):
+        context = {**self.context, "voc_delay_minutes": 0}
+        falling = assess(self.rows, now=NOW, context={**context, "voc_falling": True}).features["air"]
+        self.assertEqual((falling["voc_status"], falling["voc_falling"]), ("ok", True))
+        outdoor = assess(self.rows, now=NOW, context={**context, "voc_outdoor": True}).features["air"]
+        self.assertEqual((outdoor["voc_status"], outdoor["voc_outdoor"]), ("ok", True))
+
+    def test_climbing_with_the_window_open_says_close(self):
+        # 28 Oct., 23:07–23:14: opened at 175, the index at 354 four minutes later.
+        rows = {**self.rows, "outdoor_temperature": Reading(20.8, "valid"), "voc": Reading(354, "valid", unit=None),
+                "window:binary_sensor.w": Reading(True, "valid")}
+        context = {**self.context, "voc_opened_level": 175, "voc_mean": 300}
+        first = assess(rows, now=NOW, context=context)
+        self.assertTrue(first.features["air"]["voc_rising_open"])
+        self.assertEqual((first.action, first.reason), ("fermer", "voc_outdoor"))
+        # Opened on a high index that goes down: the airing works, it stays open.
+        down = assess({**rows, "voc": Reading(200, "valid", unit=None)}, now=NOW, context={**context, "voc_opened_level": 330, "voc_mean": 220})
+        self.assertNotEqual(down.reason, "voc_outdoor")
+        # Opened on a low index that a meal sends up (26 Oct., 12:41: 105 → 234): the airing helps, not the outside.
+        meal = assess({**rows, "voc": Reading(234, "valid", unit=None)}, now=NOW, context={**context, "voc_opened_level": 105, "voc_mean": 200})
+        self.assertNotEqual(meal.reason, "voc_outdoor")
+        # A source inside already climbing at the opening: not the outside either.
+        going = assess(rows, now=NOW, context={**context, "voc_going": True})
+        self.assertNotEqual(going.reason, "voc_outdoor")
+
+
+class Learned(unittest.TestCase):
+    def test_falling_compares_two_means(self):
+        # 28 Oct.: 434 at 22:52, 172 at 23:04, the windows shut.
+        values = [(-24, 225), (-22, 329), (-20, 436), (-18, 435), (-16, 383), (-14, 434), (-12, 356), (-10, 366),
+                  (-8, 261), (-6, 211), (-4, 185), (-2, 172)]
+        points = [(NOW + timedelta(minutes=m), v) for m, v in values]
+        self.assertTrue(voc.is_falling(points, NOW, 150))
+        # A plateau is not falling, and twenty minutes are needed to tell.
+        flat = [(NOW + timedelta(minutes=m), 180) for m, _ in values]
+        self.assertFalse(voc.is_falling(flat, NOW, 150))
+        self.assertFalse(voc.is_falling(points[-5:], NOW, 150))
+
+    def test_airings_teach_the_hours_when_outside_air_brings_voc(self):
+        def airing(day, hour, before, after, rising_before=False):
+            start = datetime(2026, 10, day, hour, 0, tzinfo=timezone.utc)
+            points = [(start - timedelta(minutes=4), before - (40 if rising_before else 0)), (start, before),
+                      (start + timedelta(minutes=3), after), (start + timedelta(minutes=8), after)]
+            return [(start, True), (start + timedelta(minutes=8), False)], points
+        cases = [airing(20, 21, 175, 350), airing(21, 21, 180, 185), airing(22, 21, 170, 300), airing(23, 21, 160, 290),
+                 airing(23, 12, 200, 380, rising_before=True), airing(24, 12, 200, 190)]
+        contacts = {"w": [row for rows, _ in cases for row in rows]}
+        points = sorted(p for _, pts in cases for p in pts)
+        records = voc.airings(contacts, points, 150)
+        # The noon one began while a source inside was already sending it up: left out.
+        self.assertEqual([r["slot"] for r in records], ["evening"] * 4 + ["afternoon"])
+        self.assertEqual(voc.outdoor_slots(records), ["evening"])
+        # Two out of three are not enough: the index jumps a lot.
+        self.assertEqual(voc.outdoor_slots(records[:3]), [])
 
 
 if __name__ == "__main__":

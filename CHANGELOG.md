@@ -1,3 +1,30 @@
+## 1.7.25 — Mon logement devient un petit bilan
+
+**En bref**
+
+- **La carte « Mon logement » devient un petit bilan** : les conseils des pièces défilent en haut, puis la journée, la semaine ou le mois.
+- **Fenêtre ouverte comme conseillé, la carte passe en bleu**, et repasse en orange quand il faut refermer.
+- **Les COV ne font plus ouvrir et fermer à la suite.**
+
+### Nouveautés
+
+- Carte « Mon logement » : onglets Jour, Semaine et Mois.
+- Les 4 thèmes du bilan sur la période choisie : Confort, Chaleur, Humidité et Air, chacun avec sa lettre.
+- Une ligne par pièce : la température du moment ou la moyenne, le mini et le maxi, votre plage en vert.
+- Une partie « Plus de détails » à déplier : la courbe dedans et dehors, les pièces, les détails.
+- Dans l'éditeur de la carte : les sections à afficher, celles à ranger dans « Plus de détails », et la période au départ.
+
+### Améliorations
+
+- COV : après une aération, une pause avant de redemander d'ouvrir.
+- COV : quand ils redescendent seuls, fenêtres fermées, rien n'est demandé.
+- COV : les heures où ouvrir les fait monter sont apprises.
+- COV : « Refermez » quand l'air du dehors en apporte, au début d'une aération.
+
+### Corrections
+
+- Fenêtre ouverte comme conseillé : « Au mieux » en bleu au lieu de « Geste conseillé » en orange, sur la carte de la pièce, la carte « Mon logement » et les entités.
+
 ## 1.7.24 — Niak Confort devient Hestia Confort
 
 **En bref**

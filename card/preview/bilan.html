@@ -1,0 +1,26 @@
+<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hestia Confort · Carte logement, bilan</title>
+<style>body{margin:0;background:#151c25;color:#e8eef5;font-family:system-ui,sans-serif}main{max-width:520px;margin:24px auto;padding:0 16px}label{display:block;margin-bottom:12px;font-size:14px}</style>
+<main><label>Scénario <select id="scenario"></select></label><niak-comfort-home-card></niak-comfort-home-card></main>
+<script type="module">
+customElements.define('home-assistant', class extends HTMLElement {});
+await import('../../custom_components/niak_comfort/frontend/niak-comfort-card.js');
+const scenes=await(await fetch('./floors.json')).json();const choice=document.querySelector('#scenario'),card=document.querySelector('niak-comfort-home-card');let send;
+choice.innerHTML=scenes.map((s,i)=>`<option value="${i}">${s.title}</option>`).join('');
+// Synthetic periods, shaped like niak_comfort/home_periods: each room around its current temperature.
+const periods=(event)=>{const out={version:1,computed_at:new Date().toISOString()};
+  for(const [name,days,step,spread] of [['day',1,1,0.8],['week',7,2,1.6],['month',30,6,2.4]]){
+    const rooms=event.rooms.map((r,i)=>{const t=r.observations?.indoor_temperature?.value??20;return {entry_id:r.entry_id,title:r.title,heated:true,score:70+i*3,
+      min:+(t-spread).toFixed(1),max:+(t+spread*0.8).toFixed(1),mean:+(t+0.1*i-0.2).toFixed(1),themes:{}};});
+    const n=days*24/step,start=new Date(Date.now()-days*86400000);
+    out[name]={period:name,start:start.toISOString(),step_hours:step,
+      themes:{comfort:{score:82-days/3|0,letter:'B'},warmth:{score:80,letter:'B',share:88-days/2|0},humidity:{score:60,letter:'C',share:18+days/3|0},air:{score:92,letter:'A',share:95}},
+      rooms,outdoor:{min:+(6-spread*2).toFixed(1),max:+(12+spread*2).toFixed(1),mean:9.4},
+      curve:{inside:Array.from({length:n},(_,k)=>+(20.4+0.5*Math.sin(k/n*Math.PI*2*days)).toFixed(1)),outside:Array.from({length:n},(_,k)=>+(9+3*Math.sin(k/n*Math.PI*2*days-1)).toFixed(1))}};}
+  return out;};
+// The fixtures predate comfort_maximum: the rooms' range as the integration now sends it.
+const withRange=(e)=>({...e,rooms:e.rooms.map(r=>({...r,comfort_minimum:r.comfort_minimum??20,comfort_maximum:24}))});
+card.setConfig({type:'custom:niak-comfort-home-card',theme:'dark'});
+card.hass={themes:{darkMode:true},callWS:async(m)=>m.type==='niak_comfort/home_periods'?periods(scenes[+choice.value].event):null,
+  connection:{subscribeMessage:async(callback)=>{send=callback;callback(withRange(scenes[+choice.value].event));return ()=>{send=undefined}}}};
+choice.onchange=()=>send?.(withRange(scenes[+choice.value].event));
+</script></main></html>
