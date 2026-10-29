@@ -1,5 +1,5 @@
-/* CHARTE COMMUNE NIAK — jetons et pièces partagés par toutes les cartes Niak.
-   Valeurs reprises de la carte Niak Weather (card/src/ui/charter.ts), qui fait référence.
+/* CHARTE COMMUNE NIAK — jetons et pièces partagés par toutes les cartes Hestia.
+   Valeurs reprises de la carte Hestia Weather (card/src/ui/charter.ts), qui fait référence.
    Modifier ICI, puis recopier avec charte/copier.sh dans chaque carte : jamais directement dans une brique. */
 :host {
   /* Couleurs du thème Home Assistant, avec replis. */

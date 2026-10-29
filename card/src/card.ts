@@ -13,10 +13,10 @@ import './home';
 
 let instances=0;
 const problems:Record<string,[string,string]>={
-  choose_entry:['Choisissez une pièce','Plusieurs pièces Niak Comfort sont configurées. Choisissez celle de cette carte dans ses réglages.'],
-  not_configured:['Ajoutez Niak Comfort','Ouvrez Niak Confort dans la barre latérale pour configurer votre première pièce après installation de l’intégration.'],
+  choose_entry:['Choisissez une pièce','Plusieurs pièces Hestia Comfort sont configurées. Choisissez celle de cette carte dans ses réglages.'],
+  not_configured:['Ajoutez Hestia Comfort','Ouvrez Hestia Confort dans la barre latérale pour configurer votre première pièce après installation de l’intégration.'],
   not_found:['Pièce introuvable','Cette pièce a été supprimée ou n’est pas chargée. Choisissez une autre pièce dans les réglages de la carte.'],
-  unknown_command:['Installez la version compatible de l’intégration','La carte nécessite l’intégration Niak Comfort avec la vue v1. Installez ou mettez à jour les deux fichiers ensemble, puis redémarrez Home Assistant.'],
+  unknown_command:['Installez la version compatible de l’intégration','La carte nécessite l’intégration Hestia Comfort avec la vue v1. Installez ou mettez à jour les deux fichiers ensemble, puis redémarrez Home Assistant.'],
   version:['Vue incompatible','La réponse reçue ne correspond pas à cette carte. Mettez à jour la carte et l’intégration ensemble.'],
   stale:['Le conseil n’est plus actuel','Le lien n’a pas fourni de résultat récent. Les anciennes mesures sont retirées jusqu’au retour des mises à jour.'],
   unavailable:['Calcul indisponible','Le moteur n’a pas de résultat utilisable. Vérifiez l’intégration et ses journaux.'],
@@ -68,7 +68,7 @@ export class NiakComfortCard extends LitElement {
     this.setAttribute('theme',theme);this.toggleAttribute('still',this.config?.animations===false);
     // An alert with nothing to say takes no room on the dashboard.
     this.toggleAttribute('empty',this.config?.format==='alert'&&!!this.view&&!asking(this.view)&&!this.preview&&!this.editMode);this.toggleAttribute('flat',this.config?.glass_effect===false);
-    // The new cards follow the Home Assistant theme, like Niak Weather; a theme forced in the card's settings still wins.
+    // The new cards follow the Home Assistant theme, like Hestia Weather; a theme forced in the card's settings still wins.
     if(this.config?.theme==='light'||this.config?.theme==='dark')this.setAttribute('forced',this.config.theme);else this.removeAttribute('forced');
     const dialog=this.renderRoot.querySelector<HTMLDialogElement>('dialog');
     if(this.dialogOpen&&dialog&&!dialog.open) dialog.showModal();
@@ -126,7 +126,7 @@ export class NiakComfortCard extends LitElement {
   protected render(){
     if(!this.config)return nothing;
     if(!this.view){const [title,text]=this.problem?(problems[this.problem]??problems.connection):['Chargement du confort','En attente des observations de la pièce.'];
-      return html`<ha-card class="nc-card problem" data-level="neutral" role="status"><h2>${title}</h2><p>${text}</p>${this.problem?html`<button @click=${()=>{this.live.stop();this.problem=undefined;this.connect();}}>Réessayer</button>${this.hass?.user?.is_admin?html`<button @click=${()=>this.configure()}>Ouvrir Niak Confort</button>`:nothing}`:nothing}</ha-card>`;}
+      return html`<ha-card class="nc-card problem" data-level="neutral" role="status"><h2>${title}</h2><p>${text}</p>${this.problem?html`<button @click=${()=>{this.live.stop();this.problem=undefined;this.connect();}}>Réessayer</button>${this.hass?.user?.is_admin?html`<button @click=${()=>this.configure()}>Ouvrir Hestia Confort</button>`:nothing}`:nothing}</ha-card>`;}
     return html`${this.panel(this.config.format==='full')}
       <dialog aria-labelledby=${this.uid+'-dialog-title'} @cancel=${()=>{this.dialogOpen=false;}} @close=${()=>{this.dialogOpen=false;}}>
         <div class="dialog-top"><span id=${this.uid+'-dialog-title'}>${this.view.volume_name??this.view.title}</span><button class="icon-button" aria-label="Fermer la carte complète" @click=${()=>this.closeFull()}>${icon('close')}</button></div><div>${this.dialogOpen?this.panel(true,true):nothing}</div>
@@ -137,4 +137,4 @@ export class NiakComfortCard extends LitElement {
 if(!customElements.get('niak-comfort-card'))customElements.define('niak-comfort-card',NiakComfortCard);
 declare global {interface Window {customCards?:Array<Record<string,unknown>>}}
 window.customCards??=[];
-if(!window.customCards.some(c=>c.type==='niak-comfort-card'))window.customCards.push({type:'niak-comfort-card',name:'Niak Confort',description:'Niak Comfort : le confort par pièce, avec des conseils expliqués et des sources visibles.'});
+if(!window.customCards.some(c=>c.type==='niak-comfort-card'))window.customCards.push({type:'niak-comfort-card',name:'Hestia Confort',description:'Hestia Comfort : le confort par pièce, avec des conseils expliqués et des sources visibles.'});

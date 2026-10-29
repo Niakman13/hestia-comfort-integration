@@ -15,7 +15,7 @@ const server=createServer((req,res)=>{const path=new URL(req.url,'http://localho
 });
 server.listen(0,'127.0.0.1');await once(server,'listening');const origin='http://127.0.0.1:'+server.address().port;
 let checks=0;const out=process.env.NIAK_HUB_OUTPUT;if(out)mkdirSync(out,{recursive:true});
-async function nav(page,label,group){const shell=page.locator('niak-socle-1-11');if(await shell.locator('.mobile-bar').isVisible())await shell.getByRole('button',{name:'Ouvrir la navigation Niak',exact:true}).click();await shell.getByRole('navigation',{name:group,exact:true}).getByRole('link',{name:label,exact:true}).click();}
+async function nav(page,label,group){const shell=page.locator('niak-socle-1-11');if(await shell.locator('.mobile-bar').isVisible())await shell.getByRole('button',{name:'Ouvrir la navigation Hestia',exact:true}).click();await shell.getByRole('navigation',{name:group,exact:true}).getByRole('link',{name:label,exact:true}).click();}
 // The Confort tab opens on its technical home, with every room one click away, even while the report loads.
 async function toRooms(panel){await panel.getByRole('heading',{name:'Confort',exact:true}).waitFor();await panel.getByRole('heading',{name:'Vos pièces',exact:true}).waitFor();}
 async function noOverflow(panel){const size=await panel.evaluate(e=>({width:e.clientWidth,scroll:e.scrollWidth,main:e.shadowRoot.querySelector('main')?.scrollWidth}));assert.ok(size.scroll<=size.width+1,JSON.stringify(size));checks++;}

@@ -1,6 +1,6 @@
 {
   "domain": "niak_comfort",
-  "name": "Niak Comfort",
+  "name": "Hestia Comfort",
   "after_dependencies": [
     "lovelace",
     "niak_weather",

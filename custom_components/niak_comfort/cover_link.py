@@ -1,9 +1,9 @@
 """Adaptive Cover Pro, recognised by itself: the integration that drives a cover with the sun.
 
-When a connected cover is driven by Adaptive Cover Pro, Niak reads its signals (automatic control,
+When a connected cover is driven by Adaptive Cover Pro, Hestia reads its signals (automatic control,
 manual override, sun in front of the window, target position, sun hours) without asking the person
 to find them. Entities are recognised by their platform and their stable key, never by their name.
-Niak still commands nothing.
+Hestia still commands nothing.
 """
 from homeassistant.helpers import entity_registry as er
 

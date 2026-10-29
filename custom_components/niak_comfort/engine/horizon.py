@@ -1,6 +1,6 @@
 """« Prochaines heures »: the room over the coming hours, without the advised gesture and with it.
 
-The card draws it under the advice. One room, one twin (engine/twin.py), the Niak Weather forecast; what is compared
+The card draws it under the advice. One room, one twin (engine/twin.py), the Hestia Weather forecast; what is compared
 follows the advice of the moment:
 
 - « cool »: a hot room, summer nights. Shut against opened by NADIR's rule (engine/night.py): when to open, the

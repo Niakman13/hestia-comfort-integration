@@ -18,7 +18,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass, config):
-    # What Niak Confort publishes for the other bricks (the rooms and what their twins learned).
+    # What Hestia Confort publishes for the other bricks (the rooms and what their twins learned).
     hass.data.setdefault(API_KEY, NiakComfortApi(hass))
     async_setup_websocket(hass)
     await get_configuration(hass)

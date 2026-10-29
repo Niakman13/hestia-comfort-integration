@@ -3,7 +3,7 @@ export const ACTIONS = ['ok','ouvrir','fermer','attendre','unknown'] as const;
 export const MODULES = ['windows','air','temperature','humidity','shutters','coordination'] as const;
 export type Level = typeof LEVELS[number];
 export type Module = typeof MODULES[number];
-/** Like Niak Weather: full, tile (folds), intermediate (the tile unfolded), mini (one line), measures (the tiles alone),
+/** Like Hestia Weather: full, tile (folds), intermediate (the tile unfolded), mini (one line), measures (the tiles alone),
  *  alert (only while a gesture is asked, hidden otherwise). */
 export const FORMATS = ['full','tile','intermediate','mini','measures','alert'] as const;
 export type Format = typeof FORMATS[number];
@@ -90,7 +90,7 @@ export interface Features {
  drying?:{minutes:number;now:number;after:number;gain:number;tau:number;openings:number;morning?:number;alone?:number;net?:number;later:{minutes:number;now:number;after:number;gain:number;time:string}|null}|null;
  trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string};
  season?:{known:boolean;weight:number|null;outdoor_mean:number|null;minimum:number;maximum:number;heated:boolean;
-   /** The home's season when known (Niak Weather's, or a season sensor): it sets the rules of the advice. */ name?:string|null;group?:'summer'|'between'|'winter'|null};
+   /** The home's season when known (Hestia Weather's, or a season sensor): it sets the rules of the advice. */ name?:string|null;group?:'summer'|'between'|'winter'|null};
  day_range?:{min:number;max:number}|null;
  /** Where the air goes through best (engine/wind.py, plan): what to open, what already helps, what to leave shut. */
  airflow?:{open:string[];keep:string[];path:'wind'|'opposite'|'two_sides'|'one_side';into:string|null;faster:number|null;learned:number;
@@ -130,9 +130,9 @@ export interface HomeAssistant {
 }
 export interface Entry {entry_id:string; title:string; area_id:string|null; volume?:string[]; volume_name?:string|null}
 export function cleanConfig(input:Config):Config {
-  if(!input || input.type!=='custom:niak-comfort-card') throw new Error('Type de carte Niak Comfort invalide.');
+  if(!input || input.type!=='custom:niak-comfort-card') throw new Error('Type de carte Hestia Comfort invalide.');
   if(input.format && !FORMATS.includes(input.format)) throw new Error('Format de carte inconnu.');
-  if(input.entry_id!==undefined && typeof input.entry_id!=='string') throw new Error('Choisissez une pièce Niak Comfort.');
+  if(input.entry_id!==undefined && typeof input.entry_id!=='string') throw new Error('Choisissez une pièce Hestia Comfort.');
   if(input.title!==undefined && typeof input.title!=='string') throw new Error('Le titre doit être un texte.');
   if(input.theme && !['auto','light','dark'].includes(input.theme)) throw new Error('Thème inconnu.');
   for(const key of ['animations','glass_effect','show_scale','show_measures','show_details','measures_open','details_open','rotate'] as const)
@@ -177,7 +177,7 @@ export type ReviewFormat='summary'|'full';
 export interface ReviewConfig {type:'custom:niak-comfort-review-card';title?:string;format?:ReviewFormat}
 
 export function cleanReviewConfig(input:ReviewConfig):ReviewConfig {
-  if(!input||input.type!=='custom:niak-comfort-review-card')throw new Error('Type de carte Niak Confort · bilan invalide.');
+  if(!input||input.type!=='custom:niak-comfort-review-card')throw new Error('Type de carte Hestia Confort · bilan invalide.');
   const config:ReviewConfig={type:input.type,format:input.format==='full'?'full':'summary'};
   if(typeof input.title==='string'&&input.title.trim())config.title=input.title.trim();
   return config;

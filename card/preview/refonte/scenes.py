@@ -1,4 +1,4 @@
-"""Situations de la maquette, calculées par le vrai moteur Niak Confort (engine/), écrites dans scenes.json.
+"""Situations de la maquette, calculées par le vrai moteur Hestia Confort (engine/), écrites dans scenes.json.
 
 Lancer depuis le dépôt : ../ha-test/venv/bin/python card/preview/refonte/scenes.py
 Données fictives inspirées de la maison de Frank ; aucune connexion à Home Assistant.
@@ -54,11 +54,11 @@ SCENES = [
      "Orange : un geste utile maintenant. Gain et durée appris des aérations de la pièce ; le rond envoie des ondes.",
      view("geste", "Cuisine", base(indoor_humidity=72.0, outdoor_humidity=78.0, outdoor_temperature=10.0), context=LEARNED)),
     ("plus-tard", "À saisir plus tard",
-     "Vert : un moment précis, calculé avec la prévision de Niak Weather.",
+     "Vert : un moment précis, calculé avec la prévision de Hestia Weather.",
      view("plus-tard", "Chambre AL", base(indoor_humidity=70.0, outdoor_humidity=88.0),
           context={"drying_model": {"tau": 60.0, "residual": 2.6, "rebound": 0.4, "openings": 5}}, outlook={"hours": EVENING})),
     ("vmc", "Un autre équipement aide",
-     "Aérer sèche peu cette pièce (fenêtre en oscillo-battant) : Niak propose la VMC, l’hélice tourne.",
+     "Aérer sèche peu cette pièce (fenêtre en oscillo-battant) : Hestia propose la VMC, l’hélice tourne.",
      view("vmc", "Chambre P", base(indoor_humidity=76.0, outdoor_humidity=81.0, indoor_temperature=20.2, ventilation=False), context=SLOW,
           names={"binary_sensor.demo_fenetre": "Fenêtre chambre P", VMC: "VMC"})),
     ("urgent", "Urgent", "Rouge : la pluie entre par une fenêtre exposée.",

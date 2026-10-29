@@ -1,4 +1,4 @@
-"""The interface Niak Confort publishes for the other Niak bricks (version 1).
+"""The interface Hestia Confort publishes for the other Hestia bricks (version 1).
 
 Other bricks read `hass.data["niak_comfort_api"]` and check `version` before using it. It only grows
 compatibly within a major version. First reader in view: a « Maison » brick, for the house as a whole.
@@ -26,12 +26,12 @@ class NiakComfortApi:
                  "volume": [p["entry_id"] for p in e.runtime_data.partners]} for e in self._loaded()]
 
     def weather(self):
-        """The Niak Weather place linked to the home (its entry_id), or None. Niak Weather shows the same link."""
+        """The Hestia Weather place linked to the home (its entry_id), or None. Hestia Weather shows the same link."""
         service = self.hass.data.get(DATA_CONFIG)
         return service.weather() if service else None
 
     async def set_weather(self, entry_id):
-        """Links the home to this Niak Weather place, or unlinks it with None: turned off on one side, off on both.
+        """Links the home to this Hestia Weather place, or unlinks it with None: turned off on one side, off on both.
         Raises ValueError with a sentence to show when the place is not available."""
         await (await get_configuration(self.hass)).set_weather(entry_id)
         return self.weather()

@@ -1,4 +1,4 @@
-"""The next hours, from the Niak Weather forecast: when opening will help, when to close, rain coming."""
+"""The next hours, from the Hestia Weather forecast: when opening will help, when to close, rain coming."""
 from datetime import datetime, timedelta
 
 
@@ -33,7 +33,7 @@ HORIZON = 120
 def rain_timing(ahead, hours_until: float | None = None) -> tuple[int | None, bool]:
     """Minutes before the next rain within the horizon, and whether they are known to the minute.
 
-    `ahead` is Niak Weather's `rain()` (2.6.1); before it, `hours_until` was the index of the first rainy hour."""
+    `ahead` is Hestia Weather's `rain()` (2.6.1); before it, `hours_until` was the index of the first rainy hour."""
     if isinstance(ahead, dict) and isinstance(ahead.get("minutes"), (int, float)) and not isinstance(ahead["minutes"], bool):
         minutes, precise = ahead["minutes"], ahead.get("precision") == "minute"
     elif isinstance(hours_until, (int, float)) and not isinstance(hours_until, bool):

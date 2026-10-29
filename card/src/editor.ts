@@ -2,7 +2,7 @@ import {LitElement,html,css,nothing} from 'lit';
 import {property,state} from 'lit/decorators.js';
 import {cleanConfig,cleanHomeConfig,MODULES,moduleLabels,SCALE_MARKS,CHIPS,TILE_BLOCKS,HORIZON_SUBJECTS,INSIGHT_TOPICS,DETAIL_ROWS,homeAction,type Config,type HomeConfig,type HomeAssistant,type Entry} from './types';
 
-/* The editors are built like Niak Weather's: the room (or title) and the format on top, then folding groups that
+/* The editors are built like Hestia Weather's: the room (or title) and the format on top, then folding groups that
    change with the format. The theme follows Home Assistant: it is no longer offered. */
 type Item={name:string;title?:string};
 const toggle=(name:string)=>({name,selector:{boolean:{}}});
@@ -141,9 +141,9 @@ export class ComfortEditor extends LitElement {
     const data={...this.defaults(c),hold_action:c.hold_action??(c.hold_path?'page':'popup'),
       ...c,show_scale:scaleShown(c),modules:(c.modules??MODULES).filter(m=>m!=='temperature')};
     const one=this.entries?.length===1?this.entries[0]:this.entries?.find(e=>e.entry_id===c.entry_id);
-    return html`${this.entries===null?html`<p class="note warn">L’intégration Niak Confort ne répond pas : vérifiez qu’elle est installée et chargée.</p>`
-      :this.entries?.length===0?html`<p class="note warn">Aucune pièce : ouvrez <a href="/niak/confort" @click=${follow}>Niak Confort</a> dans la barre latérale pour en ajouter une.</p>`
-      :html`<p class="note">${one?html`Pièce : <b>${one.volume?.length&&one.volume_name?one.volume_name:one.title}</b>. `:nothing}Les capteurs et préférences se règlent dans <a href="/niak/confort" @click=${follow}>Niak Confort</a>.</p>`}
+    return html`${this.entries===null?html`<p class="note warn">L’intégration Hestia Confort ne répond pas : vérifiez qu’elle est installée et chargée.</p>`
+      :this.entries?.length===0?html`<p class="note warn">Aucune pièce : ouvrez <a href="/niak/confort" @click=${follow}>Hestia Confort</a> dans la barre latérale pour en ajouter une.</p>`
+      :html`<p class="note">${one?html`Pièce : <b>${one.volume?.length&&one.volume_name?one.volume_name:one.title}</b>. `:nothing}Les capteurs et préférences se règlent dans <a href="/niak/confort" @click=${follow}>Hestia Confort</a>.</p>`}
       <ha-form .hass=${this.hass} .data=${data} .schema=${this.schema()} .computeLabel=${labelFor(c.format)} .computeHelper=${helperFor} @value-changed=${this.changed}></ha-form>`;
   }
 }
@@ -185,7 +185,7 @@ export class ComfortHomeEditor extends LitElement {
     if(!this.config||!this.hass)return nothing;
     const c=this.config;
     const data={...HOME_DEFAULTS,...c,hold_action:homeAction(c)};
-    return html`<p class="note">Toutes les pièces de Niak Confort. Elles se règlent dans <a href="/niak/confort" @click=${follow}>Niak Confort</a>.</p>
+    return html`<p class="note">Toutes les pièces de Hestia Confort. Elles se règlent dans <a href="/niak/confort" @click=${follow}>Hestia Confort</a>.</p>
       <ha-form .hass=${this.hass} .data=${data} .schema=${this.schema()} .computeLabel=${labelFor(c.format)} .computeHelper=${helperFor} @value-changed=${this.changed}></ha-form>`;
   }
 }

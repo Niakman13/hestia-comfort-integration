@@ -145,14 +145,14 @@ export class NiakComfortHomeCard extends LitElement {
     }
     if(blocks.includes('house')&&h.ventilation&&!h.ventilation.engaged)out.push({level:'benefit',pill:'Logement',title:h.ventilation.kind==='cross'?'Faites traverser l’air':'Ouvrez en bas et en haut',
       line:h2`${h.ventilation.openings.map(o=>o.name).join(' + ')}`,disk:'open'});
-    // A sensor that stops answering is a matter for the Niak panel, not an advice for the home.
+    // A sensor that stops answering is a matter for the Hestia panel, not an advice for the home.
     const calm=(h.level==='neutral'?'calm':h.level) as Level;
     return out.length?out:[{level:calm,pill:pills[calm],...calmAdvice}];
   }
   protected render(){
     if(!this.config)return nothing;
     const h=this.home;
-    if(!h){const text=this.problem==='not_configured'?['Aucune pièce','Ouvrez Niak Confort dans la barre latérale pour configurer vos pièces.']:this.problem?['Connexion indisponible','La carte réessaie automatiquement.']:['Chargement du logement','En attente des pièces.'];
+    if(!h){const text=this.problem==='not_configured'?['Aucune pièce','Ouvrez Hestia Confort dans la barre latérale pour configurer vos pièces.']:this.problem?['Connexion indisponible','La carte réessaie automatiquement.']:['Chargement du logement','En attente des pièces.'];
       return html`<ha-card class="nc-card problem" data-level="neutral" role="status"><h2>${text[0]}</h2><p>${text[1]}</p></ha-card>`;}
     // Every room without its indoor temperature: Home Assistant is starting or no longer passes measures on. Not advice.
     const muted=this.rooms.filter(r=>r.assessment.missing.includes('indoor_temperature')&&!!r.observations.indoor_temperature).length;
@@ -232,4 +232,4 @@ export class NiakComfortHomeCard extends LitElement {
 if(!customElements.get('niak-comfort-home-card'))customElements.define('niak-comfort-home-card',NiakComfortHomeCard);
 declare global {interface Window {customCards?:Array<Record<string,unknown>>}}
 window.customCards??=[];
-if(!window.customCards.some(c=>c.type==='niak-comfort-home-card'))window.customCards.push({type:'niak-comfort-home-card',name:'Niak Confort · logement',description:'La synthèse de toutes vos pièces : celle qui demande le plus d’attention, la plus chaude, les ouvrants ouverts.'});
+if(!window.customCards.some(c=>c.type==='niak-comfort-home-card'))window.customCards.push({type:'niak-comfort-home-card',name:'Hestia Confort · logement',description:'La synthèse de toutes vos pièces : celle qui demande le plus d’attention, la plus chaude, les ouvrants ouverts.'});

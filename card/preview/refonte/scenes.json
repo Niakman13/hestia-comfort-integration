@@ -542,7 +542,7 @@
   {
    "id": "plus-tard",
    "title": "À saisir plus tard",
-   "note": "Vert : un moment précis, calculé avec la prévision de Niak Weather.",
+   "note": "Vert : un moment précis, calculé avec la prévision de Hestia Weather.",
    "view": {
     "version": 1,
     "entry_id": "plus-tard",
@@ -729,7 +729,7 @@
   {
    "id": "vmc",
    "title": "Un autre équipement aide",
-   "note": "Aérer sèche peu cette pièce (fenêtre en oscillo-battant) : Niak propose la VMC, l’hélice tourne.",
+   "note": "Aérer sèche peu cette pièce (fenêtre en oscillo-battant) : Hestia propose la VMC, l’hélice tourne.",
    "view": {
     "version": 1,
     "entry_id": "vmc",

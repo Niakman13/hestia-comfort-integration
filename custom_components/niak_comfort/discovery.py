@@ -76,7 +76,7 @@ def provenance(hass, entity_id):
 
 
 def niak_weather(entry, key):
-    """A Niak Weather entity, recognised by its stable unique id, never by its name."""
+    """A Hestia Weather entity, recognised by its stable unique id, never by its name."""
     return entry.platform == "niak_weather" and (entry.unique_id or "").endswith("_" + key)
 
 
@@ -175,7 +175,7 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
         if domain == "sensor" and device_class == "precipitation_intensity" and attrs.get("unit_of_measurement") in ("mm/h", "in/h"):
             adapter = "rain_rate"
         elif domain == "binary_sensor" and niak_weather(entry, "pluie_en_cours"):
-            adapter = "binary"  # Niak Weather's own « it is raining now »
+            adapter = "binary"  # Hestia Weather's own « it is raining now »
         elif include_legacy and domain == "binary_sensor" and device_class not in ("problem", "battery", "connectivity"):
             adapter = "binary"
         else:
@@ -188,7 +188,7 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
         if atmo_daily(hass, entry, state):
             adapter = "atmo_daily"
         elif domain == "sensor" and niak_weather(entry, "qualite_air"):
-            adapter = "niak_index"  # Niak Weather's Atmo index of the day, 1 to 6
+            adapter = "niak_index"  # Hestia Weather's Atmo index of the day, 1 to 6
         elif include_legacy and domain == "binary_sensor" and device_class not in ("problem", "battery", "connectivity"):
             adapter = "binary"
         else:
@@ -212,7 +212,7 @@ def candidate(hass, entity_id, key, area_id=None, *, include_legacy=False, indoo
         warnings.append("derived")
     if key == "heating" and not attrs.get("hvac_action"):
         warnings.append("no_hvac_action")
-    # Niak Weather describes the outside by design; outdoor areas are the user's own statement.
+    # Hestia Weather describes the outside by design; outdoor areas are the user's own statement.
     outside = outdoor_area(hass, own_area) or entry.platform == "niak_weather"
     if key in ("outdoor_temperature", "outdoor_humidity"):
         # A mixed station sits outside but also measures indoors: its use in a room decides.

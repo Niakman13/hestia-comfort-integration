@@ -58,7 +58,7 @@ test('air quality is chosen by integration, missing ones greyed with a link, « 
  assert.deepEqual(airChoices(none,[],'other').map(c=>c.value),['atmo','niak','other','none']);
  assert.equal(airSource(undefined),'none');assert.equal(airSource({adapter:'atmo_daily'}),'atmo');assert.equal(airSource({adapter:'niak_index'}),'niak');assert.equal(airSource({adapter:'binary'}),'other');
 });
-test('the exterior comes from Niak Weather only when it has a place',()=>{
+test('the exterior comes from Hestia Weather only when it has a place',()=>{
  assert.equal(exteriorChoices({}).at(0).missing,'Pas encore installée');
  assert.equal(exteriorChoices({niak_weather:{installed:true,places:[]}}).at(0).available,false);
  assert.equal(exteriorChoices({niak_weather:{installed:true,places:[{entry_id:'a',title:'Maison'}]}}).at(0).available,true);

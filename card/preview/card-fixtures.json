@@ -1129,7 +1129,7 @@
   },
   {
     "id": "standalone",
-    "name": "Sans Niak Weather",
+    "name": "Sans Hestia Weather",
     "view": {
       "version": 1,
       "entry_id": "demo-salon",

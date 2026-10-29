@@ -8,7 +8,7 @@ house). The windows facing that way would be told there is no sun. So, from the 
 - on the sunny days, the directions of the sun (by 10° of azimuth) where the station keeps less than half of its
   usual share are « shaded »;
 - there, the sun is estimated: the clear-sky sun, on the station's scale, times what the sky lets through: the cloud
-  cover Niak Weather forecasts for the hour, set right by how far it was from the station's own measure while in the
+  cover Hestia Weather forecasts for the hour, set right by how far it was from the station's own measure while in the
   open (the coordinator keeps that gap); without a forecast, the share measured just before the shade.
 
 Nothing is set by hand: a station in the open is never found shaded, and nothing changes for it.
@@ -98,7 +98,7 @@ def nearest_hour(hours, now, within=timedelta(minutes=90)):
 
 
 def sky_factor(hour):
-    """What the sky lets through this hour, from Niak Weather's forecast: its cloud cover, else its condition."""
+    """What the sky lets through this hour, from Hestia Weather's forecast: its cloud cover, else its condition."""
     if not hour:
         return None
     cover = hour.get("cloud_coverage")

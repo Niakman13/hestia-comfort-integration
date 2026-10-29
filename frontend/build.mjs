@@ -4,6 +4,6 @@ import {build} from 'esbuild';
 const lit={lit:fileURLToPath(new URL('./node_modules/lit',import.meta.url))};
 await build({entryPoints:['panel.ts'],bundle:true,format:'esm',target:'es2022',minify:true,alias:lit,
   outfile:'../custom_components/niak_comfort/frontend/panel.js',legalComments:'none',loader:{'.css':'text'}});
-// Shared « Niak » panel (socle), copied from niak-ecosysteme/socle/ by its copier.sh.
+// Shared « Hestia » panel (socle), copied from niak-ecosysteme/socle/ by its copier.sh.
 await build({entryPoints:['socle/shell.ts'],bundle:true,format:'esm',target:'es2022',minify:true,
   outfile:'../custom_components/niak_comfort/frontend/niak-socle.js',legalComments:'none'});

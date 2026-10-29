@@ -185,7 +185,7 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         self.assertNotIn('salon', [a['area_id'] for a in self.service.overview()['areas']])
 
     def link_weather(self, sensors, hours=()):
-        """A Niak Weather place as its published interface v1 presents it."""
+        """A Hestia Weather place as its published interface v1 presents it."""
         listeners = []
         class Api:
             version = 1
@@ -218,7 +218,7 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
             self.service.validate({'sources': {}, 'weather': 'gone'}, home=True)
 
     async def test_niak_weather_link_set_from_either_side_is_one_link(self):
-        """Niak Weather's settings link or unlink through Confort's interface: the home then says the same on both sides."""
+        """Hestia Weather's settings link or unlink through Confort's interface: the home then says the same on both sides."""
         from custom_components.niak_comfort.api import NiakComfortApi
         from custom_components.niak_comfort.configuration import DATA_CONFIG
         self.register('sensor.gw_out', 'temperature', area='exterieur')
@@ -229,7 +229,7 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         self.assertEqual(await api.set_weather('nw1'), 'nw1')
         self.assertEqual(self.service.snapshot()['home']['weather'], 'nw1')
         self.assertEqual(self.service.home['sources']['outdoor_temperature']['entity_id'], 'sensor.gw_out')
-        # Turned off from Niak Weather: Confort keeps the sensors as its own, as « Vos propres capteurs » would.
+        # Turned off from Hestia Weather: Confort keeps the sensors as its own, as « Vos propres capteurs » would.
         self.assertIsNone(await api.set_weather(None))
         self.assertIsNone(self.service.snapshot()['home']['weather'])
         self.assertEqual(self.service.home['sources']['outdoor_temperature']['entity_id'], 'sensor.gw_out')
@@ -237,7 +237,7 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
             await api.set_weather('gone')
 
     async def test_niak_weather_air_without_an_entity_is_kept(self):
-        """Niak Weather 2.5.7 gives its air through api.air() (here a WAQI station): taking its station must keep it."""
+        """Hestia Weather 2.5.7 gives its air through api.air() (here a WAQI station): taking its station must keep it."""
         self.register('sensor.gw_out', 'temperature', area='exterieur')
         self.link_weather({'temperature': 'sensor.gw_out'})
         api = self.hass.data['niak_weather_api']
@@ -251,7 +251,7 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
             self.service.validate({'sources': {'pollution': {'entity_id': 'sensor.other', 'adapter': 'niak_air'}}, 'weather': 'nw1'}, home=True)
 
     async def test_a_season_sensor_is_an_exterior_source(self):
-        """Without Niak Weather, the Season integration's sensor gives the hours an airing can be asked for."""
+        """Without Hestia Weather, the Season integration's sensor gives the hours an airing can be asked for."""
         from custom_components.niak_comfort.discovery import candidate
         from custom_components.niak_comfort.exterior import exterior_reading
         from homeassistant.util import dt as dt_util
@@ -273,7 +273,7 @@ class AssistantTests(test_ha_adapter.AdapterFixture):
         self.assertEqual(self.service.weather_proposal()['season'], 'autumn')
 
     async def test_niak_weather_knows_niak_comfort_listens(self):
-        """Niak Weather 2.1+ is told who listens, so its settings show « Relié à Niak Confort »."""
+        """Hestia Weather 2.1+ is told who listens, so its settings show « Relié à Hestia Confort »."""
         heard = []
         class Api:
             version = 1

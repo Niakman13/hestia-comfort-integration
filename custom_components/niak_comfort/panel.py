@@ -1,6 +1,6 @@
 """Bundled admin panel and Lovelace card: one installation, nothing to declare by hand.
 
-The settings live in the shared « Niak » panel (socle, see socle.py), as the « Confort » tab.
+The settings live in the shared « Hestia » panel (socle, see socle.py), as the « Confort » tab.
 """
 from pathlib import Path
 import voluptuous as vol
@@ -33,7 +33,7 @@ async def async_setup_panel(hass):
         websocket_api.async_register_command(hass, ws_extension)
         hass.data[DOMAIN + "_panel_asset"] = True
     await async_register_brick(hass, {
-        "domain": DOMAIN, "name": "Niak Confort", "slug": "confort", "version": VERSION,
+        "domain": DOMAIN, "name": "Hestia Confort", "slug": "confort", "version": VERSION,
         "icon": "mdi:home-thermometer-outline", "navigation": 2, "module_url": f"{ASSETS}/panel.js?v={VERSION}",
         "element": "niak-comfort-setup", "status": comfort_status, "legacy_path": "niak-confort",
     }, f"{ASSETS}/niak-socle.js?v={VERSION}")
@@ -44,7 +44,7 @@ def _plural(n, word):
 
 
 async def comfort_status(hass):
-    """What the « Niak » home page says about Niak Confort, from its own settings only."""
+    """What the « Hestia » home page says about Hestia Confort, from its own settings only."""
     service = await get_configuration(hass)
     rooms = [{"title": e.title, "loaded": e.state.value == "loaded", "entry": e} for e in service.entries()]
     weather = weather_link.status(hass)
@@ -57,9 +57,9 @@ async def comfort_status(hass):
     todo, details, links = [line["text"] for line in checked["todo"]], [], []
     linked = next((p for p in weather.get("places", []) if p["entry_id"] == service.home.get("weather")), None)
     if linked:
-        links.append(f"Relié à Niak Weather · {linked['title']}")
+        links.append(f"Relié à Hestia Weather · {linked['title']}")
     elif weather.get("installed") and weather.get("places"):
-        details.append("Niak Weather est installé : il peut remplir l’extérieur pour vous.")
+        details.append("Hestia Weather est installé : il peut remplir l’extérieur pour vous.")
     if todo:
         return {"level": "action", "summary": f"{followed}, " + _plural(len(todo), "point") + " à régler.",
                 "details": todo + details, "links": links}
@@ -78,7 +78,7 @@ async def ws_health(hass, connection, msg):
 @websocket_api.require_admin
 @callback
 def ws_twins(hass, connection, msg):
-    """« Ce que Niak a appris » : each room's twin, with its last 24 hours replayed against the measures."""
+    """« Ce que Hestia a appris » : each room's twin, with its last 24 hours replayed against the measures."""
     rooms = []
     for entry in hass.config_entries.async_entries(DOMAIN):
         coordinator = getattr(entry, "runtime_data", None)

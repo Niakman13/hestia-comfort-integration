@@ -116,7 +116,7 @@ const HOME={
   alert:{label:'Alerte',hint:'visible seulement si une pièce demande un geste',make:()=>stack(realHome('alert'),hiddenNote('Aucune pièce ne demande de geste : la carte disparaît.'))},
 };
 
-/* Le panneau de réglages, construit comme celui de Niak Weather (sans réglage de thème : la carte suit Home Assistant). */
+/* Le panneau de réglages, construit comme celui de Hestia Weather (sans réglage de thème : la carte suit Home Assistant). */
 const sw=(key,label,help,on,state)=>`<div class="sw"><div>${label}${help?`<small>${help}</small>`:''}</div><button class="switch" role="switch" data-key="${key}" aria-checked="${state[key]??on}"></button></div>`;
 const chipList=(items,help,add)=>`<div class="chips">${items.map(i=>`<span class="chip"><span class="h">≡</span>${i}<span class="x">✕</span></span>`).join('')}</div>
   <span class="add">${ic('list','gico')}${add}</span>${help?`<p class="help">${help}</p>`:''}`;
@@ -128,9 +128,9 @@ const tap=simple=>group('Fonctionnalités','tune',select(simple?'Appui':'Appui l
 const radios=(formats,f)=>`<div class="field"><label>Format</label><div class="radios">${Object.entries(formats).map(([k,v])=>`<div class="radio" role="radio" data-format="${k}" aria-checked="${k===f}"><i></i><span>${v.label}<small>${v.hint}</small></span></div>`).join('')}</div></div>`;
 const tabs=`<div class="tabs"><span>Configuration</span><span>Visibilité</span><span>Mise en page</span></div>`;
 function roomSchema(f,s){
-  const head=`${tabs}<p class="note">Pièce : <b>Cuisine</b>. Les capteurs et préférences se règlent dans <a href="#">l’intégration Niak Confort</a>.</p>${select('Pièce','Cuisine')}${radios(ROOM,f)}`;
+  const head=`${tabs}<p class="note">Pièce : <b>Cuisine</b>. Les capteurs et préférences se règlent dans <a href="#">l’intégration Hestia Confort</a>.</p>${select('Pièce','Cuisine')}${radios(ROOM,f)}`;
   if(f==='mini')return head+look(s)+group('Contenu de la ligne','grid',chipList(['Température','Humidité'],'Une ou deux valeurs à droite du conseil.','Valeurs'),true)+tap(true);
-  if(f==='alert')return head+look(s)+group('Quand l’afficher','grid',select('Visible','Pour un geste urgent ou conseillé','Cachée quand tout va bien, comme l’alerte de Niak Weather.'),true)+tap(true);
+  if(f==='alert')return head+look(s)+group('Quand l’afficher','grid',select('Visible','Pour un geste urgent ou conseillé','Cachée quand tout va bien, comme l’alerte de Hestia Weather.'),true)+tap(true);
   if(f==='measures')return head+look(s)+group('Contenu','grid',chipList(['Humidité','Qualité de l’air','Fenêtres','Soleil et volets','Chauffage'],'Cochez les rubriques et faites glisser pour les ordonner.','Rubriques')
     +sw('m_scale','Échelle de température au-dessus','',false,s),true)+tap(false);
   if(f==='tile'||f==='intermediate')return head+look(s)
@@ -145,7 +145,7 @@ function roomSchema(f,s){
     +group('Fonctionnalités','tune',select('Appui sur une mesure','Ouvrir son historique Home Assistant'));
 }
 function homeSchema(f,s){
-  const head=`${tabs}<p class="note">Toutes les pièces de <b>Niak Confort</b>. Les pièces se règlent dans <a href="#">l’intégration</a>.</p>${select('Titre facultatif','Mon logement')}${radios(HOME,f)}`;
+  const head=`${tabs}<p class="note">Toutes les pièces de <b>Hestia Confort</b>. Les pièces se règlent dans <a href="#">l’intégration</a>.</p>${select('Titre facultatif','Mon logement')}${radios(HOME,f)}`;
   if(f==='mini'||f==='alert')return head+look(s)+tap(true);
   if(f==='list')return head+look(s)+group('Contenu','list',chipList(['Conseil de la pièce','Température'],'','Contenu des lignes')+select('Ordre des pièces','Celles qui demandent un geste d’abord'),true)
     +group('Fonctionnalités','tune',select('Appui sur une pièce','Ouvrir sa carte en fenêtre'));

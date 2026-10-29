@@ -1,4 +1,4 @@
-"""Shared « Niak » panel (socle v1): registration, newest copy wins, home page states."""
+"""Shared « Hestia » panel (socle v1): registration, newest copy wins, home page states."""
 from pathlib import Path
 import sys
 import tempfile
@@ -19,7 +19,7 @@ from custom_components.niak_comfort.panel import comfort_status
 def brick(status=None, **extra):
     async def ok(hass):
         return {"level": "ok", "summary": "Tout va bien.", "details": [], "links": []}
-    return {"domain": "niak_comfort", "name": "Niak Confort", "slug": "confort", "version": "1.0",
+    return {"domain": "niak_comfort", "name": "Hestia Confort", "slug": "confort", "version": "1.0",
             "icon": "mdi:home", "module_url": "/a/panel.js", "element": "niak-comfort-setup",
             "status": status or ok, "legacy_path": "niak-confort", **extra}
 
@@ -41,7 +41,7 @@ class SocleTests(unittest.IsolatedAsyncioTestCase):
     async def test_one_brick_opens_the_niak_panel_and_keeps_its_old_address(self):
         await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")
         panels = self.hass.data[DATA_PANELS]
-        self.assertEqual(panels["niak"].sidebar_title, "Niak")
+        self.assertEqual(panels["niak"].sidebar_title, "Hestia")
         self.assertEqual(self.module(), "/a/niak-socle.js")
         self.assertTrue(panels["niak"].require_admin)
         legacy = panels["niak-confort"]
@@ -103,7 +103,7 @@ class SocleTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.module(), "/a/niak-socle.js")
         self.assertFalse((await socle.async_overview(self.hass))["sidebar"])
         await socle.async_set_sidebar(self.hass, True)
-        self.assertEqual(self.hass.data[DATA_PANELS]["niak"].sidebar_title, "Niak")
+        self.assertEqual(self.hass.data[DATA_PANELS]["niak"].sidebar_title, "Hestia")
 
     async def test_the_choice_survives_a_restart_and_applies_to_the_next_brick(self):
         await socle.async_register_brick(self.hass, brick(), "/a/niak-socle.js")

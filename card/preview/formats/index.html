@@ -17,7 +17,7 @@ h1{font-size:26px;margin:0 0 6px}h2{font-size:19px;margin:42px 0 6px}
 .toggle{display:flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:10px}
 .toggle button{border:0;background:none;color:var(--fg2);font:inherit;padding:6px 12px;border-radius:7px;cursor:pointer}
 .toggle button[aria-pressed="true"]{background:var(--field);color:var(--fg);font-weight:600}
-/* La fenêtre d'édition de Home Assistant, en deux colonnes comme pour Niak Weather. */
+/* La fenêtre d'édition de Home Assistant, en deux colonnes comme pour Hestia Weather. */
 .dialog{display:grid;grid-template-columns:minmax(300px,520px) 1fr;border-radius:18px;overflow:hidden;background:var(--panel);border:1px solid var(--line);min-height:760px}
 .dialog .tabs{display:flex;border-bottom:1px solid var(--line)}.dialog .tabs span{flex:1;text-align:center;padding:14px 0;color:var(--fg2);font-weight:600}
 .dialog .tabs span:first-child{color:var(--accent);box-shadow:inset 0 -2px var(--accent)}
@@ -57,12 +57,12 @@ figure{margin:0;display:grid;gap:8px}figcaption b{display:block}figcaption span{
 <main>
 <div class="top">
   <div><h1>Formats et réglages · proposition</h1>
-  <p class="lead">Rapprocher Niak Confort de Niak Weather : plusieurs formats pour chaque usage, et un panneau de réglages construit pareil (format en liste, groupes repliables, contenus à cocher et à ordonner). Toutes les cartes affichées sont les vraies, telles que publiées ; le panneau de gauche est une maquette du formulaire de Home Assistant.</p></div>
+  <p class="lead">Rapprocher Hestia Confort de Hestia Weather : plusieurs formats pour chaque usage, et un panneau de réglages construit pareil (format en liste, groupes repliables, contenus à cocher et à ordonner). Toutes les cartes affichées sont les vraies, telles que publiées ; le panneau de gauche est une maquette du formulaire de Home Assistant.</p></div>
   <div class="toggle" role="group" aria-label="Thème"><button data-t="dark" aria-pressed="true">Sombre</button><button data-t="light" aria-pressed="false">Clair</button></div>
 </div>
 
 <h2>1. Le panneau de réglages de la carte pièce</h2>
-<p class="lead">Choisissez un format à gauche : les groupes proposés changent avec lui, comme dans Niak Weather, et l’aperçu suit à droite.</p>
+<p class="lead">Choisissez un format à gauche : les groupes proposés changent avec lui, comme dans Hestia Weather, et l’aperçu suit à droite.</p>
 <div class="dialog">
   <div class="edit" id="edit"></div>
   <div class="preview" id="preview"></div>

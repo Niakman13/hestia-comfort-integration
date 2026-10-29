@@ -1,5 +1,5 @@
 {
-  "title": "Niak Comfort",
+  "title": "Hestia Comfort",
   "config": {
     "step": {
       "user": {
@@ -11,8 +11,8 @@
         }
       },
       "home": {
-        "title": "Activer Niak Confort",
-        "description": "Validez pour ajouter la page Niak Confort dans la barre latérale. Vous y configurerez le Salon, puis vos autres pièces et l’extérieur du logement, avec des propositions expliquées."
+        "title": "Activer Hestia Confort",
+        "description": "Validez pour ajouter la page Hestia Confort dans la barre latérale. Vous y configurerez le Salon, puis vos autres pièces et l’extérieur du logement, avec des propositions expliquées."
       }
     },
     "error": {
@@ -22,15 +22,15 @@
       "invalid_area": "Choisissez une pièce Home Assistant existante."
     },
     "abort": {
-      "already_configured": "Cette pièce possède déjà une configuration Niak Comfort.",
-      "use_panel": "Niak Confort est déjà activé. Ajoutez et modifiez vos pièces depuis la page Niak Confort de la barre latérale."
+      "already_configured": "Cette pièce possède déjà une configuration Hestia Comfort.",
+      "use_panel": "Hestia Confort est déjà activé. Ajoutez et modifiez vos pièces depuis la page Hestia Confort de la barre latérale."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Niak Confort",
-        "description": "Les pièces, leurs capteurs et l’extérieur se règlent dans l’onglet Confort du panneau Niak.\n\n[Ouvrir les paramètres de Niak Confort]({link})",
+        "title": "Hestia Confort",
+        "description": "Les pièces, leurs capteurs et l’extérieur se règlent dans l’onglet Confort du panneau Hestia.\n\n[Ouvrir les paramètres de Hestia Confort]({link})",
         "submit": "Fermer"
       }
     },

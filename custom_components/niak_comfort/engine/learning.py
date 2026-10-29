@@ -283,13 +283,13 @@ AWAKE = {"summer": (7, 23), "between": (8, 21), "winter": (10, 18)}
 
 
 def awake(name=None):
-    """The (from, until) local hours an airing can be asked for in this season: Niak Weather's, or the season sensor
+    """The (from, until) local hours an airing can be asked for in this season: Hestia Weather's, or the season sensor
     chosen in « Extérieur ». Spring, autumn, or no season known: the in-between hours, nothing guessed."""
     return AWAKE[name] if name in ("summer", "winter") else AWAKE["between"]
 
 
 def best_moment(model, indoor_temperature, indoor_water, outdoor_water, hours, now, horizon=12, zone=None, season=None, duration=None):
-    """A later hour that would dry clearly better than now, from the Niak Weather forecast.
+    """A later hour that would dry clearly better than now, from the Hestia Weather forecast.
 
     The forecast is set on the local station: its error at the current hour is carried over. Only waking hours are
     proposed (`awake`, for the `season` name, in the home's time zone `zone`): « Aérez vers 3 h » asks for nothing anyone would do.

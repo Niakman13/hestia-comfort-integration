@@ -73,7 +73,7 @@ class Configuration:
         if entry_id:
             entry = self.hass.config_entries.async_get_entry(entry_id)
             if not entry or entry.domain != DOMAIN or entry.data.get("home"):
-                raise ValueError("Pièce Niak Confort introuvable.")
+                raise ValueError("Pièce Hestia Confort introuvable.")
             config = {**entry.data, **entry.options}
             selected = {**config.get("sources", {}), "windows": config.get("windows", []), "presence": config.get("presence", [])}
         for key, spec in self.home_sources().items():
@@ -87,7 +87,7 @@ class Configuration:
                 "drivers": {cover: self._driver(roles) for cover, roles in cover_link.find_all(self.hass).items()}}
 
     def _driver(self, roles):
-        """What the panel shows of Adaptive Cover Pro: each signal Niak reads, with its current state."""
+        """What the panel shows of Adaptive Cover Pro: each signal Hestia reads, with its current state."""
         def signal(role):
             state = self.hass.states.get(roles[role]) if roles.get(role) else None
             available = state and state.state not in ("unknown", "unavailable")
@@ -99,15 +99,15 @@ class Configuration:
                 "width": known["width"], "height": known["height"]}
 
     def weather_proposal(self, entry_id=None):
-        """Niak Weather's station as exterior sources, ready for the exterior page."""
+        """Hestia Weather's station as exterior sources, ready for the exterior page."""
         found = weather_link.exterior(self.hass, entry_id)
         if not found:
-            raise ValueError("Niak Weather n’a pas de lieu disponible.")
+            raise ValueError("Hestia Weather n’a pas de lieu disponible.")
         sources = {}
         for key, entity_id in found["proposals"].items():
             if c := candidate(self.hass, entity_id, key):
                 sources[key] = {"entity_id": entity_id, "adapter": c["adapter"], **({"block_from": 4} if c["adapter"] == "niak_index" else {})}
-        # Niak Weather 2.5.7 gives its air through api.air() (Atmo France or a WAQI station), without an entity of its own.
+        # Hestia Weather 2.5.7 gives its air through api.air() (Atmo France or a WAQI station), without an entity of its own.
         air = weather_link.air(self.hass, found["entry_id"])
         if "pollution" not in sources and air:
             sources["pollution"] = {"entity_id": air["entity_id"], "adapter": "niak_air", "block_from": 4}
@@ -134,10 +134,10 @@ class Configuration:
                     raise ValueError("Choisissez une source extérieure existante.")
                 threshold = spec.get("block_from", 4)
                 if spec.get("adapter") == "niak_air":
-                    # The air of the linked Niak Weather place, whatever its source; read again on every update.
+                    # The air of the linked Hestia Weather place, whatever its source; read again on every update.
                     air = weather_link.air(self.hass, payload.get("weather"))
                     if key != "pollution" or not air or air["entity_id"] != spec["entity_id"]:
-                        raise ValueError("La qualité de l’air de Niak Weather n’est plus disponible : rechargez la page.")
+                        raise ValueError("La qualité de l’air de Hestia Weather n’est plus disponible : rechargez la page.")
                     if isinstance(threshold, bool) or not isinstance(threshold, int) or not 2 <= threshold <= 6:
                         raise ValueError("Choisissez un niveau ATMO entre Moyen et Extrêmement mauvais.")
                     cleaned["sources"][key] = {"entity_id": spec["entity_id"], "adapter": "niak_air", "block_from": threshold}
@@ -155,7 +155,7 @@ class Configuration:
                     warnings.append({"key": key, "entity_id": c["entity_id"], "warnings": c["warnings"]})
             weather = payload.get("weather")
             if weather is not None and weather not in {p["entry_id"] for p in weather_link.status(self.hass)["places"]}:
-                raise ValueError("Ce lieu Niak Weather n’est plus disponible.")
+                raise ValueError("Ce lieu Hestia Weather n’est plus disponible.")
             cleaned["weather"] = weather
             return cleaned, warnings
         area_id = payload.get("area_id") or None
@@ -329,11 +329,11 @@ class Configuration:
             cleaned["acknowledged"] = remembered
             unique_id = cleaned["area_id"]
             if unique_id and any(e.unique_id == unique_id and e.entry_id != entry_id for e in self.entries()):
-                raise ValueError("Cette pièce Home Assistant est déjà utilisée par une autre pièce Niak Confort.")
+                raise ValueError("Cette pièce Home Assistant est déjà utilisée par une autre pièce Hestia Confort.")
             if entry_id:
                 entry = self.hass.config_entries.async_get_entry(entry_id)
                 if not entry or entry.domain != DOMAIN or entry.data.get("home"):
-                    raise ValueError("Cette pièce Niak Confort n’existe plus.")
+                    raise ValueError("Cette pièce Hestia Confort n’existe plus.")
                 cleaned["open_to"] = [e for e in cleaned["open_to"] if e != entry_id]
                 before = set(self.volume(entry_id))
                 # Preserve unknown future settings only at the top level; explicit sources
@@ -357,7 +357,7 @@ class Configuration:
                 raise ValueError("La configuration a changé ailleurs. Rechargez les pièces avant de supprimer.")
             entry = self.hass.config_entries.async_get_entry(entry_id)
             if not entry or entry.domain != DOMAIN or entry.data.get("home"):
-                raise ValueError("Cette pièce Niak Confort n’existe plus.")
+                raise ValueError("Cette pièce Hestia Confort n’existe plus.")
             partners = set(self.volume(entry_id))
             await self.hass.config_entries.async_remove(entry_id)
             await self._reload_rooms(partners)
@@ -392,12 +392,12 @@ class Configuration:
             return self.snapshot()
 
     def weather(self):
-        """The Niak Weather place that gives the outdoor to every room, or None: the one link both bricks show."""
+        """The Hestia Weather place that gives the outdoor to every room, or None: the one link both bricks show."""
         return self.home.get("weather") if self.home.get("configured") else None
 
     async def set_weather(self, entry_id):
-        """Links the outdoor to a Niak Weather place (its measures replace the others), or unlinks it (the sensors stay,
-        Niak Weather's air is dropped), as « Niak Weather » or « Vos propres capteurs » then Enregistrer would."""
+        """Links the outdoor to a Hestia Weather place (its measures replace the others), or unlinks it (the sensors stay,
+        Hestia Weather's air is dropped), as « Hestia Weather » or « Vos propres capteurs » then Enregistrer would."""
         if entry_id == self.weather():
             return self.snapshot()
         sources = (self.weather_proposal(entry_id)["sources"] if entry_id
@@ -412,7 +412,7 @@ class Configuration:
         if value not in ("yes", "no", "unknown") or not isinstance(key, str) or not key:
             raise ValueError("Réponse invalide.")
         if not any(e.entry_id == entry_id for e in self.entries()):
-            raise ValueError("Cette pièce Niak Confort n’existe plus.")
+            raise ValueError("Cette pièce Hestia Confort n’existe plus.")
         async with self.lock:
             answers = {**(self.home.get("answers") or {})}
             answers[entry_id] = {**answers.get(entry_id, {}), key: value}
@@ -444,7 +444,7 @@ class Configuration:
 
     def live_sources(self, config=None):
         """The exterior sources as read now: those saved, with the outdoor air following the source chosen in
-        Niak Weather when the home is linked to it, unless another kind of pollution sensor or no air at all was picked."""
+        Hestia Weather when the home is linked to it, unless another kind of pollution sensor or no air at all was picked."""
         sources = self.effective_sources(config) if config is not None else (self.home_sources() if self.home.get("configured") else {})
         if config is not None and not self.uses_home(config):
             return sources

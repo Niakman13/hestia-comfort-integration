@@ -17,8 +17,8 @@ class HealthTests(unittest.TestCase):
     def test_everything_answering_is_blue(self):
         r = report(Facts(rooms=[room()], configured=True, weather="Gardanne", exterior=[Sensor("outdoor_temperature", "T", "ok", 1)], version="0.5.0"))
         self.assertEqual((r["level"], r["summary"], r["rooms_summary"]), ("ok", "Tout est suivi", "1 pièce suivie"))
-        self.assertEqual(r["sources"][0], {"label": "Extérieur", "level": "ok", "text": "Niak Weather · Gardanne"})
-        self.assertEqual(r["versions"][1]["text"], "Relié à Niak Weather · Gardanne")
+        self.assertEqual(r["sources"][0], {"label": "Extérieur", "level": "ok", "text": "Hestia Weather · Gardanne"})
+        self.assertEqual(r["versions"][1]["text"], "Relié à Hestia Weather · Gardanne")
         self.assertEqual([c["text"] for c in r["rooms"][0]["cells"]], ["répond", "—", "—", "1 contact", "—"])
 
     def test_a_silent_sensor_is_to_fix_with_what_it_stops(self):
@@ -41,7 +41,7 @@ class HealthTests(unittest.TestCase):
                          configured=True, weather_installed=True, free_areas=[("ete", "Séjour d’été")]))
         texts = [t["text"] for t in r["tips"]]
         self.assertEqual(texts, ["Salon : ajouter l’humidité", "Salle de bain : ouvrants non mesurés", "Séjour d’été pas encore suivie",
-                                 "Reprendre l’extérieur de Niak Weather"])
+                                 "Reprendre l’extérieur de Hestia Weather"])
         self.assertIn("« Salon humidité » est disponible", r["tips"][0]["why"])
         self.assertEqual(r["tips"][2]["target"], {"kind": "area", "area_id": "ete", "label": "Ajouter"})
         self.assertEqual(r["level"], "ok")

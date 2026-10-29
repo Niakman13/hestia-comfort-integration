@@ -1,6 +1,6 @@
 # Guide d’utilisation
 
-Niak Confort dit, pour chaque pièce, quoi faire et pourquoi. Ce guide explique comment le régler et comment lire ses conseils.
+Hestia Confort dit, pour chaque pièce, quoi faire et pourquoi. Ce guide explique comment le régler et comment lire ses conseils.
 
 - [Premiers pas](#premiers-pas)
 - [L’extérieur](#lextérieur)
@@ -15,12 +15,12 @@ Un souci ? Voir le [dépannage](depannage.md).
 
 ## Premiers pas
 
-1. Installez **Niak Comfort** depuis HACS, puis redémarrez Home Assistant ([installation](../README.md#installation)).
-2. **Paramètres → Appareils et services → Ajouter une intégration → Niak Comfort.**
-3. Ouvrez **Niak** dans la barre latérale, onglet **Confort**.
-4. Niak propose toutes les pièces où il trouve une température. Décochez celles à ne pas suivre, puis créez-les d’un coup.
+1. Installez **Hestia Comfort** depuis HACS, puis redémarrez Home Assistant ([installation](../README.md#installation)).
+2. **Paramètres → Appareils et services → Ajouter une intégration → Hestia Comfort.**
+3. Ouvrez **Hestia** dans la barre latérale, onglet **Confort**.
+4. Hestia propose toutes les pièces où il trouve une température. Décochez celles à ne pas suivre, puis créez-les d’un coup.
 5. Réglez l’extérieur une fois, dans **Réglages généraux**.
-6. Ajoutez la carte à un tableau de bord : **Ajouter une carte → Niak Confort**.
+6. Ajoutez la carte à un tableau de bord : **Ajouter une carte → Hestia Confort**.
 
 Seule la température de la pièce est obligatoire. Chaque capteur ajouté rend les conseils plus justes.
 
@@ -30,9 +30,9 @@ Rien n’est enregistré avant **Enregistrer**. Vous pouvez revenir à chaque on
 
 L’extérieur se règle une seule fois, dans **Confort → Réglages généraux**. Il sert à toutes les pièces.
 
-### Avec Niak Weather
+### Avec Hestia Weather
 
-Si [Niak Weather](https://github.com/Niakman13/niak-weather-integration) est installé, choisissez **Niak Weather** puis votre lieu.
+Si [Hestia Weather](https://github.com/Niakman13/niak-weather-integration) est installé, choisissez **Hestia Weather** puis votre lieu.
 
 Confort reprend alors, sans rien à choisir :
 
@@ -41,11 +41,11 @@ Confort reprend alors, sans rien à choisir :
 - les vigilances et les orages ;
 - la qualité de l’air du jour.
 
-Les mesures sont seulement affichées, avec leur valeur du moment. Pour en changer : changez la station dans Niak Weather, ou choisissez **Vos propres capteurs**.
+Les mesures sont seulement affichées, avec leur valeur du moment. Pour en changer : changez la station dans Hestia Weather, ou choisissez **Vos propres capteurs**.
 
-**La liaison se règle des deux côtés.** Dans Niak Weather 2.9.0 ou plus récent, **Réglages → Extensions → Niak Confort** : un interrupteur relie le lieu à Confort. Choisir **Vos propres capteurs** dans Confort la coupe aussi côté Weather. Les deux disent toujours la même chose. Coupée, Confort garde les capteurs du dehors comme les siens, sans l’air de Niak Weather.
+**La liaison se règle des deux côtés.** Dans Hestia Weather 2.9.0 ou plus récent, **Réglages → Extensions → Hestia Confort** : un interrupteur relie le lieu à Confort. Choisir **Vos propres capteurs** dans Confort la coupe aussi côté Weather. Les deux disent toujours la même chose. Coupée, Confort garde les capteurs du dehors comme les siens, sans l’air de Hestia Weather.
 
-L’air du dehors suit la source choisie dans Niak Weather : Atmo France ou une station WAQI. Changez-la dans Weather : Confort suit. Il faut Niak Weather 2.5.7 ou plus récent. Dans Confort, seul le niveau de prudence se règle. Pour ne pas tenir compte de l’air, désactivez la qualité de l’air dans Niak Weather.
+L’air du dehors suit la source choisie dans Hestia Weather : Atmo France ou une station WAQI. Changez-la dans Weather : Confort suit. Il faut Hestia Weather 2.5.7 ou plus récent. Dans Confort, seul le niveau de prudence se règle. Pour ne pas tenir compte de l’air, désactivez la qualité de l’air dans Hestia Weather.
 
 ### Avec vos propres capteurs
 
@@ -60,11 +60,11 @@ Choisissez **Vos propres capteurs**, puis le capteur de chaque mesure ; sa valeu
 | Ensoleillement (W/m²) | Repérer le soleil qui chauffe une façade |
 | Qualité de l’air | Éviter d’aérer quand l’air du dehors est mauvais |
 
-Pour la qualité de l’air, trois choix : **Atmo France**, l’indice de **Niak Weather**, ou aucune.
+Pour la qualité de l’air, trois choix : **Atmo France**, l’indice de **Hestia Weather**, ou aucune.
 
 L’indice du jour est une précaution. Il ne mesure pas l’air devant vos fenêtres.
 
-Une mesure absente reste inconnue : Niak conseille quand même et le dit sur la carte.
+Une mesure absente reste inconnue : Hestia conseille quand même et le dit sur la carte.
 
 ## Les pièces
 
@@ -76,7 +76,7 @@ Le menu de gauche de l’onglet **Confort** a trois pages :
 
 La rubrique **Extensions** des Réglages généraux a trois parties :
 
-- **Extensions officielles Niak** : Niak Weather, ou vos propres capteurs pour le dehors ([L’extérieur](#lextérieur)).
+- **Extensions officielles Hestia** : Hestia Weather, ou vos propres capteurs pour le dehors ([L’extérieur](#lextérieur)).
 - **Extensions tierces** : Versatile Thermostat, Adaptive Cover Pro et Alarmo. Chacune dit à quoi elle sert, dans quelles pièces, et a un interrupteur. Coupée, elle n’est lue dans aucune pièce, et les réglages des pièces le disent.
 - **Détectées, pas encore lues par Confort** : les intégrations de votre Home Assistant qui pourraient aider, Scheduler par exemple. **Demander** ouvre une demande toute prête sur GitHub ; rien n’est envoyé sans vous.
 
@@ -84,26 +84,26 @@ La rubrique **Extensions** des Réglages généraux a trois parties :
 
 ![Les réglages d’une pièce : l’onglet Ouvertures](images/niak-comfort-reglages.png)
 
-### Niak part de vos pièces Home Assistant
+### Hestia part de vos pièces Home Assistant
 
-Vous avez déjà rangé vos appareils par pièce dans Home Assistant ? Niak s’en sert. Presque tout est prérempli.
+Vous avez déjà rangé vos appareils par pièce dans Home Assistant ? Hestia s’en sert. Presque tout est prérempli.
 
-- **Les pièces** : Niak propose chaque pièce Home Assistant qui a un thermomètre. Vous cochez, il les crée d’un coup.
+- **Les pièces** : Hestia propose chaque pièce Home Assistant qui a un thermomètre. Vous cochez, il les crée d’un coup.
 - **Les capteurs** : pour chaque mesure, il propose ceux de la pièce. Un capteur compte s’il est rangé dans la pièce, lui ou son appareil.
-- **La température et l’humidité de la pièce** : si vous les avez choisies dans Home Assistant, Niak les prend en premier.
+- **La température et l’humidité de la pièce** : si vous les avez choisies dans Home Assistant, Hestia les prend en premier.
 - **L’étage** : celui de la pièce dans Home Assistant.
 
 Vous vérifiez, vous gardez, vous changez. Rien n’est choisi sans vous.
 
-Plusieurs capteurs possibles ? Niak les montre tous et vous choisissez.
+Plusieurs capteurs possibles ? Hestia les montre tous et vous choisissez.
 
 Un capteur d’une autre pièce, ou d’un appareil dehors, demande une confirmation.
 
-Un capteur mal rangé ? Corrigez sa pièce dans Home Assistant : Niak le proposera au bon endroit. Vous pouvez aussi choisir n’importe quel capteur avec le sélecteur de Home Assistant.
+Un capteur mal rangé ? Corrigez sa pièce dans Home Assistant : Hestia le proposera au bon endroit. Vous pouvez aussi choisir n’importe quel capteur avec le sélecteur de Home Assistant.
 
 Une pièce ajoutée plus tard dans Home Assistant apparaît dans **À améliorer** : « Bureau pas encore suivie ».
 
-Niak ne devine rien d’un nom : il suit le rangement de Home Assistant et la nature des capteurs.
+Hestia ne devine rien d’un nom : il suit le rangement de Home Assistant et la nature des capteurs.
 
 ### Pièce libre
 
@@ -123,7 +123,7 @@ Chaque pièce a six onglets, détaillés ci-dessous. Le cadre **À quoi sert cet
 - La plage d’été arrive en douceur, quand les 7 derniers jours se réchauffent.
 - La plage d’humidité : minimum 40 % et maximum 60 % proposés, réglables pour chaque pièce. Le maximum déjà choisi est conservé.
 
-Un écart jusqu’à 3 points reste discret : « Légèrement humide » ou « Légèrement sec », sans compter la pièce parmi celles à surveiller pour ce seul écart. Entre 3 et 10 points, la carte indique « Air humide » ou « Air sec » ; au-delà de 10 points, « Très humide » ou « Très sec ». Ce sont des paliers d’affichage Niak, pas des seuils sanitaires. À 60,6 % avec un maximum de 60 %, la carte indique donc « Légèrement humide ».
+Un écart jusqu’à 3 points reste discret : « Légèrement humide » ou « Légèrement sec », sans compter la pièce parmi celles à surveiller pour ce seul écart. Entre 3 et 10 points, la carte indique « Air humide » ou « Air sec » ; au-delà de 10 points, « Très humide » ou « Très sec ». Ce sont des paliers d’affichage Hestia, pas des seuils sanitaires. À 60,6 % avec un maximum de 60 %, la carte indique donc « Légèrement humide ».
 
 L’état affiché suit la mesure actuelle, même après une humidité plus élevée. Une amélioration et un écart durable sont précisés dans « À savoir ». Le conseil reste lié à un geste utile : ouvrir n’est pas conseillé pour un léger dépassement seul, et un risque estimé sur les murs froids reste expliqué séparément. Pour un air sec, la carte précise si l’air extérieur assécherait davantage ou pourrait augmenter l’humidité ; sans mesure extérieure, elle ne suppose aucun effet.
 
@@ -166,11 +166,11 @@ Un détecteur de mouvement silencieux ne prouve pas que la pièce est vide. Dél
 
 ### Chauffage
 
-**Pièce chauffée**, en tête de l’onglet : éteint, Niak ne conseille jamais de réchauffer la pièce et ne lit pas son chauffage. Le thermostat et ses réglages s’effacent ; ils sont gardés si vous le rallumez.
+**Pièce chauffée**, en tête de l’onglet : éteint, Hestia ne conseille jamais de réchauffer la pièce et ne lit pas son chauffage. Le thermostat et ses réglages s’effacent ; ils sont gardés si vous le rallumez.
 
-Ensuite, le thermostat ou la vanne de la pièce. Niak sait alors si le chauffage tourne. Il évite de conseiller d’ouvrir pendant qu’il chauffe.
+Ensuite, le thermostat ou la vanne de la pièce. Hestia sait alors si le chauffage tourne. Il évite de conseiller d’ouvrir pendant qu’il chauffe.
 
-**Quand conseiller de rallumer** : sous le minimum de la pièce, Niak le dit d’abord dans « À savoir ». « Rallumez le chauffage » n’apparaît que si la pièce reste plus bas que la **tolérance** (1 °C par défaut, de 0 à 5 °C) pendant 30 minutes, avec quelqu’un à la maison et le chauffage coupé, et qu’elle ne se réchauffe pas d’elle-même (le soleil, par exemple).
+**Quand conseiller de rallumer** : sous le minimum de la pièce, Hestia le dit d’abord dans « À savoir ». « Rallumez le chauffage » n’apparaît que si la pièce reste plus bas que la **tolérance** (1 °C par défaut, de 0 à 5 °C) pendant 30 minutes, avec quelqu’un à la maison et le chauffage coupé, et qu’elle ne se réchauffe pas d’elle-même (le soleil, par exemple).
 
 Un thermostat qui ne dit pas ce qu’il fait (sans « action » dans Home Assistant) est au moins lu « coupé » quand son mode est arrêt.
 
@@ -187,10 +187,10 @@ Un thermostat qui ne dit pas ce qu’il fait (sans « action » dans Home Assist
 
 L’attribut `source` de « Chauffage observé » dit d’où vient l’état : `indicateur`, `hvac_action` ou `mode`. L’apprentissage du chauffage suit aussi l’indicateur.
 
-**Avec Versatile Thermostat**, reconnu tout seul, l’onglet montre ses consignes et propose de prendre sa **consigne comme minimum** de la pièce (coché par défaut) : le minimum suit ce que le thermostat vise, en confort ou en éco. Une pièce à 18 °C quand il vise 17 °C en éco n’est donc pas « trop fraîche ». Le hors-gel protège sans être un confort : la température confort reste alors le minimum, mais Niak ne demande pas de rallumer. Niak lit aussi :
+**Avec Versatile Thermostat**, reconnu tout seul, l’onglet montre ses consignes et propose de prendre sa **consigne comme minimum** de la pièce (coché par défaut) : le minimum suit ce que le thermostat vise, en confort ou en éco. Une pièce à 18 °C quand il vise 17 °C en éco n’est donc pas « trop fraîche ». Le hors-gel protège sans être un confort : la température confort reste alors le minimum, mais Hestia ne demande pas de rallumer. Hestia lit aussi :
 
 - pourquoi il est arrêté : seul un arrêt à la main appelle « Rallumez ». Arrêté par une fenêtre ouverte, par son arrêt automatique, un mode central ou un délestage, il repartira seul : la carte l’explique ;
-- son préréglage : en éco, hors-gel ou absence, une pièce plus fraîche est voulue, Niak ne demande pas de rallumer ;
+- son préréglage : en éco, hors-gel ou absence, une pièce plus fraîche est voulue, Hestia ne demande pas de rallumer ;
 - la pente de la température, tant que le jumeau de la pièce apprend ;
 - la présence ou le mouvement qu’il suit, pour une pièce sans détecteur à elle ;
 - la fenêtre ouverte qu’il détecte, dite dans « À savoir » quand aucun contact de la pièce ne le dit.
@@ -228,7 +228,7 @@ Un capteur à vérifier demande une confirmation. Elle est retenue ensuite.
 | Rouge | Attention | Urgent : « Fermez, il pleut » |
 | Gris | — | Mesures en chargement, absentes ou incomplètes |
 
-Niak ne parle que pour un geste qui aide. Sinon : « Rien à faire ».
+Hestia ne parle que pour un geste qui aide. Sinon : « Rien à faire ».
 
 - **Aérer seulement si c’est mieux qu’attendre** : la durée d’aération est apprise pièce par pièce.
 - **Pas d’« Aérez » en pleine nuit** : la carte attend le réveil et dit à partir de quelle heure aérer.
@@ -263,7 +263,7 @@ Un appui sur une tuile de mesure ouvre son historique dans Home Assistant. Le bo
 
 Avec des étages Home Assistant, les pièces sont regroupées par étage. De plain-pied, tout est dans **Mon logement**.
 
-Niak peut proposer deux fenêtres à ouvrir ensemble :
+Hestia peut proposer deux fenêtres à ouvrir ensemble :
 
 - sur deux façades opposées : l’air traverse ;
 - sur deux étages : effet cheminée, même sans vent.
@@ -306,7 +306,7 @@ La carte suit le thème de Home Assistant, clair ou sombre.
 
 ## Le bilan du logement
 
-Le bilan dit si le logement a été confortable sur les **douze derniers mois**. Il est dans le menu de gauche de l’onglet **Confort**, sous **Accueil**, et sur la carte **Niak Confort · bilan**.
+Le bilan dit si le logement a été confortable sur les **douze derniers mois**. Il est dans le menu de gauche de l’onglet **Confort**, sous **Accueil**, et sur la carte **Hestia Confort · bilan**.
 
 ![Le bilan du logement : la note, la chaleur, l’humidité et l’air, les conseils et la note de chaque pièce](images/niak-comfort-bilan.png)
 
@@ -332,28 +332,28 @@ Le bilan lit l’historique de Home Assistant : les statistiques à long terme g
 
 ## Fenêtres, chauffage, VMC, purificateur, volets
 
-Niak observe vos équipements. Il ne les commande jamais.
+Hestia observe vos équipements. Il ne les commande jamais.
 
 ### Fenêtres
 
 - Une fenêtre qui s’ouvre apparaît sur la carte en une à deux secondes.
 - Le conseil attend 30 secondes, pour ignorer un contact qui rebondit.
-- **Pluie** : Niak fait fermer les ouvrants exposés. Ceux qui sont abrités peuvent rester ouverts.
+- **Pluie** : Hestia fait fermer les ouvrants exposés. Ceux qui sont abrités peuvent rester ouverts.
 - **Vent fort** : au-delà de 45 km/h de rafales, rien ne reste ouvert.
 - **Gel** : pas d’aération prolongée sous 1 °C.
-- **Soleil** : Niak signale la fenêtre ouverte par laquelle le soleil chauffe la pièce.
+- **Soleil** : Hestia signale la fenêtre ouverte par laquelle le soleil chauffe la pièce.
 - Avec le vent, il dit quelles fenêtres ouvrir pour faire traverser l’air.
 
 ### Chauffage
 
 - La tuile Chauffage montre s’il chauffe, et son mode (hors gel, éco, confort…).
-- Pendant qu’il chauffe, Niak limite l’aération.
+- Pendant qu’il chauffe, Hestia limite l’aération.
 - Un CO₂ élevé garde une aération courte : l’air doit quand même être renouvelé.
 
 ### VMC
 
 - La tuile Ventilation dit si elle tourne, et si elle est en grande vitesse.
-- Quand ouvrir la fenêtre sécherait peu, Niak propose plutôt : « Lancez la VMC ».
+- Quand ouvrir la fenêtre sécherait peu, Hestia propose plutôt : « Lancez la VMC ».
 
 ### Purificateur
 
@@ -365,28 +365,28 @@ Niak observe vos équipements. Il ne les commande jamais.
 Chaque ouvrant peut avoir :
 
 - **aucun volet** ;
-- **un volet manuel** (bois, battant…) : Niak ne connaît pas sa position. Il conseille sous condition : « Si le volet est ouvert, fermez-le côté ouest » ;
-- **un volet connecté** : Niak lit sa position, et son automatisme ou sa dérogation si vous les choisissez.
+- **un volet manuel** (bois, battant…) : Hestia ne connaît pas sa position. Il conseille sous condition : « Si le volet est ouvert, fermez-le côté ouest » ;
+- **un volet connecté** : Hestia lit sa position, et son automatisme ou sa dérogation si vous les choisissez.
 
-En été, Niak conseille de protéger les façades au soleil. En hiver, il signale le soleil qui peut chauffer.
+En été, Hestia conseille de protéger les façades au soleil. En hiver, il signale le soleil qui peut chauffer.
 
 Avec une avancée de toit et ses dimensions, l’ombre est estimée. Sans dimensions, un modèle simple est utilisé.
 
 ### Avec Adaptive Cover Pro
 
-Si [Adaptive Cover Pro](https://github.com/jrhubott/adaptive-cover-pro) pilote un volet, Niak le reconnaît dès que vous choisissez ce volet dans **Ouvertures**. Le panneau affiche alors « Piloté par Adaptive Cover Pro » et la liste de ce qu’il lit.
+Si [Adaptive Cover Pro](https://github.com/jrhubott/adaptive-cover-pro) pilote un volet, Hestia le reconnaît dès que vous choisissez ce volet dans **Ouvertures**. Le panneau affiche alors « Piloté par Adaptive Cover Pro » et la liste de ce qu’il lit.
 
-Ce que Niak lit tout seul :
+Ce que Hestia lit tout seul :
 
-| Dans Adaptive Cover Pro | Ce qu’en fait Niak |
+| Dans Adaptive Cover Pro | Ce qu’en fait Hestia |
 |---|---|
-| Integration Enabled, Automatic Control, Sun Tracking | Les trois allumés : Adaptive Cover Pro pilote, Niak ne vous demande rien. Un seul coupé : Niak reprend ses conseils et dit lequel. |
-| Manual Override Detection, Dérogation manuelle | Vous avez repris la main : Niak la respecte. Détection coupée : Niak ignore ce signal. |
-| Climate Mode | Coupé dans une pièce trop chaude : Niak signale qu’il ne ferme pas contre la chaleur. |
+| Integration Enabled, Automatic Control, Sun Tracking | Les trois allumés : Adaptive Cover Pro pilote, Hestia ne vous demande rien. Un seul coupé : Hestia reprend ses conseils et dit lequel. |
+| Manual Override Detection, Dérogation manuelle | Vous avez repris la main : Hestia la respecte. Détection coupée : Hestia ignore ce signal. |
+| Climate Mode | Coupé dans une pièce trop chaude : Hestia signale qu’il ne ferme pas contre la chaleur. |
 | Soleil devant | Plus précis que la façade seule : sans soleil devant la fenêtre, rien à fermer. |
 | Début et fin du soleil | Pièce déjà trop chaude : « à fermer avant 13 h 50 », si Adaptive Cover Pro ne pilote pas. |
 | Position cible, raison | Visibles dans les détails de la carte. |
-| Orientation, largeur, hauteur de la fenêtre | Reprises pour le calcul du soleil et de l’ombre. Une valeur saisie dans Niak reste prioritaire. |
+| Orientation, largeur, hauteur de la fenêtre | Reprises pour le calcul du soleil et de l’ombre. Une valeur saisie dans Hestia reste prioritaire. |
 
 Une fonction qu’Adaptive Cover Pro laisse indisponible (par exemple le mode climat non configuré) est simplement ignorée : ce n’est pas une panne.
 
@@ -398,7 +398,7 @@ Seule l’avancée de toit reste à saisir : Adaptive Cover Pro ne la connaît p
 
 Une aération ne remplace jamais tout l’air. Chaque pièce sèche à sa façon.
 
-Niak relit les ouvertures des 10 derniers jours. Il retient, pour chaque pièce :
+Hestia relit les ouvertures des 10 derniers jours. Il retient, pour chaque pièce :
 
 - à quelle vitesse elle sèche ;
 - l’humidité qui reste ;
@@ -410,16 +410,16 @@ Ce que ça change :
 
 - **Une promesse réaliste** : « 76 % d’humidité, environ 70 % après l’aération ».
 - **La durée de la pièce** : 20 min dans une buanderie qui sèche vite, une heure dans une chambre qui sèche mal.
-- **Pas de geste inutile** : si aérer ne gagne presque rien, Niak ne le demande pas. Il propose la VMC si la pièce en a une.
-- **Le bon moment** : « Aérez vers 22 h » quand l’air du soir sera plus sec (avec Niak Weather).
+- **Pas de geste inutile** : si aérer ne gagne presque rien, Hestia ne le demande pas. Il propose la VMC si la pièce en a une.
+- **Le bon moment** : « Aérez vers 22 h » quand l’air du soir sera plus sec (avec Hestia Weather).
 - **Les murs** : le jumeau apprend aussi la masse de la pièce, qui suit l’air en quelques heures. Dix minutes d’aération refroidissent l’air, pas les murs ; une nuit entière, oui.
-- **La nuit simulée** (avec Niak Weather, d’après la méthode de [NADIR](https://solal3105.github.io/NADIR2/methodologie.html), de Solal Gendrin ([son dépôt](https://github.com/solal3105/NADIR2))) : quand la pièce a chaud, Niak simule les 30 prochaines heures, fenêtres fermées puis ouvertes aux bons moments. Il pèse le soleil qui entrerait volets relevés contre l’air frais, n’ouvre ni sous la pluie ni sous votre minimum. « À savoir » dit alors : « Cette nuit : ouvrez de 22 h à 7 h · 1,8 °C de mieux demain au plus chaud », et signale un air humide. Fiable à l’heure près, pas à la décimale.
+- **La nuit simulée** (avec Hestia Weather, d’après la méthode de [NADIR](https://solal3105.github.io/NADIR2/methodologie.html), de Solal Gendrin ([son dépôt](https://github.com/solal3105/NADIR2))) : quand la pièce a chaud, Hestia simule les 30 prochaines heures, fenêtres fermées puis ouvertes aux bons moments. Il pèse le soleil qui entrerait volets relevés contre l’air frais, n’ouvre ni sous la pluie ni sous votre minimum. « À savoir » dit alors : « Cette nuit : ouvrez de 22 h à 7 h · 1,8 °C de mieux demain au plus chaud », et signale un air humide. Fiable à l’heure près, pas à la décimale.
 
 Dans **Détails**, la ligne **Séchage** dit sur combien d’aérations la pièce a appris.
 
 ### Apprentissage optimal
 
-Niak rejoue chaque jour les prévisions de la pièce sur les dernières 24 heures. L’apprentissage est **optimal** après 7 jours de mesures, quand ces prévisions tiennent à ±0,5 °C et ±3 % d’humidité.
+Hestia rejoue chaque jour les prévisions de la pièce sur les dernières 24 heures. L’apprentissage est **optimal** après 7 jours de mesures, quand ces prévisions tiennent à ±0,5 °C et ±3 % d’humidité.
 
 Alors le conseil est **optimisé** : il annonce le résultat, « Aérez 15 min · 76 → 68 % en 15 min », aussi pour le CO₂ et les COV. Une pastille « Conseil optimisé » le signale. Si les prévisions ne tiennent plus, la pièce repasse en conseil estimé.
 
@@ -436,7 +436,7 @@ Pour apprendre, une pièce a besoin :
 - de la température et de l’humidité du dehors ;
 - de l’historique de Home Assistant (l’enregistreur, actif par défaut).
 
-Une ouverture de moins de 10 minutes ne compte pas. Avant d’avoir appris, Niak suppose une pièce ordinaire, avec prudence.
+Une ouverture de moins de 10 minutes ne compte pas. Avant d’avoir appris, Hestia suppose une pièce ordinaire, avec prudence.
 
 ## Pour vos automatisations
 
@@ -504,4 +504,4 @@ actions:
       entity_id: fan.vmc
 ```
 
-Niak ne commande rien lui-même : ces automatisations restent les vôtres.
+Hestia ne commande rien lui-même : ces automatisations restent les vôtres.

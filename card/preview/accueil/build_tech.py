@@ -1,4 +1,4 @@
-"""Builds technique.html: a technical home page for Confort in the Niak hub, from the real health report (tech.json)."""
+"""Builds technique.html: a technical home page for Confort in the Hestia hub, from the real health report (tech.json)."""
 from pathlib import Path
 here = Path(__file__).parent
 data = (here / "tech.json").read_text()
@@ -39,7 +39,7 @@ const roomOf=title=>D.rooms.find(r=>r.title===title)||{};
 const air=title=>{const r=roomOf(title);return [r.co2!=null?'CO₂':null,title==='Salon'?'COV':null].filter(Boolean).join(' · ')||'—';};
 const volume=title=>roomOf(title).volume||'—';
 document.getElementById('app').innerHTML=`
-<div class="top"><div><h1>Confort</h1><p class="sub"><span class="statusline"><span class="dot"></span>${todo?todo+' point'+(todo>1?'s':'')+' à regarder':'Tout fonctionne'}</span> · Intégration 1.2.5 · Niak Weather 2.6.1 relié (Gardanne) · ${H.rooms.length} pièces</p></div>
+<div class="top"><div><h1>Confort</h1><p class="sub"><span class="statusline"><span class="dot"></span>${todo?todo+' point'+(todo>1?'s':'')+' à regarder':'Tout fonctionne'}</span> · Intégration 1.2.5 · Hestia Weather 2.6.1 relié (Gardanne) · ${H.rooms.length} pièces</p></div>
  <div class="chips"><button class="btn primary">Ajouter une pièce</button><button class="btn">Extérieur et météo</button>
  <div class="toggle"><button data-t="light">Clair</button><button data-t="dark" aria-pressed="true">Sombre</button></div></div></div>
 <div class="kpis">
@@ -64,8 +64,8 @@ document.getElementById('app').innerHTML=`
  <section><h3>Sources partagées</h3>${H.sources.map(s=>`<div class="srow"><b>${s.label}</b><span>${s.text}</span></div>`).join('')}
   <div class="srow"><b>Présence</b><span>Alarmo · zone Maison</span></div><div class="srow"><b>Soleil</b><span>sun.sun · façades des fenêtres</span></div></section>
  <section><h3>Versions et liens</h3><div class="srow"><b>Intégration</b><span>1.2.5</span></div><div class="srow"><b>Carte</b><span>1.2.5 · embarquée</span></div>
-  <div class="srow"><b>Niak Weather</b><span>2.6.1 · relié à Gardanne</span></div><div class="srow"><b>Interface Maison</b><span>niak_comfort_api v1</span></div></section>
- <section><h3>Les cartes</h3><p class="empty" style="margin:0 0 10px">Dans un tableau de bord : Ajouter une carte, puis <b>Niak Confort</b> pour une pièce, ou <b>Niak Confort · logement</b> pour la synthèse.</p>
+  <div class="srow"><b>Hestia Weather</b><span>2.6.1 · relié à Gardanne</span></div><div class="srow"><b>Interface Maison</b><span>niak_comfort_api v1</span></div></section>
+ <section><h3>Les cartes</h3><p class="empty" style="margin:0 0 10px">Dans un tableau de bord : Ajouter une carte, puis <b>Hestia Confort</b> pour une pièce, ou <b>Hestia Confort · logement</b> pour la synthèse.</p>
   <div class="short"><button>Ajouter une carte pièce <span>8 pièces · Salon · Cuisine en une</span></button><button>Ajouter la carte logement <span>synthèse</span></button></div></section>
 </div></div>`;
 document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{document.documentElement.dataset.theme=b.dataset.t;document.querySelectorAll('[data-t]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));});

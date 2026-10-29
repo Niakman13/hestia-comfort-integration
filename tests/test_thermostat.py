@@ -1,4 +1,4 @@
-"""Versatile Thermostat: what Niak reads from it, and how it changes « Rallumez le chauffage »."""
+"""Versatile Thermostat: what Hestia reads from it, and how it changes « Rallumez le chauffage »."""
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys

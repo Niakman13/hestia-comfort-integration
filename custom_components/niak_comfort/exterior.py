@@ -9,7 +9,7 @@ from .engine.sources import normalize, Reading
 def exterior_reading(state, key, spec, *, now, max_age):
     entity_id = spec["entity_id"]
     if spec.get("adapter") == "niak_air":
-        # Niak Weather's index from its chosen source, already on Atmo's 1 to 6 scale.
+        # Hestia Weather's index from its chosen source, already on Atmo's 1 to 6 scale.
         index = spec.get("index")
         if not isinstance(index, int) or not 1 <= index <= 6:
             return Reading(None, "unknown", source=entity_id, detail="unavailable")

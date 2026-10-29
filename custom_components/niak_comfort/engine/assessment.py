@@ -106,7 +106,7 @@ class Settings:
 SEASON_FROM, SEASON_TO = 12.0, 20.0
 
 
-# The upper limit by season, when the home's season is known (Niak Weather's, or a season sensor): winter's value,
+# The upper limit by season, when the home's season is known (Hestia Weather's, or a season sensor): winter's value,
 # summer's, and half-way in spring and autumn.
 SEASON_WEIGHTS = {"winter": 0.0, "between": 0.5, "summer": 1.0}
 
@@ -440,7 +440,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     # Template veto order: rain, gusts, outdoor air, frost, heating. Frost and a running
     # heating only soften the advice: a confirmed air need still gets a short airing.
     storm = outlook.get("storm") is True
-    vigilance = (outlook.get("vigilance") or 0) >= 2  # orange or red, from Niak Weather
+    vigilance = (outlook.get("vigilance") or 0) >= 2  # orange or red, from Hestia Weather
     # One rain for the whole home, the same for « open » and for « close »: the station says whether it rains,
     # the radar when it starts. Only a rain due shortly shuts the exposed openings and keeps them shut: within
     # twenty minutes when known to the minute, within the hour when only the hourly forecast says it and nothing
@@ -456,7 +456,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         d["avoid"] = ("rain" if wet_hour and rained_on(d["entity_id"])
                       else "gust" if d["wind_side"] == "windward" and gust is not None and gust >= GUSTY
                       else "sun" if hot and d["sun_wm2"] is not None and d["sun_wm2"] >= settings.sun_facade else None)
-    # The storm and the orange vigilance are forecasts. When Niak Weather's own station measures the rain
+    # The storm and the orange vigilance are forecasts. When Hestia Weather's own station measures the rain
     # and the gusts here, it has the last word: dry, calm and no rain within the hour, they only shorten
     # the airing. Without such a station, or with a red vigilance, the forecast still keeps everything shut.
     station = outlook.get("station") or ()
@@ -509,7 +509,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     elif rain_coming:
         action, reason, level = "fermer", "rain_soon", "action"
     elif hard and (opened or wants_open or not closed):
-        # Windows not known to be shut still hear the constraint: Niak cannot tell all is well.
+        # Windows not known to be shut still hear the constraint: Hestia cannot tell all is well.
         # Only outdoor air reaches every opening; rain spares sheltered ones, gusts are handled above.
         action, reason = ("fermer" if opened and pollution is True else "attendre"), "opening_blocked"
         if level in ("calm", "neutral"):
@@ -649,7 +649,7 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
                 break
     if warm_walls:
         action, reason, level = "ok", "warm_walls", "action"
-    # Protections never configured: the advice stands, the card says what Niak does not watch.
+    # Protections never configured: the advice stands, the card says what Hestia does not watch.
     unverified = tuple(k for k in ("pollution", "rain") if k not in readings and not (k == "rain" and all_sheltered))
     extended = features(readings, settings, context, openings, sun, details,
                         needs, action, reason, now, ai, ae, air_detail)

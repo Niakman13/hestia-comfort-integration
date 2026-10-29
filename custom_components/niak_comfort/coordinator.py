@@ -84,7 +84,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         self._advice_followed = False
         # Habits found in the twin's half hours (engine/habits.py), asked about in the hub.
         self.habits = []
-        # The season the home lives in (Niak Weather's, or a season sensor): hours of airing, answers by season.
+        # The season the home lives in (Hestia Weather's, or a season sensor): hours of airing, answers by season.
         self.season_name = None
         # Rooms open onto this one (no wall between them): their openings are this room's too.
         self.partners = self._partners()
@@ -162,7 +162,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         ids.discard("")
         if ids:
             self.config_entry.async_on_unload(async_track_state_change_event(self.hass, sorted(ids), self._changed))
-        # Linked to Niak Weather: recompute when its forecasts or alerts change.
+        # Linked to Hestia Weather: recompute when its forecasts or alerts change.
         if weather_link.api(self.hass) and (place := self._weather_place()):
             self.config_entry.async_on_unload(weather_link.listen(self.hass, place, lambda: self.hass.async_create_task(self.async_request_refresh())))
         stored = await self._feedback_store.async_load() or {}
@@ -237,7 +237,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         return {**self.config.get("evolution", {}), "occupied": self._occupied(), "people": self._people(), "alarm": self._alarm(),
                 "volume": self._volume_air(readings),
                 "intended_open": self._intended_open(now), "zone": dt_util.get_default_time_zone(),
-                # The season: Niak Weather's when it is the exterior source, else a season sensor chosen in « Extérieur ».
+                # The season: Hestia Weather's when it is the exterior source, else a season sensor chosen in « Extérieur ».
                 "season_name": self.season_name,
                 "heated": self.config.get("heated", True), "outdoor_mean_7d": self.season[1],
                 "indoor_day_range": self.day_range, "drying_model": self.drying_model, "flows": self.flow_model,
@@ -407,7 +407,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
         try:
             view["verdict"] = verdict(view, dt_util.as_local)
         except (KeyError, TypeError, ValueError):
-            logging.getLogger(__name__).exception("Niak Comfort: verdict for %s", view["title"])
+            logging.getLogger(__name__).exception("Hestia Comfort: verdict for %s", view["title"])
             view["verdict"] = None
         return view
 
@@ -746,7 +746,7 @@ class ComfortCoordinator(DataUpdateCoordinator):
             return reading
         recent = lambda kept: kept[1] if kept and now - kept[0] <= timedelta(hours=3) else None
         bias, before = recent(self._sky_bias), recent(self._sun_before)
-        # In the shade: Niak Weather's cloud cover, set right by what the station measured in the open just before.
+        # In the shade: Hestia Weather's cloud cover, set right by what the station measured in the open just before.
         factor = sky * bias if sky is not None and bias is not None else sky
         value, estimated = sunlight.estimate(float(reading.value), now, latitude, longitude, self.sun_shade, factor, before)
         return replace(reading, value=value, detail="shaded_estimate") if estimated else reading

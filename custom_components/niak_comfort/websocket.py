@@ -48,7 +48,7 @@ def ws_subscribe(hass, connection, msg):
     entry = next((e for e in entries if e.entry_id == wanted), None) if wanted else entries[0] if len(entries) == 1 else None
     if entry is None:
         code = "not_found" if wanted else "choose_entry" if entries else "not_configured"
-        connection.send_error(msg["id"], code, "Choisissez une pièce Niak Comfort chargée")
+        connection.send_error(msg["id"], code, "Choisissez une pièce Hestia Comfort chargée")
         return
     coordinator = entry.runtime_data
 
@@ -87,7 +87,7 @@ def ws_home_subscribe(hass, connection, msg):
     """The home card: every room view plus the synthesis, refreshed when any room changes."""
     entries = loaded_entries(hass)
     if not entries:
-        connection.send_error(msg["id"], "not_configured", "Aucune pièce Niak Comfort chargée")
+        connection.send_error(msg["id"], "not_configured", "Aucune pièce Hestia Comfort chargée")
         return
     coordinators = [e.runtime_data for e in entries]
 
@@ -132,7 +132,7 @@ def ws_home_subscribe(hass, connection, msg):
 def ws_view(hass, connection, msg):
     entry = hass.config_entries.async_get_entry(msg["entry_id"])
     if entry is None or entry.domain != DOMAIN or entry.state is not ConfigEntryState.LOADED:
-        connection.send_error(msg["id"], "not_found", "Pièce Niak Comfort non chargée")
+        connection.send_error(msg["id"], "not_found", "Pièce Hestia Comfort non chargée")
         return
     connection.send_result(msg["id"], entry.runtime_data.data)
 

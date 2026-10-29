@@ -1,5 +1,5 @@
 {
-  "title": "Niak Comfort",
+  "title": "Hestia Comfort",
   "config": {
     "step": {
       "user": {
@@ -11,8 +11,8 @@
         }
       },
       "home": {
-        "title": "Enable Niak Comfort",
-        "description": "Confirm to add the Niak Comfort page to the sidebar. There you will configure the living room, then other rooms and the outdoor sources, with explained proposals."
+        "title": "Enable Hestia Comfort",
+        "description": "Confirm to add the Hestia Comfort page to the sidebar. There you will configure the living room, then other rooms and the outdoor sources, with explained proposals."
       }
     },
     "error": {
@@ -22,14 +22,14 @@
       "invalid_area": "Choose an existing Home Assistant area."
     },
     "abort": {
-      "already_configured": "This room already has a Niak Comfort configuration.",
-      "use_panel": "Niak Comfort is already enabled. Add and edit rooms from the Niak Comfort page in the sidebar."
+      "already_configured": "This room already has a Hestia Comfort configuration.",
+      "use_panel": "Hestia Comfort is already enabled. Add and edit rooms from the Hestia Comfort page in the sidebar."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Configure in Niak Comfort",
+        "title": "Configure in Hestia Comfort",
         "description": "Rooms, their sensors and outdoor sources are managed in {workspace}, from the sidebar."
       }
     },

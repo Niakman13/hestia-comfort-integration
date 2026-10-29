@@ -1,4 +1,4 @@
-"""The advice follows the home's season (Niak Weather's, or a season sensor): not the same in summer and winter.
+"""The advice follows the home's season (Hestia Weather's, or a season sensor): not the same in summer and winter.
 
 Born on 21 October 2026: « Aérez vers 3 h », a window left open at night told it was fine whatever the weather,
 and one set of rules for the whole year."""

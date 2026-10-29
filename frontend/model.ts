@@ -24,7 +24,7 @@ export interface Driver {name:string;auto:string|null;override:string|null;signa
 // The technical state of the home (health.py): orange (bad) stops something, tip could be better, none is not used.
 export type Level='ok'|'bad'|'tip'|'none'|'shared';
 export type Target={kind:'room';entry_id:string;label:string}|{kind:'exterior';label:string}|{kind:'area';area_id:string;label:string};
-/** « Ce que Niak a appris » : what each room's twin learned, and how well it replays the last 24 hours. */
+/** « Ce que Hestia a appris » : what each room's twin learned, and how well it replays the last 24 hours. */
 export interface TwinRoom {inertia_hours:number;sun_degrees:number|null;heating_degrees:number|null;household_degrees:number;window_half_minutes:number|null;air_changes_per_hour:number;window_air_changes_per_hour:number|null;water_per_hour:number;
  /** Rooms sharing one air: what the other room's windows and air weigh here, learned. */ far_window_percent?:number|null;mixing_percent?:number|null}
 export interface Twin {status:'learning'|'ready';samples:number;days:number;open_samples?:number;room?:TwinRoom|null;
@@ -115,7 +115,7 @@ export const intros:Record<string,string[]>={
  5:['Tout ce que vous avez choisi, onglet par onglet.',
   'Rien ne change tant que vous n’avez pas enregistré ; un oubli, revenez à l’onglet voulu.'],
  exterior:['Les mesures du dehors : température, humidité, pluie, vent, soleil et pollution.',
-  'Avec Niak Weather, elles sont reprises de sa station ; sinon, vous choisissez vos capteurs.',
+  'Avec Hestia Weather, elles sont reprises de sa station ; sinon, vous choisissez vos capteurs.',
   'Réglées une fois, elles servent à toutes vos pièces.'],
 };
 // The exterior sensors, by frame: title and keys.
@@ -138,16 +138,16 @@ export function airChoices(s:Pick<Snapshot,'niak_weather'|'integrations'>,all:Ca
  const list:Choice[]=[
   {value:'atmo',label:'Atmo France',hint:'L’indice ATMO du jour, pour votre zone.',available:atmo,
    ...(atmo?{}:s.integrations?.atmofrance?{missing:'Aucune zone trouvée : ajoutez-en une dans l’intégration Atmo France.'}:{missing:'Pas encore installée',url:links.atmofrance})},
-  {value:'niak',label:'Niak Weather',hint:'L’indice de qualité de l’air de votre lieu Niak Weather.',available:niak,
+  {value:'niak',label:'Hestia Weather',hint:'L’indice de qualité de l’air de votre lieu Hestia Weather.',available:niak,
    ...(niak?{}:nw?{missing:'Activez la qualité de l’air dans l’onglet Météo.'}:{missing:'Pas encore installée',url:links.niak_weather})}];
  if(current==='other')list.push({value:'other',label:'Autre signal',hint:'Un capteur choisi avant cette version.',available:true});
  list.push({value:'none',label:'Pas de qualité de l’air',hint:'Les conseils ne tiennent pas compte de la pollution.',available:true});
  return list;
 }
-// Where the exterior measures come from: Niak Weather's station, or the person's own sensors.
+// Where the exterior measures come from: Hestia Weather's station, or the person's own sensors.
 export function exteriorChoices(s:Pick<Snapshot,'niak_weather'>):Choice[]{
  const nw=s.niak_weather,ready=!!nw?.installed&&!!nw.places.length;
- return [{value:'weather',label:'Niak Weather',hint:'Meilleurs conseils : Confort sait s’il va pleuvoir, quand le soleil arrive et quand l’air dehors est mauvais.',badge:'recommandé',available:ready,
+ return [{value:'weather',label:'Hestia Weather',hint:'Meilleurs conseils : Confort sait s’il va pleuvoir, quand le soleil arrive et quand l’air dehors est mauvais.',badge:'recommandé',available:ready,
    ...(ready?{}:nw?.installed?{missing:'Aucun lieu dans l’onglet Météo pour l’instant.'}:{missing:'Pas encore installée',url:links.niak_weather})},
   {value:'own',label:'Vos propres capteurs',hint:'Une mesure à la fois, toutes facultatives. Sans prévisions ni alertes, les conseils seront moins justes.',available:true}];
 }

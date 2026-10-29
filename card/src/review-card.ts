@@ -32,7 +32,7 @@ export class NiakComfortReviewCard extends LitElement {
   }
 }
 
-/** The editor: a title and the format, as the other Niak cards. */
+/** The editor: a title and the format, as the other Hestia cards. */
 export class NiakComfortReviewEditor extends LitElement {
   @property({attribute:false}) hass?:HomeAssistant;
   @state() private config?:ReviewConfig;
@@ -55,5 +55,5 @@ export class NiakComfortReviewEditor extends LitElement {
 if(!customElements.get('niak-comfort-review-card'))customElements.define('niak-comfort-review-card',NiakComfortReviewCard);
 if(!customElements.get('niak-comfort-review-card-editor'))customElements.define('niak-comfort-review-card-editor',NiakComfortReviewEditor);
 window.customCards??=[];
-if(!window.customCards.some(c=>c.type==='niak-comfort-review-card'))window.customCards.push({type:'niak-comfort-review-card',name:'Niak Confort · bilan',
+if(!window.customCards.some(c=>c.type==='niak-comfort-review-card'))window.customCards.push({type:'niak-comfort-review-card',name:'Hestia Confort · bilan',
   description:'Le bilan du logement sur douze mois : une note selon la norme européenne EN 16798-1, la chaleur, l’humidité, l’air, les pièces et des conseils.'});

@@ -1,6 +1,6 @@
 """The technical state of the home, for the home page of the « Confort » tab: what works, what needs the user, what could be set better.
 
-Same shape as Niak Weather's (engine/health.py there): orange (`bad`) only for what stops something from working, a better setting
+Same shape as Hestia Weather's (engine/health.py there): orange (`bad`) only for what stops something from working, a better setting
 is a tip, grey (`none`) is what is not used. Read from this brick's own settings and Home Assistant only.
 """
 from dataclasses import dataclass, field
@@ -63,10 +63,10 @@ class Facts:
     """The home's exterior sensors (Sensor)."""
     configured: bool = False
     weather: str = ""
-    """The Niak Weather place the exterior comes from, "" when not linked."""
+    """The Hestia Weather place the exterior comes from, "" when not linked."""
     weather_installed: bool = False
     free_areas: list = field(default_factory=list)
-    """Home Assistant rooms with a thermometer that no Niak room follows: (area_id, name)."""
+    """Home Assistant rooms with a thermometer that no Hestia room follows: (area_id, name)."""
     version: str = ""
     alarm: str = ""
     """The home's alarm as read: « Alarmo · désarmée », "" without one."""
@@ -132,13 +132,13 @@ def report(f):
         tips.append(_line("tip", f"{name} pas encore suivie", "Pièce Home Assistant avec un thermomètre : elle peut être suivie.",
                           {"kind": "area", "area_id": area_id, "label": "Ajouter"}))
     if f.weather_installed and not f.weather:
-        tips.append(_line("tip", "Reprendre l’extérieur de Niak Weather", "Sa station, ses alertes et ses prévisions, sans rien choisir à nouveau.", exterior_target))
+        tips.append(_line("tip", "Reprendre l’extérieur de Hestia Weather", "Sa station, ses alertes et ses prévisions, sans rien choisir à nouveau.", exterior_target))
 
     # ---- Sources ----
     bad = [s for s in f.exterior if s.status != "ok"]
     silent = f" · {len(bad)} capteur{'s' if len(bad) > 1 else ''} ne répond{'ent' if len(bad) > 1 else ''} pas" if bad else ""
     if f.weather:
-        exterior = {"label": "Extérieur", "level": "bad" if bad else "ok", "text": f"Niak Weather · {f.weather}{silent}"}
+        exterior = {"label": "Extérieur", "level": "bad" if bad else "ok", "text": f"Hestia Weather · {f.weather}{silent}"}
     elif f.configured:
         exterior = {"label": "Extérieur", "level": "bad" if bad else "ok",
                     "text": _plural(len(f.exterior), "capteur") + (silent or (", tous répondent" if f.exterior else ""))}
@@ -170,7 +170,7 @@ def report(f):
                 cells.append({"level": "ok", "text": _plural(len(mine), "contact") if key == "windows" else "répond"})
         rooms.append({"entry_id": room.entry_id, "title": room.title, "cells": cells})
 
-    # Extensions: Niak's own bricks, then other integrations Niak reads by itself, each making the advice better where it is used.
+    # Extensions: Hestia's own bricks, then other integrations Hestia reads by itself, each making the advice better where it is used.
     vt = [r.title for r in f.rooms if r.thermostat]
     acp = [r.title for r in f.rooms if r.driven_covers]
     linked = {"niak_weather": [f.weather] if f.weather else [], thermostats.PLATFORM: vt, "adaptive_cover_pro": acp, people.PLATFORM: [f.alarm] if f.alarm else []}
@@ -186,8 +186,8 @@ def report(f):
     # Installed integrations Confort does not read yet: shown so that the person can ask for them.
     others = [dict(o) for o in OTHERS if o["key"] in f.installed]
     versions = [{"level": "ok", "text": f"Intégration {f.version}", "why": "avec sa carte"},
-                {"level": "ok", "text": f"Relié à Niak Weather · {f.weather}", "why": "l’extérieur vient de sa station et de ses prévisions"} if f.weather else
-                {"level": "none", "text": "Pas relié à Niak Weather", "why": "installé : il peut remplir l’extérieur" if f.weather_installed else "non installé"}]
+                {"level": "ok", "text": f"Relié à Hestia Weather · {f.weather}", "why": "l’extérieur vient de sa station et de ses prévisions"} if f.weather else
+                {"level": "none", "text": "Pas relié à Hestia Weather", "why": "installé : il peut remplir l’extérieur" if f.weather_installed else "non installé"}]
     # One count everywhere: every sensor checked here, in the rooms (a shared one once) and outside.
     checked = [s for r in f.rooms for s in r.sensors] + list(f.exterior)
     sensors = {"answering": sum(1 for s in checked if s.status == "ok"), "total": len(checked)}
@@ -198,7 +198,7 @@ def report(f):
 
 
 EXTENSIONS = (
-    {"key": "niak_weather", "name": "Niak Weather", "official": True, "url": "https://github.com/Niakman13/niak-weather-integration",
+    {"key": "niak_weather", "name": "Hestia Weather", "official": True, "url": "https://github.com/Niakman13/niak-weather-integration",
      "role": "Extérieur, prévisions, pluie, vigilances",
      "use": "Le dehors pour toutes les pièces : température, humidité, pluie, vent, soleil, saison, pollution, alertes et prévisions.",
      "without": "Sans lui : vos propres capteurs, sans prévisions ni alertes.",
@@ -229,7 +229,7 @@ DOMAINS = frozenset(e["key"] for e in EXTENSIONS + OTHERS) | set(cover_link.PLAT
 
 
 def _weather_air(spec):
-    return Sensor("pollution", f"Niak Weather · {spec.get('provider') or 'qualité de l’air'}", "ok" if spec.get("index") else "silent")
+    return Sensor("pollution", f"Hestia Weather · {spec.get('provider') or 'qualité de l’air'}", "ok" if spec.get("index") else "silent")
 
 
 def _sensor(hass, key, entity_id, now):

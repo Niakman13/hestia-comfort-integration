@@ -182,7 +182,7 @@ def _shutters(readings, settings, openings, sun, details, needs, now=None):
             tip=f' Le soleil arrive sur la fenêtre à {soon} : fermez le volet avant.'
         if driven and override is not True:
             if driving:
-                # It moves the cover itself: Niak does not ask the person to do it twice.
+                # It moves the cover itself: Hestia does not ask the person to do it twice.
                 advice,tip=None,' Adaptive Cover Pro pilote le volet' + (f', position visée {target:g} %.' if target is not None else '.')
                 if 'cool' in needs and climate is False:
                     tip += ' Son mode climat est coupé : il ne ferme pas contre la chaleur.'

@@ -38,7 +38,7 @@ const NEED_PILLS:Record<string,string>={dry:'Trop humide',heat:'Trop frais',cool
 const NEED_DISKS:Record<string,string>={dry:'drop',heat:'temp',cool:'temp',air:'air'};
 /** A cool room that asks no gesture is no problem to the person: the heating takes care of it, nobody is home, the
  * outdoor air or the room itself warms it, or it is within the tolerance. Only a room clearly cold with no heating
- * known keeps its « Trop frais »: Niak cannot say who warms it, and « Tout va bien » would be wrong. */
+ * known keeps its « Trop frais »: Hestia cannot say who warms it, and « Tout va bien » would be wrong. */
 export const coldSettled=(a:View['assessment'])=>{const w=a.features?.warmth;
   return !w||w.slight||w.heating!=null||!!w.thermostat||w.occupied===false||!!w.outdoor_warms||!!w.warming;};
 const SEASON_NAMES:Record<string,string>={spring:'printemps',summer:'été',autumn:'automne',winter:'hiver'};
@@ -118,7 +118,7 @@ function gesture(v:View):Advice {
     return {title:span?`${verb} ${span}`:fallback,line,disk:'open',cap:shut?`Refermez avant ${shut}`:first};
   };
   const constraint=a.constraints.find(c=>c!=='heating_running'&&c!=='frost')??a.constraints[0];
-  // A silent sensor is not advice: the banner says what Niak cannot see, the tiles show which ones.
+  // A silent sensor is not advice: the banner says what Hestia cannot see, the tiles show which ones.
   const failed=a.missing.filter(k=>!!o[k]&&k!=='pollution'),count=failed.length;
   const blind=unreadable(v);
   if(blind&&v.starting)return {title:'Mesures en chargement',line:html`Home Assistant ${b('vient de démarrer')}`,disk:'clock',pill:'Démarrage',level:'neutral'};
@@ -136,7 +136,7 @@ function gesture(v:View):Advice {
     const winterWarm=a.features?.season?.group==='winter'&&a.needs.includes('cool');
     // A measure named beside « Rien à faire » reads as « do something »: with nothing better to do the pill says
     // « Au mieux », in blue, and « À savoir » says what is out and why. Only a room clearly cold with no heating
-    // known keeps « Trop frais »: someone could warm it, Niak cannot tell who.
+    // known keeps « Trop frais »: someone could warm it, Hestia cannot tell who.
     const unsettled=a.needs.includes('heat')&&!coldSettled(a),first=unsettled?'heat':a.needs.includes('dry')?'dry':a.needs[0];
     return {title:'Rien à faire',line:opened&&a.features?.open_warms?html`L’air du dehors, plus doux, ${b('réchauffe la pièce')}`:opened?html`Ouverte ou fermée, ${b('cela ne change rien')}`:a.reason==='opening_blocked'?html`Aérer ${b('n’est pas possible')} pour l’instant`
       :a.reason==='drying_night'?html`La nuit, ${b('aérez plutôt au réveil')}`
@@ -491,11 +491,11 @@ function airWhy(v:View):TemplateResult {
 }
 
 export interface Slide extends Advice {level:Level;pill:string}
-/** Every advice of the moment, the main one first: what to do, then the remedies already at work and what Niak cannot check. */
+/** Every advice of the moment, the main one first: what to do, then the remedies already at work and what Hestia cannot check. */
 export function slides(v:View,blocks:readonly BannerBlock[]=['remedies','later']):Slide[] {
   const a=v.assessment,main=advice(v),out:Slide[]=[{...main,level:main.level??a.level,pill:main.pill??pills[a.level]}];
   // Remedies at work (purifier, ventilation) are information: they are in « À savoir », not in the banner.
-  // What Niak cannot check is information, not advice: it stays in « Détails ».
+  // What Hestia cannot check is information, not advice: it stays in « Détails ».
   const later=a.features?.drying?.later;
   if(blocks.includes('later')&&later&&a.reason==='drying_possible')out.push({level:'benefit',pill:'Plus tard',title:`Encore mieux vers ${hour(later.time)}`,line:html`L’air sera plus sec : ${b('environ '+Math.round(later.after)+' %')}`,disk:'clock'});
   if(blocks.includes('later')&&a.slot&&a.slot.kind==='open'&&!['cooling_unavailable','precool_later'].includes(a.reason))out.push({level:'benefit',pill:'Plus tard',title:`Ouvrez vers ${hour(a.slot.time)}`,line:html`Il fera ${b(number(a.slot.temperature)+' °C')} dehors`,disk:'moon'});
@@ -504,7 +504,7 @@ export function slides(v:View,blocks:readonly BannerBlock[]=['remedies','later']
 
 export interface ScaleInput {band?:[number,number]|null;day?:{min:number;max:number}|null;now?:number|null;out?:number|null;
   rooms?:{name:string;short:string;value:number;level:Level;entity?:string}[];unit?:string;nowEntity?:string;outEntity?:string}
-/** The charter's scale (as Niak Weather's « Ressenti »): a thin track, your range, a ring with its value; labels never overlap. */
+/** The charter's scale (as Hestia Weather's « Ressenti »): a thin track, your range, a ring with its value; labels never overlap. */
 export function scale(s:ScaleInput):TemplateResult {
   const values=[s.band?.[0],s.band?.[1],s.day?.min,s.day?.max,s.now,s.out,...(s.rooms??[]).map(r=>r.value)].filter((x):x is number=>typeof x==='number'&&Number.isFinite(x));
   if(!values.length)return html``;
@@ -757,7 +757,7 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
   </ha-card>`;
 }
 
-/** The advices, one at a time every 4.5 s (as Niak Weather's ticker). Every slide sits in the same place,
+/** The advices, one at a time every 4.5 s (as Hestia Weather's ticker). Every slide sits in the same place,
     so the card keeps the height of the longest one. Pauses on hover or focus; a tap shows the next one. */
 export class NiakAdviceTicker extends LitElement {
   @property({attribute:false}) slides:Slide[]=[];

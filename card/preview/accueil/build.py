@@ -1,4 +1,4 @@
-"""Builds maquette.html: a home page for Confort in the Niak hub, from the real rooms (data.json, not committed)."""
+"""Builds maquette.html: a home page for Confort in the Hestia hub, from the real rooms (data.json, not committed)."""
 from pathlib import Path
 here = Path(__file__).parent
 data = (here / "data.json").read_text()
@@ -83,7 +83,7 @@ const icon=t=>(ICONS.find(([k])=>t.startsWith(k))||[,'•'])[1];
 const app=document.getElementById('app');
 app.innerHTML=`
 <div class="top"><div><h1>Confort</h1><p class="sub">${when[0].toUpperCase()+when.slice(1)} · ${total} pièces suivies</p></div>
- <div class="chips"><span class="chip">Dehors <b>${fr(out?.te)} °C</b> · ${fr(out?.he,0)} %${out?.rain?' · pluie':''}</span><span class="chip">Météo : <b>Niak Weather</b></span>
+ <div class="chips"><span class="chip">Dehors <b>${fr(out?.te)} °C</b> · ${fr(out?.he,0)} %${out?.rain?' · pluie':''}</span><span class="chip">Météo : <b>Hestia Weather</b></span>
  <div class="toggle"><button data-t="light">Clair</button><button data-t="dark" aria-pressed="true">Sombre</button></div></div></div>
 <div class="hero ${tasks.length?'action':'calm'}"><div><div class="eyebrow">Mon logement</div>
  <h2>${tasks.length?`${tasks.length} geste${tasks.length>1?'s':''} à faire`:'Tout va bien'}</h2>
@@ -113,8 +113,8 @@ app.innerHTML=`
   <h3 style="margin-top:16px">Cette semaine</h3>${data.rooms.some(r=>r.week&&(r.week.followed||r.week.ignored))?'':'<p class="empty">Le bilan apparaîtra après vos premières aérations conseillées et suivies.</p>'}
  </section>
  <section><h3>État technique</h3><div class="health"><span class="ok">● Tout fonctionne</span><button class="link">Voir le détail</button></div>
-  <p class="empty">8 pièces · capteurs à jour · Niak Weather relié</p></section>
- <section><h3>Raccourcis</h3><div class="short"><button>Ajouter une pièce <span>Entrée est disponible</span></button><button>Extérieur et météo <span>Niak Weather</span></button><button>Les cartes du tableau de bord <span>Comment les ajouter</span></button><button>Réglages des pièces <span>8 pièces</span></button></div></section>
+  <p class="empty">8 pièces · capteurs à jour · Hestia Weather relié</p></section>
+ <section><h3>Raccourcis</h3><div class="short"><button>Ajouter une pièce <span>Entrée est disponible</span></button><button>Extérieur et météo <span>Hestia Weather</span></button><button>Les cartes du tableau de bord <span>Comment les ajouter</span></button><button>Réglages des pièces <span>8 pièces</span></button></div></section>
 </div></div>`;
 document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{document.documentElement.dataset.theme=b.dataset.t;document.querySelectorAll('[data-t]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));});
 document.querySelectorAll('.q').forEach(q=>q.querySelectorAll('button').forEach(b=>b.onclick=()=>q.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))));

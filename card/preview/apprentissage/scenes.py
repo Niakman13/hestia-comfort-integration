@@ -33,7 +33,7 @@ def view(eid, title, values, window, opened=False, context=None, twin=None, lear
 
 
 scenes = [
-    {"id": "appris", "title": "Conseil appris", "note": "La cuisine est apprise : Niak annonce le résultat, d’après ses 31 aérations.",
+    {"id": "appris", "title": "Conseil appris", "note": "La cuisine est apprise : Hestia annonce le résultat, d’après ses 31 aérations.",
      "view": view("appris", "Cuisine", {**DRY, "indoor_temperature": 21.6, "indoor_humidity": 76}, "fenetre_c", twin="cuisine",
                   context={"drying_model": {"tau": 37.2, "residual": 1.5, "rebound": 0.4, "openings": 31}},
                   learned={"now": 76, "after": 68, "minutes": 15, "measure": "humidity", "openings": 31, "days": 10,

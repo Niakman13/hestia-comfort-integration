@@ -4,11 +4,11 @@ Bêta du bloc 6, préparée le 15 octobre 2026. Vérifiée localement ; les cont
 
 ## Réglage et affichage
 
-Les pièces rattachées à Home Assistant reprennent l’étage de leur zone. Dans **Pièce et confort**, Niak indique cet étage et explique où le modifier. Pour une pièce libre, un sélecteur facultatif permet de choisir un étage Home Assistant existant. Les identifiants font foi ; Niak ne devine rien à partir des noms. Supprimer un étage conserve les pièces, dans le groupe sans étage. La carte se met à jour à la modification des registres de zones et d’étages.
+Les pièces rattachées à Home Assistant reprennent l’étage de leur zone. Dans **Pièce et confort**, Hestia indique cet étage et explique où le modifier. Pour une pièce libre, un sélecteur facultatif permet de choisir un étage Home Assistant existant. Les identifiants font foi ; Hestia ne devine rien à partir des noms. Supprimer un étage conserve les pièces, dans le groupe sans étage. La carte se met à jour à la modification des registres de zones et d’étages.
 
 La carte affiche les niveaux dans l’ordre de leur numéro, sous-sols inclus, puis les niveaux sans numéro et les pièces sans étage. Chaque groupe affiche sa moyenne arithmétique, sa couverture (n pièces mesurées sur N), sa pièce la plus chaude et toutes ses pièces. Les mesures inconnues, périmées ou non finies ne participent pas aux moyennes. La moyenne n’est pondérée ni par la surface ni par le volume ; elle ne remplace pas les conseils des pièces.
 
-Avec un seul groupe, la carte présente simplement **Mon logement**. Le plain-pied reste pleinement utilisable, y compris sans étage configuré. L’absence d’étages ne permet pas à Niak d’affirmer que la maison est de plain-pied. Des niveaux peuvent aussi ne contenir aucune pièce suivie.
+Avec un seul groupe, la carte présente simplement **Mon logement**. Le plain-pied reste pleinement utilisable, y compris sans étage configuré. L’absence d’étages ne permet pas à Hestia d’affirmer que la maison est de plain-pied. Des niveaux peuvent aussi ne contenir aucune pièce suivie.
 
 ## Conseils
 
@@ -40,7 +40,7 @@ Ajouts compatibles au message WebSocket `niak_comfort/home_subscribe`, version 1
 
 L’API de configuration version 1 ajoute `floors`, `areas[].floor_id` et l’étage résolu de chaque pièce. `floor_id` est un réglage facultatif des seules pièces libres. Les pièces rattachées ne peuvent pas contredire leur zone HA.
 
-Ces informations préparent une future consommation par Niak Chauffage. Elles ne créent ni zone physique de commande ni action de chauffage. Un futur contrat Confort → Chauffage devra être défini avant ce raccordement.
+Ces informations préparent une future consommation par Hestia Chauffage. Elles ne créent ni zone physique de commande ni action de chauffage. Un futur contrat Confort → Chauffage devra être défini avant ce raccordement.
 
 ## Vérifications locales
 

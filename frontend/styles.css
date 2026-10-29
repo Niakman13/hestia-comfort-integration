@@ -10,7 +10,7 @@
 .found{display:grid;gap:2px;margin:12px 0 16px}.found-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--nc-border);padding:6px 0}.found-row label{margin:6px 0;flex:1}.found-row label>span{display:grid}.found-row .hint{margin:0;font-size:14px}
 .notice.weather{margin:16px 0;border-color:var(--nc-accent)}.notice.weather p{margin:4px 0}.remove{margin-top:28px}.danger{color:var(--error-color,#efb1ab);border-color:currentColor;background:transparent}.danger:hover{background:color-mix(in srgb,transparent,var(--error-color,#efb1ab) 12%)}button.link.danger-link{color:var(--error-color,#efb1ab);font-size:14px}
 
-/* The tab's home page: the home's technical state, in frames (same look as Niak Weather's « Météo » tab) */
+/* The tab's home page: the home's technical state, in frames (same look as Hestia Weather's « Météo » tab) */
 :host{--nc-todo:#f2a65a;--nc-off:#8a93a3;--nc-frame:var(--ha-card-background,var(--card-background-color,#222932))}:host([data-theme=light]){--nc-todo:#b25a00}
 .hl-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:12px}.hl-head h1{margin:0}
 .hl-state{display:flex;align-items:center;gap:8px;margin:6px 0 0;font-weight:600;color:var(--lv);flex-wrap:wrap}.hl-state .muted{font-weight:400}
@@ -33,7 +33,7 @@
 .hl-table th button.link{min-height:32px;padding:0;font-weight:600}
 @media(max-width:720px){.hl-grid{grid-template-columns:1fr}.hl-lines li{flex-wrap:wrap}.hl-go{margin-left:22px}}
 
-/* Charte des onglets de réglage (ECOSYSTEME.md § 8), same look as Niak Weather's « Météo » tab */
+/* Charte des onglets de réglage (ECOSYSTEME.md § 8), same look as Hestia Weather's « Météo » tab */
 .warn-inline{color:var(--nc-todo)}
 .choice{border:1px solid var(--nc-accent)}
 /* Inside a frame, text takes the frame's whole width (charte). */

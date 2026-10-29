@@ -1,4 +1,4 @@
-"""One place to configure: the Niak Confort page. The native flow only enables it."""
+"""One place to configure: the Hestia Confort page. The native flow only enables it."""
 import uuid
 import voluptuous as vol
 

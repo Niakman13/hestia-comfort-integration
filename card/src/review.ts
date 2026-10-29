@@ -152,7 +152,7 @@ export class ComfortReview extends LitElement {
  // The home: its note, one panel per theme, its rooms.
  private dashboard(){
   const d=this.data!,h=d.home;
-  if(!d.rooms.length)return html`<p class="notice">Aucune pièce Niak Confort chargée.</p>`;
+  if(!d.rooms.length)return html`<p class="notice">Aucune pièce Hestia Confort chargée.</p>`;
   const warm=d.rooms.map(r=>r.themes.warmth).filter((w):w is Warmth=>!!w&&w.score!=null);
   return html`<div class="top"><div><h1>Votre maison</h1><p class="muted">${this.period()}</p></div></div>
    <div class="note"><div class="scale">${['A','B','C','D','E'].map(l=>html`<span class=${l===h.letter?'on '+(good(l)?'good':'bad'):''}>${l}</span>`)}</div>

@@ -40,7 +40,7 @@ h2{font-size:19px;margin:34px 0 4px}
 <div class="grid" id="marks"></div>
 <h2>2. Les autres cas</h2>
 <div class="grid" id="others"></div>
-<h2>3. L’accueil Confort du hub Niak : l’encart Apprentissage</h2>
+<h2>3. L’accueil Confort du hub Hestia : l’encart Apprentissage</h2>
 <div class="hub" id="hub"></div>
 </main>
 <script>customElements.get('home-assistant')||customElements.define('home-assistant',class extends HTMLElement{});</script>

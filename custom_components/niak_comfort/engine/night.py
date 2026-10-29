@@ -2,7 +2,7 @@
 
 After NADIR's method (solal3105.github.io/NADIR2/methodologie.html), on this room's own twin instead of a typical one:
 
-- the room is simulated over the next 30 hours of the Niak Weather forecast, twice: windows shut, and windows opened
+- the room is simulated over the next 30 hours of the Hestia Weather forecast, twice: windows shut, and windows opened
   by the rule below. The mass of the walls (engine/twin.py) carries the coolness of the night into the next day;
 - the rule opens when the outside is cooler than the simulated room by OPEN_MARGIN, shuts when it is no longer cooler
   by CLOSE_MARGIN (a hysteresis, so that it does not blink), never under rain, never below the room's minimum;

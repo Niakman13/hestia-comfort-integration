@@ -1,4 +1,4 @@
-"""Bloc 5: wind against the openings, Niak Weather signals and the next hours."""
+"""Bloc 5: wind against the openings, Hestia Weather signals and the next hours."""
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
