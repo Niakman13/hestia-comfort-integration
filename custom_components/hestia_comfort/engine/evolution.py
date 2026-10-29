@@ -7,6 +7,9 @@ import math
 
 from . import voc as vocs
 
+# The integrations that drive a cover with the sun, by the key cover_link.py gives them.
+DRIVERS = {'adaptive_cover_pro': 'Adaptive Cover Pro', 'cover_automatic': 'CoverAutomatic', 'cover_extender': 'Cover Extender'}
+
 
 def _number(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
@@ -152,8 +155,9 @@ def _shutters(readings, settings, openings, sun, details, needs, now=None):
         state = _value(readings,'cover_state:'+eid) if meta.shutter == 'connected' else None
         override=_value(readings,'shutter_override:'+meta.override_entity) if meta.override_entity else None
         automatic=_value(readings,'shutter_auto:'+meta.auto_entity) if meta.auto_entity else None
-        # Adaptive Cover Pro knows whether the sun really stands in front of this window (its field of view).
-        driven=meta.driver=='adaptive_cover_pro'
+        # The driver knows whether the sun really stands in front of this window (its field of view, its facade).
+        driven=bool(meta.driver)
+        name=DRIVERS.get(meta.driver,meta.driver)
         front=_value(readings,'shutter_sun:'+eid) if driven else None
         target=_value(readings,'shutter_target:'+eid) if driven else None
         switch=lambda name:_value(readings,f'shutter_{name}:'+eid) if driven else None
@@ -190,12 +194,12 @@ def _shutters(readings, settings, openings, sun, details, needs, now=None):
         if driven and override is not True:
             if driving:
                 # It moves the cover itself: Hestia does not ask the person to do it twice.
-                advice,tip=None,' Adaptive Cover Pro pilote le volet' + (f', position visée {target:g} %.' if target is not None else '.')
+                advice,tip=None,f' {name} pilote le volet' + (f', position visée {target:g} %.' if target is not None else '.')
                 if 'cool' in needs and climate is False:
                     tip += ' Son mode climat est coupé : il ne ferme pas contre la chaleur.'
             elif off and advice:
-                tip += {'disabled':' Adaptive Cover Pro est désactivé pour ce volet.','auto':' Le pilotage automatique d’Adaptive Cover Pro est coupé.',
-                        'tracking':' Le suivi du soleil d’Adaptive Cover Pro est coupé.'}[off]
+                tip += {'disabled':f' {name} est désactivé pour ce volet.','auto':f' Le pilotage automatique de {name} est coupé.',
+                        'tracking':f' Le suivi du soleil de {name} est coupé.'}[off]
         message += tip
         if model == 'geometry': message += ' Ombre estimée par géométrie.'
         elif model == 'simple': message += ' Ombre estimée par modèle simple.'

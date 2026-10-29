@@ -50,7 +50,7 @@ class HealthTests(unittest.TestCase):
         r = report(Facts(rooms=[room(thermostat=True)], weather="Gardanne", weather_installed=True,
                          installed=frozenset({"versatile_thermostat", "adaptive_cover_pro", "better_thermostat"})))
         ext = {e["key"]: e for e in r["extensions"]}
-        self.assertEqual([e["key"] for e in r["extensions"]], ["hestia_weather", "versatile_thermostat", "adaptive_cover_pro", "alarmo"])
+        self.assertEqual([e["key"] for e in r["extensions"]], ["hestia_weather", "versatile_thermostat", "adaptive_cover_pro", "cover_automatic", "cover_extender", "alarmo"])
         self.assertEqual((ext["hestia_weather"]["state"], ext["hestia_weather"]["official"]), ("linked", True))
         self.assertEqual((ext["versatile_thermostat"]["state"], ext["versatile_thermostat"]["rooms"]), ("linked", ["Salon"]))
         self.assertEqual((ext["adaptive_cover_pro"]["state"], ext["adaptive_cover_pro"]["level"]), ("found", "none"))

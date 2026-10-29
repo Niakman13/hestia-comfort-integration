@@ -79,6 +79,16 @@ def air(hass, entry_id):
     return link.air(entry_id)
 
 
+def pollen(hass, entry_id):
+    """Today's pollens from the source chosen in Hestia Weather: `level` 0 none to 4 very high, whatever the source, `high`
+    from 3, `main` the species that weighs most; None when not linked, without a pollen source, or before Hestia Weather
+    gives api.pollen()."""
+    link = api(hass)
+    if not link or not entry_id or not hasattr(link, "pollen"):
+        return None
+    return link.pollen(entry_id)
+
+
 def season(hass, entry_id):
     """Today's season as Hestia Weather shows it (its Season sensor, else the date): « spring », « summer », « autumn »
     or « winter »; None when not linked or before Hestia Weather 2.6.2."""

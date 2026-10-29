@@ -325,7 +325,9 @@ export function facts(v:View):Fact[] {
   // Who the room is for, and the alarm (engine/people.py).
   const hh=f?.household,ppl=f?.people;
   if(hh?.away_open)out.push({ic:'window',title:'Fenêtre ouverte',text:ppl?.away?.length?`${ppl.away.join(' et ')} ${ppl.away.length>1?'sont absents':'est absent'}`:'personne à la maison'});
-  if(hh?.empty_room)out.push({ic:'open',title:'Pièce vide',text:'le bon moment pour aérer longuement'});
+  // High pollens, for a household that said it is allergic: an empty room is no reason for a long airing then.
+  if(hh?.empty_room&&!f?.pollen)out.push({ic:'open',title:'Pièce vide',text:'le bon moment pour aérer longuement'});
+  if(f?.pollen)out.push({ic:'open',title:'Pollens élevés',text:f.pollen.after_rain?'aérez court, juste après la pluie':'aérez court, tôt le matin'});
   if(hh?.sleeping&&a.action==='ouvrir'&&!['air_needed','short_air_change'].includes(a.reason))out.push({ic:'clock',title:'Nuit',text:'si vous dormez, aérez plutôt au réveil'});
   // A window no contact of the room watches, seen open by the thermostat (its temperature drop).
   if(f?.thermostat?.window)out.push({ic:'window',title:'Fenêtre ouverte',text:`vue par ${f.thermostat.name}`});
@@ -340,6 +342,8 @@ export function facts(v:View):Fact[] {
   else if(a.reason==='drying_alone'&&f?.drying?.alone!=null)out.push({ic:'drop',title:'Humidité',text:`redescend seule : environ ${Math.round(f.drying.alone)} % dans ${f.drying.minutes} min`});
   else if(a.reason==='drying_night')out.push({ic:'clock',title:'Aération',text:f?.drying?.morning!=null?`dès ${f.drying.morning} h, si l’humidité reste haute`:'au réveil, si l’humidité reste haute'});
   if(hum?.local)out.push({ic:'drop',title:'Vapeur',text:'plus humide ici qu’à côté : cuisson ou douche'});
+  // A shower in a room that has one (« Équipements »): the peak is expected, not a risk. A confirmed habit already says it.
+  if(hum?.shower&&!v.habit)out.push({ic:'drop',title:'Humidité',text:`après la douche, il y a ${hum.shower.minutes} min`});
   // A high VOC that calls for nothing says why: it falls by itself, or opening makes it climb (engine/voc.py).
   if(air?.voc_falling)out.push({ic:'flask',title:'COV',text:'en baisse, il retombe seul : pas besoin d’aérer'});
   else if(air?.voc_outdoor)out.push({ic:'flask',title:'COV',text:'élevé, mais à cette heure l’air du dehors le fait monter : aérer n’aide pas'});
@@ -430,7 +434,7 @@ function oneHumidity(out:Fact[],weight:number,tip:boolean):Fact[] {
 const TOPICS:Record<string,string>={'Humidité':'humidity','Air sec':'humidity','Légèrement sec':'humidity','Très sec':'humidity',
   'Air humide':'humidity','Légèrement humide':'humidity','Très humide':'humidity','Humidité élevée':'humidity','Air humide dehors':'humidity','Vapeur':'humidity',
   'Pièce fraîche':'heating','Un peu frais':'heating','Pièce chaude':'heating','Soleil':'sun','Fenêtres':'windows','Autres fenêtres':'windows','Fenêtre ouverte':'windows',
-  'Aération':'windows','Aération d’hiver':'windows','Pièce vide':'household','Nuit':'household','Purificateur':'equipment','VMC':'equipment',
+  'Aération':'windows','Aération d’hiver':'windows','Pièce vide':'household','Nuit':'household','Pollens élevés':'household','Purificateur':'equipment','VMC':'equipment',
   'Cette nuit':'forecast','Dernière aération':'learning','COV':'windows'};
 /** The « À savoir » lines of a card, rooms sharing one air merged, by priority. */
 export function factList(v:View,partners:View[]=[],config:Config={type:'custom:hestia-comfort-card'}):Fact[] {

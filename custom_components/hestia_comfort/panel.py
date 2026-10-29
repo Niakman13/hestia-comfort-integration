@@ -32,7 +32,9 @@ async def async_setup_panel(hass):
         websocket_api.async_register_command(hass, ws_twins)
         websocket_api.async_register_command(hass, ws_answer)
         websocket_api.async_register_command(hass, ws_alarm)
+        websocket_api.async_register_command(hass, ws_pollen_allergy)
         websocket_api.async_register_command(hass, ws_extension)
+        websocket_api.async_register_command(hass, ws_lights)
         hass.data[DOMAIN + "_panel_asset"] = True
     await async_register_brick(hass, {
         "domain": DOMAIN, "name": "Hestia Confort", "slug": "confort", "version": VERSION,
@@ -150,6 +152,34 @@ async def ws_alarm(hass, connection, msg):
     try:
         with speaking(msg.get("language")):
             snapshot = await (await get_configuration(hass)).set_alarm(msg["alarm"])
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid", str(err))
+        return
+    connection.send_result(msg["id"], snapshot)
+
+
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/set_pollen_allergy", LANGUAGE: str, vol.Required("allergy"): bool})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_pollen_allergy(hass, connection, msg):
+    """Someone at home is allergic to pollens (general settings): airings short and early on days of high pollens."""
+    try:
+        with speaking(msg.get("language")):
+            snapshot = await (await get_configuration(hass)).set_pollen_allergy(msg["allergy"])
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid", str(err))
+        return
+    connection.send_result(msg["id"], snapshot)
+
+
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/set_lights", LANGUAGE: str, vol.Required("lights"): dict})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_lights(hass, connection, msg):
+    """The « Lumières » settings (Extensions, and each room's Notifications tab), saved at once."""
+    try:
+        with speaking(msg.get("language")):
+            snapshot = await (await get_configuration(hass)).set_lights(msg["lights"])
     except ValueError as err:
         connection.send_error(msg["id"], "invalid", str(err))
         return

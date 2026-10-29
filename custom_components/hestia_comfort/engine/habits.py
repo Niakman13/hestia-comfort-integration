@@ -60,8 +60,10 @@ def detect(rows, zone):
     return found
 
 
-def cause(title, area=None):
-    """The cause a question may ask about, from the kind of room its name says; None when nothing fits."""
+def cause(title, area=None, equipment=()):
+    """The cause a question may ask about: a shower the room declares, else what its name says; None when nothing fits."""
+    if "shower" in (equipment or ()):
+        return N_("la douche")
     name = unicodedata.normalize("NFD", f"{title} {area or ''}".lower())
     name = "".join(c for c in name if unicodedata.category(c) != "Mn")
     if any(w in name for w in ("salle de bain", "salle d'eau", "salle d’eau", "sdb", "douche")):
@@ -86,7 +88,7 @@ def night_key(season):
     return f"night_open:{season_group(season)}"
 
 
-def questions(title, area, habits, answers, season=None):
+def questions(title, area, habits, answers, season=None, equipment=()):
     """The questions still to ask for this room: one per habit not answered yet (per season for a night window)."""
     out = []
     for habit in habits:
@@ -98,7 +100,7 @@ def questions(title, area, habits, answers, season=None):
             rises = {"weekdays": N_("L’humidité de la pièce « {room} » monte souvent vers {hour} h en semaine."),
                      "weekend": N_("L’humidité de la pièce « {room} » monte souvent vers {hour} h le week-end.")}.get(
                 habit["days"], N_("L’humidité de la pièce « {room} » monte souvent vers {hour} h."))
-            guess = cause(title, area)
+            guess = cause(title, area, equipment)
             text = t(rises, room=title, hour=habit["hour"]) + " " + (
                 t("Est-ce {cause} ?", cause=t(guess)) if guess else t("Est-ce une habitude de la maison ?"))
             hint = t("Votre réponse précise la cause ; sans elle, aucune cause n’est affichée.")
@@ -111,12 +113,12 @@ def questions(title, area, habits, answers, season=None):
     return out
 
 
-def now_habit(habits, answers, when, title, area=None):
+def now_habit(habits, answers, when, title, area=None, equipment=()):
     """A confirmed humidity habit going on now (its hour and the two after): the words for « À savoir », or None."""
     kind = "weekend" if when.weekday() >= 5 else "weekdays"
     for habit in habits:
         if (habit["kind"] == "humidity" and habit["days"] in (kind, "all") and (answers or {}).get(habit["key"]) == "yes"
                 and -1 <= when.hour - habit["hour"] <= 2):
-            guess = cause(title, area)
+            guess = cause(title, area, equipment)
             return f"habituelle à cette heure : {guess}, elle retombe d’elle-même" if guess else "habituelle à cette heure, elle retombe d’elle-même"
     return None

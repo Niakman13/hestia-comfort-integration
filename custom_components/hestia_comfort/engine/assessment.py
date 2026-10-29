@@ -10,7 +10,7 @@ from typing import Mapping
 from .sources import Reading
 from .wind import DRIVEN_RAIN_GUST, GUSTY, crossing as wind_crossing, open_first, plan as airflow_plan, side as wind_side
 from .outlook import IMMINENT, rain_timing, slot as next_slot
-from . import learning, thermostat as thermostats
+from . import learning, shower as showers, thermostat as thermostats
 
 # Points above the humidity threshold beyond which a useful drying gesture can be proposed.
 HUMIDITY_GRACE = 3
@@ -150,9 +150,9 @@ class Opening:
     cover_entity: str | None = None
     auto_entity: str | None = None
     override_entity: str | None = None
-    # The integration that drives the cover with the sun (« adaptive_cover_pro »), when one is recognised.
+    # The integration that drives the cover with the sun (« adaptive_cover_pro », « cover_automatic », « cover_extender »), when one is recognised.
     driver: str | None = None
-    # The window's exact bearing in degrees, when the cover's driver knows it (Adaptive Cover Pro).
+    # The window's exact bearing in degrees, when the cover's driver knows it (Adaptive Cover Pro, CoverAutomatic's facade).
     azimuth: float | None = None
     width: float | None = None
     height: float | None = None
@@ -241,6 +241,9 @@ def facade_irradiance(share: float, sun: Sun | None, solar: float | None) -> flo
 
 # Minutes of a winter airing: short and brisk; and the humidity points it must take off to be asked for.
 WINTER_AIRING, WINTER_GAIN = 10, 3.0
+# Minutes of an airing on a day of high pollens, for a household that said it is allergic; and how long after the rain
+# the air stays washed of them.
+POLLEN_AIRING, POLLEN_RINSED = 10, 60
 
 
 def _benefits(details, openings, settings, ti, hot, cold, heated, te, group=None):
@@ -306,6 +309,15 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     all_sheltered = bool(contacts) and not exposed
     rain = False if all_sheltered else value("rain")
     pollution = value("pollution")
+    # Today's pollens: given by the coordinator only when someone at home said they are allergic.
+    pollen = context.get("pollen") if isinstance(context.get("pollen"), Mapping) else None
+    pollen_high = bool(pollen and pollen.get("high") is True)
+    rinsed = False
+    if pollen_high and now is not None and isinstance(context.get("rained_at"), str) and value("rain") is not True:
+        try:
+            rinsed = 0 <= (now - datetime.fromisoformat(context["rained_at"])).total_seconds() <= POLLEN_RINSED * 60
+        except (TypeError, ValueError):
+            rinsed = False
     daily_air = readings.get("pollution")
     if daily_air and daily_air.quality == "estimated" and daily_air.value is not None:
         # The daily index the person chose as precaution: above their threshold it blocks,
@@ -346,8 +358,10 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
     if ai is not None and te is not None and te < hti:
         surface = min(100.0, ai / absolute_humidity(te + WALL_FACTOR * (hti - te), 100) * 100)
     previous_humidity = (previous.features.get("humidity") or {}) if previous else {}
+    # A shower in a room that has one (its « Équipements »): the peak is expected, it starts no mould risk.
+    shower = showers.episode(context.get("humidity_history"), now, "shower" in (context.get("equipment") or ()))
     damp = (surface is not None and surface >= MOULD_RH - (MOULD_HYSTERESIS if previous_humidity.get("damp_since") else 0)
-            and (lasting or surface >= MOULD_FAST))
+            and (lasting or surface >= MOULD_FAST) and not (shower and not previous_humidity.get("damp_since")))
     damp_since = (previous_humidity.get("damp_since") or (now.isoformat() if now else None)) if damp else None
     # Already lasting for three hours, or damp for an hour now: a passing peak is not a mould risk.
     mould = damp and (now is None or lasting or (damp_since is not None
@@ -559,7 +573,8 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
         action, reason = "attendre", "precool_later"
     elif partial:
         action, reason = "unknown", "incomplete_data"
-    elif opportunities and not opened and co2 is not None and co2 >= settings.co2_potential:
+    elif opportunities and not opened and co2 is not None and co2 >= settings.co2_potential and not pollen_high:
+        # Pollens high for an allergic household: an airing nothing calls for brings only pollens.
         level, reason = "benefit", "optional_air_change"
     if (opened and optional_wet_exchange and not air and not hard and not soft
             and action != "fermer" and not rain_coming):
@@ -689,12 +704,21 @@ def assess(readings: Mapping[str, Reading], settings: Settings = Settings(),
             surface=None if surface is None else round(surface), mould=mould,
             excess=None if excess is None else round(excess, 1), source="inside" if wet else "outside" if humid_outdoor else None,
             # Water above the shared air of the volume (g/m³): a local source such as cooking steam.
-            local=local if local is not None and local >= 1.0 else None, damp_since=damp_since,
+            local=local if local is not None and local >= 1.0 else None, damp_since=damp_since, shower=shower,
             # Where a full airing would bring the room at best: the outdoor water, warmed to the room's temperature.
             reachable=None if ae is None or not saturated else round(min(100.0, ae / saturated * 100)))
     if reason == "drying_possible" and drying:
         extended["ventilation"]["duration_minutes"] = ({"min": 5, "max": WINTER_AIRING} if group == "winter" else
                                                        {"min": max(5, 5 * round(drying["minutes"] * .75 / 5)), "max": drying["minutes"]})
+    # High pollens, for a household that said it is allergic (« Réglages généraux »): the airing stays short, best early in
+    # the morning or just after the rain. It is never put off: the humidity and the CO₂ come first.
+    extended["pollen"] = None
+    if pollen_high:
+        span = extended["ventilation"].get("duration_minutes")
+        if action == "ouvrir" and isinstance(span, dict) and span.get("max", 0) > POLLEN_AIRING:
+            extended["ventilation"]["duration_minutes"] = {"min": min(span.get("min", 5), 5), "max": POLLEN_AIRING}
+        extended["pollen"] = {"level": pollen.get("level"), "main": pollen.get("main"), "after_rain": rinsed,
+                              "airing": action == "ouvrir" or opened}
     # A later rain bounds the airing: the window is shut five minutes before it.
     extended["rain_ahead"] = {"minutes": soon, "precise": precise} if soon is not None else None
     if soon is not None and action == "ouvrir" and soon > IMMINENT:

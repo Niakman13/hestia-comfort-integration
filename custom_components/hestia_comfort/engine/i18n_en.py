@@ -80,6 +80,11 @@ EN: dict[str, str] = {
     "Sans lui : le chauffage est lu sur le thermostat de Home Assistant seulement.": "Without it: the heating is read from Home Assistant’s thermostat only.",
     "installé, aucun chauffage choisi dans une pièce": "installed, no heating chosen in a room",
     "Volets pilotés avec le soleil": "Shutters driven by the sun",
+    "Choisissez les équipements parmi ceux proposés.": "Choose the equipment among those offered.",
+    "Volets pilotés par façade, règles et scénarios": "Shutters driven per facade, rules and scenarios",
+    "Volets pilotés par façade : Confort sait s’il est en pause après un geste à la main, la position qu’il vise, et à quelle heure le soleil arrive sur la façade.": "Shutters driven per facade: Comfort knows when it pauses after a hand on the shutter, the position it aims at, and when the sun reaches the facade.",
+    "Modes, verrou et ombrage des volets": "Shutter modes, lock and shading",
+    "Modes, verrou et ombrage automatique : Confort sait quand le volet se ferme seul au soleil, et ne demande rien sur un volet verrouillé.": "Modes, lock and automatic shading: Comfort knows when the shutter closes by itself in the sun, and asks nothing for a locked shutter.",
     "Volets pilotés avec le soleil : Confort sait quand ils se ferment et nomme les volets à fermer avant la chaleur.":
         "Shutters driven by the sun: Comfort knows when they close and names the shutters to close before the heat.",
     "Sans lui : le soleil est estimé par la façade de chaque ouvrant.": "Without it: the sun is estimated from the facade of each opening.",
@@ -133,7 +138,7 @@ EN: dict[str, str] = {
     "Cette pièce Home Assistant est déjà utilisée par une autre pièce Hestia Confort.": "This Home Assistant area is already used by another Hestia Comfort room.",
     "Cette pièce Hestia Confort n’existe plus.": "This Hestia Comfort room no longer exists.", "La pièce n’a pas pu être ajoutée.": "The room could not be added.",
     "La configuration a changé ailleurs. Rechargez les pièces avant de supprimer.": "The configuration changed elsewhere. Reload the rooms before removing.",
-    "Choisissez une alarme de Home Assistant.": "Choose a Home Assistant alarm.", "Extension inconnue.": "Unknown extension.", "Réponse invalide.": "Invalid answer.",
+    "Choisissez une alarme de Home Assistant.": "Choose a Home Assistant alarm.", "Réglage d’allergie invalide.": "Invalid allergy setting.", "Extension inconnue.": "Unknown extension.", "Réglage des lumières invalide.": "Invalid lights setting.", "Réponse invalide.": "Invalid answer.",
     # engine/habits.py: the learning questions
     "cet été": "this summer", "cet hiver": "this winter", "en cette saison": "this season",
     "la douche": "the shower", "la cuisine": "the cooking", "le linge qui sèche": "laundry drying",

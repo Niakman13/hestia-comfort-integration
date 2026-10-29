@@ -21,7 +21,41 @@ DATA_CONFIG = DOMAIN + "_configuration"
 
 
 # The third-party integrations a person can turn off in the general settings.
-SWITCHABLE = ("versatile_thermostat", "adaptive_cover_pro", "alarmo")
+# The equipment a room may declare (« Équipements »): each one changes how its air is read.
+EQUIPMENT = ("shower",)
+SWITCHABLE = ("versatile_thermostat", "adaptive_cover_pro", "cover_automatic", "cover_extender", "alarmo")
+# A coloured light that shows the advice (« Lumières »): for the whole home or room by room, one look per state of the banner.
+LIGHT_STATES = ("calm", "benefit", "action", "airing", "urgent")
+LIGHT_EFFECTS = ("keep", "off", "solid", "flash")
+
+
+def clean_light(rule):
+    """One light's settings, kept only when they make sense; None without a light."""
+    if not isinstance(rule, dict) or not isinstance(rule.get("entity_id"), str) or not rule["entity_id"].startswith("light."):
+        return None
+    looks = {}
+    for key in LIGHT_STATES:
+        look = (rule.get("states") or {}).get(key)
+        if not isinstance(look, dict):
+            continue
+        colour = look.get("colour")
+        colour = colour if isinstance(colour, str) and len(colour) == 7 and colour.startswith("#") else None
+        effect = look.get("effect") if isinstance(look.get("effect"), str) and look.get("effect") else "solid"
+        brightness = look.get("brightness")
+        brightness = max(1, min(100, int(brightness))) if isinstance(brightness, (int, float)) and not isinstance(brightness, bool) else 60
+        looks[key] = {"colour": colour, "effect": effect, "brightness": brightness}
+    follow = rule.get("follow") if isinstance(rule.get("follow"), str) else "home"
+    return {"entity_id": rule["entity_id"], "follow": follow, "wake": rule.get("wake") is True,
+            "night": rule.get("night") is not False, "presence": rule.get("presence") is not False, "states": looks}
+
+
+def clean_lights(value):
+    """The « Lumières » settings: who drives the light (the whole home or each room) and each light's looks."""
+    if not isinstance(value, dict):
+        raise ValueError(t("Réglage des lumières invalide."))
+    rooms = value.get("rooms") if isinstance(value.get("rooms"), dict) else {}
+    return {"mode": "rooms" if value.get("mode") == "rooms" else "home", "home": clean_light(value.get("home")),
+            "rooms": {k: r for k, r in ((k, clean_light(v)) for k, v in rooms.items() if isinstance(k, str)) if r}}
 
 class Configuration:
     def __init__(self, hass):
@@ -47,8 +81,8 @@ class Configuration:
 
     def revision(self):
         values = [(e.entry_id, dict(e.data), dict(e.options)) for e in self.entries()]
-        # The answers to the learning questions and the alarm, set on their own, never block a room being edited.
-        home = {k: v for k, v in self.home.items() if k not in ("answers", "alarm")}
+        # The answers to the learning questions, the alarm, the pollen allergy and the lights, set on their own, never block a room being edited.
+        home = {k: v for k, v in self.home.items() if k not in ("answers", "alarm", "pollen_allergy", "lights")}
         return hashlib.sha256(json.dumps([home, values], sort_keys=True, default=str).encode()).hexdigest()
 
     def home_sources(self):
@@ -73,7 +107,7 @@ class Configuration:
             entries.append({"entry_id": e.entry_id, "title": e.title, "loaded": e.state.value == "loaded", "config": config, "floor": room_floor(self.hass, config)})
         areas = [{"area_id": a.id, "name": a.name, "floor_id": a.floor_id, "outdoor": a.name.strip().casefold() in OUTDOOR_AREAS}
                  for a in ar.async_get(self.hass).areas.values()]
-        return {"version": 1, "revision": self.revision(), "home": {"sources": self.home_sources(), "configured": bool(self.home.get("configured")), "acknowledged": self.home.get("acknowledged", []), "weather": self.home.get("weather"), "alarm": self.home.get("alarm"), "disabled": list(self.home.get("disabled") or [])}, "hestia_weather": weather_link.status(self.hass), "integrations": {"atmofrance": bool(self.hass.config_entries.async_entries("atmofrance"))}, "rooms": entries, "floors": floor_catalog(self.hass), "areas": sorted(areas, key=lambda a: (a["name"].casefold() != "salon", a["name"].casefold()))}
+        return {"version": 1, "revision": self.revision(), "home": {"sources": self.home_sources(), "configured": bool(self.home.get("configured")), "acknowledged": self.home.get("acknowledged", []), "weather": self.home.get("weather"), "alarm": self.home.get("alarm"), "pollen_allergy": bool(self.home.get("pollen_allergy")), "disabled": list(self.home.get("disabled") or []), "lights": self.home.get("lights") or {"mode": "home", "home": None, "rooms": {}}}, "hestia_weather": weather_link.status(self.hass), "integrations": {"atmofrance": bool(self.hass.config_entries.async_entries("atmofrance"))}, "rooms": entries, "floors": floor_catalog(self.hass), "areas": sorted(areas, key=lambda a: (a["name"].casefold() != "salon", a["name"].casefold()))}
 
     def discover(self, area_id=None, entry_id=None):
         if area_id and not ar.async_get(self.hass).async_get_area(area_id):
@@ -92,17 +126,17 @@ class Configuration:
         candidates = catalog(self.hass, area_id, selected, indoor_ids)
         return {"version": 1, "revision": self.revision(), "candidates": candidates,
                 "suggestions": suggestions(candidates, area_id) if area_id else {},
-                # Covers driven by Adaptive Cover Pro: their signals are read without being chosen.
+                # Covers driven with the sun (cover_link.py): their signals are read without being chosen.
                 "drivers": {cover: self._driver(roles) for cover, roles in cover_link.find_all(self.hass).items()}}
 
     def _driver(self, roles):
-        """What the panel shows of Adaptive Cover Pro: each signal Hestia reads, with its current state."""
+        """What the panel shows of a cover's driver: each signal Hestia reads, with its current state."""
         def signal(role):
             state = self.hass.states.get(roles[role]) if roles.get(role) else None
             available = state and state.state not in ("unknown", "unavailable")
             return {"entity_id": roles[role], "name": state.name, "on": state.state == "on"} if available else None
         known = cover_link.facts(self.hass, roles)
-        return {"name": roles["name"], "auto": roles.get("auto"), "override": roles.get("override"),
+        return {"name": roles["name"], "driver": roles.get("driver", "adaptive_cover_pro"), "auto": roles.get("auto"), "override": roles.get("override"),
                 "signals": {role: signal(role) for role in ("enabled", "auto", "tracking", "detection", "override", "sun", "climate")},
                 "azimuth": known["azimuth"], "exposure": cover_link.exposure(known["azimuth"]),
                 "width": known["width"], "height": known["height"]}
@@ -224,6 +258,10 @@ class Configuration:
         thermostat_reference = payload.get("thermostat_reference", True)
         if not isinstance(thermostat_reference, bool):
             raise ValueError(t("« Minimum repris du thermostat » doit être oui ou non."))
+        # What the room holds that changes its air (« Équipements »): a shower or a bath, in the room or opening onto it.
+        equipment = payload.get("equipment", [])
+        if not isinstance(equipment, list) or any(e not in EQUIPMENT for e in equipment):
+            raise ValueError(t("Choisissez les équipements parmi ceux proposés."))
         # The people the room is for (`person` entities): a bedroom's one, a living room's several, or none for everyone.
         persons = payload.get("persons", [])
         if not isinstance(persons, list) or any(not isinstance(p, str) or not p.startswith("person.") for p in persons):
@@ -307,7 +345,7 @@ class Configuration:
                    "presence": list(dict.fromkeys(presence)), "evolution": cleaned_evolution, "use_home": not legacy,
                    "air_reference_version": AIR_REFERENCE_VERSION, "heated": heated, "thermostat_reference": thermostat_reference,
                    "windows_unmeasured": windows_unmeasured and not windows,
-                   "persons": list(dict.fromkeys(persons)), "open_to": list(dict.fromkeys(open_to))}
+                   "persons": list(dict.fromkeys(persons)), "open_to": list(dict.fromkeys(open_to)), "equipment": list(dict.fromkeys(equipment))}
         return cleaned, warnings
 
     @staticmethod
@@ -328,7 +366,8 @@ class Configuration:
             remembered = self.ensure_acknowledged(warnings, acknowledged or [])
             if home:
                 updated = {**cleaned, "acknowledged": remembered, "configured": True, "revision": self.home["revision"] + 1,
-                           "answers": self.home.get("answers", {}), "alarm": self.home.get("alarm")}
+                           "answers": self.home.get("answers", {}), "alarm": self.home.get("alarm"),
+                           "pollen_allergy": bool(self.home.get("pollen_allergy")), "lights": self.home.get("lights")}
                 await self.store.async_save(updated)
                 self.home = updated
                 for entry in self.entries():
@@ -383,6 +422,34 @@ class Configuration:
                 if entry.state.value == "loaded":
                     await self.hass.config_entries.async_reload(entry.entry_id)
             return self.snapshot()
+
+    async def set_pollen_allergy(self, value):
+        """Someone at home is allergic to pollens: on days of high pollens, airings are kept short and early. Off by default."""
+        if not isinstance(value, bool):
+            raise ValueError(t("Réglage d’allergie invalide."))
+        async with self.lock:
+            self.home = {**self.home, "pollen_allergy": value}
+            await self.store.async_save(self.home)
+            for entry in self.entries():
+                if entry.state.value == "loaded":
+                    await self.hass.config_entries.async_reload(entry.entry_id)
+            return self.snapshot()
+
+    async def set_lights(self, value):
+        """The « Lumières » settings, saved at once; they change no advice, so no room is reloaded."""
+        lights = clean_lights(value)
+        async with self.lock:
+            self.home = {**self.home, "lights": lights}
+            await self.store.async_save(self.home)
+        if driver := self.hass.data.get("hestia_comfort_lights"):
+            driver.refresh()
+        return self.snapshot()
+
+    def pollen(self):
+        """Today's pollens of the linked Hestia Weather place, only when someone at home is allergic; None otherwise."""
+        if not self.home.get("pollen_allergy") or not self.weather():
+            return None
+        return weather_link.pollen(self.hass, self.weather())
 
     async def set_extension(self, key, enabled):
         """Uses a third-party integration or not, for every room: Alarmo found by itself or no alarm; the others listed when off."""

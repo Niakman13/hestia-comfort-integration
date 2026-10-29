@@ -50,7 +50,7 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
         self.followed = set()
         self.started = dt_util.utcnow()
         self.history_reports = {}
-        self.histories = {"temperature_history": deque(maxlen=360), "outdoor_history": deque(maxlen=360)}
+        self.histories = {"temperature_history": deque(maxlen=360), "outdoor_history": deque(maxlen=360), "humidity_history": deque(maxlen=360)}
         # The VOC index of the last minutes, for its mean (engine/voc.py).
         self.voc_points = deque(maxlen=240)
         # The last airing while the VOC called for air, noted the moment the room is shut: the pause starts there.
@@ -58,6 +58,8 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
         # The index when the room was opened, while it stays open: climbing well above it, the air outside brings VOC.
         self.voc_opened_level = None
         self.voc_going = False
+        # The last time the rain was measured falling: just after it, the air holds fewer pollens.
+        self.rained_at = None
         # What each airing did to the index, read in the history, and the times of day when opening made it climb.
         self.voc_airings, self.voc_slots = [], []
         # The sun of the last quarter of an hour: a passing cloud does not make « Soleil » come and go.
@@ -112,10 +114,10 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
         ids = set(self.sources.values()) | set(self.windows) | set(self.config.get("presence", []))
         for meta in self.config.get("openings", {}).values():
             ids.update(meta[k] for k in ("cover_entity", "auto_entity", "override_entity") if meta.get(k))
-        # Covers driven by Adaptive Cover Pro: its signals are read without being chosen by hand.
+        # Covers driven with the sun (Adaptive Cover Pro, CoverAutomatic, Cover Extender): their signals are read without being chosen by hand.
         self.drivers = self._drivers()
         for roles in self.drivers.values():
-            ids.update(v for k, v in roles.items() if k in cover_link.ROLES)
+            ids.update(roles.get("watch") or [v for k, v in roles.items() if k in cover_link.SIGNALS])
         # The sun is read at each refresh: the minute tick follows it, its own changes would only add refreshes.
         shared = self.home_configuration.effective_sources(self.config) if self.home_configuration else {}
         ids |= {s["entity_id"] for s in shared.values()}
@@ -183,7 +185,7 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
         await self.async_request_refresh()
 
     def _context(self, now, readings):
-        for key, source in (("temperature_history", "indoor_temperature"), ("outdoor_history", "outdoor_temperature")):
+        for key, source in (("temperature_history", "indoor_temperature"), ("outdoor_history", "outdoor_temperature"), ("humidity_history", "indoor_humidity")):
             history = self.histories[key]
             reading = readings.get(source)
             # Keep samples received during this session; repeated clock refreshes do not invent samples.
@@ -219,10 +221,15 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
         self._remember_season(weather_link.season(self.hass, self._weather_place()) or self._season(readings))
         return {**self.config.get("evolution", {}), "occupied": self._occupied(), "people": self._people(), "alarm": self._alarm(),
                 "volume": self._volume_air(readings),
+                # Today's pollens, only when someone at home said they are allergic (« Réglages généraux »).
+                "pollen": self.home_configuration.pollen() if self.home_configuration else None,
+                "rained_at": self._rained(readings, now),
                 "intended_open": self._intended_open(now), "zone": dt_util.get_default_time_zone(),
                 # The season: Hestia Weather's when it is the exterior source, else a season sensor chosen in « Extérieur ».
                 "season_name": self.season_name,
                 "heated": self.config.get("heated", True), "outdoor_mean_7d": self.season[1],
+                # What the room holds that makes its air change: a shower (« Équipements »).
+                "equipment": self.config.get("equipment") or [],
                 "indoor_day_range": self.day_range, "drying_model": self.drying_model, "flows": self.flow_model,
                 "humidity_floor_3h": self.humidity_floor,
                 "humidity_ceiling_3h": self.humidity_ceiling,
@@ -259,15 +266,17 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
         for e, roles in drivers.items():
             if e in openings:
                 o, known = openings[e], cover_link.facts(self.hass, roles)
-                # An angle typed by the person wins over the one Adaptive Cover Pro was given.
-                openings[e] = replace(o, driver="adaptive_cover_pro", auto_entity=o.auto_entity or roles.get("auto"),
-                                      override_entity=o.override_entity or roles.get("override"),
+                # An angle typed by the person wins over the one the driver was given.
+                openings[e] = replace(o, driver=roles.get("driver", "adaptive_cover_pro"), auto_entity=o.auto_entity or roles.get("auto"),
+                                      # CoverAutomatic says a hand on the cover in its status: read as the override below.
+                                      override_entity=o.override_entity or roles.get("override") or roles.get("status"),
                                       azimuth=o.azimuth if o.azimuth is not None else known["azimuth"],
                                       exposure=o.exposure or cover_link.exposure(known["azimuth"]),
                                       width=o.width if o.width is not None else known["width"],
                                       height=o.height if o.height is not None else known["height"])
-                if known["reason"]:
-                    readings[f"shutter_reason:{e}"] = Reading(known["reason"], "valid", roles.get("target"), now.isoformat())
+                reason = known["reason"] or cover_link.values(self.hass, roles).get("reason")
+                if reason:
+                    readings[f"shutter_reason:{e}"] = Reading(reason, "valid", roles.get("target") or roles.get("status") or roles.get("mode"), now.isoformat())
         for entity_id in self.windows:
             readings[f"window:{entity_id}"] = self._reading(entity_id, "window", now)
         for entity_id in self.config.get("presence", []):
@@ -291,7 +300,7 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
                 if getattr(opening, field):
                     readings[f"{kind}:{getattr(opening, field)}"] = self._reading(getattr(opening, field), kind, now)
             roles = drivers.get(entity_id) or {}
-            # Adaptive Cover Pro's own signals are extras: one it leaves unavailable (a disabled
+            # A driver's own signals are extras: one it leaves unavailable (a disabled
             # feature) is simply not read, never counted as a sensor that stopped answering.
             live = lambda role: roles.get(role) and (s := self.hass.states.get(roles[role])) and s.state not in ("unknown", "unavailable")
             for role, kind in (("sun", "shutter_sun"), ("target", "shutter_target")):
@@ -307,6 +316,13 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
                 # In local time, so that « 13 h 50 » reads as the person's clock.
                 if moment:
                     readings[f"shutter_{role}:{entity_id}"] = Reading(dt_util.as_local(moment).isoformat(), "valid", roles[role], state.last_reported.isoformat())
+            # The signals a driver says in its own words (CoverAutomatic's status, Cover Extender's attribute on the cover).
+            derived = cover_link.values(self.hass, roles) if roles else {}
+            source = roles.get("status") or roles.get("cover") or roles.get("mode")
+            for role, kind in (("override", "shutter_override"), ("sun", "shutter_sun"), ("target", "shutter_target"), ("sun_start", "shutter_sun_start"), ("sun_end", "shutter_sun_end")):
+                if derived.get(role) is not None:
+                    key = f"shutter_override:{opening.override_entity or source}" if role == "override" else f"{kind}:{entity_id}"
+                    readings[key] = Reading(derived[role], "valid", source, now.isoformat())
         if selected.get("purifier"):
             state = self.hass.states.get(selected["purifier"])
             # A purifier's on/off state is useful even without speed reporting.
@@ -390,7 +406,8 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
                 "inherited": self.inherited(),
                 "twin": twin_view,
                 "feedback": {"last": summary["last"], "week": summary["week"]},
-                "habit": habits.now_habit(self.habits, self._answers(), dt_util.as_local(now), self.config.get("name") or "", self.config.get("area_id")),
+                "habit": habits.now_habit(self.habits, self._answers(), dt_util.as_local(now), self.config.get("name") or "", self.config.get("area_id"),
+                                          self.config.get("equipment") or ()),
                 "observations": {k: asdict(v) for k, v in readings.items()},
                 "names": {e: (state.name if (state := self.hass.states.get(e)) else e) for e in self.windows},
                 "starting": (now - self.started).total_seconds() < STARTUP_GRACE_SECONDS}
@@ -428,6 +445,13 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
     def _season(readings):
         reading = readings.get("season")
         return reading.value if reading and reading.quality == "valid" else None
+
+    def _rained(self, readings, now):
+        """When the rain was last measured falling, ISO time, or None."""
+        rain = readings.get("rain")
+        if rain is not None and rain.usable and rain.value is True:
+            self.rained_at = now
+        return self.rained_at.isoformat() if self.rained_at else None
 
     def _weather_place(self):
         home = self.home_configuration.home if self.home_configuration else {}

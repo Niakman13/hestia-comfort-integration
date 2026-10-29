@@ -88,6 +88,11 @@ class EvolutionTests(unittest.TestCase):
         q=zone(indoor_temperature=18)
         self.assertEqual(assess(q,openings={'a':Opening(shutter='manual')},sun=Sun(-10,180)).features['shutters'][0]['advice'],'close')
         self.assertEqual(assess(q,openings={'a':Opening()},sun=Sun(-10,180)).features['shutters'],[])
+    def test_any_driver_is_named_when_it_drives(self):
+        o={'a':Opening(exposure='O',shutter='connected',cover_entity='cover.v',auto_entity='switch.auto',driver='cover_extender')}
+        q=zone(indoor_temperature=28,solar=700); q['cover:a']=Reading(100,'valid','cover.v'); q['shutter_auto:switch.auto']=Reading(True,'valid','switch.auto')
+        s=assess(q,openings=o,sun=Sun(30,270)).features['shutters'][0]
+        self.assertIsNone(s['advice']); self.assertIn('Cover Extender pilote le volet',s['message'])
     def test_adaptive_cover_pro_drives_or_is_switched_off(self):
         o={'a':Opening(exposure='O',shutter='connected',cover_entity='cover.v',auto_entity='switch.auto',driver='adaptive_cover_pro')}
         def run(auto,front):

@@ -174,7 +174,7 @@ class LearningMixin:
 
     def questions(self):
         return habits.questions(self.config.get("name") or self.config_entry.title, self.config.get("area_id"), self.habits, self._answers(),
-                                self.season_name)
+                                self.season_name, self.config.get("equipment") or ())
 
     def _answers(self):
         """The person's answers to this room's questions (Oui / Non / Je ne sais pas), kept with the home settings."""

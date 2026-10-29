@@ -4,17 +4,17 @@ import {live} from 'lit/directives/live.js';
 import styles from './styles.css';
 // The comfort review is shared with its Lovelace card (card/src/review.ts).
 import '../card/src/review';
-import {frame,hubStyles,modernStyles,helpTip,defaultValue,pageHead,todoFrame,itemsFrame,stepMenu,stepFooter,extensionsFrame,versionsFrame,extensionCard as nkExtensionCard,removeBlock as nkRemoveBlock,pageStyles,setLanguage,addDictionary,t,fr,currentLocale,currentLanguage,type NkLine,type NkLevel} from './socle/ui';
+import {frame,hubStyles,modernStyles,helpTip,defaultValue,pageHead,todoFrame,itemsFrame,stepMenu,stepFooter,extensionsFrame,detectedFrame,versionsFrame,extensionCard as nkExtensionCard,removeBlock as nkRemoveBlock,pageStyles,setLanguage,addDictionary,t,fr,currentLocale,currentLanguage,type NkLine,type NkLevel} from './socle/ui';
 import {PANEL_EN} from './i18n-en';
+import {lightEditor,noLights,type Lights,type LightRule} from './lights';
 import {words,labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,stages,intros,outdoorGroups,changedAdvanced,advancedDefaults,airSource,airChoices,exteriorChoices,airReferenceDefaults,vocPreset,thresholdSources,type Choice,type Candidate,type Discovery,type Health,type HealthLine,type Target,type Snapshot,type Hass,type Room,type RoomConfig,type Spec,type Twins,type Twin,type Progress,type Extension,seasonNames} from './model';
 // Confort's words beside the hub's (socle 1.13): French in the code, English for any other language.
 addDictionary('en',PANEL_EN);
 /** An extension's state in one word, and its colour: blue when linked, orange when one step is left. */
 const extState:Record<Extension['state'],[string,string]>={linked:[fr('liée'),'ok'],found:[fr('à lier'),'act'],missing:[fr('non installée'),''],off:[fr('désactivée'),'']};
-const extIcon:Record<string,string>={hestia_weather:'weather',versatile_thermostat:'heating',adaptive_cover_pro:'openings',alarmo:'presence'};
+const extIcon:Record<string,string>={hestia_weather:'weather',versatile_thermostat:'heating',adaptive_cover_pro:'openings',cover_automatic:'openings',cover_extender:'openings',alarmo:'presence'};
 /** HACS opens the repository from its GitHub address. */
 const hacsUrl=(url:string)=>{const [owner,repository]=url.replace('https://github.com/','').split('/');return `https://my.home-assistant.io/redirect/hacs_repository/?owner=${owner}&repository=${repository}&category=integration`;};
-const askUrl=(name:string,use:string)=>`https://github.com/hestiaFB/hestia-comfort-integration/issues/new?title=${encodeURIComponent(t('Lire l’extension {name}',{name}))}&body=${encodeURIComponent(t('J’utilise {name}.',{name})+' '+use)}`;
 /** Plural words: French says « 0 point », English « 0 points ». */
 const many=(n:number)=>n>1||n===0&&currentLanguage()!=='fr';
 const num=(v:number,d=1)=>v.toLocaleString(currentLocale(),{maximumFractionDigits:d,minimumFractionDigits:0});
@@ -32,13 +32,13 @@ function learnState(tw:Twin,g?:Progress|null):{label:string;cls:string;missing:s
   if((p.air??1)<1)missing.push(t('air pas encore vu fenêtre ouverte'));
   return {label:g.complete?t('Optimal'):`${g.percent} %`,cls:g.complete?'ok':'',missing};
 }
-const roomSections=[{stage:0,path:'temperature',label:fr('Température'),title:fr('Température et humidité'),icon:'temperature'},{stage:1,path:'ouvertures',label:fr('Ouvertures'),title:fr('Fenêtres et portes'),icon:'openings'},{stage:2,path:'air',label:fr('Air intérieur'),title:fr('Qualité de l’air'),icon:'air'},{stage:6,path:'presence',label:fr('Présence'),title:fr('Présence'),icon:'presence'},{stage:3,path:'chauffage',label:fr('Chauffage'),title:fr('Chauffage'),icon:'heating'},{stage:4,path:'piece',label:fr('La pièce'),title:fr('La pièce et ses réglages'),icon:'room'}];
-const roomOrder=[0,1,2,6,3,4,5];
+const roomSections=[{stage:0,path:'temperature',label:fr('Température'),title:fr('Température et humidité'),icon:'temperature'},{stage:1,path:'ouvertures',label:fr('Ouvertures'),title:fr('Fenêtres et portes'),icon:'openings'},{stage:2,path:'air',label:fr('Air intérieur'),title:fr('Qualité de l’air'),icon:'air'},{stage:6,path:'presence',label:fr('Présence'),title:fr('Présence'),icon:'presence'},{stage:3,path:'chauffage',label:fr('Chauffage'),title:fr('Chauffage'),icon:'heating'},{stage:4,path:'piece',label:fr('La pièce'),title:fr('La pièce et ses réglages'),icon:'room'},{stage:7,path:'notifications',label:fr('Notifications'),title:fr('Notifications'),icon:'light'}];
+const roomOrder=[0,1,2,6,3,4,7,5];
 // The step menu ends on « Récapitulatif », as in every Hestia brick (socle 1.12).
 const menuSections=[...roomSections,{stage:5,path:'recapitulatif',label:fr('Récapitulatif'),title:fr('Récapitulatif'),icon:'review'}];
 const repository='https://github.com/hestiaFB/hestia-comfort-integration';
 // The third-party integrations by theme on the Extensions page, as in Hestia Weather; one not listed here goes under « Autres ».
-const themes:[string,string[]][]=[[fr('Chauffage'),['versatile_thermostat']],[fr('Volets'),['adaptive_cover_pro']],[fr('Présence'),['alarmo']],[fr('Autres'),[]]];
+const themes:[string,string[]][]=[[fr('Chauffage'),['versatile_thermostat']],[fr('Volets'),['adaptive_cover_pro','cover_automatic','cover_extender']],[fr('Présence'),['alarmo']],[fr('Autres'),[]]];
 const help:Record<string,string>=words({season:fr('La saison règle les heures où une aération peut être proposée : jusqu’au coucher en été, en journée au printemps et en automne, aux heures les moins froides en hiver. Le capteur de l’intégration Saison convient.'),indoor_temperature:fr('La mesure de l’air de cette pièce. Seule information obligatoire. La température d’un appareil ou du sol d’une plante peut être différente.'),indoor_humidity:fr('Permet de repérer un air trop humide et de savoir si aérer l’assèche vraiment.'),illuminance:fr('La lumière mesurée en lux aide à interpréter le soleil. Elle ne mesure pas la position d’un volet.'),pm25:fr('Mesure les particules fines. Le seuil d’action est votre réglage de confort.'),voc:fr('Les repères ci-dessous dépendent du capteur et de son unité ; un indice n’est pas une concentration.'),purifier:fr('Observe son fonctionnement sans le commander. Un purificateur filtre les particules ; il ne retire pas le CO₂.'),ventilation:fr('Une VMC ou une ventilation renouvelle l’air et aide à assécher. Seul son état (en marche ou non) est lu, sans la commander ni présumer son débit.'),ventilation_boost:fr('Seulement si votre VMC a deux vitesses : choisissez ici sa position rapide (Turbo). La VMC compte comme en marche si l’une des deux tourne.'),presence:fr('Plusieurs capteurs peuvent suivre la pièce. L’absence adapte les conseils sans couper le suivi ni les alertes.'),co2:fr('Permet de savoir quand renouveler l’air. Ce capteur ne mesure pas tous les polluants.'),windows:fr('Les contacts des fenêtres et portes qui donnent sur l’extérieur. Pas les portes de meubles ou d’appareils.'),heating:fr('Permet de savoir si le chauffage tourne vraiment, pour ne pas conseiller d’ouvrir à ce moment-là. Rien n’est commandé.'),heating_indicator:fr('Pour un thermostat qui ne dit pas s’il chauffe : une vanne, un relais ou un état de marche qui le dit. Il passe avant ce que dit le thermostat ; arrêté, le thermostat reste lu « Arrêté ».'),outdoor_temperature:fr('Permet de savoir si ouvrir rafraîchit ou réchauffe, et s’il gèle.'),outdoor_humidity:fr('Avec les températures, permet de comparer l’eau contenue dans l’air dedans et dehors.'),rain:fr('Une intensité en mm/h dit s’il pleut maintenant. Un cumul de la journée ne le dit pas.'),wind_gust:fr('Au-delà de vos réglages (45 km/h par défaut), le conseil est de ne rien laisser ouvert.'),wind_bearing:fr('D’où vient le vent, en degrés. Avec l’exposition des ouvrants, elle dit lesquels sont au vent, aide à faire traverser l’air et repère la pluie poussée sous un avant-toit.'),solar:fr('Un capteur d’ensoleillement en W/m² permet de calculer le soleil reçu par chaque façade.'),pollution:fr('L’indice ATMO du jour (intégration Atmo France) sert de précaution régionale. Ce n’est pas une mesure à vos fenêtres.')});
 let pickerLoad:Promise<string|null>|undefined;
 // Home Assistant loads its entity picker lazily; a card editor makes it available to this page.
@@ -522,10 +522,10 @@ export class ComfortSetup extends LitElement {
   <div class="sensor-settings"><h4>${t('Quand conseiller de rallumer')}</h4>${this.number('heating_tolerance',t('Tolérance sous le minimum (°C)'),1,0.5)}${defaultValue('1 °C',()=>this.draft={...d,settings:{...d.settings,heating_tolerance:1}},html`<p class="hint">${t('Sous le minimum de la pièce, Hestia le dit d’abord dans « À savoir ». « Rallumez le chauffage » n’apparaît que si la pièce reste plus bas que cette tolérance pendant 30 minutes, avec quelqu’un à la maison et le chauffage coupé, et qu’elle ne se réchauffe pas d’elle-même (soleil). 0 : dès le minimum.')}</p>`,{applied:(d.settings.heating_tolerance??1)===1})}</div>`;}
  return nothing;
  }
- /** Who moves the cover. Adaptive Cover Pro is recognised by itself and each signal it gives is shown;
+ /** Who moves the cover. Adaptive Cover Pro, CoverAutomatic and Cover Extender are recognised by themselves and each signal they give is shown;
      any other automation is told by hand. Full width, below the cover's own fields. */
  private coverDriver(id:string,cover?:string|null){
-  const m=this.draft!.openings[id]??defaultOpening(),found=cover?this.discovery?.drivers?.[cover]:undefined,driver=this.uses('adaptive_cover_pro')?found:undefined;
+  const m=this.draft!.openings[id]??defaultOpening(),found=cover?this.discovery?.drivers?.[cover]:undefined,driver=found&&this.uses(found.driver??'adaptive_cover_pro')?found:undefined;
   const fields=html`${this.openingSource(id,'auto_entity','shutter_auto',t('Interrupteur qui active le pilotage automatique'))}${this.openingSource(id,'override_entity','shutter_override',t('Capteur « repris à la main »'))}`;
   if(!driver)return html`<div class="wide"><h4>${t('Qui pilote ce volet ?')}</h4>${found?html`<p class="hint">${t('{name} est désactivé dans Réglages généraux, rubrique Extensions : ses signaux ne sont pas lus.',{name:found.name})}</p>`:nothing}<p class="hint">${t('Si une automatisation ouvre et ferme ce volet, indiquez l’interrupteur qui l’active et, s’il existe, le capteur qui signale que vous avez repris la main. Rien n’est commandé : le conseil évite seulement ce que l’automatisme fait déjà.')}</p>${fields}</div>`;
   const sig=driver.signals,row=(label:string,s:{name:string;on:boolean}|null|undefined,on:string,off:string)=>s?html`<li><b>${label}</b> · ${s.on?on:off}<span class="hint"> (${s.name})</span></li>`:nothing;
@@ -537,7 +537,7 @@ export class ComfortSetup extends LitElement {
    <p class="hint">${t('Ainsi, quand {name} pilote le volet, aucun geste ne vous est demandé ; s’il est coupé, vous êtes prévenu avant que le soleil n’arrive sur la fenêtre. Rien n’est commandé.',{name:driver.name})}</p>
    ${m.auto_entity||m.override_entity?html`<h4>${t('Signaux choisis à la main')}</h4><p class="hint">${t('Ils remplacent ceux de {name}. Retirez-les pour revenir à la détection.',{name:driver.name})}</p>${fields}`:nothing}</div>`;
  }
- private openingDetails(id:string){const m=this.draft!.openings[id]??defaultOpening(),known=m.shutter==='connected'&&m.cover_entity&&this.uses('adaptive_cover_pro')?this.discovery?.drivers?.[m.cover_entity]:undefined;return html`<div class="opening">
+ private openingDetails(id:string){const m=this.draft!.openings[id]??defaultOpening(),found=m.shutter==='connected'&&m.cover_entity?this.discovery?.drivers?.[m.cover_entity]:undefined,known=found&&this.uses(found.driver??'adaptive_cover_pro')?found:undefined;return html`<div class="opening">
   <label>${t('Exposition')}<select @change=${(e:Event)=>this.setOpening(id,{exposure:(e.target as HTMLSelectElement).value||null})}><option value="" ?selected=${!m.exposure}>${t('Je ne sais pas')}</option>${exposures.map(([v,l])=>html`<option value=${v} ?selected=${m.exposure===v}>${t(l)}</option>`)}</select></label>
   <label>${t('Angle précis (facultatif)')}<input type="number" min="0" max="359" step="1" inputmode="numeric" placeholder=${m.exposure?String(({N:0,NE:45,E:90,SE:135,S:180,SO:225,O:270,NO:315} as Record<string,number>)[m.exposure]??''):t('0 à 359')} .value=${m.azimuth!=null?String(m.azimuth):''}
    @input=${(e:Event)=>{const raw=(e.target as HTMLInputElement).value;this.setOpening(id,{azimuth:raw===''?null:Number(raw)});}}></label>
@@ -599,8 +599,15 @@ export class ComfortSetup extends LitElement {
    <p class="hint">${t('Le suivi fonctionne aussi de plain-pied, sans étage à configurer.')}</p>
    <p class="hint">${t('Rattacher la pièce permet de proposer ses capteurs. Vous pouvez toujours en choisir ailleurs.')}</p>`,{className:'nk-field-section nk-plain'})}
    ${this.sharedAir()}
+   ${this.equipmentFrame()}
    ${frame(t('Réglages avancés'),html`
     <p class="hint">${t('Choix de fonctionnement Hestia, modifiables selon votre logement ; ces valeurs ne sont pas des normes sanitaires.')}</p>${this.number('gust_max',t('Rafales : ne rien laisser ouvert au-delà de (km/h)'),45)}${this.number('frost',t('Gel : pas d’ouverture prolongée en dessous de (°C)'),1,0.5)}${this.number('sun_facade',t('Soleil compté sur une fenêtre à partir de (W/m²)'),250,10)}${this.evolutionNumber('glazing_factor',t('Facteur estimé du vitrage (0 à 1)'),0.7,0,1,0.05)}${this.number('illuminance_low',t('Luminosité basse (lux)'),100)}${this.number('max_age_seconds',t('Ancienneté maximum des mesures (secondes)'),10800)}<p class="hint">${t('45 km/h de rafales et 1 °C : précautions Hestia pour les ouvrants, à adapter à leur exposition. 250 W/m² : à partir de ce soleil sur une fenêtre (moyenne des 15 dernières minutes), Confort conseille de le garder (pièce fraîche) ou de baisser le volet (pièce chaude) ; plus bas, il le signale plus souvent. 100 lux : repère de faible luminosité, sans déduction de position de volet. Facteur vitrage 0,7 : hypothèse de calcul de buée entre température extérieure (0) et intérieure (1), sans mesure du vitrage. 10 800 secondes : après 3 heures sans nouvelle mesure de l’appareil, une donnée numérique devient trop ancienne. Beaucoup de capteurs n’envoient une valeur que lorsqu’elle change ; une valeur stable reste donc valable. Cette expiration ne s’applique pas aux états de contacts.')}</p>`,{collapsible:true,open:false,count:changedAdvanced(d.settings)?t('{n} sur {total} modifiés',{n:changedAdvanced(d.settings),total:Object.keys(advancedDefaults).length}):t('Par défaut')})}`;}
+ /** What the room holds that changes its air: a shower makes its peaks of humidity expected, never a mould risk. */
+ private equipmentFrame(){const d=this.draft!,mine=d.equipment??[];
+  const item=(key:string,label:string,hint:string)=>html`<label class="check"><input type="checkbox" .checked=${mine.includes(key)}
+   @change=${(e:Event)=>{const on=(e.target as HTMLInputElement).checked;this.draft={...d,equipment:on?[...mine,key]:mine.filter(x=>x!==key)};}}>${label}</label><p class="hint">${hint}</p>`;
+  return frame(t('Équipements'),html`<p class="hint">${t('Ce que la pièce contient et qui change son air, même sans capteur à part.')}</p>
+   ${item('shower',t('Douche ou baignoire'),t('Dans la pièce ou dans une salle d’eau ouverte sur elle. La hausse d’humidité qui suit une douche est attendue : Hestia propose d’assécher, sans parler de moisissure, et nomme la douche quand l’humidité monte à son heure habituelle.'))}`,{className:'nk-field-section nk-plain'});}
  /** Rooms with no wall or door between them share one air: their windows are common, their advice never opposite. */
  private sharedAir(){const d=this.draft!,others=this.snapshot!.rooms.filter(r=>r.entry_id!==this.entryId);if(!others.length)return nothing;
   const mine=d.open_to??[],theirs=(r:{config:RoomConfig})=>!!this.entryId&&(r.config.open_to??[]).includes(this.entryId);
@@ -614,7 +621,7 @@ export class ComfortSetup extends LitElement {
   return html`${frame(t('Récapitulatif'),html`<dl class="summary compact"><dt>${t(stages[0])}</dt><dd>${measures||'—'}</dd>
    <dt>${t(stages[1])}</dt><dd>${d.windows.length?html`${d.windows.length>1?t('{n} ouvrants',{n:d.windows.length}):t('{n} ouvrant',{n:d.windows.length})}${sheltered?' · '+(sheltered>1?t('{n} abrités',{n:sheltered}):t('{n} abrité',{n:sheltered})):''}${expo?' · '+expo:''}${unknown?' · '+t('{n} sans exposition',{n:unknown}):''}<details><summary>${t('Voir la liste')}</summary>${d.windows.map(id=>html`<div>${name('windows',id)}</div>`)}</details>`:t('Aucun')}</dd>
    <dt>${t(stages[2])}</dt><dd>${['co2','pm25','voc','purifier','ventilation','ventilation_boost'].map(k=>name(k,d.sources[k])).filter(Boolean).join(' · ')||t('Air non mesuré')}${d.presence?.length?' · '+(d.presence.length>1?t('{n} capteurs de présence',{n:d.presence.length}):t('{n} capteur de présence',{n:d.presence.length})):''}</dd><dt>${t(stages[3])}</dt><dd>${name('heating',d.sources.heating)||t('Non suivi')}</dd>
-   <dt>${t(stages[4])}</dt><dd>${d.name} · ${d.area_id?t('rattachée à « {name} »',{name:this.areaName(d.area_id)}):t('pièce libre')} · ${t('étage : {floor}',{floor:this.floorName()})} · ${d.settings.minimum}–${d.settings.maximum} °C${(d.settings.summer_maximum??26)>d.settings.maximum?' '+t('(été {n} °C)',{n:d.settings.summer_maximum??26}):''}${d.heated===false?' · '+t('non chauffée'):''}</dd>
+   <dt>${t(stages[4])}</dt><dd>${d.name} · ${d.area_id?t('rattachée à « {name} »',{name:this.areaName(d.area_id)}):t('pièce libre')} · ${t('étage : {floor}',{floor:this.floorName()})} · ${d.settings.minimum}–${d.settings.maximum} °C${(d.settings.summer_maximum??26)>d.settings.maximum?' '+t('(été {n} °C)',{n:d.settings.summer_maximum??26}):''}${d.heated===false?' · '+t('non chauffée'):''}${d.equipment?.includes('shower')?' · '+t('douche'):''}</dd>
    <dt>${t('Extérieur')}</dt><dd>${home.configured?exteriorSummary(home.sources):t('À configurer depuis Mon logement')}</dd></dl>`)}
    ${this.confirmBlock()}`;}
  private errorBlock(){return this.error?html`<p class="notice error" role="alert">${this.error}</p>`:nothing;}
@@ -622,8 +629,8 @@ export class ComfortSetup extends LitElement {
   return html`${pageHead({back:{label:t('Réglages généraux'),onClick:()=>this.cancel()},title:d.name?t('Configurer {name}',{name:d.name}):t('Configurer la pièce'),subtitle:`${d.area_id?t('Pièce Home Assistant : {name}',{name:this.areaName(d.area_id)}):t('Pièce libre')} · ${t('Les réglages de cette pièce')}`})}
   ${stepMenu(t('Réglages de la pièce'),menuSections.map(x=>({label:t(x.label),title:t(x.title),icon:x.icon,current:x.stage===this.stage,onClick:()=>this.go(x.stage)})),this.busy)}
   <div class="room-content-head"><h2>${section?t(section.title):t('Récapitulatif')}</h2></div>${this.intro(String(this.stage))}
-  ${this.stage===0?[...indoor,'illuminance'].map(key=>this.field(key)):this.stage===1?html`${this.field('windows')}${this.draft&&!this.draft.windows.length?html`<label class="check"><input type="checkbox" .checked=${this.draft.windows_unmeasured===true} @change=${(e:Event)=>this.draft={...this.draft!,windows_unmeasured:(e.target as HTMLInputElement).checked}}>${t('Pas de contact de fenêtre ici, c’est voulu : ne plus le suggérer')}</label>`:nothing}`:this.stage===2?this.airPresence():this.stage===6?html`${this.field('presence')}${this.personsBlock()}`:this.stage===3?this.heatingStage():this.stage===4?this.preferences():this.summary()}
-  ${this.stage!==4&&this.stage!==5&&!(this.stage===3&&d.heated===false)?html`<button class="link" ?disabled=${this.busy} @click=${()=>this.refreshCandidates()}>${t('Rechercher à nouveau les capteurs')}</button>`:nothing}${this.errorBlock()}
+  ${this.stage===0?[...indoor,'illuminance'].map(key=>this.field(key)):this.stage===1?html`${this.field('windows')}${this.draft&&!this.draft.windows.length?html`<label class="check"><input type="checkbox" .checked=${this.draft.windows_unmeasured===true} @change=${(e:Event)=>this.draft={...this.draft!,windows_unmeasured:(e.target as HTMLInputElement).checked}}>${t('Pas de contact de fenêtre ici, c’est voulu : ne plus le suggérer')}</label>`:nothing}`:this.stage===2?this.airPresence():this.stage===6?html`${this.field('presence')}${this.personsBlock()}`:this.stage===3?this.heatingStage():this.stage===4?this.preferences():this.stage===7?this.notifications():this.summary()}
+  ${this.stage!==4&&this.stage!==5&&this.stage!==7&&!(this.stage===3&&d.heated===false)?html`<button class="link" ?disabled=${this.busy} @click=${()=>this.refreshCandidates()}>${t('Rechercher à nouveau les capteurs')}</button>`:nothing}${this.errorBlock()}
   ${stepFooter({previous:at>0?{label:t('Étape précédente'),onClick:()=>this.go(roomOrder[at-1]),disabled:this.busy}:undefined,
    next:this.stage!==5?{label:t('Continuer'),onClick:()=>this.next(),disabled:this.busy}:undefined,
    save:this.entryId?{label:t('Enregistrer'),onClick:()=>this.saveRoom(),disabled:this.busy}:this.stage===5?{label:t('Créer la pièce'),onClick:()=>void this.save(),disabled:this.busy}:undefined})}${this.removeBlock()}`;}
@@ -638,15 +645,24 @@ export class ComfortSetup extends LitElement {
   <h2 class="ex-sec">${t('Extensions tierces')}</h2><p class="hint">${t('Rangées par thème. Toutes facultatives : chacune affine les conseils là où elle sert.')}</p>
   ${h?themes.map(([label,keys])=>{const items=ext.filter(x=>!x.official&&(keys.length?keys.includes(x.key):!themes.some(([,k])=>k.includes(x.key))));
    return items.length?html`<h3 class="ex-theme">${t(label)}</h3>${items.map(x=>this.extensionCard(x))}`:nothing;}):html`<p class="muted" role="status">${t('Recherche des extensions…')}</p>`}
-  ${h?.others?.length?html`<h2 class="ex-sec">${t('Détectées, pas encore lues par Confort')}</h2>${frame(t('À proposer'),html`<p class="hint">${t('Trouvées dans votre Home Assistant. Confort ne s’en sert pas encore ; dites-nous si elles vous seraient utiles.')}</p>
-   ${h.others.map(o=>html`<div class="ac-row ex-other"><b>${o.name}<small class="hint ac-ext">${o.use}</small></b><span class="tw-pill">${t('pas encore lue')}</span><a class="ex-act" href=${askUrl(o.name,o.use)} target="_blank" rel="noreferrer">${t('Demander')}</a></div>`)}
-   <p class="hint">${t('« Demander » ouvre une demande toute prête sur GitHub. Rien n’est envoyé sans vous.')}</p>`)}`:nothing}
+  ${this.lightsCard()}
+  ${detectedFrame({brick:t('Confort'),repository:'https://github.com/hestiaFB/hestia-comfort-integration',version:h?.version??'',rows:h?.others??[]})}
   ${this.confirmBlock()}${this.errorBlock()}${stepFooter({previous:{label:t('Annuler'),onClick:()=>this.cancel()},save:{label:t('Enregistrer'),onClick:()=>void this.save(),disabled:this.busy}})}`;}
  /** Réglages généraux: the rooms to change or add, and how to show their cards; nothing here waits for a save. */
  private settingsPage(){return html`${pageHead({back:{label:t('Accueil Confort'),onClick:()=>this.path('')},title:t('Réglages généraux'),subtitle:t('Vos pièces et les cartes.')})}
   ${this.roomsSettings()}
+  ${this.householdSettings()}
   ${frame(t('Les cartes'),html`<p class="hint">${t('Dans un tableau de bord :')} <strong>${t('Ajouter une carte')}</strong>${t(', puis')} <strong>${t('Hestia Confort')}</strong> ${t('pour une pièce (les pièces au même air n’en font qu’une), ou')} <strong>${t('Hestia Confort · logement')}</strong> ${t('pour la synthèse.')}</p>`)}
   ${this.errorBlock()}`;}
+ /** The household: an allergy to pollens shortens the airings on days of high pollens. Off by default, saved at once. */
+ private householdSettings(){const on=!!this.snapshot?.home.pollen_allergy;
+  return frame(t('Le foyer'),html`<label class="check ex-switch"><input type="checkbox" role="switch" .checked=${on} ?disabled=${this.busy} @change=${(e:Event)=>void this.setPollenAllergy((e.target as HTMLInputElement).checked)}>${t('Allergie aux pollens')}</label>
+   <p class="hint">${t('Les jours de pollens élevés, les aérations restent courtes, de préférence tôt le matin ou juste après la pluie.')}</p>
+   <p class="hint">${t('Une aération utile pour l’humidité ou le CO₂ est toujours conseillée.')}</p>
+   ${on&&!this.snapshot?.home.weather?html`<p class="hint">${t('Les pollens viennent de Hestia Weather : reliez-le dans Extensions.')}</p>`:nothing}`);}
+ private async setPollenAllergy(allergy:boolean){this.busy=true;
+  try{this.snapshot=await this.ws<Snapshot>({type:'hestia_comfort/set_pollen_allergy',allergy});this.revision=this.snapshot.revision;}
+  catch(e){this.error=(e as {message?:string}).message??t('Le réglage n’a pas pu être enregistré.');}finally{this.busy=false;}}
  /** Every room, to change or to add; what needs setting is named on its line. */
  private roomsSettings(){const todo=new Map<string,number>();for(const l of this.health?.todo??[])if(l.target?.kind==='room')todo.set(l.target.entry_id,(todo.get(l.target.entry_id)??0)+1);
   return itemsFrame({title:t('Vos pièces'),hint:t('Capteurs, ouvrants, même air et réglages de chaque pièce.'),
@@ -659,9 +675,30 @@ export class ComfortSetup extends LitElement {
   // They stay on screen while the room loads: no other page shows in between.
   this.remember();this.workspaceKey='';await this.editRoom(room);if(this.draft)this.exteriorDraft=undefined;else this.workspaceKey='reglages';const stage=roomSections.find(x=>x.path===section)?.stage;if(section&&stage!=null&&this.draft)this.go(stage);}
  /** One extension: what it is for, its state, and the one thing to do (link it, install it) when it is not used. */
+ /** The lights that show the advice, saved at once: the whole home here, or room by room in each room's Notifications tab. */
+ private lights():Lights{return this.snapshot?.home.lights??noLights();}
+ private async saveLights(lights:Lights){this.busy=true;this.error='';
+  try{this.snapshot=await this.ws<Snapshot>({type:'hestia_comfort/set_lights',lights});}
+  catch(e){this.error=this.message(e);}finally{this.busy=false;}}
+ private lightsCard(){const l=this.lights(),rooms=this.snapshot?.rooms??[],wled=Object.values(this.hass?.entities??{}).some(e=>e.platform==='wled');
+  const linked=l.mode==='home'?!!l.home:rooms.some(r=>l.rooms[r.entry_id]);
+  const name=(r?:LightRule|null)=>r?String(this.hass?.states?.[r.entity_id]?.attributes?.friendly_name??r.entity_id):t('aucune');
+  const mode=(m:Lights['mode'])=>html`<label class="check"><input type="radio" name="li-mode" .checked=${l.mode===m} ?disabled=${this.busy} @change=${()=>void this.saveLights({...l,mode:m})}>${m==='home'?t('Tout le logement'):t('Pièce par pièce')}</label>`;
+  const body=html`<div class="li-when" role="radiogroup" aria-label=${t('Qui pilote la lumière ?')}><p class="hint">${t('Qui pilote la lumière ?')}</p>${mode('home')}${mode('rooms')}</div>
+   ${l.mode==='home'?lightEditor({hass:this.hass,rule:l.home,busy:this.busy,follows:[{value:'home',label:t('Tout le logement')},...rooms.map(r=>({value:r.entry_id,label:r.title}))],change:rule=>void this.saveLights({...l,home:rule})})
+    :html`<ul class="li-rooms">${rooms.map(r=>html`<li><span><strong>${r.title}</strong> · ${name(l.rooms[r.entry_id])}</span><button class="nk-edit" ?disabled=${this.busy} @click=${()=>void this.openRoom(r.entry_id,'notifications')}>${t('Régler')}</button></li>`)}</ul>
+     <p class="hint">${t('Chaque pièce règle sa lumière dans son onglet Notifications.')}</p>`}`;
+  return html`<h3 class="ex-theme">${t('Lumières')}</h3>${nkExtensionCard({icon:'light',name:t('WLED et lumières couleur'),use:t('Une lumière prend la couleur du conseil : bleu tout va bien, vert à saisir, orange un geste.')+' '+(wled?t('WLED trouvé : ses effets sont proposés pour chaque état.'):t('Avec WLED, ses effets (respiration, vague…) s’ajoutent ; une ampoule couleur suffit sinon.')),
+   pill:{text:linked?t('liée'):wled?t('à lier'):t('facultative'),level:linked?'ok':wled?'todo':'none'},detail:t('Enregistré tout de suite, sans le bouton Enregistrer.'),action:nothing,todo:false,switches:[],body})}`;}
+ /** A room's Notifications tab: its own light when the lights go room by room; the phone will come later. */
+ private notifications(){const l=this.lights(),id=this.entryId;
+  const light=l.mode==='home'?frame(t('Lumière'),html`<p class="hint">${t('La lumière est réglée pour tout le logement, dans Extensions.')}</p><button class="nk-edit" ?disabled=${this.busy} @click=${()=>void this.editExterior()}>${t('Ouvrir le réglage')}</button>`,{className:'nk-field-section nk-plain'})
+   :!id?frame(t('Lumière'),html`<p class="hint">${t('Créez d’abord la pièce : sa lumière se règle ensuite ici.')}</p>`,{className:'nk-field-section nk-plain'})
+   :lightEditor({hass:this.hass,rule:l.rooms[id]??null,busy:this.busy,taken:this.snapshot?.rooms.find(r=>r.entry_id!==id&&l.rooms[r.entry_id]&&l.rooms[r.entry_id].entity_id===l.rooms[id]?.entity_id)?.title,change:rule=>{const rooms={...l.rooms};if(rule)rooms[id]={...rule,follow:id};else delete rooms[id];void this.saveLights({...l,rooms});}});
+  return html`${light}${frame(t('Sur le téléphone'),html`<p class="hint">${t('Bientôt : prévenir sur le téléphone quand un geste est conseillé.')}</p>`,{className:'nk-field-section nk-plain'})}`;}
  private extensionCard(x:Extension,body:unknown=nothing){const [said,cls]=extState[x.state],word=t(said);
   // Linking a heating or a cover is a room's choice: the first room opens on that step.
-  const step=x.key==='versatile_thermostat'?'chauffage':x.key==='adaptive_cover_pro'?'ouvertures':'';const first=this.snapshot?.rooms[0];
+  const step=x.key==='versatile_thermostat'?'chauffage':['adaptive_cover_pro','cover_automatic','cover_extender'].includes(x.key)?'ouvertures':'';const first=this.snapshot?.rooms[0];
   // Hestia Weather's own choice already says how to install it.
   const off=x.state==='off',act=x.state==='missing'&&!x.official?html`<a class="ex-act" href=${hacsUrl(x.url)} target="_blank" rel="noreferrer">${t('Installer avec HACS')}</a>`
    :x.state==='found'&&step&&first?html`<button class="nk-edit" ?disabled=${this.busy} @click=${()=>void this.openRoom(first.entry_id,step)}>${t('Lier')}</button>`:nothing;

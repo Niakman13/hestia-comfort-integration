@@ -11,7 +11,7 @@ export const EN_VIEW:Record<string,string>={
  'vent du nord':'north wind','vent de nord-est':'north-east wind','vent d’est':'east wind','vent de sud-est':'south-east wind','vent du sud':'south wind','vent de sud-ouest':'south-west wind',
  'vent d’ouest':'west wind','vent de nord-ouest':'north-west wind',
  'Contact d’ouvrant':'Window contact','Position du volet':'Shutter position','État du volet':'Shutter state','Automatisation du volet':'Shutter automation','Dérogation du volet':'Shutter override',
- 'Soleil devant le volet':'Sun in front of the shutter','Position visée du volet':'Shutter target position','Suivi du soleil du volet':'Shutter sun tracking',
+ 'Soleil devant le volet':'Sun in front of the shutter','Pilote du volet':'Shutter driver','Position visée du volet':'Shutter target position','Suivi du soleil du volet':'Shutter sun tracking',
  'Détection de la reprise à la main':'Manual takeover detection','Mode climat du volet':'Shutter climate mode','Source':'Source',
  'Mesures à vérifier : {names}':'Measures to check: {names}','Bilan limité : {names} non configuré':'Limited check: {names} not set up','Sources configurées disponibles':'Configured sources available',
 };

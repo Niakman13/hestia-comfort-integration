@@ -65,16 +65,18 @@ export interface Reading {
 }
 export interface Features {
  shutters?:{entity_id:string;mode:'none'|'manual'|'connected';position:number|null;state:string|null;advice:'close'|'open'|null;message:string;shade_fraction:number|null;shade_model:'geometry'|'simple'|'unknown';manual_override:boolean|null;automatic:boolean|null;
-  cover?:string|null;driver?:'adaptive_cover_pro'|null;sun_front?:boolean|null;target?:number|null;sun_start?:string|null;sun_end?:string|null;soon?:boolean;driving?:boolean;off?:'disabled'|'auto'|'tracking'|null;detection?:boolean|null;climate?:boolean|null;reason?:string|null;override_end?:string|null}[];
+  cover?:string|null;driver?:'adaptive_cover_pro'|'cover_automatic'|'cover_extender'|null;sun_front?:boolean|null;target?:number|null;sun_start?:string|null;sun_end?:string|null;soon?:boolean;driving?:boolean;off?:'disabled'|'auto'|'tracking'|null;detection?:boolean|null;climate?:boolean|null;reason?:string|null;override_end?:string|null}[];
  presence?:{state:'occupied'|'empty'|'leaving'|'unknown'|'not_configured';message:string;minutes?:number;delay?:number};
  air?:{co2_status?:'high'|'ok'|'unknown'|'not_configured';pm25_status:'high'|'ok'|'unknown'|'not_configured';voc_status:'high'|'ok'|'uninterpreted'|'unknown'|'not_configured';voc_unit:string|null;voc_minutes?:number|null;voc_mean?:number|null;voc_paused?:boolean;voc_falling?:boolean;voc_outdoor?:boolean;voc_rising_open?:boolean;purifier:{on:boolean|null;speed:number|null};pm25_treated?:boolean;ventilation?:{on:boolean|null;boost?:boolean}|null;coverage:string;message:string};
  ventilation?:{opened_minutes:number|null;duration_minutes:{min:number;max:number}|null;message:string;capacity:number|null};
  humidity?:{dew_point:number|null;incoming_relative:number|null;glass_temperature:number|null;condensation_risk:boolean|null;message:string;
   status?:'unknown'|'normal'|'low'|'high';degree?:number;measured?:number|null;minimum?:number;maximum?:number;lasting?:boolean;trend?:'improving'|'worsening'|'stable'|null;
   /** Air against the coldest spot of the outer walls (%), mould risk, water above outdoors (g/m³), where it comes from, best reachable by airing (%). */
-  surface?:number|null;mould?:boolean;excess?:number|null;local?:number|null;source?:'inside'|'outside'|null;reachable?:number|null};
+  surface?:number|null;mould?:boolean;excess?:number|null;local?:number|null;source?:'inside'|'outside'|null;reachable?:number|null;shower?:{since:string;minutes:number;base:number;peak:number}|null};
  /** What airing would really bring, from the room's past openings: humidity now and after, lasting gain in points. */
  rain_ahead?:{minutes:number;precise:boolean}|null;
+ /** High pollens, only for a household that said it is allergic (« Réglages généraux »). */
+ pollen?:{level:number|null;main:string|null;after_rain:boolean;airing:boolean}|null;
  /** A gesture whose result the room's twin predicts, once it has proved itself in this room. */
  learned?:{now:number;after:number;minutes:number;measure:'humidity'|'temperature'|'co2'|'voc';openings:number;days:number;precision:{temperature:number;humidity:number};closing?:boolean}|null;
  /** What the sun on the windows does for the room now (engine/assessment.py, _benefits). */ benefits?:{kind:'sun_warms'|'sun_heats';openings:string[];watts:number;keep_shut?:boolean}[];

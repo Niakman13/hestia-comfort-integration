@@ -109,7 +109,7 @@ export function sourceLabel(v:View,k:string):string{
  const split=k.indexOf(':');if(split<0)return sourceLabels[k]??k;
  const kind=k.slice(0,split),name=v.names?.[k.slice(split+1)];
  const titles:Record<string,string>={window:'Contact d’ouvrant',presence:'Présence',cover:'Position du volet',cover_state:'État du volet',shutter_auto:'Automatisation du volet',shutter_override:'Dérogation du volet',
-  shutter_sun:'Soleil devant le volet',shutter_target:'Position visée du volet',shutter_enabled:'Adaptive Cover Pro',shutter_tracking:'Suivi du soleil du volet',shutter_detection:'Détection de la reprise à la main',shutter_climate:'Mode climat du volet'};
+  shutter_sun:'Soleil devant le volet',shutter_target:'Position visée du volet',shutter_enabled:'Pilote du volet',shutter_tracking:'Suivi du soleil du volet',shutter_detection:'Détection de la reprise à la main',shutter_climate:'Mode climat du volet'};
  return name?(kind==='window'?name:`${titles[kind]??'Source'} · ${name}`):titles[kind]??'Source';
 }
 export function coverageText(v:View):string {

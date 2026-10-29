@@ -277,6 +277,66 @@ class AdapterTests(AdapterFixture):
         entry = SimpleNamespace(data={}, options={"set_azimuth": 273.0, "window_width": 1.4, "window_height": 0.96})
         hass = SimpleNamespace(states=SimpleNamespace(get=lambda e: None), config_entries=SimpleNamespace(async_get_entry=lambda i: entry))
         self.assertEqual(cover_link.facts(hass, {"entry": "acp"}), {"azimuth": 273.0, "reason": None, "width": 1.4, "height": 0.96})
+    async def _shutter(self):
+        entry = ConfigEntry(domain="hestia_comfort", title="Salon", unique_id="salon2", version=1, minor_version=1, source="user",
+            data=self.entry.data, options={"openings": {"binary_sensor.window": {"shutter": "connected", "cover_entity": "cover.volet"}}},
+            discovery_keys={}, subentries_data=[])
+        data = await ComfortCoordinator(self.hass, entry)._async_update_data()
+        return data, data["assessment"]["features"]["shutters"][0]
+
+    async def test_cover_automatic_is_recognised_and_read(self):
+        registry = er.async_get(self.hass)
+        for domain, unique_id, object_id, value, attributes in (
+                ("sensor", "cover_automatic_cover.volet_status", "volet_status", "paused", {"rule_name": None, "target_position": 40}),
+                ("switch", "cover_automatic_cover.volet_auto", "volet_auto", "on", {}),
+                ("switch", "cover_automatic_master", "cover_automatic", "on", {}),
+                ("sensor", "cover_automatic_facade_ouest_sun", "facade_ouest_sun", "on", {}),
+                ("sensor", "cover_automatic_facade_ouest_sun_entry", "facade_ouest_sun_entry", "13:50", {})):
+            entity = registry.async_get_or_create(domain, "cover_automatic", unique_id, suggested_object_id=object_id)
+            self.hass.states.async_set(entity.entity_id, value, attributes)
+        self.hass.states.async_set("cover.volet", "open", {"current_position": 100})
+        storage = SimpleNamespace(covers={"cover.volet": SimpleNamespace(facade_id="ouest")},
+                                  facades={"ouest": SimpleNamespace(azimuth_start=225.0, azimuth_end=315.0, cover_ids=["cover.volet"])})
+        fake = SimpleNamespace(runtime_data=SimpleNamespace(storage=storage))
+        from custom_components.hestia_comfort import cover_link
+        with patch.object(self.hass.config_entries, "async_entries", side_effect=lambda domain=None, **k: [fake] if domain == "cover_automatic" else []):
+            found = cover_link.find(self.hass, "cover.volet")
+            self.assertEqual((found["driver"], found["auto"], found["sun"]), ("cover_automatic", "switch.volet_auto", "sensor.facade_ouest_sun"))
+            self.assertEqual(cover_link.facts(self.hass, found)["azimuth"], 270.0)
+            values = cover_link.values(self.hass, found)
+            # Paused after a hand on the cover: the person's choice is kept, the position it aims at and the sun's hour are read.
+            self.assertEqual((values["override"], values["target"], values["reason"]), (True, 40.0, "en pause"))
+            self.assertEqual(dt_util.parse_datetime(values["sun_start"]).strftime("%H:%M"), "13:50")
+            data, shutter = await self._shutter()
+        self.assertEqual((shutter["driver"], shutter["manual_override"], shutter["target"]), ("cover_automatic", True, 40))
+        self.assertFalse(any(k.startswith("shutter_") for k in data["assessment"]["missing"]))
+        self.assertEqual(data["assessment"]["openings"][0]["exposure"], "O")
+
+    async def test_cover_extender_is_recognised_and_read(self):
+        registry = er.async_get(self.hass)
+        cover = registry.async_get_or_create("cover", "demo", "volet", suggested_object_id="volet")
+        for domain, kind, value in (("switch", f"switch_{cover.id}_auto_shade", "on"), ("switch", f"switch_{cover.id}_lock", "off"),
+                                    ("select", f"select_mode_{cover.id}", "Ombre")):
+            entity = registry.async_get_or_create(domain, "cover_extender", "cover_extender_" + kind, suggested_object_id="volet_" + kind.split("_")[-1])
+            self.hass.states.async_set(entity.entity_id, value)
+        self.hass.states.async_set("cover.volet", "open", {"current_position": 100, "sun_facing": True})
+        from custom_components.hestia_comfort import cover_link
+        found = cover_link.find(self.hass, "cover.volet")
+        self.assertEqual((found["driver"], found["auto"], found["override"]), ("cover_extender", "switch.volet_shade", "switch.volet_lock"))
+        self.assertEqual(cover_link.values(self.hass, found), {"sun": True, "reason": "mode « Ombre »"})
+        data, shutter = await self._shutter()
+        self.assertEqual((shutter["driver"], shutter["automatic"], shutter["sun_front"], shutter["manual_override"]), ("cover_extender", True, True, False))
+        self.assertIsNone(shutter["advice"])
+        self.assertIn("Cover Extender pilote", shutter["message"])
+
+    async def test_a_driver_turned_off_is_not_read(self):
+        from custom_components.hestia_comfort import cover_link
+        registry = er.async_get(self.hass)
+        cover = registry.async_get_or_create("cover", "demo", "volet", suggested_object_id="volet")
+        registry.async_get_or_create("switch", "cover_extender", f"cover_extender_switch_{cover.id}_lock", suggested_object_id="volet_lock")
+        self.assertIn("cover.volet", cover_link.find_all(self.hass))
+        self.assertNotIn("cover.volet", cover_link.find_all(self.hass, {"adaptive_cover_pro", "cover_automatic"}))
+
     async def test_real_state_mapping_and_sensor_output(self):
         coordinator = ComfortCoordinator(self.hass, self.entry)
         coordinator.data = await coordinator._async_update_data()

@@ -17,13 +17,13 @@ export interface Candidate {
 export interface Spec {entity_id:string;adapter:string;block_from?:number}
 export interface OpeningMeta {exposure:string|null;azimuth?:number|null;kind:string;sheltered:boolean;shutter?:'none'|'manual'|'connected';cover_entity?:string;auto_entity?:string;override_entity?:string;width?:number;height?:number;overhang_depth?:number;overhang_gap?:number}
 export interface EvolutionConfig {voc_threshold?:{value:number;unit:string};glazing_factor?:number;presence_delay_minutes?:number;voc_delay_minutes?:number;voc_pause_minutes?:number}
-export interface RoomConfig {presence?:string[];evolution?:EvolutionConfig;floor_id?:string|null;area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean;heated?:boolean;thermostat_reference?:boolean;windows_unmeasured?:boolean;persons?:string[];open_to?:string[]}
+export interface RoomConfig {presence?:string[];equipment?:string[];evolution?:EvolutionConfig;floor_id?:string|null;area_id:string|null;name:string;sources:Record<string,string>;windows:string[];openings:Record<string,OpeningMeta>;settings:Record<string,number>;acknowledged?:string[];use_home?:boolean;rain_exposed?:boolean;heated?:boolean;thermostat_reference?:boolean;windows_unmeasured?:boolean;persons?:string[];open_to?:string[]}
 export interface Room {entry_id:string;title:string;loaded:boolean;config:RoomConfig}
 export interface Area {floor_id?:string|null;area_id:string;name:string;outdoor:boolean}
-export interface Snapshot {version:1;revision:string;floors?:{floor_id:string;name:string;level:number|null}[];areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null;alarm?:string|null;disabled?:string[]};hestia_weather?:{installed:boolean;places:{entry_id:string;title:string}[]};integrations?:{atmofrance?:boolean}}
+export interface Snapshot {version:1;revision:string;floors?:{floor_id:string;name:string;level:number|null}[];areas:Area[];rooms:Room[];home:{configured:boolean;sources:Record<string,Spec>;acknowledged?:string[];weather?:string|null;alarm?:string|null;pollen_allergy?:boolean;disabled?:string[];lights?:import('./lights').Lights};hestia_weather?:{installed:boolean;places:{entry_id:string;title:string}[]};integrations?:{atmofrance?:boolean}}
 export interface Discovery {version:1;revision:string;candidates:Record<string,Candidate[]>;suggestions:Record<string,string|string[]>;drivers?:Record<string,Driver>}
 export interface DriverSignal {entity_id:string;name:string;on:boolean}
-export interface Driver {name:string;auto:string|null;override:string|null;signals?:Partial<Record<'enabled'|'auto'|'tracking'|'detection'|'override'|'sun'|'climate',DriverSignal|null>>;azimuth?:number|null;exposure?:string|null;width?:number|null;height?:number|null}
+export interface Driver {name:string;driver?:string;auto:string|null;override:string|null;signals?:Partial<Record<'enabled'|'auto'|'tracking'|'detection'|'override'|'sun'|'climate',DriverSignal|null>>;azimuth?:number|null;exposure?:string|null;width?:number|null;height?:number|null}
 // The technical state of the home (health.py): orange (bad) stops something, tip could be better, none is not used.
 export type Level='ok'|'bad'|'tip'|'none'|'shared';
 export type Target={kind:'room';entry_id:string;label:string}|{kind:'exterior';label:string}|{kind:'area';area_id:string;label:string};
@@ -42,7 +42,7 @@ export interface Twins {version:1;rooms:{entry_id:string;title:string;twin:Twin;
 export interface HealthLine {level:Level;text:string;why:string;target?:Target|null}
 export interface Health {level:'ok'|'action';summary:string;tips_summary:string;rooms_summary:string;todo:HealthLine[];tips:HealthLine[];
  sources:{label:string;level:Level;text:string}[];version?:string;column_keys?:string[];sensors?:{answering:number;total:number};extensions?:Extension[];others?:{key:string;name:string;use:string}[];socle?:string;columns:string[];rooms:{entry_id:string;title:string;cells:{level:Level;text:string}[]}[];versions:HealthLine[]}
-export interface Hass {callWS<T>(msg:Record<string,unknown>):Promise<T>;language?:string;user?:{is_admin:boolean};themes?:{darkMode?:boolean};connection?:unknown;states?:Record<string,{state:string;attributes?:Record<string,unknown>}>}
+export interface Hass {callWS<T>(msg:Record<string,unknown>):Promise<T>;callService?(domain:string,service:string,data:Record<string,unknown>):Promise<unknown>;entities?:Record<string,{platform?:string;device_id?:string|null}>;devices?:Record<string,{name?:string|null;name_by_user?:string|null}>;language?:string;user?:{is_admin:boolean};themes?:{darkMode?:boolean};connection?:unknown;states?:Record<string,{state:string;attributes?:Record<string,unknown>}>}
 export const warningText:Record<string,string>=words({
  alias:fr('Cette entité recopie une autre mesure. Vérifiez sa provenance ci-dessous.'),
  other_area:fr('La mesure ou sa source est rattachée à une autre pièce. Confirmez qu’elle représente bien celle-ci.'),
@@ -101,6 +101,8 @@ export function warningId(key:string,id:string){return key+':'+id;}
 export const stages=[fr('Température et humidité'),fr('Fenêtres et portes'),fr('Qualité de l’air'),fr('Chauffage'),fr('La pièce et ses réglages'),fr('Récapitulatif')];
 // What each step is for, shown on top of it in a frame that folds: one idea per line.
 export const intros:Record<string,string[]>={
+ 7:[fr('Une lumière couleur montre le conseil de la pièce : bleu tout va bien, vert à saisir, orange un geste.'),
+  fr('Facultatif. La lumière se règle ici quand Extensions dit « Pièce par pièce ».')],
  0:[fr('La température de la pièce : la seule mesure obligatoire.'),
   fr('L’humidité est facultative : elle repère un air trop humide.'),
   fr('Les capteurs de la pièce sont proposés ; vous les gardez, les changez ou les retirez.')],

@@ -1,4 +1,6 @@
-"""Read selected Home Assistant observations; never register equipment services."""
+"""Read selected Home Assistant observations; never register equipment services.
+
+The one exception is the coloured light chosen in the hub (« Lumières », light_driver.py), and only under its safeguards."""
 from homeassistant.const import Platform
 from homeassistant.helpers import config_validation as cv
 
@@ -12,6 +14,7 @@ from .air_references import apply_air_references, apply_freshness
 from .api import API_KEY, HestiaComfortApi
 from .entities import async_clean, home_clean
 from .domain_migration import async_setup_migration
+from .light_driver import async_start_lights
 
 PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR]
 
@@ -24,8 +27,9 @@ async def async_setup(hass, config):
     # What Hestia Confort publishes for the other bricks (the rooms and what their twins learned).
     hass.data.setdefault(API_KEY, HestiaComfortApi(hass))
     async_setup_websocket(hass)
-    await get_configuration(hass)
+    configuration = await get_configuration(hass)
     await async_setup_panel(hass)
+    await async_start_lights(hass, configuration)
     return True
 
 

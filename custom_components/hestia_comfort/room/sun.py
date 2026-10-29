@@ -84,13 +84,14 @@ class SunMixin:
             return None
 
     def _drivers(self):
-        """{opening: Adaptive Cover Pro's entities} for each connected cover it drives; none when it is turned off."""
-        if not self._uses("adaptive_cover_pro"):
+        """{opening: its driver's entities} for each connected cover driven with the sun; none from a driver turned off."""
+        used = {key for key in cover_link.ADAPTERS if self._uses(key)}
+        if not used:
             return {}
         try:
-            driven = cover_link.find_all(self.hass)
-        except Exception:  # A changed Adaptive Cover Pro must never stop the room.
-            self.logger.warning("Adaptive Cover Pro could not be read", exc_info=True)
+            driven = cover_link.find_all(self.hass, used)
+        except Exception:  # A changed driver must never stop the room.
+            self.logger.warning("The covers' drivers could not be read", exc_info=True)
             return {}
         return {e: driven[m["cover_entity"]] for e, m in self.config.get("openings", {}).items()
                 if m.get("shutter") == "connected" and m.get("cover_entity") in driven}

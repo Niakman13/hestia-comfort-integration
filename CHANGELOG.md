@@ -1,3 +1,34 @@
+## 2.1.0b2 — Bêta : une lumière qui montre le conseil, et les pollens
+
+**En bref**
+
+- **Une lumière montre le conseil** : un bandeau WLED ou une ampoule couleur prend la couleur du conseil, pour tout le logement ou pièce par pièce.
+- **Allergie aux pollens** : les jours de pollens élevés, les aérations restent courtes, tôt le matin ou juste après la pluie.
+- **Une douche dans la pièce** : l’humidité qui suit une douche est reconnue et nommée.
+- **Deux nouveaux pilotes de volets** : CoverAutomatic et Cover Extender sont lus comme Adaptive Cover Pro.
+
+### Avant de mettre à jour
+
+- Mettez à jour Hestia Weather en même temps (3.1.0b2) : les pollens viennent de lui.
+
+### Nouveautés
+
+- Dans Extensions, l’encart « WLED et lumières couleur » : une lumière pour tout le logement, ou une par pièce.
+- Dans chaque pièce, un onglet « Notifications » pour régler sa lumière.
+- Pour chaque état, une couleur, un effet et une luminosité, avec un bouton pour essayer tout de suite.
+- La lumière ne change que si elle est déjà allumée, sauf si vous permettez de l’allumer pour un geste ou une alerte.
+- Jamais la nuit, et seulement si quelqu’un est à la maison : ces deux réglages sont cochés d’office.
+- Quand tout va bien, la lumière revient comme avant. Éteinte à la main, elle est laissée tranquille.
+- Un bandeau WLED découpé en segments peut montrer une pièce sur chaque segment.
+- Dans Réglages généraux, le réglage « Allergie aux pollens ». « À savoir » dit quand les pollens sont élevés.
+- Dans La pièce, un cadre « Équipements » : douche ou baignoire.
+- Les volets pilotés par CoverAutomatic ou Cover Extender sont reconnus, avec leur reprise à la main et le soleil sur la façade.
+
+### Améliorations
+
+- Une intégration trouvée mais pas encore lue se demande en un clic, avec un formulaire déjà rempli.
+- Une aération utile pour l’humidité ou le CO₂ reste toujours conseillée, même les jours de pollens.
+
 ## 2.1.0b1 — Bêta : le hub Hestia en allemand
 
 **En bref**

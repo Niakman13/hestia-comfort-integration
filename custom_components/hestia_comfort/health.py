@@ -52,7 +52,9 @@ class Room:
     thermostat: bool = False
     """Its heating is a Versatile Thermostat (engine/thermostat.py)."""
     driven_covers: int = 0
-    """Its covers driven by Adaptive Cover Pro."""
+    """Its covers driven with the sun (cover_link.py)."""
+    drivers: frozenset = frozenset()
+    """The integrations driving them: « adaptive_cover_pro », « cover_automatic », « cover_extender »."""
     windows_intended: bool = False
     """No contact on its windows, on purpose: not suggested again."""
 
@@ -179,8 +181,8 @@ def report(f):
 
     # Extensions: Hestia's own bricks, then other integrations Hestia reads by itself, each making the advice better where it is used.
     vt = [r.title for r in f.rooms if r.thermostat]
-    acp = [r.title for r in f.rooms if r.driven_covers]
-    linked = {"hestia_weather": [f.weather] if f.weather else [], thermostats.PLATFORM: vt, "adaptive_cover_pro": acp, people.PLATFORM: [f.alarm] if f.alarm else []}
+    linked = {"hestia_weather": [f.weather] if f.weather else [], thermostats.PLATFORM: vt, people.PLATFORM: [f.alarm] if f.alarm else [],
+              **{key: [r.title for r in f.rooms if key in r.drivers] for key in cover_link.ADAPTERS}}
     installed = {"hestia_weather": f.weather_installed}
     extensions = []
     for ext in EXTENSIONS:
@@ -189,7 +191,7 @@ def report(f):
         text = (t("relié · {place}", place=f.weather) if ext["key"] == "hestia_weather" else f.alarm if ext["key"] == people.PLATFORM
                 else _count(len(found), "{n} pièce", "{n} pièces") + " · " + ", ".join(found)) if found and state != "off" else t("désactivée") if state == "off" else t(ext[state])
         extensions.append({**{k: ext[k] for k in ("key", "name", "official", "url")}, **{k: t(ext[k]) for k in ("role", "use", "without")},
-                           "state": state, "level": "ok" if found else "none", "text": text, "rooms": found if ext["key"] in (thermostats.PLATFORM, "adaptive_cover_pro") else []})
+                           "state": state, "level": "ok" if found else "none", "text": text, "rooms": found if ext["key"] == thermostats.PLATFORM or ext["key"] in cover_link.ADAPTERS else []})
     # Installed integrations Confort does not read yet: shown so that the person can ask for them.
     others = [{**o, "use": t(o["use"])} for o in OTHERS if o["key"] in f.installed]
     versions = [{"level": "ok", "text": t("Intégration {version}", version=f.version), "why": t("avec sa carte")},
@@ -221,6 +223,16 @@ EXTENSIONS = (
     {"key": "adaptive_cover_pro", "name": cover_link.NAME, "official": False, "url": "https://github.com/jrhubott/adaptive-cover-pro",
      "role": N_("Volets pilotés avec le soleil"),
      "use": N_("Volets pilotés avec le soleil : Confort sait quand ils se ferment et nomme les volets à fermer avant la chaleur."),
+     "without": N_("Sans lui : le soleil est estimé par la façade de chaque ouvrant."),
+     "found": N_("installé, aucun volet relié à un ouvrant"), "missing": N_("non installé")},
+    {"key": "cover_automatic", "name": "CoverAutomatic", "official": False, "url": "https://github.com/crandler/CoverAutomatic",
+     "role": N_("Volets pilotés par façade, règles et scénarios"),
+     "use": N_("Volets pilotés par façade : Confort sait s’il est en pause après un geste à la main, la position qu’il vise, et à quelle heure le soleil arrive sur la façade."),
+     "without": N_("Sans lui : le soleil est estimé par la façade de chaque ouvrant."),
+     "found": N_("installé, aucun volet relié à un ouvrant"), "missing": N_("non installé")},
+    {"key": "cover_extender", "name": "Cover Extender", "official": False, "url": "https://github.com/Pulpyyyy/cover-extender",
+     "role": N_("Modes, verrou et ombrage des volets"),
+     "use": N_("Modes, verrou et ombrage automatique : Confort sait quand le volet se ferme seul au soleil, et ne demande rien sur un volet verrouillé."),
      "without": N_("Sans lui : le soleil est estimé par la façade de chaque ouvrant."),
      "found": N_("installé, aucun volet relié à un ouvrant"), "missing": N_("non installé")},
     {"key": people.PLATFORM, "name": people.NAME, "official": False, "url": "https://github.com/nielsfaber/alarmo",
@@ -286,7 +298,9 @@ async def facts(hass, version):
         room.shared = coordinator.inherited() if hasattr(coordinator, "inherited") else {}
         heating = er.async_get(hass).async_get(sources["heating"]) if sources.get("heating") else None
         room.thermostat = bool(heating and heating.platform == thermostats.PLATFORM and thermostats.PLATFORM not in disabled)
-        room.driven_covers = sum(1 for w in windows if w in (getattr(coordinator, "drivers", None) or {}))
+        driven = {w: r for w, r in (getattr(coordinator, "drivers", None) or {}).items() if w in windows}
+        room.driven_covers = len(driven)
+        room.drivers = frozenset(r.get("driver", "adaptive_cover_pro") for r in driven.values())
         room.windows_intended = config.get("windows_unmeasured") is True
         room.sensors = [_sensor(hass, key, sources[key], now) for key in ("indoor_temperature", "indoor_humidity", "co2", "heating", "illuminance", "pm25", "voc", "purifier", "ventilation", "ventilation_boost") if sources.get(key)]
         room.sensors += [_sensor(hass, "windows", w, now) for w in windows]
@@ -332,6 +346,6 @@ async def facts(hass, version):
     alarm = f"{found['name']} · {t(states[found['state']]) if found['state'] in states else found['state']}" if found else ""
     loaded = getattr(getattr(hass, "config", None), "components", None) or set()
     # The original Adaptive Cover is read like the Pro one.
-    installed = {d for d in DOMAINS if d in loaded} | ({"adaptive_cover_pro"} if any(p in loaded for p in cover_link.PLATFORMS) else set())
+    installed = {d for d in DOMAINS if d in loaded} | ({"adaptive_cover_pro"} if any(p in loaded for p in cover_link.AdaptiveCoverPro.PLATFORMS) else set())
     return Facts(alarm=alarm, installed=frozenset(installed), disabled=frozenset(disabled), rooms=rooms, exterior=exterior, configured=bool(service.home.get("configured")), weather=weather,
                  weather_installed=bool(link.get("installed") and link.get("places")), free_areas=free, version=version)
