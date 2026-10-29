@@ -1,3 +1,19 @@
+## 2.1.0b1 — Bêta : le hub Hestia en allemand
+
+**En bref**
+
+- **Le hub Hestia parle allemand** : le menu, l’accueil et les réglages communs, quand Home Assistant est en allemand.
+- Les pages de Hestia Confort restent en anglais pour l’instant pour un germanophone, au lieu du français.
+
+### Avant de mettre à jour
+
+- Vous venez de la 1.7.x ? Le passage au nom Hestia se fait comme avec la 2.0.0b2 : voir ses notes.
+- Mettez à jour Hestia Weather en même temps (3.1.0b1), si vous l’avez.
+
+### Nouveautés
+
+- Le menu, l’accueil et les réglages du hub Hestia en allemand.
+
 ## 2.0.0b2 — Bêta : le passage au nom Hestia, suivi pas à pas
 
 **En bref**
