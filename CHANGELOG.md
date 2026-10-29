@@ -1,3 +1,17 @@
+## 1.7.24 — Niak Confort devient Hestia Confort
+
+**En bref**
+
+- **Niak Confort devient Hestia Confort.** Le nom change partout : cartes, panneau, textes et documentation.
+- **Rien à refaire de votre côté.** Mêmes pièces, mêmes réglages, mêmes entités, mêmes cartes.
+
+### Améliorations
+
+- Nouveau logo du hub : un H à la place du N.
+- La liaison s’appelle maintenant « Hestia Weather », et le panneau commun « Hestia ».
+- Dans HACS, l’intégration s’appelle « Hestia Comfort ».
+- Les noms internes (`niak_comfort`, `niak-comfort-card`) ne changent pas, pour ne rien casser chez vous.
+
 ## 1.7.23 — Journal de Home Assistant allégé
 
 **En bref**
