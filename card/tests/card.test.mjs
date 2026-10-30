@@ -8,12 +8,12 @@ import {build} from 'esbuild';
 const root=new URL('../',import.meta.url),temp=await mkdtemp(join(tmpdir(),'hestia-comfort-card-'));
 await build({entryPoints:['src/types.ts','src/view.ts','src/live.ts','src/views/room.ts','src/views/horizon.ts','src/editor.ts','src/hass-change.ts'].map(p=>fileURLToPath(new URL(p,root))),outdir:temp,
   bundle:true,platform:'node',format:'esm',outExtension:{'.js':'.mjs'},logLevel:'silent'});
-const {cleanConfig,cleanHomeConfig,homeAction,cleanReviewConfig}=await import(pathToFileURL(join(temp,'types.mjs')));
+const {cleanConfig,cleanHomeConfig,homeAction,cleanReviewConfig,kindOf,KINDS}=await import(pathToFileURL(join(temp,'types.mjs')));
 const {isView,numeric,summary,readingStatus,coverageText,windFrom,evolutionLines,co2Metric,solarMetric}=await import(pathToFileURL(join(temp,'view.mjs')));
 const {LiveView}=await import(pathToFileURL(join(temp,'live.mjs')));
 const {roomChoices}=await import(pathToFileURL(join(temp,'editor.mjs')));
 const {hassMatters}=await import(pathToFileURL(join(temp,'hass-change.mjs')));
-const {outsideGaps,advice,slides,roomCard,facts,factList,factBox,trendOf}=await import(pathToFileURL(join(temp,'views/room.mjs')));
+const {outsideGaps,advice,slides,roomCard,facts,factList,factBox,trendOf,modules}=await import(pathToFileURL(join(temp,'views/room.mjs')));
 const fixtures=JSON.parse(await readFile(new URL('../preview/card-fixtures.json',import.meta.url),'utf8'));
 const fresh=()=>({...structuredClone(fixtures[0].view),computed_at:new Date().toISOString()});
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
@@ -633,6 +633,24 @@ test('« À savoir » is said under three headings, the gesture one only with a 
   const box=flat(factBox(v));
   assert.match(box,/data-group=gesture|Pour le geste/);assert.match(box,/Appris/);
   assert.ok(box.indexOf('Pour le geste')<box.indexOf('Appris'));
+});
+test('the formats come in three kinds, as Hestia Weather’s editor (30 October)',()=>{
+  assert.deepEqual(['full','tile','intermediate','temperature','measures','horizon','mini','alert'].map(f=>kindOf(f)),['large','large','large','piece','piece','piece','small','small']);
+  assert.deepEqual(Object.values(KINDS).flat().sort(),['air','alert','full','heating','horizon','humidity','intermediate','measures','mini','openings','temperature','tile']);
+  // An older card keeps its format: nothing to change on the dashboard.
+  for(const format of ['full','tile','intermediate','mini','measures','alert'])assert.equal(cleanConfig({type:'custom:hestia-comfort-card',format}).format,format);
+});
+test('the modules: one air shows each room’s humidity, its windows and sun once (30 October)',()=>{
+  const room=(title,h,inherited={})=>{const v=fresh();v.title=title;v.inherited=inherited;
+    v.observations={...v.observations,indoor_temperature:{value:20.5,quality:'valid',source:'sensor.t_'+title},indoor_humidity:{value:h,quality:'valid',source:'sensor.h_'+title},
+      'window:binary_sensor.w':{value:true,quality:'valid',source:'binary_sensor.w'}};return v;};
+  const config={type:'custom:hestia-comfort-card',modules:['windows','air','humidity','shutters','coordination','temperature']};
+  const list=modules(room('Salon',58),config,[room('Cuisine',66)]);
+  const hum=list.find(m=>m.key==='humidity');
+  assert.deepEqual(hum.rows.map(r=>r.room),['Salon','Cuisine']);
+  const open=list.find(m=>m.key==='openings');
+  assert.equal([open.main,...open.stats].filter(x=>(x.label??'')==='Fenêtres').length,1);
+  assert.equal(list[0].key,'temperature');
 });
 test('one air says its windows to open in one line (30 October)',()=>{
   // Salon asks for Fenêtre Ouest, Cuisine for Fenêtre Cuisine, both doors already open: one gesture, one line.

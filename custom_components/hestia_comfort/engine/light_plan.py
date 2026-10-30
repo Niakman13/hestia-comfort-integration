@@ -59,6 +59,30 @@ def plan(rule, key, *, is_on, hour, someone_home, ours):
     return ("on", data)
 
 
+# LightEntityFeature.FLASH: a light without it ignores « flash ».
+FLASH = 8
+
+
+def _named(effects, name):
+    return next((e for e in effects or () if str(e).lower() == name), None)
+
+
+def fit(data, attributes):
+    """The call fitted to what the light can do: a light that cannot flash blinks with its own « Blink » effect, and
+    « Fixe » stops an effect already running (a WLED strip keeps its rainbow under a new colour otherwise)."""
+    data, effects = dict(data), attributes.get("effect_list") or ()
+    if "flash" in data and not int(attributes.get("supported_features") or 0) & FLASH:
+        del data["flash"]
+        blink = _named(effects, "blink")
+        if blink:
+            data["effect"] = blink
+    if "effect" not in data and "flash" not in data:
+        solid = _named(effects, "solid")
+        if solid:
+            data["effect"] = solid
+    return data
+
+
 def snapshot(state, attributes):
     """How a light was before Hestia changed it, enough to put it back."""
     if state != "on":

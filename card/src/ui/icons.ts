@@ -15,6 +15,8 @@ const paths:Record<string,string>={
   info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.1"/>',
   chevron:'<path d="m6 9 6 6 6-6"/>',
   arrow:'<path d="M4 12h16m-6-6 6 6-6 6"/>',
+  eye:'<path d="M10 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0"/><path d="M21 12c-2.4 4-5.4 6-9 6s-6.6-2-9-6c2.4-4 5.4-6 9-6s6.6 2 9 6"/>',
+  school:'<path d="M22 9 12 5 2 9l10 4 10-4v6"/><path d="M6 10.6V16a6 3 0 0 0 12 0v-5.4"/>',
   up:'<path d="m6 14 6-6 6 6"/>',
   close:'<path d="m6 6 12 12M18 6 6 18"/>',
   settings:'<path d="M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6M10 15v6"/>',

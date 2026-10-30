@@ -11,6 +11,11 @@
 ha-card.nc-c { overflow:hidden; border-radius:var(--nw-radius-card); background:var(--nw-bg); color:var(--nw-fg); font-family:var(--ha-font-family-body, Roboto, system-ui, sans-serif); container-type:inline-size; }
 .nc-hero { position:relative; isolation:isolate; overflow:hidden; padding:18px 20px 16px;
   background:linear-gradient(115deg, var(--nw-bg) 40%, color-mix(in oklab, var(--c) 16%, var(--nw-bg)) 100%); }
+/* Followed by « À savoir », the banner's light goes on behind it and fades out, seen through its frosted box: no
+   hard edge where the banner ends. */
+.nc-hero:has(+ .nc-facts) { overflow:visible; z-index:0;
+  background:linear-gradient(to bottom, transparent 55%, var(--nw-bg) 100%), linear-gradient(115deg, var(--nw-bg) 40%, color-mix(in oklab, var(--c) 16%, var(--nw-bg)) 100%); }
+.nc-hero:has(+ .nc-facts)::after { mask-image:linear-gradient(to bottom, #000 45%, transparent 85%); -webkit-mask-image:linear-gradient(to bottom, #000 45%, transparent 85%); }
 /* La lumière du bandeau : centrée sur le bord droit du cadre, un peu au-dessus du milieu, diffuse en paliers
    (aucune tache, aucune arête). Son mouvement dit l'état, accordé à l'anneau du rond. */
 .nc-hero::after { content:''; position:absolute; width:420px; height:420px; right:-210px; top:calc(36% - 210px); z-index:-1; pointer-events:none;
@@ -67,6 +72,8 @@ ha-card.nc-c { overflow:hidden; border-radius:var(--nw-radius-card); background:
 .k-room { width:10px; height:10px; border-radius:50%; background:color-mix(in oklab, var(--nw-ok) 75%, var(--nw-fg)); }
 /* Corps : sections repliables. */
 .nc-body { padding:14px 20px 16px; border-top:1px solid var(--nw-line-soft); display:grid; gap:14px; }
+/* Under « À savoir », its framed box already sets the measures apart: no line. */
+.nc-facts + .nc-body { border-top:0; }
 .nc-body[hidden] { display:none; }
 .nc-fold .nw-sum b { font-weight:600; color:color-mix(in oklab, var(--nw-watch) var(--nw-ink), var(--nw-fg)); }
 .nc-tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(112px, 1fr)); gap:8px; margin-top:12px; }
@@ -114,8 +121,10 @@ hestia-note-ticker { display:block; flex:1; min-width:0; }
 .nc-spark svg { display:block; width:100%; height:100%; overflow:visible; }
 .nc-spark-band { fill:color-mix(in oklab, var(--nw-calm) 18%, transparent); }
 .nc-spark-line { fill:none; stroke:var(--t, var(--nw-fg2)); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke;
-  stroke-dasharray:1; stroke-dashoffset:0; animation:nc-spark-draw 1.4s var(--nw-ease) .2s backwards; }
-@keyframes nc-spark-draw { from { stroke-dashoffset:1; } }
+}
+/* Drawn from left to right by uncovering it: a dash pattern breaks into pieces under a stretched viewBox. */
+.nc-spark svg { animation:nc-spark-draw 1.4s var(--nw-ease) .2s backwards; }
+@keyframes nc-spark-draw { from { clip-path:inset(0 100% 0 0); } to { clip-path:inset(0 0 0 0); } }
 .nc-spark-dot { position:absolute; width:8px; height:8px; margin:-4px 0 0 -4px; border-radius:50%; background:var(--t, var(--nw-fg2)); }
 .nc-spark-dot::after { content:''; position:absolute; inset:0; border-radius:50%; background:var(--t, var(--nw-fg2)); animation:nc-spark-now 2s ease-in-out infinite; }
 @keyframes nc-spark-now { 0%,100% { transform:scale(1); opacity:.35; } 60% { transform:scale(2.6); opacity:0; } }
@@ -193,7 +202,7 @@ button.nc-tile { font:inherit; color:inherit; text-align:left; cursor:pointer; b
 @keyframes nc-pop { from { opacity:0; scale:.4; } }
 @keyframes nc-grow { from { opacity:0; transform:scaleX(.2); } }
 @media (prefers-reduced-motion:reduce) {
-  .nc-hero::before, .nc-hero::after, .nc-disk, .nc-disk::before, .nc-disk::after, .nc-tile.out em::before, .nc-tile.mute::after, .nc-way .icon, .nc-spark-line, .nc-spark-dot::after, .nc-stack > .nc-slide, .nc-tiles > *, .nc-ring, .nc-now, .nc-mk.room, .nc-band, .nc-day { animation:none !important; }
+  .nc-hero::before, .nc-hero::after, .nc-disk, .nc-disk::before, .nc-disk::after, .nc-tile.out em::before, .nc-tile.mute::after, .nc-way .icon, .nc-spark svg, .nc-spark-dot::after, .nc-stack > .nc-slide, .nc-tiles > *, .nc-ring, .nc-now, .nc-mk.room, .nc-band, .nc-day { animation:none !important; }
   .nc-stack > .nc-slide { transform:none !important; filter:none !important; }
 }
 :host([still]) *, :host([still]) *::before, :host([still]) *::after { animation:none !important; transition:none !important; }
@@ -296,11 +305,14 @@ button.nc-row:hover { background:color-mix(in srgb, var(--nw-fg) 5%, transparent
 .nc-facts li svg { width:16px; height:16px; flex:none; margin-top:2px; opacity:.8; }
 .nc-facts li b { color:var(--nw-fg); font-weight:600; }
 /* What counts most, first: in full ink, its pictogram lit; a risk in the « to watch » colour. */
+/* As the approved mockup: one framed box, a small heading per group, the gesture's lines on the banner's orange. */
+.nc-facts { position:relative; z-index:1; }
+.nc-facts-box { margin-top:8px; padding:10px 14px 12px; }
 .nc-facts-g + .nc-facts-g { margin-top:10px; }
-.nc-facts-g h4 { display:flex; align-items:center; gap:6px; margin:8px 0 0; font-size:var(--nw-fs-small); font-weight:600; color:var(--nw-fg2); }
+.nc-facts-g h4 { display:flex; align-items:center; gap:6px; margin:0; font-size:var(--nw-fs-small); font-weight:500; color:var(--nw-fg2); }
 .nc-facts-g h4 svg { width:14px; height:14px; }
-/* Where to open goes with the gesture: on the banner's orange, softly. */
-.nc-facts-g[data-group="gesture"] ul { padding:8px 10px; border-radius:calc(var(--nw-radius) * .6); background:color-mix(in oklab, var(--nw-act) 12%, var(--nw-bg)); }
+.nc-facts-box li b { font-weight:500; }
+.nc-facts-g[data-group="gesture"] ul { padding:9px 12px; border-radius:calc(var(--nw-radius) * .6); background:color-mix(in oklab, var(--nw-act) 45%, var(--nw-bg)); }
 .nc-facts-g[data-group="gesture"] li { color:var(--nw-fg); }
 .nc-facts-g[data-group="gesture"] li svg { color:color-mix(in oklab, var(--nw-act) 70%, var(--nw-fg)); opacity:1; }
 .nc-facts li.risk svg { color:var(--nw-watch); opacity:1; }
@@ -343,3 +355,59 @@ button.nc-row:hover { background:color-mix(in srgb, var(--nw-fg) 5%, transparent
 .k-h-base { width:14px; border-top:2px dashed var(--nw-fg2); }
 .k-h-line { width:14px; border-top:3px solid; }
 .k-h-band { width:10px; height:10px; border-radius:3px; } .k-h-band.keep { background:color-mix(in oklab, var(--nw-heat) 70%, transparent); }
+
+/* ── As Hestia Weather (30 October): « En ce moment » on the right, the folded tile's bubble, sections and modules. ── */
+.nc-top { justify-content:space-between; align-items:flex-start; }
+.nc-name { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
+.nc-sub { flex-basis:100%; font-size:var(--nw-fs-small); color:var(--nw-fg2); }
+.nc-moment { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex:none; text-align:right; }
+.nc-moment .nc-level { margin:0 0 4px; }
+.nc-moment-v { all:unset; cursor:pointer; border-radius:8px; }
+.nc-moment-t { font-size:calc(var(--nw-fs-title) * 1.9); font-weight:700; letter-spacing:-1px; line-height:1; font-variant-numeric:tabular-nums; }
+.nc-moment-t small { font-size:var(--nw-fs-small); font-weight:500; letter-spacing:0; margin-left:2px; vertical-align:top; }
+.nc-moment-d { font-size:var(--nw-fs-small); color:var(--nw-fg2); white-space:nowrap; }
+.nc-weatherlike .nc-grid { margin-top:6px; }
+/* Folded: the advice in a see-through bubble, its disk small, as Hestia Weather's ticker. */
+.nc-bubble { margin-top:10px; max-width:min(100%, 420px); padding:8px 12px; border-radius:var(--nw-radius); background:var(--nw-glass-clear); border:1px solid var(--nw-line);
+  backdrop-filter:var(--nw-frost); -webkit-backdrop-filter:var(--nw-frost); }
+.nc-bubble .nc-grid { margin-top:0; gap:10px; }
+.nc-bubble .nc-advice { font-size:var(--nw-fs-text); margin:2px 0 0; }
+.nc-bubble .nc-line { font-size:var(--nw-fs-small); }
+.nc-bubble .nc-diskwrap { margin:0; }
+.nc-bubble .nc-disk { width:40px; height:40px; }
+.nc-bubble .nc-disk .icon { width:20px; height:20px; }
+.nc-bubble .nc-cap { display:none; }
+.nc-handle { display:block; width:34px; height:3px; border-radius:2px; margin:10px auto 0; background:color-mix(in oklab, var(--nw-fg) 22%, transparent); }
+.nc-tile-card.folded { cursor:pointer; }
+.nc-foot { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:10px 20px; border-top:1px solid var(--nw-line-soft); font-size:var(--nw-fs-small); color:var(--nw-fg2); }
+.nc-sections { display:grid; gap:14px; }
+/* Modules: a header with its room, the measure and its way, the half hour, a few figures (Hestia Weather's Pluie, Vent). */
+.nc-mods { display:grid; gap:10px; margin-top:10px; }
+.nc-mod-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap:10px; }
+.nc-mod { position:relative; overflow:hidden; border:1px solid var(--nw-line); border-radius:var(--nw-radius); padding:12px 14px; min-width:0; background:var(--nw-bg); }
+.nc-mod-h { display:flex; align-items:center; gap:8px; min-width:0; }
+.nc-mod-h b { font-weight:600; font-size:var(--nw-fs-text); }
+.nc-mod-h .nc-ic { width:28px; height:28px; border-radius:8px; display:grid; place-items:center; background:color-mix(in oklab, var(--nw-fg) 8%, transparent); }
+.nc-mod-h .nc-ic .icon { width:16px; height:16px; }
+.nc-src { margin-left:auto; font-size:var(--nw-fs-small); }
+.nc-mod-v { all:unset; display:block; margin-top:8px; cursor:default; }
+button.nc-mod-v, button.nc-mod-row { cursor:pointer; }
+.nc-mod-v b, .nc-mod-row b { display:inline-flex; align-items:center; gap:8px; font-size:calc(var(--nw-fs-title) * 1.35); font-weight:700; font-variant-numeric:tabular-nums; }
+.nc-mod-v b small, .nc-mod-row b small { font-size:var(--nw-fs-small); font-weight:400; color:var(--nw-fg2); margin-left:-4px; }
+.nc-mod-rows { display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:8px; }
+.nc-mod-row { all:unset; display:flex; flex-direction:column; gap:1px; }
+.nc-mod-row span { font-size:var(--nw-fs-small); color:var(--nw-fg2); }
+.nc-mod-row.out span { color:color-mix(in oklab, var(--nw-watch) 55%, var(--nw-fg)); font-weight:600; }
+.nc-mod-sub { margin:4px 0 0; font-size:var(--nw-fs-small); color:var(--nw-fg2); }
+.nc-mod .nc-scale, .nc-mod .nc-legend { margin-top:6px; }
+.nc-mod-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(80px, 1fr)); gap:6px; margin-top:10px; padding-top:8px; border-top:1px solid var(--nw-line-soft); }
+.nc-mod-stats > * { all:unset; display:flex; flex-direction:column; gap:1px; min-width:0; }
+.nc-mod-stats button { cursor:pointer; }
+.nc-mod-stats span { font-size:var(--nw-fs-small); color:var(--nw-fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.nc-mod-stats b { font-size:var(--nw-fs-text); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.nc-mod.out { border-color:color-mix(in oklab, var(--c) 45%, var(--nw-line)); }
+.nc-mod.out::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--c); }
+.nc-mod.out.soft::before { display:none; }
+.nc-piece-card { padding:0; }
+.nc-piece-card > .nc-mod { border:0; border-radius:0; padding:16px 18px; }
+.nc-mod-none { margin:0; padding:16px 18px; color:var(--nw-fg2); font-size:var(--nw-fs-small); }

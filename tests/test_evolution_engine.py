@@ -137,11 +137,19 @@ class EvolutionTests(unittest.TestCase):
         c=assess(zone(),now=NOW,context=ctx).features['trends']['curves']
         self.assertEqual(c['humidity']['way'],'stable')
         self.assertEqual(c['voc']['way'],'down')
-        # The oldest point first, as [minutes ago, value]; what is older than half an hour is left out.
-        self.assertEqual([p[1] for p in c['voc']['points']],[380,340,300,270])
+        # The oldest point first, as [minutes ago, value]: the value before the window holds at its start, the
+        # last one holds until now (a sensor silent while stable).
+        # The 500 held at the window's start shares its two minutes with the 380 measured just after.
+        self.assertEqual([p[1] for p in c['voc']['points']],[440,340,300,270,270])
         self.assertEqual(c['voc']['points'][0][0],29)
         # Under ten minutes of measures: no way said.
         self.assertIsNone(c['co2']); self.assertIsNone(c['temperature'])
+    def test_a_silent_sensor_is_stable_not_missing(self):
+        # Cuisine, 30 October: three reports in one minute after a restart, then silence for 13 minutes.
+        at=lambda m,v:((NOW-timedelta(minutes=m)).isoformat(),v)
+        ctx={'humidity_history':[at(14,66),at(13,65),at(13,66)]}
+        c=assess(zone(),now=NOW,context=ctx).features['trends']['curves']['humidity']
+        self.assertEqual(c['way'],'stable'); self.assertEqual(c['points'][-1][1],66)
     def test_durations_with_hard_veto_unavailable(self):
         r=assess(zone(co2=1800,rain=True,**{'window:a':True}),context={'opening_minutes':{'a':10}})
         self.assertEqual(r.action,'fermer')

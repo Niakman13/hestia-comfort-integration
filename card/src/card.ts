@@ -60,8 +60,8 @@ export class HestiaComfortCard extends LitElement {
   }
   static getConfigElement(){return document.createElement('hestia-comfort-card-editor');}
   static getStubConfig():Config{return {type:'custom:hestia-comfort-card',format:'tile'};}
-  getCardSize(){const f=this.config?.format;return f==='mini'?1:f==='alert'?2:f==='full'?10:f==='measures'?4:3;}
-  getGridOptions(){return {columns:this.config?.format==='full'?'full':12,rows:'auto',min_columns:6};}
+  getCardSize(){const f=this.config?.format;return f==='mini'?1:f==='alert'?2:f==='full'?10:f==='measures'?6:f==='horizon'||f==='temperature'?4:3;}
+  getGridOptions(){const f=this.config?.format;return {columns:f==='full'?'full':['humidity','air','openings','heating'].includes(f??'')?6:12,rows:'auto',min_columns:f&&['humidity','air','openings','heating'].includes(f)?3:6};}
   connectedCallback(){super.connectedCallback();this.connect();}
   disconnectedCallback(){super.disconnectedCallback();this.live.stop();this.stopPartners();this.closeFull();}
   protected shouldUpdate(changed:PropertyValues){return hassMatters(changed,this.hass);}
@@ -85,8 +85,8 @@ export class HestiaComfortCard extends LitElement {
     const get=(k:string,fallback:boolean)=>open[prefix+k]??fallback;
     // Opening at start follows the card's settings; the full card in its window always shows the measures.
     const measures=modal||(this.config?.measures_open??(fmt==='full'||fmt==='intermediate')),details=this.config?.details_open??false;
-    const fallback=(k:string)=>k==='tilesOpen'?measures:k==='detailsOpen'?details:false;
-    return {why:get('why',false),tilesOpen:get('tilesOpen',measures),detailsOpen:get('detailsOpen',details),horizonAlt:get('horizonAlt',false),uid:this.uid+(modal?'-dialog':'-main'),
+    const fallback=(k:string)=>k==='tilesOpen'?measures:k==='detailsOpen'?details:k==='horizonOpen';
+    return {why:get('why',false),tilesOpen:get('tilesOpen',measures),detailsOpen:get('detailsOpen',details),horizonAlt:get('horizonAlt',false),unfolded:get('unfolded',false),horizonOpen:get('horizonOpen',true),uid:this.uid+(modal?'-dialog':'-main'),
       // Read the current state at click time: two quick clicks must not overwrite each other.
       toggle:k=>{const cur=this.open;this.open={...cur,[prefix+k]:!(cur[prefix+k]??fallback(k))};},
       configure:this.hass?.user?.is_admin?()=>this.configure():undefined};
@@ -123,9 +123,11 @@ export class HestiaComfortCard extends LitElement {
     if(card===null)return this.preview||this.editMode?html`<ha-card class="nc-c nc-alert-note" data-level="calm"><p>${t('Alerte · {room} : rien à signaler. La carte n’apparaît que lorsqu’un geste est conseillé.',{room:this.view!.title})}</p></ha-card>`:nothing;
     if(format==='full')return card;
     const tap=format==='mini'||format==='alert';
+    // As Hestia Weather's tile: a tap folds or unfolds it in place, except on what has its own action (a button, a link).
+    const unfold=format==='tile'?(e:Event)=>{if(this.held){e.stopPropagation();e.preventDefault();this.held=false;return;}if((e.target as HTMLElement).closest('button,a,input,select,[role=button]'))return;this.state(modal).toggle('unfolded');}:undefined;
     const label=tap?t('Ouvrir la carte complète'):undefined;
     return html`<div class="nc-hold" role=${tap?'button':'group'} tabindex=${tap?0:-1} aria-label=${label??this.view!.title}
-      @click=${tap?this.act:this.swallow} @pointerdown=${tap?undefined:this.press} @pointerup=${this.release} @pointerleave=${this.release} @pointercancel=${this.release} @contextmenu=${(e:Event)=>{if(this.held)e.preventDefault();}}
+      @click=${tap?this.act:unfold??this.swallow} @pointerdown=${tap?undefined:this.press} @pointerup=${this.release} @pointerleave=${this.release} @pointercancel=${this.release} @contextmenu=${(e:Event)=>{if(this.held)e.preventDefault();}}
       @keydown=${(e:KeyboardEvent)=>{if(tap&&(e.key==='Enter'||e.key===' ')){e.preventDefault();this.act(e);}}}>${card}</div>`;
   }
   protected render(){

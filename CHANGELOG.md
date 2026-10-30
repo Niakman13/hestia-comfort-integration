@@ -1,3 +1,32 @@
+## 2.1.0b5 — Bêta : les cartes rangées comme Hestia Weather
+
+### Avant de mettre à jour
+
+- Gardez Hestia Weather 3.1.0b2.
+- Vos cartes gardent leur format : rien à refaire sur vos tableaux de bord.
+
+### Nouveautés
+
+- Dans l’éditeur, on choisit d’abord le type de carte, comme dans Hestia Weather : grandes cartes, cartes à la pièce, petites cartes.
+- Nouvelles cartes à la pièce : Température, Humidité, Air, Ouvertures, Chauffage et Prochaines heures.
+- La carte complète s’ouvre sur une « Synthèse », puis trois sections repliables : Maintenant, Prochaines heures, Détails.
+- « Maintenant » range les mesures en modules : la valeur, sa flèche, sa courbe et quelques chiffres (plage, dehors, mini et maxi…).
+- Le bandeau montre « En ce moment » à droite : la température, et son mini et son maxi sur 24 h.
+
+### Améliorations
+
+- La tuile repliée montre le conseil dans une bulle ; un appui la déplie, un appui long ouvre la carte complète.
+- « À savoir » prend un cadre en verre, et le halo du bandeau descend derrière sans arête.
+- Pour deux pièces au même air, l’humidité montre chaque pièce, et les fenêtres et le soleil ne sont dits qu’une fois.
+- Une lumière qui ne sait pas clignoter clignote avec son propre effet ; « Fixe » arrête un effet WLED en cours.
+
+### Corrections
+
+- La tendance apparaît dès le redémarrage : la dernière demi-heure est relue dans l’historique.
+- Un capteur qui ne donne des nouvelles que quand sa valeur bouge compte comme stable, et a sa courbe.
+- Les petites courbes s’affichaient en pointillés : elles se tracent d’un seul trait.
+- Dans Extensions, le bouton « Régler » de WLED mène bien à Réglages généraux.
+
 ## 2.1.0b4 — Bêta : la tendance de chaque mesure
 
 **En bref**

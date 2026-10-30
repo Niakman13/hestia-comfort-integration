@@ -247,20 +247,35 @@ def _curve(history, now, key, window=30, step=2):
     """A measure's last half hour for its tile: its speed per hour, its way (up, down, stable) and its points.
 
     Points are the mean of each `step` minutes, as [minutes ago, value]; None under the same three measures over
-    ten minutes the slope asks for."""
-    slope=_slope(history,now,window)
-    if slope is None:
+    ten minutes the slope asks for.
+
+    A sensor that reports only when its value moves stays silent while it is stable: its last value holds until now,
+    and the last one before the window holds at its start. Silence is « stable », never a gap."""
+    if now is None or now.tzinfo is None:
         return None
-    buckets={}
+    start,points,before=now-timedelta(minutes=window),[],None
     for point in history or []:
         try:
             stamp,value=point
             stamp=datetime.fromisoformat(stamp.replace('Z','+00:00')) if isinstance(stamp,str) else stamp
-            ago=(now-stamp).total_seconds()/60
-            if _number(value) and 0<=ago<=window:
-                buckets.setdefault(int(ago//step),[]).append(float(value))
+            if not stamp.tzinfo or not _number(value) or stamp>now:
+                continue
+            if stamp<start:
+                before=(start,float(value))
+            else:
+                points.append((stamp,float(value)))
         except (ValueError,TypeError,AttributeError):
             continue
+    if before and (not points or points[0][0]>start):
+        points.insert(0,before)
+    if points and (now-points[-1][0]).total_seconds()>=step*60:
+        points.append((now,points[-1][1]))
+    slope=_slope(points,now,window)
+    if slope is None:
+        return None
+    buckets={}
+    for stamp,value in points:
+        buckets.setdefault(min(int((now-stamp).total_seconds()/60//step),window//step-1),[]).append(value)
     points=[[min(window,k*step+step/2),round(sum(v)/len(v),2)] for k,v in sorted(buckets.items(),reverse=True)]
     way='stable' if abs(slope)<STEADY[key] else 'up' if slope>0 else 'down'
     return dict(slope=slope,way=way,points=points)

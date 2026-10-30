@@ -44,6 +44,21 @@ class LightPlanTest(unittest.TestCase):
         self.assertEqual(lp.restore(before), ("turn_on", {"brightness": 120, "rgb_color": [255, 200, 150], "effect": "Solid"}))
         self.assertEqual(lp.restore(lp.snapshot("off", {})), ("turn_off", {}))
 
+class Fit(unittest.TestCase):
+    """What the light can do, on the real house: a WLED strip and a Hue bulb, neither able to flash (30 October)."""
+    WLED = {"supported_features": 36, "effect_list": ["Solid", "Blink", "Breathe"]}
+    HUE = {"supported_features": 32}
+
+    def test_a_light_without_flash_blinks_with_its_own_effect(self):
+        self.assertEqual(lp.fit({"flash": "long", "brightness_pct": 100}, self.WLED), {"effect": "Blink", "brightness_pct": 100})
+        self.assertNotIn("flash", lp.fit({"flash": "long"}, self.HUE))
+        self.assertEqual(lp.fit({"flash": "long"}, {"supported_features": 44})["flash"], "long")
+
+    def test_solid_stops_an_effect_already_running(self):
+        self.assertEqual(lp.fit({"rgb_color": [1, 2, 3]}, self.WLED)["effect"], "Solid")
+        self.assertNotIn("effect", lp.fit({"rgb_color": [1, 2, 3]}, self.HUE))
+        self.assertEqual(lp.fit({"effect": "Breathe"}, self.WLED)["effect"], "Breathe")
+
 
 if __name__ == "__main__":
     unittest.main()

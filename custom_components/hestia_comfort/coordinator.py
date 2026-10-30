@@ -29,6 +29,11 @@ from .room.airings import AiringsMixin
 from .room.readings import ReadingsMixin
 
 
+# The measures whose last hours are kept for the trends: (history, reading).
+HISTORIES = (("temperature_history", "indoor_temperature"), ("outdoor_history", "outdoor_temperature"), ("humidity_history", "indoor_humidity"),
+             ("co2_history", "co2"), ("voc_history", "voc"), ("pm25_history", "pm25"))
+
+
 class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, AiringsMixin, ReadingsMixin, DataUpdateCoordinator):
     def __init__(self, hass, entry):
         logger = logging.getLogger(__name__)
@@ -184,9 +189,38 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
             return
         await self.async_request_refresh()
 
+    async def _seed_histories(self, readings, now):
+        """After a start, the last half hour read in the recorder: the tiles' trends do not wait for new measures."""
+        self._seeded = True
+        wanted = {key: readings[source].source for key, source in HISTORIES
+                  if not self.histories[key] and readings.get(source) and readings[source].source}
+        if not wanted:
+            return
+        try:
+            from homeassistant.components.recorder import get_instance
+            from . import recorder_history
+            start = now - timedelta(minutes=30)
+            rows = await get_instance(self.hass).async_add_executor_job(recorder_history.read, self.hass, start, now, set(wanted.values()))
+            seeded = {}
+            for key, entity_id in wanted.items():
+                seeded[key] = []
+                for row in rows.get(entity_id, []):
+                    try:
+                        value = float(row.state)
+                    except (TypeError, ValueError):
+                        continue
+                    # The state at the start of the window was set earlier: it holds from the window's start.
+                    seeded[key].append((max(row.last_changed, start).isoformat(), value, row.last_changed))
+        except Exception:  # noqa: BLE001 - no recorder, or a failed read: the trends simply start with this session
+            logging.getLogger(__name__).debug("Recorder history unavailable for the trends", exc_info=True)
+            return
+        for key, points in seeded.items():
+            for stamp, value, changed in points:
+                self.histories[key].append((stamp, value))
+                self.history_reports[key] = changed
+
     def _context(self, now, readings):
-        for key, source in (("temperature_history", "indoor_temperature"), ("outdoor_history", "outdoor_temperature"), ("humidity_history", "indoor_humidity"),
-                            ("co2_history", "co2"), ("voc_history", "voc"), ("pm25_history", "pm25")):
+        for key, source in HISTORIES:
             history = self.histories[key]
             reading = readings.get(source)
             # Keep samples received during this session; repeated clock refreshes do not invent samples.
@@ -369,6 +403,8 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
         open_now = {k[7:] for k, r in advice_readings.items() if k.startswith("window:") and r.usable and r.value is True}
         current["far"] = 1.0 if self.partners and open_now and not open_now & mine else 0.0
         current["beside"] = self._beside_now()
+        if not getattr(self, "_seeded", False):
+            await self._seed_histories(readings, now)
         context = self._context(now, readings)
         context["thermostat"] = self._thermostat()
         context["thermostat_reference"] = self.config.get("thermostat_reference", True)

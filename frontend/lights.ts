@@ -24,6 +24,7 @@ const ownEffects:[string,string][]=[['keep',fr('Ne rien changer')],['off',fr('É
 export const noLights=():Lights=>({mode:'home',home:null,rooms:{}});
 export function newRule(entity_id:string,follow='home'):LightRule{return {entity_id,follow,wake:false,night:true,presence:true,states:structuredClone(defaults)};}
 export function look(rule:LightRule,key:string):LightLook{return rule.states[key]??defaults[key];}
+const named=(effects:unknown,name:string)=>(Array.isArray(effects)?effects as string[]:[]).find(e=>String(e).toLowerCase()===name);
 
 /** The lights that can show a colour; a plain on/off or dimmable bulb cannot. */
 export function colourLights(hass?:Hass,wled=true){const states=hass?.states??{};
@@ -34,11 +35,14 @@ export function colourLights(hass?:Hass,wled=true){const states=hass?.states??{}
 export function segmentsOf(hass:Hass|undefined,strip:string){return colourLights(hass,true).filter(l=>l.wled&&l.strip===strip);}
 
 function rgb(hex:string){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));}
-/** Shows a state's look on the light at once, from the hub: the « Essayer » button. */
+/** Shows a state's look on the light at once, from the hub: the « Essayer » button. Fitted as the driver does
+ * (engine/light_plan.py fit): no flash → its « Blink » effect; « Fixe » stops an effect already running. */
 export function tryLook(hass:Hass|undefined,rule:LightRule,key:string){const l=look(rule,key);if(!hass?.callService||l.effect==='keep')return;
  if(l.effect==='off'){void hass.callService('light','turn_off',{entity_id:rule.entity_id});return;}
  const data:Record<string,unknown>={entity_id:rule.entity_id,brightness_pct:l.brightness,...(l.colour?{rgb_color:rgb(l.colour)}:{})};
- if(l.effect==='flash')data.flash='long';else if(l.effect!=='solid')data.effect=l.effect;
+ const a=hass.states?.[rule.entity_id]?.attributes??{},canFlash=(Number(a.supported_features??0)&8)!==0;
+ if(l.effect==='flash'){const blink=named(a.effect_list,'blink');if(canFlash)data.flash='long';else if(blink)data.effect=blink;}
+ else if(l.effect!=='solid')data.effect=l.effect;else{const solid=named(a.effect_list,'solid');if(solid)data.effect=solid;}
  void hass.callService('light','turn_on',data);}
 
 // What an effect looks like on the preview strip; a light's own effect is drawn by its name (WLED: Breathe, Blink, Rainbow…).

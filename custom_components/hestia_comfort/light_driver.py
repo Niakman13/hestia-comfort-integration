@@ -116,7 +116,7 @@ class LightDriver:
                 self._call("turn_off", entity_id, {})
             else:
                 self._wake_main(entity_id)
-                self._call("turn_on", entity_id, action[1])
+                self._call("turn_on", entity_id, light_plan.fit(action[1], state.attributes))
 
     def _main_of(self, entity_id):
         """The main light of a WLED strip cut into segments: a segment alone does not light the strip."""

@@ -5,9 +5,16 @@ export const MODULES = ['windows','air','temperature','humidity','shutters','coo
 export type Level = typeof LEVELS[number];
 export type Module = typeof MODULES[number];
 /** Like Hestia Weather: full, tile (folds), intermediate (the tile unfolded), mini (one line), measures (the tiles alone),
- *  alert (only while a gesture is asked, hidden otherwise). */
-export const FORMATS = ['full','tile','intermediate','mini','measures','alert'] as const;
+ *  alert (only while a gesture is asked, hidden otherwise), and one card per measure (the full card's modules). */
+export const FORMATS = ['full','tile','intermediate','mini','measures','alert','temperature','humidity','air','openings','heating','horizon'] as const;
 export type Format = typeof FORMATS[number];
+/** The formats in three kinds, as Hestia Weather's editor: large cards, one card per piece of the room, small cards. */
+export type Kind = 'large'|'piece'|'small';
+export const KINDS:Record<Kind,Format[]>={large:['full','tile','intermediate'],piece:['temperature','humidity','air','openings','heating','measures','horizon'],small:['mini','alert']};
+export const kindOf=(format:Format='tile'):Kind=>(Object.keys(KINDS) as Kind[]).find(k=>KINDS[k].includes(format))??'large';
+/** The modules of the full card's « Maintenant », each also a card of its own. */
+export const PIECES = ['temperature','humidity','air','openings','heating'] as const;
+export type Piece = typeof PIECES[number];
 /** What scrolls after the advice of the moment: remedies at work (purifier, ventilation), a better moment later. */
 export const BANNER_BLOCKS = ['remedies','later'] as const;
 export type BannerBlock = typeof BANNER_BLOCKS[number];

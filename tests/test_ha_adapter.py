@@ -229,6 +229,23 @@ class AdapterTests(AdapterFixture):
         await restored._restore_learning()
         self.assertEqual(restored.drying_model, coordinator.drying_model)
 
+    async def test_a_restart_reads_the_last_half_hour_for_the_trends(self):
+        # 30 October: after the b4 install the Cuisine had no curve until its sensors spoke again.
+        from custom_components.hestia_comfort.recorder_history import Row
+        now = dt_util.utcnow()
+        row = lambda minutes, value: Row(now - timedelta(minutes=minutes), now - timedelta(minutes=minutes), value, {})
+        class FakeRecorder:
+            async def async_add_executor_job(self, function, *args):
+                if function.__name__ == "read":
+                    return {"sensor.co2": [row(45, "1500"), row(20, "1600"), row(8, "unavailable"), row(5, "1700")]}
+                return {}
+        coordinator = ComfortCoordinator(self.hass, self.entry)
+        with patch("homeassistant.components.recorder.get_instance", return_value=FakeRecorder()):
+            data = await coordinator._async_update_data()
+        curve = data["assessment"]["features"]["trends"]["curves"]["co2"]
+        self.assertEqual(curve["way"], "up")
+        self.assertEqual(curve["points"][0][1], 1500)
+
     async def _season(self, rows):
         class FakeRecorder:
             async def async_add_executor_job(self, function, *args):

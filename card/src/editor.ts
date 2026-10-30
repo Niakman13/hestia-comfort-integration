@@ -2,7 +2,7 @@ import {LitElement,html,css,nothing} from 'lit';
 import {property,state} from 'lit/decorators.js';
 import {SECTIONS,SECTION_LABELS,SHOWN_SECTIONS,FOLDED_SECTIONS} from './views/homeboard';
 import {t,th,fr,setLanguage} from './i18n';
-import {cleanConfig,cleanHomeConfig,MODULES,moduleLabels,SCALE_MARKS,CHIPS,TILE_BLOCKS,HORIZON_SUBJECTS,INSIGHT_TOPICS,DETAIL_ROWS,homeAction,type Config,type HomeConfig,type HomeAssistant,type Entry} from './types';
+import {cleanConfig,cleanHomeConfig,KINDS,kindOf,type Kind,MODULES,moduleLabels,SCALE_MARKS,CHIPS,TILE_BLOCKS,HORIZON_SUBJECTS,INSIGHT_TOPICS,DETAIL_ROWS,homeAction,type Config,type HomeConfig,type HomeAssistant,type Entry} from './types';
 
 /* The editors are built like Hestia Weather's: the room (or title) and the format on top, then folding groups that
    change with the format. The theme follows Home Assistant: it is no longer offered. */
@@ -111,15 +111,24 @@ export class ComfortEditor extends LitElement {
   private schema(){
     const c=this.config!,f=c.format??'tile',action=c.hold_action??(c.hold_path?'page':'popup');
     const rooms=this.entries&&this.entries.length>1?[{name:'entry_id',selector:{select:{mode:'dropdown',options:roomChoices(this.entries,c.entry_id)}}}]:[];
-    const format={name:'format',selector:{select:{mode:'list',options:[
-      {value:'full',label:t('Complète : bandeau conseil, À savoir, mesures et détails')},{value:'tile',label:t('Tuile : le conseil et ses pastilles, se déplie d’un appui')},
-      {value:'intermediate',label:t('Tuile dépliée : la même, ouverte au départ')},{value:'mini',label:t('Mini : une ligne, le conseil et la température')},
-      {value:'measures',label:t('Mesures : les tuiles de la pièce, sans conseil')},{value:'alert',label:t('Alerte : visible seulement quand un geste est conseillé')}]}}};
-    const head=[...rooms,{name:'title',selector:{text:{}}},format];
+    // As Hestia Weather's editor: the kind of card first, then the formats of that kind only.
+    const kinds={name:'kind',title:t('Type de carte'),required:true,selector:{select:{mode:'list',options:[
+      {value:'large',label:t('Grandes cartes : la page de la pièce et la tuile')},
+      {value:'piece',label:t('Cartes à la pièce : température, humidité, air, ouvertures, chauffage, prochaines heures')},
+      {value:'small',label:t('Petites cartes : une ligne ou une alerte')}]}}};
+    const all:Record<string,string>={full:t('Complète : la page de la pièce'),tile:t('Tuile : une bande qui se déplie d’un appui'),intermediate:t('Tuile dépliée : la même, ouverte au départ'),
+      temperature:t('Température : la mesure, son échelle et sa courbe'),humidity:t('Humidité : chaque pièce, la plage et le dehors'),air:t('Air : CO₂, COV, particules et appareils'),
+      openings:t('Ouvertures : fenêtres, soleil et volets'),heating:t('Chauffage : l’état et le mode du thermostat'),measures:t('Toutes les mesures : les modules de la pièce, sans conseil'),
+      horizon:t('Prochaines heures : le graphique de la pièce'),mini:t('Mini : une ligne, le conseil et la température'),alert:t('Alerte : visible seulement quand un geste est conseillé')};
+    const format={name:'format',required:true,selector:{select:{mode:'dropdown',options:KINDS[kindOf(f)].map(value=>({value,label:all[value]}))}}};
+    const head=[...rooms,{name:'title',selector:{text:{}}},kinds,format];
     const rubriques=choices('modules',MODULES.filter(m=>m!=='temperature').map(m=>[m,moduleLabels[m]]));
     if(f==='mini')return [...head,look(),group(fr('Contenu de la ligne'),'mdi:view-list-outline',[choices('mini_values',chipOptions)],true),hold(action)];
     if(f==='alert')return [...head,look(),group(fr('Bandeau'),'mdi:view-day-outline',[toggle('rotate')],true),hold(action)];
     if(f==='measures')return [...head,look(),group(fr('Contenu'),'mdi:view-grid-outline',[rubriques,scaleToggle],true),hold(action)];
+    if(f==='temperature')return [...head,look(),group(fr('Contenu'),'mdi:view-grid-outline',[scaleToggle],true),hold(action)];
+    if(f==='horizon')return [...head,look(),group(fr('Contenu'),'mdi:view-grid-outline',[horizonMode,choices('horizon_subjects',[['temperature',fr('Température')],['humidity',fr('Humidité')]])],true),hold(action)];
+    if(kindOf(f)==='piece')return [...head,look(),hold(action)];
     // The tile keeps its spirit: the advice and its chips, then what unfolds; each section keeps its own settings.
     if(f==='tile'||f==='intermediate')return [...head,
       group(fr('Tuile : bandeau et partie dépliable'),'mdi:view-day-outline',[choices('tile_chips',chipOptions),choices('tile_blocks',[['scale',fr('Échelle de température')],['horizon',fr('Graphique « Prochaines heures »')],['measures',fr('Mesures')],['details',fr('Détails techniques')]])],true),
@@ -130,7 +139,11 @@ export class ComfortEditor extends LitElement {
   }
   private changed(e:CustomEvent<{value:Record<string,unknown>}>){
     e.stopPropagation();if(!this.config)return;
-    this.config=cleanConfig(tidy(nextConfig(this.config,e.detail.value),this.config as unknown as Record<string,unknown>,this.defaults(this.config)) as unknown as Config);
+    const value={...e.detail.value};
+    // Another kind of card: its first format. The kind itself is not a setting of the card.
+    if(typeof value.kind==='string'&&value.kind!==kindOf(this.config.format))value.format=KINDS[value.kind as Kind][0];
+    delete value.kind;
+    this.config=cleanConfig(tidy(nextConfig(this.config,value),this.config as unknown as Record<string,unknown>,this.defaults(this.config)) as unknown as Config);
     this.dispatchEvent(new CustomEvent('config-changed',{detail:{config:this.config},bubbles:true,composed:true}));
   }
   private defaults(c:Config):Record<string,unknown>{
@@ -143,7 +156,7 @@ export class ComfortEditor extends LitElement {
     if(!this.config||!this.hass)return nothing;
     const c=this.config;
     const data={...this.defaults(c),hold_action:c.hold_action??(c.hold_path?'page':'popup'),
-      ...c,show_scale:scaleShown(c),modules:(c.modules??MODULES).filter(m=>m!=='temperature')};
+      ...c,kind:kindOf(c.format),show_scale:scaleShown(c),modules:(c.modules??MODULES).filter(m=>m!=='temperature')};
     const one=this.entries?.length===1?this.entries[0]:this.entries?.find(e=>e.entry_id===c.entry_id);
     return html`${this.entries===null?html`<p class="note warn">${t('L’intégration Hestia Confort ne répond pas : vérifiez qu’elle est installée et chargée.')}</p>`
       :this.entries?.length===0?html`<p class="note warn">${th('Aucune pièce : ouvrez {link} dans la barre latérale pour en ajouter une.',{link:html`<a href="/hestia/confort" @click=${follow}>${t('Hestia Confort')}</a>`})}</p>`

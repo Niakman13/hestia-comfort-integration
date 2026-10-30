@@ -1,10 +1,10 @@
 import {html,svg,nothing,LitElement,type TemplateResult} from 'lit';
 import {property,state} from 'lit/decorators.js';
-import {SCALE_MARKS,CHIPS,TILE_BLOCKS,DETAIL_ROWS,INSIGHT_TOPICS,type Config,type View,type Level,type Format,type BannerBlock,type Chip} from '../types';
+import {SCALE_MARKS,CHIPS,TILE_BLOCKS,DETAIL_ROWS,INSIGHT_TOPICS,PIECES,type Piece,type Config,type View,type Level,type Format,type BannerBlock,type Chip} from '../types';
 import {numeric,number,heatingLabels,coverageText,windFrom,sourceLabel,needs as needLabels,constraintLabels,shortWhy} from '../view';
 import {icon} from '../ui/icons';
 import {horizonBox} from './horizon';
-import {t,t as tr,tx,tl} from '../i18n';
+import {t,t as tr,tx,tl,currentLocale} from '../i18n';
 
 /** The level, said in two or three words: the colour is never the only signal. */
 // Versatile Thermostat's presets and the reasons it stops by itself, in the person's words.
@@ -470,7 +470,7 @@ export function factList(v:View,partners:View[]=[],config:Config={type:'custom:h
   return list;
 }
 /** The headings of « À savoir », by rank: the gesture's side first, then what is worth watching, then what was learned. */
-const FACT_GROUPS=[{id:'gesture',ic:'hand',title:'Pour le geste',ranks:[0]},{id:'watch',ic:'info',title:'À surveiller',ranks:[1,2,3,4]},{id:'learned',ic:'spark',title:'Appris',ranks:[5]}];
+const FACT_GROUPS=[{id:'gesture',ic:'hand',title:'Pour le geste',ranks:[0]},{id:'watch',ic:'eye',title:'À surveiller',ranks:[1,2,3,4]},{id:'learned',ic:'school',title:'Appris',ranks:[5]}];
 export function factBox(v:View,partners:View[]=[],config:Config={type:'custom:hestia-comfort-card'},list=factList(v,partners,config)):TemplateResult|typeof nothing {
   // The first line is what counts most: set apart, and a risk in the « to watch » colour.
   // Three headings, each said only when it has lines: where to act for the gesture, what to keep an eye on, what was learned.
@@ -478,8 +478,8 @@ export function factBox(v:View,partners:View[]=[],config:Config={type:'custom:he
   // Under « Rien à faire » there is no gesture: its lines join what is worth watching, never on orange.
   const calm=advice(v).title==='Rien à faire',of=(f:Fact)=>calm&&rank(f)===0?1:rank(f);
   const groups=FACT_GROUPS.map(g=>({...g,lines:list.filter(f=>g.ranks.includes(of(f)))})).filter(g=>g.lines.length);
-  return list.length?html`<div class="nc-facts"><div class="nw-label">${t('À savoir')}</div>${groups.map(g=>html`<section class="nc-facts-g" data-group=${g.id}>
-    <h4>${icon(g.ic)}${tx(g.title)}</h4><ul>${g.lines.map(line)}</ul></section>`)}</div>`:nothing;
+  return list.length?html`<div class="nc-facts"><div class="nw-label">${t('À savoir')}</div><div class="nc-facts-box nw-glass">${groups.map(g=>html`<section class="nc-facts-g" data-group=${g.id}>
+    <h4>${icon(g.ic)}${tx(g.title)}</h4><ul>${g.lines.map(line)}</ul></section>`)}</div></div>`:nothing;
 }
 /** Why the room that leads a shared air asks for its gesture, after its name. */
 const SHARED:Record<string,string>={air_needed:'a besoin d’air',short_air_change:'a besoin d’air',cooling_possible:'se rafraîchit',warming_possible:'se réchauffe',
@@ -623,7 +623,7 @@ function sparkline(r:Trend):TemplateResult {
   const line=curvePath(pts);
   return html`<div class="nc-spark" data-tone=${r.tone} aria-hidden="true"><svg viewBox="0 0 100 24" preserveAspectRatio="none">
     ${band&&by>bx?svg`<rect class="nc-spark-band" x="0" width="100" y=${Math.max(0,bx)} height=${Math.min(24,by)-Math.max(0,bx)}></rect>`:nothing}
-    <path class="nc-spark-line" d=${line} pathLength="1"></path></svg>
+    <path class="nc-spark-line" d=${line}></path></svg>
     <span class="nc-spark-dot" style=${`left:${last[0]}%;top:${last[1]/24*100}%`}></span></div>`;
 }
 /** Opens Home Assistant's own details window (history, attributes) for an entity, as any dashboard card does. */
@@ -724,18 +724,24 @@ export function details(v:View,config:Config):TemplateResult[] {
   return out;
 }
 
-export interface CardState {why:boolean;tilesOpen:boolean;detailsOpen:boolean;horizonAlt?:boolean;toggle:(k:'why'|'tilesOpen'|'detailsOpen'|'horizonAlt')=>void;uid:string;configure?:()=>void}
+export interface CardState {why:boolean;tilesOpen:boolean;detailsOpen:boolean;horizonAlt?:boolean;
+  /** The tile unfolded by a tap; « Prochaines heures » folded or not on the full card. */ unfolded?:boolean;horizonOpen?:boolean;
+  toggle:(k:'why'|'tilesOpen'|'detailsOpen'|'horizonAlt'|'unfolded'|'horizonOpen')=>void;uid:string;configure?:()=>void}
 /** The « i » panel: needs, constraints and how complete the picture is, one line each. */
 export function whyLines(v:View):TemplateResult {
   const a=v.assessment;
   return html`<p><b>${t('Besoins')}</b> · ${a.needs.length?a.needs.map(n=>tx(needLabels[n]??n)).join(', '):t('aucun parmi les mesures connues')}</p><p><b>${t('Contraintes')}</b> · ${a.constraints.length?a.constraints.map(c=>tx(constraintLabels[c]??c)).join(', '):t('aucune confirmée')}</p><p><b>${t('Bilan')}</b> · ${tx(coverageText(v))}</p>`;
 }
 /** Hero shared by the room and home cards: name, « i », level pill, the gesture, the disk, then the scale. */
-export function hero(o:{name:string;level:Level;slides:Slide[];scaleLabel:string;scale:TemplateResult;st:CardState;why:TemplateResult;compact?:boolean;still?:boolean;small?:boolean;after?:TemplateResult|typeof nothing;graph?:TemplateResult|typeof nothing}):TemplateResult {
+export function hero(o:{name:string;level:Level;slides:Slide[];scaleLabel:string;scale:TemplateResult;st:CardState;why:TemplateResult;compact?:boolean;still?:boolean;small?:boolean;after?:TemplateResult|typeof nothing;graph?:TemplateResult|typeof nothing;
+  /** As Hestia Weather: « En ce moment » on the right (the pill, the temperature, its day), a line after the name, the advice in a bubble on a folded tile. */
+  now?:TemplateResult|typeof nothing;sub?:string;bubble?:boolean}):TemplateResult {
   const many=o.slides.length>1;
-  return html`<div class=${'nc-hero'+(o.small?' nc-compact':'')} data-mood=${mood(o.slides[0],o.level)}>
-    <div class="nc-top"><h2>${o.name}</h2><button class="nw-info" aria-label=${t('Pourquoi ce conseil ?')} aria-expanded=${o.st.why} aria-controls=${o.st.uid+'-why'} @click=${()=>o.st.toggle('why')}>${icon('info')}</button><span class="nw-chip nc-level">${many?t('{n} conseils',{n:o.slides.length}):pillMark(o.slides[0]?.pill??pills[o.level],o.slides[0]?.level??o.level,!!o.slides[0]?.learned)}</span></div>
-    <hestia-advice-ticker .slides=${o.slides} .still=${!!o.still}></hestia-advice-ticker>
+  const pill=html`<span class="nw-chip nc-level">${many?t('{n} conseils',{n:o.slides.length}):pillMark(o.slides[0]?.pill??pills[o.level],o.slides[0]?.level??o.level,!!o.slides[0]?.learned)}</span>`;
+  return html`<div class=${'nc-hero'+(o.small?' nc-compact':'')+(o.now!==undefined?' nc-weatherlike':'')+(o.bubble?' nc-folded':'')} data-mood=${mood(o.slides[0],o.level)}>
+    <div class="nc-top"><div class="nc-name"><h2>${o.name}</h2><button class="nw-info" aria-label=${t('Pourquoi ce conseil ?')} aria-expanded=${o.st.why} aria-controls=${o.st.uid+'-why'} @click=${()=>o.st.toggle('why')}>${icon('info')}</button>${o.sub?html`<span class="nc-sub">${o.sub}</span>`:nothing}</div>
+      ${o.now!==undefined?html`<div class="nc-moment">${pill}${o.now}</div>`:pill}</div>
+    <div class=${o.bubble?'nc-bubble':''}><hestia-advice-ticker .slides=${o.slides} .still=${!!o.still}></hestia-advice-ticker></div>
     <div class="nc-why" id=${o.st.uid+'-why'} ?hidden=${!o.st.why}>${o.why}</div>
     ${o.compact?nothing:html`<div class="nc-sec nw-glass"><div class="nw-label">${o.scaleLabel}</div>${o.scale}</div>`}
     ${o.graph??nothing}
@@ -766,6 +772,74 @@ const chipRow=(list:ReturnType<typeof chipValues>)=>list.length?html`<div class=
   :html`<span class=${'nc-chip'+(c.out?' out':'')}>${icon(c.ic)}${c.text}</span>`)}</div>`:nothing;
 /** Is something asked of the person? The alert format shows only then. */
 export const asking=(v:View)=>['action','urgent'].includes(slides(v)[0]?.level??v.assessment.level);
+/** A figure at the foot of a module: its label, its value, the sensor behind it. */
+interface Stat {label:string;value:string;entity?:string;note?:string}
+/** One module of « Maintenant », as Hestia Weather's Pluie or Vent: a title and its room, the measure with its way and its
+ * half hour, then a few figures. A shared air shows each room in it (rows). */
+interface Module {key:Piece;ic:string;title:string;src?:string;main?:Tile;rows?:{room:string;tile:Tile}[];sub?:string;extra?:TemplateResult|typeof nothing;stats:Stat[];level:string}
+const stat=(t:Tile,label=tx(t.label)):Stat=>({label,value:`${tx(t.value)}${t.unit&&t.value!=='—'?' '+t.unit:''}`,entity:t.entity,note:t.note});
+const PIECE_LOOK:Record<Piece,[string,string]>={temperature:['temp','Température'],humidity:['drop','Humidité'],air:['air','Air'],openings:['window','Ouvertures'],heating:['heat','Chauffage']};
+/** The modules of a room (and of the rooms sharing its air), each only when it has something to show. */
+export function modules(v:View,config:Config,partners:View[]=[],o:{scale?:TemplateResult|null}={}):Module[] {
+  const mods=new Set(config.modules??[]),rooms=[v,...partners],f=v.assessment.features,many=partners.length>0;
+  // Each room's own tiles: a measure read from the room sharing this air shows once, where it is measured.
+  const own=rooms.map(r=>({room:r.title,tiles:many?ownTiles(r,tiles(r,config)):tiles(r,config)}));
+  const find=(labels:string[])=>own.flatMap(r=>r.tiles.filter(t=>labels.includes(t.label)).map(t=>({room:r.room,tile:t})));
+  const out:Module[]=[],level=(t?:Tile)=>t?.out&&!t.remedy?String(t.level):'calm';
+  if(mods.has('temperature')){const main=roomTemperature(v)[0];
+    if(main){const d=f?.day_range,te=numeric(v.observations.outdoor_temperature),slope=f?.trends?.curves?.temperature?.slope;
+      const stats:Stat[]=[...partners.flatMap(p=>roomTemperature(p).map(t=>stat(t,p.title))),
+        ...(d?[{label:t('Mini 24 h'),value:number(d.min)+' °C'},{label:t('Maxi 24 h'),value:number(d.max)+' °C'}]:[]),
+        ...(te!==null?[{label:t('Dehors'),value:number(te)+' °C',entity:v.observations.outdoor_temperature?.source??undefined}]:[]),
+        ...(slope!=null&&!d?[{label:t('Tendance'),value:(slope>0?'+':'')+number(slope)+' °C/h'}]:[])];
+      out.push({key:'temperature',ic:'temp',title:PIECE_LOOK.temperature[1],src:many?v.title:undefined,main,sub:tx(main.note),extra:o.scale??nothing,stats:stats.slice(0,4),level:level(main)});}}
+  const hum=find(['Humidité']);
+  if(hum.length){const h=f?.humidity,lead=hum.find(x=>x.tile.out)??hum[0],ho=numeric(v.observations.outdoor_humidity);
+    out.push({key:'humidity',ic:'drop',title:PIECE_LOOK.humidity[1],src:hum.length===1&&many?hum[0].room:undefined,main:lead.tile,rows:hum.length>1?hum:undefined,
+      sub:hum.length>1?hum.filter(x=>x.tile.out).map(x=>`${x.room} : ${tx(x.tile.note)}`).join(' · ')||tx(lead.tile.note):tx(lead.tile.note),
+      stats:[...(h?.minimum!=null&&h?.maximum!=null?[{label:t('Plage'),value:`${number(h.minimum)}–${number(h.maximum)} %`}]:[]),
+        ...(ho!==null?[{label:t('Dehors'),value:number(ho)+' %',entity:v.observations.outdoor_humidity?.source??undefined}]:[]),
+        ...(h?.dew_point!=null?[{label:t('Point de rosée'),value:number(h.dew_point)+' °C'}]:[])],level:level(lead.tile)});}
+  const air=find(['CO₂','COV','Particules','Purificateur','Ventilation']);
+  if(air.length){const measures=air.filter(x=>['CO₂','COV','Particules'].includes(x.tile.label)),lead=measures.find(x=>x.tile.out)??measures[0]??air[0];
+    out.push({key:'air',ic:'air',title:PIECE_LOOK.air[1],src:many?lead.room:undefined,main:lead.tile,sub:`${tx(lead.tile.label)} · ${tx(lead.tile.note)}`,
+      stats:air.filter(x=>x!==lead).map(x=>stat(x.tile,many&&x.room!==lead.room?`${tx(x.tile.label)} · ${x.room}`:tx(x.tile.label))),level:level(lead.tile)});}
+  // The windows and the sun are the shared air's: said once, by the first room (as the tiles did).
+  const open=find(['Fenêtres','Soleil','Volet']).filter((x,i,all)=>x.tile.label==='Volet'||all.findIndex(y=>y.tile.label===x.tile.label)===i);
+  if(open.length){const lead=open.find(x=>x.tile.label==='Fenêtres')??open[0];
+    out.push({key:'openings',ic:lead.tile.ic,title:PIECE_LOOK.openings[1],main:lead.tile,sub:tx(lead.tile.note),stats:open.filter(x=>x!==lead).map(x=>stat(x.tile)),level:level(lead.tile)});}
+  const heat=find(['Chauffage']);
+  if(heat.length){const lead=heat[0];
+    out.push({key:'heating',ic:'heat',title:PIECE_LOOK.heating[1],src:many?lead.room:undefined,main:lead.tile,rows:heat.length>1?heat:undefined,sub:tx(lead.tile.note),stats:[],level:'calm'});}
+  return out;
+}
+const statBody=(x:Stat)=>html`<span>${x.label}</span><b>${x.value}</b>`;
+/** A module, drawn as Hestia Weather's: header, the measure, its half hour, its figures; each value opens its sensor. */
+export function moduleCard(m:Module,soft=true):TemplateResult {
+  const value=(t:Tile)=>html`${tx(t.value)}${t.unit&&t.value!=='—'?html`<small>${t.unit}</small>`:nothing}${t.trend?trendArrow(t.trend):nothing}`;
+  const hit=(t:Tile,body:TemplateResult,cls:string)=>t.entity?html`<button type="button" class=${cls+' nc-hit'} title=${tr('Détails : {label}',{label:tx(t.label)})} @click=${(e:Event)=>moreInfo(e,t.entity!)}>${body}</button>`:html`<div class=${cls}>${body}</div>`;
+  const main=m.rows?html`<div class="nc-mod-rows">${m.rows.map(r=>hit(r.tile,html`<span>${r.room}</span><b>${value(r.tile)}</b>`,'nc-mod-row'+(r.tile.out?' out':'')))}</div>`
+    :m.main?hit(m.main,html`<b>${value(m.main)}</b>`,'nc-mod-v'):nothing;
+  const curve=m.rows?(m.rows.find(r=>r.tile.out)??m.rows[0]).tile.trend:m.main?.trend;
+  return html`<div class=${'nc-mod'+(m.level!=='calm'?' out'+(soft?' soft':''):'')} data-piece=${m.key} data-level=${m.level}>
+    <div class="nc-mod-h"><span class="nc-ic">${icon(m.ic)}</span><b>${tx(m.title)}</b>${m.src?html`<span class="nw-chip nc-src">${m.src}</span>`:nothing}</div>
+    ${main}${m.sub?html`<p class="nc-mod-sub">${m.sub}</p>`:nothing}${m.extra??nothing}${curve?sparkline(curve):nothing}
+    ${m.stats.length?html`<div class="nc-mod-stats">${m.stats.map(x=>x.entity?html`<button type="button" class="nc-hit" title=${x.note?tx(x.note):tr('Détails : {label}',{label:x.label})} @click=${(e:Event)=>moreInfo(e,x.entity!)}>${statBody(x)}</button>`:html`<div title=${x.note?tx(x.note):nothing}>${statBody(x)}</div>`)}</div>`:nothing}
+  </div>`;
+}
+/** « Maintenant »: the temperature across, the others two by two, as Hestia Weather's « Aujourd’hui ». */
+const moduleGrid=(list:Module[],soft:boolean)=>{const wide=list.filter(m=>m.key==='temperature'),rest=list.filter(m=>m.key!=='temperature');
+  return html`<div class="nc-mods">${wide.map(m=>moduleCard(m,soft))}${rest.length?html`<div class="nc-mod-grid">${rest.map(m=>moduleCard(m,soft))}</div>`:nothing}</div>`;};
+/** « En ce moment », on the right of the banner as in Hestia Weather: the temperature, then its day (or the room beside it). */
+function nowBlock(v:View,partners:View[]):TemplateResult|typeof nothing {
+  const ti=numeric(v.observations.indoor_temperature),d=v.assessment.features?.day_range;
+  if(ti===null)return nothing;
+  const other=partners.map(p=>({p,t:numeric(p.observations.indoor_temperature)})).find(x=>x.t!==null);
+  const src=v.observations.indoor_temperature?.source;
+  const temp=html`<b class="nc-moment-t">${number(ti)}<small>°C</small></b>`;
+  return html`${src?html`<button type="button" class="nc-hit nc-moment-v" title=${t('Détails de la température')} @click=${(e:Event)=>moreInfo(e,src)}>${temp}</button>`:temp}
+    <span class="nc-moment-d">${d?html`↓ ${number(d.min)}° ↑ ${number(d.max)}°`:other?`${other.p.title} ${number(other.t!)}°`:nothing}</span>`;
+}
 /** The room card in each format; null when the alert format has nothing to say. */
 export function roomCard(v:View,config:Config,st:CardState,format:Format='full',partners:View[]=[]):TemplateResult|null {
   const a=v.assessment,f=a.features,ti=numeric(v.observations.indoor_temperature),te=numeric(v.observations.outdoor_temperature);
@@ -801,31 +875,46 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
     return html`<ha-card class="nc-c nc-line-card" data-level=${top} data-mood=${mood(all[0],top)}><div class="nc-disk" data-disk=${all[0]?.disk}>${icon(all[0]?.disk??'check')}</div>
       <div class="nc-line-text"><span>${name}</span><b>${tx(all[0]?.title)}</b></div>${chipRow(values.filter(c=>c!==temp))}${temp?html`<span class="nc-line-value">${temp.text.replace(' °C','')}<small> °C</small></span>`:nothing}</ha-card>`;
   }
+  // The modules of « Maintenant », the scale inside the temperature's (switched off, the module keeps its figures).
+  const scaleIn=config.show_scale===false||(config.show_scale===undefined&&config.scale_marks?.length===0)?null:sc;
+  const mods=modules(v,config,partners,{scale:scaleIn});
   if(format==='measures')
-    return html`<ha-card class="nc-c nc-measures-card" data-level="neutral"><div class="nc-mhead"><h2>${name}</h2><span class="nw-sum">${summary}</span></div><div class="nc-mbody">${config.show_scale===true||config.scale_marks?.length?scaleBox:nothing}${grid}</div></ha-card>`;
+    return html`<ha-card class="nc-c nc-measures-card" data-level="neutral"><div class="nc-mhead"><h2>${name}</h2><span class="nw-sum">${summary}</span></div><div class="nc-mbody">${moduleGrid(modules(v,config,partners,{scale:config.show_scale===true||config.scale_marks?.length?sc:null}),true)}</div></ha-card>`;
+  // One card per piece of the room: the full card's module alone, or its « Prochaines heures ».
+  if(format==='horizon')
+    return html`<ha-card class="nc-c nc-piece-card" data-level="neutral"><div class="nc-mod" data-piece="horizon"><div class="nc-mod-h"><span class="nc-ic">${icon('clock')}</span><b>${t('Prochaines heures')}</b><span class="nw-chip nc-src">${name}</span></div>${horizonBox(f?.horizon??[],{subjects:config.horizon_subjects,mode:config.horizon_mode??'always',uid:st.uid,second:!!st.horizonAlt,onTab:()=>st.toggle('horizonAlt'),
+      plage:x=>x==='humidity'?(hum?.minimum!=null&&hum?.maximum!=null?[hum.minimum,hum.maximum]:null):(season?[season.minimum,season.maximum]:null)})}</div></ha-card>`;
+  if((PIECES as readonly string[]).includes(format)){
+    const m=mods.find(x=>x.key===format);
+    return html`<ha-card class="nc-c nc-piece-card" data-level="neutral">${m?moduleCard({...m,src:m.src??name},true):html`<p class="nc-mod-none">${t('{room} : rien à montrer ici. Vérifiez les capteurs et les rubriques de la carte.',{room:name})}</p>`}</ha-card>`;
+  }
   if(format==='alert'){
     if(!asking(v))return null;
-    return html`<ha-card class="nc-c" data-level=${top}>${hero({name,level:top,slides:all,scaleLabel:'',scale:html``,st,why:whyLines(v),compact:true,small:true,still})}</ha-card>`;
+    return html`<ha-card class="nc-c" data-level=${top}>${hero({name,level:top,slides:all,scaleLabel:'',scale:html``,st,why:whyLines(v),compact:true,small:true,still,now:nowBlock(v,partners)})}</ha-card>`;
   }
+  const now=nowBlock(v,partners);
+  // « Maintenant », « Prochaines heures », « Détails »: the full card's sections, as Hestia Weather's « Aujourd’hui » and « Prévisions ».
+  const measures=mods.length>0&&config.show_measures!==false,hasGraph=graph!==nothing;
+  const sections=(blocks:readonly string[])=>{const parts=blocks.map(b=>
+      b==='measures'&&measures?fold({label:t('Maintenant'),summary,open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tiles',body:moduleGrid(mods,soft),keep:watched.map(t=>tile(t,soft))})
+      :b==='horizon'&&hasGraph?fold({label:t('Prochaines heures'),summary:'',open:st.horizonOpen??true,onToggle:()=>st.toggle('horizonOpen'),id:st.uid+'-horizon',body:graph as TemplateResult})
+      :b==='details'&&config.show_details!==false?fold({label:t('Détails'),summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:st.uid+'-details',body:detailList}):null).filter(x=>x!==null);
+    return parts.length?html`<div class="nc-body nc-sections">${parts}</div>`:nothing;};
   if(format==='tile'||format==='intermediate'){
-    const blocks=config.tile_blocks??TILE_BLOCKS;
-    const body=blocks.map(b=>b==='scale'?scaleBox:b==='horizon'?graph:b==='measures'?(list.length?grid:nothing):html`<div class="nc-tile-details"><div class="nw-label">${t('Détails')}</div>${detailList}</div>`);
-    const chips=st.tilesOpen?nothing:chipRow([...chipValues(v,config.tile_chips??CHIPS),...partners.flatMap(p=>chipValues(p,['temperature']).map(c=>({...c,text:p.title+' '+c.text})))]);
-    return html`<ha-card class="nc-c" data-level=${top} ?data-starting=${!!v.starting}>
-      ${hero({name,level:top,slides:all,scaleLabel:'',scale:html``,st,why:whyLines(v),compact:true,small:true,still,after:chips})}
-      ${box}
-      ${blocks.length?html`<div class="nc-body nc-tile-body">${fold({label:t('Mesures et détails'),summary:list.length?summary:'',open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tile',body:html`<div class="nc-tile-blocks">${body}</div>`})}</div>`:nothing}
+    // As Hestia Weather's tile: folded, the room, « En ce moment » and the advice in a bubble; a tap unfolds it in place.
+    const open=format==='intermediate'||!!st.unfolded;
+    const blocks=(config.tile_blocks??TILE_BLOCKS).filter(b=>b!=='scale');
+    const chips=open?nothing:chipRow([...chipValues(v,(config.tile_chips??CHIPS).filter(c=>c!=='temperature')),...partners.flatMap(p=>chipValues(p,['humidity']).map(c=>({...c,text:p.title+' '+c.text})))]);
+    return html`<ha-card class=${'nc-c nc-tile-card'+(open?' open':' folded')} data-level=${top} ?data-starting=${!!v.starting}>
+      ${hero({name,level:top,slides:all,scaleLabel:'',scale:html``,st,why:whyLines(v),compact:true,small:true,still,now,bubble:!open,after:html`${chips}${format==='tile'?html`<span class="nc-handle" aria-hidden="true"></span>`:nothing}`})}
+      ${open?html`${box}${sections(blocks)}<div class="nc-foot"><span>${partners.length?t('Capteurs de {rooms}',{rooms:[v,...partners].map(r=>r.title).join(' et ')}):t('Capteurs de la pièce')}</span><span>${format==='tile'?t('Appui : replier · '):''}${t('Appui long : carte complète')}</span></div>`:nothing}
     </ha-card>`;
   }
-  const measures=list.length&&config.show_measures!==false;
-  const body=measures||config.show_details!==false;
-  return html`<ha-card class="nc-c" data-level=${top} ?data-starting=${!!v.starting}>
-    ${hero({name,level:top,slides:all,scaleLabel:t('Température'),scale:sc??html``,st,why:whyLines(v),compact:!sc,still,graph})}
+  const day=new Date().toLocaleDateString(currentLocale(),{weekday:'long',day:'numeric',month:'long'});
+  return html`<ha-card class="nc-c nc-full-card" data-level=${top} ?data-starting=${!!v.starting}>
+    ${hero({name:t('Synthèse'),sub:`${name} · ${day}`,level:top,slides:all,scaleLabel:'',scale:html``,st,why:whyLines(v),compact:true,still,now})}
     ${box}
-    ${!body?nothing:html`<div class="nc-body">
-      ${measures?fold({label:t('Mesures'),summary,open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:st.uid+'-tiles',body:grid,keep:watched.map(t=>tile(t,soft))}):nothing}
-      ${config.show_details===false?nothing:fold({label:t('Détails'),summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:st.uid+'-details',body:detailList})}
-    </div>`}
+    ${sections(['measures','horizon','details'])}
   </ha-card>`;
 }
 
