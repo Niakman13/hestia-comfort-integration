@@ -1,3 +1,25 @@
+## 2.1.0b7 — Bêta : les retours du premier essai
+
+### Avant de mettre à jour
+
+- Gardez Hestia Weather 3.1.0b2.
+
+### Améliorations
+
+- L’humidité de deux pièces au même air défile, pièce par pièce, comme les mesures de l’air.
+- La bulle de la pièce suit la mesure affichée : « Cuisine » quand on voit les COV de la cuisine.
+- Les mesures qui défilent se font glisser, au doigt comme à la souris.
+- « À venir » ne s’affiche que s’il a quelque chose à dire : un geste à comparer, une prévision qui sort de votre plage, un prochain geste, de la pluie.
+- Le graphique d’« À venir » prend toute la largeur et dit ce qu’il montre en toutes lettres.
+- La courbe du soleil disparaît la nuit ; les courbes du soleil et de la chauffe portent une légende claire.
+- Le module Température ne répète plus le mini et le maxi du bandeau.
+- Une pièce qui suit le conseil de sa voisine montre le conseil de la pièce qui mène, avec ce qu’elle a appris.
+
+### Corrections
+
+- L’humidité s’affiche en nombre entier partout.
+- L’écart à la consigne n’est plus affiché en hors-gel, en éco ou en absence.
+
 ## 2.1.0b6 — Bêta : une carte plus claire, chaque chose à sa place
 
 ### Avant de mettre à jour

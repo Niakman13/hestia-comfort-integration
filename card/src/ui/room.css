@@ -522,10 +522,7 @@ ha-card.nc-alert-card { display:flex; align-items:center; gap:14px; padding:10px
 .nc-mod-h24 .nc-mod-sub { text-align:left; }
 .nc-mod-h24 .nc-legend { margin-top:4px; font-size:var(--nw-fs-small); }
 .nc-mod-text { font-size:calc(var(--nw-fs-title) * 1.05) !important; letter-spacing:-.2px; }
-@container (min-width:740px) {
-  .nc-upcoming .nc-mod-h24 { grid-column:span 2; }
-  .nc-upcoming .nc-mod-grid:has(.nc-mod-h24 + .nc-mod-h24) > :not(.nc-mod-h24) { grid-column:span 2; }
-}
+@container (min-width:740px) { .nc-upcoming .nc-mod-grid > :not(.nc-mod-wide) { grid-column:span 2; } }
 @container (min-width:740px) { .nc-upcoming .nc-mod-grid:not(:has(.nc-mod-h24)) > * { grid-column:span 2; } }
 /* The « i »: frosted glass as « À savoir », its sentence on the whole width. */
 .nc-b-why.nw-glass { padding:10px 14px; background:var(--nw-glass-clear); }
@@ -574,3 +571,10 @@ hestia-mod-slides { display:block; }
 .nc-b:not(.compact) { padding-bottom:26px; }
 .nc-b-why.nw-glass { margin-top:14px; }
 .nc-b-why:not([hidden]) + .nc-b-main { margin-top:22px; }
+.nc-mod-taglne { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px; }
+.nc-mod-taglne .nc-mod-tag { margin-top:0; }
+.nc-mslides { touch-action:pan-y; user-select:none; -webkit-user-select:none; }
+/* « À venir »: the graph across the whole width, what it shows said in words, its result above it. */
+.nc-mod-wide { grid-column:1 / -1; }
+.nc-mod-h24-what { margin-left:auto; font-size:var(--nw-fs-small); font-weight:600; color:var(--nw-fg2); }
+.nc-mod-h24-result { margin:6px 0 2px; font-size:var(--nw-fs-text); color:var(--nw-fg); }

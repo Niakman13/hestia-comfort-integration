@@ -634,10 +634,10 @@ function sparkline(r:Trend):TemplateResult {
     <defs><linearGradient id=${id} x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="nc-spark-fill0"></stop><stop offset="1" class="nc-spark-fill1"></stop></linearGradient></defs>
     <path class="nc-spark-area" d=${`${line} L${last[0].toFixed(1)} 24 L${pts[0][0].toFixed(1)} 24 Z`} fill=${`url(#${id})`}></path>
     <path class="nc-spark-line" d=${line}></path></svg>
-    <span class="nc-spark-dot" style=${`left:${last[0]}%;top:${last[1]/24*100}%`}></span></div>${SPARK_CAPTION[r.key]?html`<span class="nc-spark-cap">${t(SPARK_CAPTION[r.key],{n:Math.round(win)})}</span>`:nothing}`;
+    <span class="nc-spark-dot" style=${`left:${last[0]}%;top:${last[1]/24*100}%`}></span></div>${SPARK_CAPTION[r.key]?html`<span class="nc-spark-cap">${t(SPARK_CAPTION[r.key])}</span>`:nothing}`;
 }
 /** A curve that is not the value shown above it says what it is. */
-const SPARK_CAPTION:Record<string,string>={heating:'Puissance de chauffe · {n} min',solar:'Soleil dehors · {n} min'};
+const SPARK_CAPTION:Record<string,string>={heating:'Puissance de chauffe, dernière demi-heure',solar:'Soleil dehors, dernière demi-heure'};
 /** Opens Home Assistant's own details window (history, attributes) for an entity, as any dashboard card does. */
 export const moreInfo=(e:Event,entityId:string)=>{e.stopPropagation();(e.currentTarget as HTMLElement).dispatchEvent(new CustomEvent('hass-more-info',{detail:{entityId},bubbles:true,composed:true}));};
 /** The entity behind each tile: the one a tap opens. */
@@ -661,7 +661,7 @@ const ownTiles=(v:View,list:Tile[])=>list.filter(t=>!v.inherited?.[tileKeys[t.la
 export function tiles(v:View,config:Config):Tile[] {
   const o=v.observations,a=v.assessment,mods=new Set(config.modules??[]),list:Tile[]=[],air=a.features?.air;
   if(mods.has('humidity')&&o.indoor_humidity){const h=numeric(o.indoor_humidity),hum=a.features?.humidity,wet=a.needs.includes('dry'),outside=hum?.source==='outside',out=h!==null&&(hum?.degree!==undefined?hum.degree>=2:wet);
-    list.push({ic:'drop',label:'Humidité',value:number(h),unit:'%',note:h===null?gone(o.indoor_humidity):(humidityLabel(v)?.toLowerCase()??(outside?'humide dehors aussi':'normale')),level:out?'watch':'calm',out,
+    list.push({ic:'drop',label:'Humidité',value:h===null?'—':number(Math.round(h)),unit:'%',note:h===null?gone(o.indoor_humidity):(humidityLabel(v)?.toLowerCase()??(outside?'humide dehors aussi':'normale')),level:out?'watch':'calm',out,
       trend:h===null?undefined:trendOf(v,'humidity',hum?.status==='high'||hum?.status==='low'?hum.status:null,hum?.minimum!=null&&hum?.maximum!=null?[hum.minimum,hum.maximum]:null)});}
   if(mods.has('air')&&o.co2){const c=numeric(o.co2),high=air?.co2_status==='high';
     list.push({ic:'air',label:'CO₂',value:number(c),unit:'ppm',note:c===null?gone(o.co2):high?'à renouveler':'normal',level:high?(a.level==='urgent'?'urgent':'watch'):'calm',out:high,trend:c===null?undefined:trendOf(v,'co2',high?'high':null)});}
@@ -673,7 +673,7 @@ export function tiles(v:View,config:Config):Tile[] {
       list.push({ic:open?'open':'window',label:'Fenêtres',value:`${open}/${contacts.length}`,note:flagged?'à refermer':open?(open===1&&a.features?.ventilation?.opened_minutes!=null?`ouverte depuis ${Math.round(a.features.ventilation.opened_minutes)} min`:open>1?`${open} ouvertes`:'1 ouverte'):'toutes fermées',level:flagged?'action':'neutral',out:flagged});}}
   if(mods.has('shutters')){const s=a.sun,solar=numeric(o.solar),entering=(a.openings??[]).some(x=>x.flags.includes('sun_entering'));
     if(s||solar!==null){const night=!!s&&s.elevation<=0,value=night?'Nuit':solar===null?'non mesuré':solar<150?'Faible':solar<500?'Moyen':'Fort';
-      list.push({ic:night?'moon':'sun',label:'Soleil',value,note:entering?'entre dans la pièce':night?'pas d’apport':solar===null?'non mesuré':`${number(Math.round(solar))} W/m²${o.solar?.detail==='shaded_estimate'?' · estimé, station à l’ombre':''}`,level:entering?'action':'neutral',out:entering,trend:solar===null?undefined:trendOf(v,'solar',null)});}}
+      list.push({ic:night?'moon':'sun',label:'Soleil',value,note:entering?'entre dans la pièce':night?'pas d’apport':solar===null?'non mesuré':`${number(Math.round(solar))} W/m²${o.solar?.detail==='shaded_estimate'?' · estimé, station à l’ombre':''}`,level:entering?'action':'neutral',out:entering,trend:solar===null||night?undefined:trendOf(v,'solar',null)});}}
   // A connected cover: where it stands, and who moves it (Adaptive Cover Pro, the person, or nobody yet).
   if(mods.has('shutters'))for(const s of a.features?.shutters??[]){if(s.mode!=='connected')continue;
     const p=s.position,shut=p===0||(p==null&&s.state==='closed'),open=p===100||(p==null&&s.state==='open'),act=s.manual_override!==true&&!!s.advice;
@@ -820,7 +820,7 @@ function chipValues(v:View,which:readonly Chip[]):{ic:string;text:string;out:boo
   const o=v.observations,a=v.assessment,out=[];
   for(const c of which){
     if(c==='temperature'){const t=numeric(o.indoor_temperature);if(t!==null)out.push({ic:'temp',text:number(t)+' °C',out:a.needs.includes('cool')||a.needs.includes('heat'),entity:o.indoor_temperature?.source??undefined});}
-    if(c==='humidity'){const h=numeric(o.indoor_humidity),degree=a.features?.humidity?.degree;if(h!==null)out.push({ic:'drop',text:number(h)+' %',out:degree!==undefined?degree>=2:a.needs.includes('dry'),entity:o.indoor_humidity?.source??undefined});}
+    if(c==='humidity'){const h=numeric(o.indoor_humidity),degree=a.features?.humidity?.degree;if(h!==null)out.push({ic:'drop',text:number(Math.round(h))+' %',out:degree!==undefined?degree>=2:a.needs.includes('dry'),entity:o.indoor_humidity?.source??undefined});}
     if(c==='co2'){const x=numeric(o.co2);if(x!==null)out.push({ic:'air',text:number(x)+' ppm',out:a.features?.air?.co2_status==='high',entity:o.co2?.source??undefined});}
   }
   return out;
@@ -837,8 +837,9 @@ interface Stat {label:string;value:string;entity?:string;note?:string}
 interface Module {key:Piece;ic:string;title:string;src?:string;main?:Tile;rows?:{room:string;tile:Tile}[];sub?:string;extra?:TemplateResult|typeof nothing;stats:Stat[];level:string;
   /** A curve other than the main measure's: the sun outside for the openings. */
   curve?:Trend;
-  /** Several measures shown one after the other, each the same way (the air: CO₂, VOC, particles). */
-  slides?:{label:string;tile:Tile}[]}
+  /** Several measures shown one after the other, each the same way (the air: CO₂, VOC, particles; one air's rooms'
+   * humidity): its name, the room it is measured in, the measure. */
+  slides?:{label:string;room?:string;tile:Tile}[]}
 const stat=(t:Tile,label=tx(t.label)):Stat=>({label,value:`${tx(t.value)}${t.unit&&t.value!=='—'?' '+t.unit:''}`,entity:t.entity,note:t.note});
 const PIECE_LOOK:Record<Piece,[string,string]>={temperature:['temp','Température'],humidity:['drop','Humidité'],air:['air','Air'],openings:['window','Ouvertures'],heating:['heat','Chauffage']};
 /** The modules of a room (and of the rooms sharing its air), each only when it has something to show. */
@@ -851,14 +852,16 @@ export function modules(v:View,config:Config,partners:View[]=[],o:{scale?:Templa
   if(mods.has('temperature')){const main=roomTemperature(v)[0];
     if(main){const d=f?.day_range,te=numeric(v.observations.outdoor_temperature),slope=f?.trends?.curves?.temperature?.slope;
       const stats:Stat[]=[...partners.flatMap(p=>roomTemperature(p).map(t=>stat(t,p.title))),
-        ...(d?[{label:t('Mini 24 h'),value:number(d.min)+' °C'},{label:t('Maxi 24 h'),value:number(d.max)+' °C'}]:[]),
         ...(te!==null?[{label:t('Dehors'),value:number(te)+' °C',entity:v.observations.outdoor_temperature?.source??undefined}]:[]),
         ...(slope!=null&&!d?[{label:t('Tendance'),value:(slope>0?'+':'')+number(slope)+' °C/h'}]:[])];
       out.push({key:'temperature',ic:'temp',title:PIECE_LOOK.temperature[1],src:many?v.title:undefined,main,sub:tx(main.note),extra:o.scale??nothing,stats:stats.slice(0,4),level:level(main)});}}
   const hum=find(['Humidité']);
   if(hum.length){const h=f?.humidity,lead=hum.find(x=>x.tile.out)??hum[0],ho=numeric(v.observations.outdoor_humidity);
-    out.push({key:'humidity',ic:'drop',title:PIECE_LOOK.humidity[1],src:hum.length===1&&many?hum[0].room:undefined,main:lead.tile,rows:hum.length>1?hum:undefined,
-      sub:hum.length>1?hum.filter(x=>x.tile.out).map(x=>`${x.room} : ${tx(x.tile.note)}`).join(' · ')||tx(lead.tile.note):tx(lead.tile.note),
+    // One air's rooms one after the other, the most humid first, each drawn the same way as the air's measures.
+    const order=[...hum.filter(x=>x.tile.out),...hum.filter(x=>!x.tile.out)];
+    out.push({key:'humidity',ic:'drop',title:PIECE_LOOK.humidity[1],src:hum.length===1&&many?hum[0].room:undefined,main:lead.tile,
+      slides:hum.length>1?order.map(x=>({label:t('Humidité'),room:x.room,tile:x.tile})):undefined,
+      sub:tx(lead.tile.note),
       stats:[...(h?.minimum!=null&&h?.maximum!=null?[{label:t('Plage'),value:`${number(h.minimum)}–${number(h.maximum)} %`}]:[]),
         ...(ho!==null?[{label:t('Dehors'),value:number(ho)+' %',entity:v.observations.outdoor_humidity?.source??undefined}]:[]),
         ...(h?.dew_point!=null?[{label:t('Rosée'),value:number(h.dew_point)+' °C',note:'Point de rosée'}]:[])],level:level(lead.tile)});}
@@ -867,8 +870,8 @@ export function modules(v:View,config:Config,partners:View[]=[],o:{scale?:Templa
     const name=(x:typeof lead)=>many&&x.room!==lead.room?`${tx(x.tile.label)} · ${x.room}`:tx(x.tile.label);
     // Each measure of the air drawn the same way, one after the other (30 October, evening): those out of range first.
     const order=[...measures.filter(x=>x.tile.out),...measures.filter(x=>!x.tile.out)];
-    out.push({key:'air',ic:'air',title:PIECE_LOOK.air[1],src:many?lead.room:undefined,main:lead.tile,
-      slides:order.length>1?order.map(x=>({label:name(x),tile:x.tile})):undefined,
+    out.push({key:'air',ic:'air',title:PIECE_LOOK.air[1],src:many&&order.length<2?lead.room:undefined,main:lead.tile,
+      slides:order.length>1?order.map(x=>({label:tx(x.tile.label),room:many?x.room:undefined,tile:x.tile})):undefined,
       sub:`${tx(lead.tile.label)} · ${tx(lead.tile.note)}`,
       stats:air.filter(x=>order.length>1?!measures.includes(x):x!==lead).map(x=>stat(x.tile,name(x))),level:level(lead.tile)});}
   // The windows and the sun are the shared air's: said once, by the first room (as the tiles did).
@@ -884,7 +887,7 @@ export function modules(v:View,config:Config,partners:View[]=[],o:{scale?:Templa
     const target=numeric(v.observations.heating_target),ti=numeric(v.observations.indoor_temperature),day=f?.heating_day?.minutes;
     const hm=(m:number)=>m<60?`${m} min`:`${Math.floor(m/60)} h${m%60?' '+String(m%60).padStart(2,'0'):''}`;
     const stats:Stat[]=[...(target!==null?[{label:t('Consigne'),value:number(target)+' °C',entity:v.observations.heating_target?.source??undefined}]:[]),
-      ...(target!==null&&ti!==null?[{label:t('Écart'),value:`${ti-target>0?'+':ti-target<0?'−':''}${number(Math.abs(Math.round((ti-target)*10)/10))} °C`}]:[]),
+      ...(target!==null&&ti!==null&&!['frost','eco','away','off','sleep'].includes(String(v.observations.heating_mode?.value??''))?[{label:t('Écart'),value:`${ti-target>0?'+':ti-target<0?'−':''}${number(Math.abs(Math.round((ti-target)*10)/10))} °C`}]:[]),
       ...(day!=null?[{label:t('Chauffe 24 h'),value:day?hm(day):t('aucune')}]:[])];
     out.push({key:'heating',ic:'heat',title:PIECE_LOOK.heating[1],src:many?lead.room:undefined,main:lead.tile,rows:heat.length>1?heat:undefined,sub:lead.tile.note?tx(lead.tile.note):undefined,stats,curve:lead.tile.curve,level:'calm'});}
   return out;
@@ -906,8 +909,8 @@ export function moduleCard(m:Module,soft=true):TemplateResult {
   </div>`;
 }
 /** The air's measures one after the other: each its name, its value and way, its note, its half hour. */
-function modSlides(list:{label:string;tile:Tile}[],value:(t:Tile)=>TemplateResult,hit:(t:Tile,body:TemplateResult,cls:string)=>TemplateResult):TemplateResult {
-  return html`<hestia-mod-slides .items=${list.map(x=>html`<span class=${'nc-mod-tag'+(x.tile.out?' out':'')}>${x.label}</span>
+function modSlides(list:{label:string;room?:string;tile:Tile}[],value:(t:Tile)=>TemplateResult,hit:(t:Tile,body:TemplateResult,cls:string)=>TemplateResult):TemplateResult {
+  return html`<hestia-mod-slides .items=${list.map(x=>html`<div class="nc-mod-taglne"><span class=${'nc-mod-tag'+(x.tile.out?' out':'')}>${x.label}</span>${x.room?html`<span class="nw-chip nc-src">${x.room}</span>`:nothing}</div>
     <div class="nc-mod-line">${hit(x.tile,html`<b>${value(x.tile)}</b>`,'nc-mod-v')}<p class="nc-mod-sub">${tx(x.tile.note)}</p></div>${x.tile.trend?sparkline(x.tile.trend):html`<div class="nc-spark"></div>`}`)}></hestia-mod-slides>`;
 }
 /** « À la carte », compact: the measure, its way and its half hour, nothing else. */
@@ -930,18 +933,22 @@ const moduleGrid=(list:Module[],soft:boolean)=>{const wide=list.filter(m=>m.key=
 /** « À venir », as Hestia Weather's forecasts beside « Aujourd'hui »: each subject's next hours in its own module (what to do as
  * its title, the graph, what it changes), the next gesture, and outside. Modules of the same make as « Maintenant ». */
 function upcoming(v:View,config:Config,plage:(s:HorizonSubject)=>[number,number]|null):TemplateResult|typeof nothing {
-  const a=v.assessment,f=a.features,shown=horizonShown(f?.horizon??[],config.horizon_mode??'always',config.horizon_subjects);
-  const mods:TemplateResult[]=shown.map(h=>html`<div class="nc-mod nc-mod-h24" data-piece=${h.subject}>
-      <div class="nc-mod-h"><span class="nc-ic">${icon(h.subject==='humidity'?'drop':'temp')}</span><b>${h.subject==='humidity'?t('Humidité'):t('Température')}</b><span class="nw-chip nc-src">${horizonHead(h)}</span></div>
-      <div class="nc-horizon">${horizonChart(h,plage(h.subject))}</div><p class="nc-mod-sub">${horizonResult(h)}</p>${horizonLegend(h)}</div>`);
-  // The next gesture: what « plus tard » offers in the banner, said here once.
+  const a=v.assessment,f=a.features;
+  // Only what says something: a gesture compared with doing nothing, or a forecast that leaves your range.
+  const leaves=(h:Horizon)=>{const p=plage(h.subject),all=[...h.base,...(h.gesture??[])];return !!p&&all.length>0&&(Math.min(...all)<p[0]||Math.max(...all)>p[1]);};
+  const shown=horizonShown(f?.horizon??[],'always',config.horizon_subjects).filter(h=>h.kind!=='trend'||leaves(h));
+  const mods:TemplateResult[]=shown.map(h=>html`<div class="nc-mod nc-mod-h24 nc-mod-wide" data-piece=${h.subject}>
+      <div class="nc-mod-h"><span class="nc-ic">${icon(h.subject==='humidity'?'drop':'temp')}</span><b>${h.subject==='humidity'?t('Humidité'):t('Température')}</b><span class="nc-mod-h24-what">${horizonHead(h)}</span></div>
+      <p class="nc-mod-sub nc-mod-h24-result">${horizonResult(h)}</p>
+      <div class="nc-horizon">${horizonChart(h,plage(h.subject))}</div>${horizonLegend(h)}</div>`);
+  // The next gesture, when there is one: what « plus tard » would have said in the banner.
   const later=slides(v,['later']).slice(1)[0];
-  mods.push(html`<div class="nc-mod" data-piece="next"><div class="nc-mod-h"><span class="nc-ic">${icon(later?.disk??'clock')}</span><b>${t('Prochain geste')}</b></div>
-    <div class="nc-mod-v"><b class="nc-mod-text">${later?tx(later.title):t('Rien de prévu')}</b></div><p class="nc-mod-sub">${later?.line?tl(later.line):t('Le conseil change dès que la pièce le demande.')}</p></div>`);
-  const te=numeric(v.observations.outdoor_temperature),rain=a.constraints.includes('rain_soon')||a.rain_soon_minutes!=null;
-  if(te!==null||v.observations.rain)mods.push(html`<div class="nc-mod" data-piece="outside"><div class="nc-mod-h"><span class="nc-ic">${icon(rain?'rain':'cloud')}</span><b>${t('Dehors')}</b></div>
-    <div class="nc-mod-v"><b class="nc-mod-text">${rain?t('Pluie {when}',{when:tx(rainWhen(a))}):t('Pas de pluie annoncée')}</b></div>${te!==null?html`<p class="nc-mod-sub">${t('{n} °C dehors en ce moment',{n:number(te)})}</p>`:nothing}</div>`);
-  return html`<div class="nc-mods nc-upcoming"><div class="nc-mod-grid">${mods}</div></div>`;
+  if(later)mods.push(html`<div class="nc-mod" data-piece="next"><div class="nc-mod-h"><span class="nc-ic">${icon(later.disk??'clock')}</span><b>${t('Prochain geste')}</b></div>
+    <div class="nc-mod-v"><b class="nc-mod-text">${tx(later.title)}</b></div>${later.line?html`<p class="nc-mod-sub">${tl(later.line)}</p>`:nothing}</div>`);
+  // Outside, only when rain is on its way.
+  if(a.constraints.includes('rain_soon')||a.rain_soon_minutes!=null)mods.push(html`<div class="nc-mod" data-piece="outside"><div class="nc-mod-h"><span class="nc-ic">${icon('rain')}</span><b>${t('Dehors')}</b></div>
+    <div class="nc-mod-v"><b class="nc-mod-text">${t('Pluie {when}',{when:tx(rainWhen(a))})}</b></div></div>`);
+  return mods.length?html`<div class="nc-mods nc-upcoming"><div class="nc-mod-grid">${mods}</div></div>`:nothing;
 }
 /** « En ce moment », on the right of the banner as in Hestia Weather: the temperature, then its day (or the room beside it). */
 function nowBlock(v:View,partners:View[]):TemplateResult|typeof nothing {
@@ -964,7 +971,9 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
   const band:[number,number]|null=f?.season&&marks.includes('band')?[f.season.minimum,f.season.maximum]:null;
   const sc=(config.modules??[]).includes('temperature')&&marks.length&&ti!==null
     ?scale({band,day:marks.includes('day')?f?.day_range??null:null,now:ti,out:marks.includes('out')?te:null,nowEntity:v.observations.indoor_temperature?.source??undefined,outEntity:v.observations.outdoor_temperature?.source??undefined}):null;
-  const all=slides(v,config.banner_blocks),top=all[0]?.level??a.level,name=config.title||(partners.length?v.volume_name:null)||v.title;
+  // One air whose gesture comes from the other room: the banner says that room's advice, its reason and what it learned.
+  const leader=a.reason==='shared_volume'?partners.find(p=>p.title===a.features?.volume?.lead&&p.assessment.reason!=='shared_volume'):undefined;
+  const all=slides(leader??v,config.banner_blocks),top=all[0]?.level??a.level,name=config.title||(partners.length?v.volume_name:null)||v.title;
   const still=config.animations===false||config.rotate===false;
   // A measure out of range is framed in orange only when the room asks for a gesture.
   const soft=!['action','urgent'].includes(top);
@@ -1014,10 +1023,12 @@ export function roomCard(v:View,config:Config,st:CardState,format:Format='full',
   const now=nowBlock(v,partners);
   // « Maintenant », « Prochaines heures », « Détails »: the full card's sections, as Hestia Weather's « Aujourd’hui » and « Prévisions ».
   const measures=mods.length>0&&config.show_measures!==false,hasGraph=graph!==nothing;
+  // « À venir » says only what is worth it; with nothing to say, it is left out.
+  const coming=config.show_horizon===false?nothing:upcoming(v,config,plage);
   // Always « Maintenant », then « À venir », then « Détails », whatever order the settings list them in.
   const sections=(blocks:readonly string[])=>{const parts=['measures','horizon','details'].filter(b=>blocks.includes(b)).map(b=>
       b==='measures'&&measures?part(t('Maintenant'),summary,moduleGrid(mods,soft))
-      :b==='horizon'&&config.show_horizon!==false?part(t('À venir'),t('Prochaines 24 h'),upcoming(v,config,plage))
+      :b==='horizon'&&config.show_horizon!==false&&coming!==nothing?part(t('À venir'),t('Prochaines 24 h'),coming as TemplateResult)
       :b==='details'&&config.show_details!==false?fold({label:t('Détails'),summary:'',open:st.detailsOpen,onToggle:()=>st.toggle('detailsOpen'),id:st.uid+'-details',body:detailList}):null).filter(x=>x!==null);
     return parts.length?html`<div class="nc-body nc-sections">${parts}</div>`:nothing;};
   if(format==='tile'||format==='intermediate'){
@@ -1128,14 +1139,21 @@ export class HestiaModSlides extends LitElement {
   @state() private index=0;
   @state() private paused=false;
   private timer?:ReturnType<typeof setInterval>;
+  private startX:number|null=null;
+  private dragged=false;
   createRenderRoot(){return this;}
   connectedCallback(){super.connectedCallback();this.timer=setInterval(()=>{
     if(this.items.length>1&&!this.paused&&!matchMedia('(prefers-reduced-motion: reduce)').matches)this.index=(this.index+1)%this.items.length;},5000);}
   disconnectedCallback(){super.disconnectedCallback();clearInterval(this.timer);this.timer=undefined;}
   protected render(){
     const n=this.items.length,i=this.index%Math.max(1,n);
-    return html`<div class="nc-mslides" @mouseenter=${()=>{this.paused=true;}} @mouseleave=${()=>{this.paused=false;}}
-        @click=${(e:Event)=>{if(!(e.target as HTMLElement).closest('.nc-mdots,.nc-hit'))this.index=(i+1)%n;}}>
+    // Swiped with a finger or dragged with the mouse: left for the next one, right for the one before; a tap shows the next.
+    const down=(e:PointerEvent)=>{this.startX=e.clientX;this.dragged=false;};
+    const up=(e:PointerEvent)=>{if(this.startX===null)return;const dx=e.clientX-this.startX;this.startX=null;
+      if(Math.abs(dx)>30){this.dragged=true;this.index=(i+(dx<0?1:n-1))%n;}};
+    return html`<div class="nc-mslides" @mouseenter=${()=>{this.paused=true;}} @mouseleave=${()=>{this.paused=false;this.startX=null;}}
+        @pointerdown=${down} @pointerup=${up} @pointercancel=${()=>{this.startX=null;}}
+        @click=${(e:Event)=>{if(this.dragged){this.dragged=false;e.stopPropagation();return;}if(!(e.target as HTMLElement).closest('.nc-mdots,.nc-hit'))this.index=(i+1)%n;}}>
       <div class="nc-mslides-stack">${this.items.map((x,k)=>html`<div class=${'nc-mslide'+(k===i?' on':'')} aria-hidden=${k===i?'false':'true'}>${x}</div>`)}</div>
       <div class="nc-mdots" role="tablist">${this.items.map((_,k)=>html`<button type="button" role="tab" aria-selected=${k===i} aria-label=${t('Mesure {n}',{n:k+1})} class=${k===i?'on':''} @click=${()=>{this.index=k;}}></button>`)}</div>
     </div>`;

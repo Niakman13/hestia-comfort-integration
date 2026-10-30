@@ -653,7 +653,8 @@ test('the modules: one air shows each room’s humidity, its windows and sun onc
   const config={type:'custom:hestia-comfort-card',modules:['windows','air','humidity','shutters','coordination','temperature']};
   const list=modules(room('Salon',58),config,[room('Cuisine',66)]);
   const hum=list.find(m=>m.key==='humidity');
-  assert.deepEqual(hum.rows.map(r=>r.room),['Salon','Cuisine']);
+  // One air's rooms one after the other (31 October), those out of range first; here neither is: the rooms' order.
+  assert.deepEqual(hum.slides.map(r=>r.room),['Salon','Cuisine']);
   const open=list.find(m=>m.key==='openings');
   assert.equal([open.main,...open.stats].filter(x=>(x.label??'')==='Fenêtres').length,1);
   assert.equal(list[0].key,'temperature');
@@ -713,4 +714,18 @@ test('the Air module shows each of its measures the same way, one after the othe
   assert.deepEqual(air.slides.map(x=>x.label),['CO₂','COV']);
   // The banner keeps one advice: both reasons are on its line.
   assert.equal(slides(v).length,1);
+});
+test('one air: the banner says the leading room’s advice, with what it learned (31 October)',()=>{
+  const flat=t=>t==null?'':Array.isArray(t)?t.map(flat).join(''):typeof t!=='object'?String(t):t.strings?t.strings.map((x,i)=>x+(i<t.values.length?flat(t.values[i]):'')).join(''):'';
+  const lead=fresh();lead.title='Cuisine';
+  lead.observations={...lead.observations,co2:{value:1250,quality:'valid',source:'sensor.co2',unit:'ppm'}};
+  lead.assessment={...lead.assessment,level:'action',reason:'air_needed',action:'ouvrir',needs:['air'],
+    features:{...lead.assessment.features,air:{co2_status:'high',pm25_status:'not_configured',voc_status:'ok',voc_unit:null,purifier:{on:null,speed:null},coverage:'',message:''},
+      learned:{now:1250,after:700,minutes:10,measure:'co2',openings:6,days:19,precision:{temperature:.4,humidity:1}}}};
+  const salon=fresh();salon.title='Salon';
+  salon.assessment={...salon.assessment,level:'action',reason:'shared_volume',action:'ouvrir',needs:['dry'],features:{...salon.assessment.features,volume:{lead:'Cuisine',reason:'air_needed',action:'ouvrir'}}};
+  const st={why:false,tilesOpen:true,detailsOpen:false,uid:'t',toggle(){}};
+  const card=flat(roomCard(salon,{type:'custom:hestia-comfort-card',format:'full',modules:['air']},st,'full',[lead]));
+  // The « i » says it: the advice comes from what the leading room learned.
+  assert.match(card,/conseil optimisé, d’après 6 aérations/);
 });
