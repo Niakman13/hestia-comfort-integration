@@ -70,6 +70,8 @@ class Facts:
     weather_installed: bool = False
     free_areas: list = field(default_factory=list)
     """Home Assistant rooms with a thermometer that no Hestia room follows: (area_id, name)."""
+    wled: list = field(default_factory=list)
+    """Who the WLED lights show, as « Notifications lumineuses » sets them: « Tout le logement » or room names."""
     version: str = ""
     alarm: str = ""
     """The home's alarm as read: « Alarmo · désarmée », "" without one."""
@@ -182,7 +184,7 @@ def report(f):
     # Extensions: Hestia's own bricks, then other integrations Hestia reads by itself, each making the advice better where it is used.
     vt = [r.title for r in f.rooms if r.thermostat]
     linked = {"hestia_weather": [f.weather] if f.weather else [], thermostats.PLATFORM: vt, people.PLATFORM: [f.alarm] if f.alarm else [],
-              **{key: [r.title for r in f.rooms if key in r.drivers] for key in cover_link.ADAPTERS}}
+              **{key: [r.title for r in f.rooms if key in r.drivers] for key in cover_link.ADAPTERS}, "wled": f.wled}
     installed = {"hestia_weather": f.weather_installed}
     extensions = []
     for ext in EXTENSIONS:
@@ -191,7 +193,7 @@ def report(f):
         text = (t("relié · {place}", place=f.weather) if ext["key"] == "hestia_weather" else f.alarm if ext["key"] == people.PLATFORM
                 else _count(len(found), "{n} pièce", "{n} pièces") + " · " + ", ".join(found)) if found and state != "off" else t("désactivée") if state == "off" else t(ext[state])
         extensions.append({**{k: ext[k] for k in ("key", "name", "official", "url")}, **{k: t(ext[k]) for k in ("role", "use", "without")},
-                           "state": state, "level": "ok" if found else "none", "text": text, "rooms": found if ext["key"] == thermostats.PLATFORM or ext["key"] in cover_link.ADAPTERS else []})
+                           "state": state, "level": "ok" if found else "none", "text": text, "rooms": found if ext["key"] in (thermostats.PLATFORM, "wled") or ext["key"] in cover_link.ADAPTERS else []})
     # Installed integrations Confort does not read yet: shown so that the person can ask for them.
     others = [{**o, "use": t(o["use"])} for o in OTHERS if o["key"] in f.installed]
     versions = [{"level": "ok", "text": t("Intégration {version}", version=f.version), "why": t("avec sa carte")},
@@ -235,6 +237,11 @@ EXTENSIONS = (
      "use": N_("Modes, verrou et ombrage automatique : Confort sait quand le volet se ferme seul au soleil, et ne demande rien sur un volet verrouillé."),
      "without": N_("Sans lui : le soleil est estimé par la façade de chaque ouvrant."),
      "found": N_("installé, aucun volet relié à un ouvrant"), "missing": N_("non installé")},
+    {"key": "wled", "name": "WLED", "official": False, "url": "https://github.com/wled/WLED",
+     "role": N_("Bandeaux LED, effets et segments"),
+     "use": N_("Bandeaux LED : leurs effets (respiration, vague…) et leurs segments sont proposés dans les notifications lumineuses, un segment par pièce."),
+     "without": N_("Sans lui : les notifications lumineuses utilisent les ampoules couleur, sans effets."),
+     "found": N_("installé, aucune notification lumineuse"), "missing": N_("non installé")},
     {"key": people.PLATFORM, "name": people.NAME, "official": False, "url": "https://github.com/nielsfaber/alarmo",
      "role": N_("Maison vide, nuit, fenêtre ouverte alarme armée"),
      "use": N_("Maison vide, nuit, vacances : pas d’aération conseillée quand personne n’est là, et un avertissement si une fenêtre reste ouverte alarme armée."),
@@ -347,5 +354,11 @@ async def facts(hass, version):
     loaded = getattr(getattr(hass, "config", None), "components", None) or set()
     # The original Adaptive Cover is read like the Pro one.
     installed = {d for d in DOMAINS if d in loaded} | ({"adaptive_cover_pro"} if any(p in loaded for p in cover_link.AdaptiveCoverPro.PLATFORMS) else set())
-    return Facts(alarm=alarm, installed=frozenset(installed), disabled=frozenset(disabled), rooms=rooms, exterior=exterior, configured=bool(service.home.get("configured")), weather=weather,
+    # The WLED lights the light notifications drive: for the whole home, or by room.
+    registry, lights = er.async_get(hass), service.home.get("lights") or {}
+    is_wled = lambda rule: bool(rule) and getattr(registry.async_get(rule["entity_id"]), "platform", None) == "wled"
+    titles = {e.entry_id: e.title for e in service.entries()}
+    wled = ([t("Tout le logement")] if is_wled(lights.get("home")) else []) if lights.get("mode") != "rooms" else \
+        [titles.get(k, k) for k, rule in (lights.get("rooms") or {}).items() if is_wled(rule)]
+    return Facts(alarm=alarm, installed=frozenset(installed), disabled=frozenset(disabled), rooms=rooms, exterior=exterior, configured=bool(service.home.get("configured")), weather=weather, wled=wled,
                  weather_installed=bool(link.get("installed") and link.get("places")), free_areas=free, version=version)

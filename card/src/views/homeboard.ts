@@ -58,32 +58,35 @@ export function themes(d:PeriodData|undefined,period:Period):TemplateResult {
     <b>${d?value:'…'}${d&&value!=='—'?html`<small>${unit}</small>`:nothing}</b><span class="nh-note">${d?t(g?.letter||value!==DASH?note:none):t('chargement')}</span></div>`)}</div>`;
 }
 
-export interface ChartRoom {entry_id:string;title:string;level:Level|'neutral';now:number|null}
+export interface ChartRoom {entry_id:string;title:string;level:Level|'neutral';now:number|null;
+ /** This room's comfort range for the season; none for a room left unheated. */ band:[number,number]|null}
 export interface ChartFloor {name:string;mean:number|null;rooms:ChartRoom[]}
 
 /** One line per room on a shared scale: the period's range, a dot for now (day) or the mean (week, month). */
-export function roomsChart(o:{floors:ChartFloor[];data:PeriodData|undefined;period:Period;band:[number,number]|null;outNow:number|null}):TemplateResult {
+export function roomsChart(o:{floors:ChartFloor[];data:PeriodData|undefined;period:Period;outNow:number|null}):TemplateResult {
   const byId=new Map((o.data?.rooms??[]).map(r=>[r.entry_id,r]));
   const lines=o.floors.flatMap(f=>f.rooms.map(r=>{const p=byId.get(r.entry_id),dot=o.period==='day'?r.now??p?.mean??null:p?.mean??r.now;
     const lo=[p?.min,o.period==='day'?r.now:null].filter((x):x is number=>x!=null),hi=[p?.max,o.period==='day'?r.now:null].filter((x):x is number=>x!=null);
     return {...r,dot,min:lo.length?Math.min(...lo):null,max:hi.length?Math.max(...hi):null};}));
-  const values=lines.flatMap(l=>[l.min,l.max,l.dot]).filter((x):x is number=>x!=null).concat(o.band??[]);
+  const values=lines.flatMap(l=>[l.min,l.max,l.dot,...(l.band??[])]).filter((x):x is number=>x!=null);
+  // The scale's degrees stand out within the range only when every room has the same one.
+  const bands=lines.map(l=>l.band).filter((b):b is [number,number]=>!!b),same=bands.length&&bands.every(b=>b[0]===bands[0][0]&&b[1]===bands[0][1])?bands[0]:null;
   const from=Math.floor((values.length?Math.min(...values):18)-0.5),to=Math.ceil((values.length?Math.max(...values):24)+0.5);
   const at=(t:number)=>`${((Math.min(Math.max(t,from),to)-from)/(to-from)*100).toFixed(1)}%`;
   const ticks=[];for(let t=Math.ceil(from/2)*2;t<=to;t+=2)if(t>from)ticks.push(t);
-  const bandStyle=o.band?`left:${at(o.band[0])};width:calc(${at(o.band[1])} - ${at(o.band[0])})`:'display:none';
+  const bandStyle=(b:[number,number]|null)=>b?`left:${at(b[0])};width:calc(${at(b[1])} - ${at(b[0])})`:'display:none';
   const out=o.data?.outdoor,outValue=o.period==='day'?o.outNow??out?.mean??null:out?.mean??o.outNow;
   const row=(l:typeof lines[number])=>html`<div class="nh-row" data-level=${l.level}>
     <span class="nh-name">${l.title}</span>
-    <span class="nh-track"><i class="nh-band-zone" style=${bandStyle}></i>
+    <span class="nh-track"><i class="nh-band-zone" style=${bandStyle(l.band)}></i>
       ${l.min!=null&&l.max!=null?html`<i class="nh-range" style=${`left:${at(l.min)};width:max(4px,calc(${at(l.max)} - ${at(l.min)}))`}></i>`:nothing}
       ${l.dot!=null?html`<i class="nh-dot" style=${`left:${at(l.dot)}`}></i>`:nothing}</span>
     <span class="nh-val">${l.dot!=null?number(Math.round(l.dot*10)/10)+'°':'—'}</span></div>`;
   let i=0;
   return html`<div class="nh-chart">
     <div class="nh-chart-head"><span class="nw-label">${t('Températures {period}',{period:t(PERIOD_WORD[o.period])})}</span>
-      <span class="nh-legend">${o.band?html`<span><i class="nh-key-band"></i>${t('votre plage')}</span>`:nothing}<span><i class="nh-key-range"></i>${t('mini–maxi')}</span><span><i class="nh-key-dot"></i>${o.period==='day'?t('maintenant'):t('moyenne')}</span></span></div>
-    <div class="nh-row nh-axis"><span></span><span class="nh-track">${ticks.map(t=>html`<em class=${o.band&&t>=o.band[0]&&t<=o.band[1]?'in':''} style=${`left:${at(t)}`}>${t}°</em>`)}</span><span></span></div>
+      <span class="nh-legend">${bands.length?html`<span><i class="nh-key-band"></i>${t('votre plage')}</span>`:nothing}<span><i class="nh-key-range"></i>${t('mini–maxi')}</span><span><i class="nh-key-dot"></i>${o.period==='day'?t('maintenant'):t('moyenne')}</span></span></div>
+    <div class="nh-row nh-axis"><span></span><span class="nh-track">${ticks.map(t=>html`<em class=${same&&t>=same[0]&&t<=same[1]?'in':''} style=${`left:${at(t)}`}>${t}°</em>`)}</span><span></span></div>
     ${o.floors.map(f=>{const rows=lines.slice(i,i+=f.rooms.length);
       return html`${o.floors.length>1?html`<div class="nh-floor"><span class="nw-label">${f.name}</span><span>${f.mean!=null?number(f.mean)+'°':''}</span></div>`:nothing}${rows.map(row)}`;})}
     ${outValue!=null?html`<div class="nh-row nh-out"><span class="nh-name">${t('Dehors')}</span><span class="nh-out-text">${out?html`${number(out.min)} → ${number(out.max)} °C`:nothing}</span><span class="nh-val">${number(Math.round(outValue*10)/10)}°</span></div>`:nothing}

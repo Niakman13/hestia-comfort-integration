@@ -1,3 +1,28 @@
+## 2.1.0b3 — Bêta : WLED à part, les plages de chaque pièce
+
+**En bref**
+
+- **WLED devient une extension** : on l’active ou non dans Extensions, comme les autres.
+- **Les notifications lumineuses ont leur encart** dans Réglages généraux.
+- **Chaque pièce montre sa propre plage** dans « Températures sur 24 h ».
+- **Le bilan respecte votre minimum** : une chambre réglée à 16 °C n’est plus invitée à chauffer sous 18 °C.
+
+### Avant de mettre à jour
+
+- Gardez Hestia Weather 3.1.0b2.
+
+### Améliorations
+
+- Dans Extensions, WLED a sa carte, son interrupteur et un lien pour l’ajouter à Home Assistant.
+- WLED activé : ses bandeaux et leurs segments sont proposés tout seuls dans les notifications lumineuses, avec leurs effets.
+- WLED coupé : ses lumières ne sont plus proposées ni commandées, et reviennent comme avant.
+- L’onglet Notifications d’une pièce renvoie vers Réglages généraux en mode « Tout le logement ».
+
+### Corrections
+
+- « Températures sur 24 h » dessinait la même plage pour toutes les pièces : chacune a maintenant la sienne, et une pièce non chauffée n’en a pas.
+- « Chauffez-la davantage l’hiver » suit le minimum de la pièce quand il est sous 18 °C.
+
 ## 2.1.0b2 — Bêta : une lumière qui montre le conseil, et les pollens
 
 **En bref**

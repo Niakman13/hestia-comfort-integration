@@ -80,7 +80,7 @@ async def async_review(hass, now=None):
             rooms = []
             for entry_id, title, config in rooms_in:
                 series = {k: _points(stats.get(i)) for k, i in wanted[entry_id].items() if i}
-                graded = review.room(series, outside, zone, config.get("heated", True) is not False)
+                graded = review.room(series, outside, zone, config.get("heated", True) is not False, (config.get("settings") or {}).get("minimum"))
                 # A room with a ventilation of its own is told to run it longer rather than to open.
                 ventilation = bool(config.get("sources", {}).get("ventilation"))
                 rooms.append({"entry_id": entry_id, "title": title, **graded, "advice": review.advice(graded, ventilation)})

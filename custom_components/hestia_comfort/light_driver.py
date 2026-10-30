@@ -48,8 +48,14 @@ class LightDriver:
     def rules(self):
         lights = self.configuration.home.get("lights") or {}
         if lights.get("mode") == "rooms":
-            return [{**rule, "follow": entry_id} for entry_id, rule in (lights.get("rooms") or {}).items()]
-        return [lights["home"]] if lights.get("home") else []
+            found = [{**rule, "follow": entry_id} for entry_id, rule in (lights.get("rooms") or {}).items()]
+        else:
+            found = [lights["home"]] if lights.get("home") else []
+        # WLED turned off in Extensions: its lights are no longer driven.
+        if "wled" in (self.configuration.home.get("disabled") or []):
+            registry = er.async_get(self.hass)
+            found = [r for r in found if getattr(registry.async_get(r["entity_id"]), "platform", None) != "wled"]
+        return found
 
     def verdict(self, follow):
         if follow == "home":

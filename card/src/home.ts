@@ -262,10 +262,12 @@ export class HestiaComfortHomeCard extends LitElement {
     const bandRange:[number,number]|null=season?[season.minimum,season.maximum]:own?[own.comfort_minimum!,own.comfort_maximum!]:null;
     const chartFloors:ChartFloor[]=floors.map(f=>({name:f.name,mean:f.mean,rooms:this.rooms.filter(r=>f.room_ids.includes(r.entry_id)).map(r=>{
       const lvl=(advice(r).level??r.assessment.level) as Level;
-      return {entry_id:r.entry_id,title:r.title,now:numeric(r.observations.indoor_temperature),level:r.assessment.features?.season?.heated===false&&!['action','urgent'].includes(lvl)?'neutral':lvl};})}));
+      const own=r.assessment.features?.season,unheated=own?.heated===false;
+      const range:[number,number]|null=unheated?null:own?[own.minimum,own.maximum]:r.comfort_minimum!=null&&r.comfort_maximum!=null?[r.comfort_minimum,r.comfort_maximum]:null;
+      return {entry_id:r.entry_id,title:r.title,now:numeric(r.observations.indoor_temperature),band:range,level:unheated&&!['action','urgent'].includes(lvl)?'neutral':lvl};})}));
     const render=(s:Section,inside:boolean)=>{switch(s){
       case 'themes':return themes(data,period);
-      case 'rooms_chart':return roomsChart({floors:chartFloors,data,period,band:bandRange,outNow:h.outdoor_temperature});
+      case 'rooms_chart':return roomsChart({floors:chartFloors,data,period,outNow:h.outdoor_temperature});
       case 'curve':return curve(data,period,bandRange);
       case 'rooms':return inside?h2`<div><span class="nw-label">${tt('Pièces')}</span>${tiles}</div>`
         :fold({label:tt('Pièces'),summary:tileSummary(all.length,outside.length,'pièce'),open:st.tilesOpen,onToggle:()=>st.toggle('tilesOpen'),id:this.uid+'-rooms',body:tiles,keep:outside.map(r=>this.roomTile(r))});

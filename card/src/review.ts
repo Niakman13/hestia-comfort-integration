@@ -10,7 +10,7 @@ type Warmth=Grade&{monthly:(Month&{min:number;mean:number;max:number;cold:number
  coldest:{value:number;month:string}|null;hottest:{value:number;month:string}|null;day:{winter:(number|null)[];summer:(number|null)[];outdoor_winter:(number|null)[];outdoor_summer:(number|null)[]}};
 type Humidity=Grade&{dry:number;humid:number;monthly:(Month&{mean:number;humid:number})[]};
 type Air=Grade&{split:number[];day:(number|null)[];monthly:(Month&{median:number})[]};
-type Advice={key:string;theme:'warmth'|'humidity'|'air';level:'action'|'benefit'|'neutral';share:number|null;hour?:number;gap?:number;rooms?:number;room?:string;entry_id?:string};
+type Advice={key:string;theme:'warmth'|'humidity'|'air';level:'action'|'benefit'|'neutral';share:number|null;below?:number;hour?:number;gap?:number;rooms?:number;room?:string;entry_id?:string};
 type RoomReview={entry_id:string;title:string;score:number|null;letter:string|null;themes:{warmth?:Warmth;humidity?:Humidity;air?:Air};advice?:Advice[]};
 type ThemeGrade={score:number|null;letter:string|null;rooms:number};
 export type Review={version:number;computed_at:string;start:string;outdoor:boolean;home:{score:number|null;letter:string|null;themes:Record<'warmth'|'humidity'|'air',ThemeGrade>;advice?:Advice[]};rooms:RoomReview[]};
@@ -32,7 +32,7 @@ const avg=(v:number[])=>v.length?v.reduce((a,b)=>a+b,0)/v.length:0;
 function adviceText(a:Advice):[string,string]{
  const share=a.share==null?'':num(a.share,0)+' %';
  switch(a.key){
-  case 'heat_more':return [t('Chauffez-la davantage l’hiver'),t('Sous 18 °C {share} du temps, de novembre à avril',{share})];
+  case 'heat_more':return [t('Chauffez-la davantage l’hiver'),t('Sous {below} °C {share} du temps, de novembre à avril',{share,below:num(a.below??18,0)})];
   case 'run_ventilation':return [t('Faites tourner la VMC plus longtemps'),t('Au-dessus de 70 % d’humidité {share} du temps',{share})];
   case 'air_daily':return [t('Aérez 10 minutes chaque jour'),t('Au-dessus de 70 % d’humidité {share} du temps',{share})];
   case 'air_at':return [t('Aérez 10 minutes vers {h} h',{h:a.hour??''}),t('Air à renouveler {share} du temps, surtout vers {h} h',{share,h:a.hour??''})];

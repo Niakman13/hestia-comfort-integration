@@ -42,7 +42,7 @@ export const EN_CARDS:Record<string,string>={
  'ouvrir':'opening','aérer':'airing','soleil sur les fenêtres':'sun on the windows','fermé':'closed','sans aérer':'without airing','sans soleil':'without sun','prévue':'forecast','aéré':'aired',
  'en aérant':'with airing','avec le soleil':'with the sun',
  // review.ts: the year's review
- 'Chauffez-la davantage l’hiver':'Heat it more in winter','Sous 18 °C {share} du temps, de novembre à avril':'Below 18 °C {share} of the time, from November to April',
+ 'Chauffez-la davantage l’hiver':'Heat it more in winter','Sous {below} °C {share} du temps, de novembre à avril':'Below {below} °C {share} of the time, from November to April',
  'Faites tourner la VMC plus longtemps':'Run the ventilation longer','Au-dessus de 70 % d’humidité {share} du temps':'Above 70% humidity {share} of the time','Aérez 10 minutes chaque jour':'Air for 10 minutes every day',
  'Aérez 10 minutes vers {h} h':'Air for 10 minutes around {h}:00','Air à renouveler {share} du temps, surtout vers {h} h':'Air to renew {share} of the time, mostly around {h}:00',
  'L’été, ouvrez en grand la nuit':'In summer, open wide at night','À l’aube, dehors est {gap} °C plus frais que la maison':'At dawn, outside is {gap} °C cooler than the house',

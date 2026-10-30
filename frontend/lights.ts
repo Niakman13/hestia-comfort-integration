@@ -26,12 +26,12 @@ export function newRule(entity_id:string,follow='home'):LightRule{return {entity
 export function look(rule:LightRule,key:string):LightLook{return rule.states[key]??defaults[key];}
 
 /** The lights that can show a colour; a plain on/off or dimmable bulb cannot. */
-export function colourLights(hass?:Hass){const states=hass?.states??{};
+export function colourLights(hass?:Hass,wled=true){const states=hass?.states??{};
  return Object.keys(states).filter(id=>id.startsWith('light.')&&((states[id].attributes?.supported_color_modes as string[]|undefined)??[]).some(m=>!['onoff','brightness','white'].includes(m)))
-  .map(id=>{const e=hass?.entities?.[id],device=e?.device_id?hass?.devices?.[e.device_id]:undefined;
+  .filter(id=>wled||hass?.entities?.[id]?.platform!=='wled').map(id=>{const e=hass?.entities?.[id],device=e?.device_id?hass?.devices?.[e.device_id]:undefined;
    return {id,name:String(states[id].attributes?.friendly_name??id),wled:e?.platform==='wled',strip:e?.platform==='wled'?String(device?.name_by_user??device?.name??'WLED'):''};}).sort((a,b)=>a.name.localeCompare(b.name));}
 /** A WLED strip cut into segments: each segment is a light of its own, able to show another room. */
-export function segmentsOf(hass:Hass|undefined,strip:string){return colourLights(hass).filter(l=>l.wled&&l.strip===strip);}
+export function segmentsOf(hass:Hass|undefined,strip:string){return colourLights(hass,true).filter(l=>l.wled&&l.strip===strip);}
 
 function rgb(hex:string){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));}
 /** Shows a state's look on the light at once, from the hub: the « Essayer » button. */
@@ -52,9 +52,9 @@ function preview(e:Event,label:string,l:LightLook){const root=(e.target as HTMLE
  strip.className='li-strip '+(l.effect==='keep'?'keep':l.effect==='off'?'off':motion(l.effect));
  strip.style.setProperty('--li-c',l.colour??'#aad6e5');strip.style.setProperty('--li-b',String(.7+l.brightness/330));}
 /** The light's settings, as in the approved mockup; every change is handed back to be saved at once. */
-export function lightEditor(o:{hass?:Hass;rule:LightRule|null;taken?:string;follows?:{value:string;label:string}[];busy:boolean;change:(rule:LightRule|null)=>void}){
- const lights=colourLights(o.hass),rule=o.rule,current=rule?lights.find(l=>l.id===rule.entity_id):undefined;
- const list=(o.hass?.states?.[rule?.entity_id??'']?.attributes?.effect_list as string[]|undefined)??[];
+export function lightEditor(o:{hass?:Hass;wled:boolean;rule:LightRule|null;taken?:string;follows?:{value:string;label:string}[];busy:boolean;change:(rule:LightRule|null)=>void}){
+ const lights=colourLights(o.hass,o.wled),rule=o.rule,current=rule?lights.find(l=>l.id===rule.entity_id):undefined;
+ const list=current?.wled||!o.hass?.entities?.[rule?.entity_id??'']||o.hass.entities[rule!.entity_id].platform!=='wled'?(o.hass?.states?.[rule?.entity_id??'']?.attributes?.effect_list as string[]|undefined)??[]:[];
  const set=(change:Partial<LightRule>)=>rule&&o.change({...rule,...change});
  const setLook=(key:string,change:Partial<LightLook>)=>rule&&o.change({...rule,states:{...rule.states,[key]:{...look(rule,key),...change}}});
  const pick=html`<label class="zone">${t('Lumière à piloter')}<select ?disabled=${o.busy} @change=${(e:Event)=>{const id=(e.target as HTMLSelectElement).value;o.change(id?(rule?{...rule,entity_id:id}:newRule(id,o.follows?.[0]?.value??'home')):null);}}>
@@ -62,7 +62,7 @@ export function lightEditor(o:{hass?:Hass;rule:LightRule|null;taken?:string;foll
   ${[...new Set(lights.filter(l=>l.wled).map(l=>l.strip))].map(strip=>html`<optgroup label=${'WLED · '+strip}>${lights.filter(l=>l.wled&&l.strip===strip).map(l=>html`<option value=${l.id} ?selected=${l.id===rule?.entity_id}>${l.name}</option>`)}</optgroup>`)}
   ${rule&&!current?html`<option value=${rule.entity_id} selected>${t('Introuvable · choisissez-en une autre')}</option>`:nothing}</select></label>`;
  if(!lights.length&&!rule)return frame(t('Lumière'),html`<p class="hint">${t('Aucune lumière couleur trouvée dans Home Assistant. Un bandeau WLED ou une ampoule couleur conviennent.')}</p>`,{className:'nk-field-section nk-plain'});
- return frame(t('Lumière'),html`<div class="li-host"><p class="hint">${t('La lumière prend la couleur du conseil. Hestia ne la commande que dans les conditions choisies ici.')}</p>
+ return frame(t('Lumière'),html`<div class="li-host"><p class="hint">${t('Hestia ne la commande que dans les conditions choisies ici.')}</p>
   <div class="li-grid">${pick}${rule&&o.follows?.length?html`<label class="zone">${t('Suit le conseil de')}<select ?disabled=${o.busy} @change=${(e:Event)=>set({follow:(e.target as HTMLSelectElement).value})}>
    ${o.follows.map(f=>html`<option value=${f.value} ?selected=${f.value===rule.follow}>${f.label}</option>`)}</select></label>`:nothing}</div>
   ${current?.wled?html`<p class="hint"><em class="ex-badge benefit">WLED</em> ${t('Ses effets sont proposés pour chaque état.')}${segmentsOf(o.hass,current.strip).length>1?' '+t('Ce bandeau a {n} segments : chacun peut montrer une autre pièce.',{n:segmentsOf(o.hass,current.strip).length}):''}</p>`:nothing}

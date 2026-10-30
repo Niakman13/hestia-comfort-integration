@@ -17,7 +17,8 @@ An unheated room (a laundry) is not graded on its warmth. A theme with less than
 Advice (`advice`) speaks only of a lasting problem the measures show, never of a cause they cannot prove: the standard's
 normal range is missed half the winter in most homes heated to the legal 19 °C, so a room is told to heat only when it
 falls out of every category (under 18 °C) for a sixth of the heating season, and to dry only above the 70 % that
-Confort already calls a mould risk.
+Confort already calls a mould risk. A room whose minimum was set lower (a bedroom kept at 16 °C) is told to heat only
+under that minimum: the grade keeps the standard, the advice follows the person's choice.
 """
 from collections import defaultdict
 from datetime import timedelta
@@ -109,7 +110,7 @@ def _profile(points, months):
     return [round(mean(hours[h]), 1) if hours[h] else None for h in range(24)]
 
 
-def warmth(points, outdoor, running):
+def warmth(points, outdoor, running, floor=HEAT_FIXED[2][1]):
     """The warmth of a room: grade, month by month against the normal range (II), and a typical day by season."""
     rows, months = [], defaultdict(lambda: {"values": [], "cold": 0, "hot": 0, "low": [], "high": []})
     heating = chilly = 0
@@ -118,7 +119,7 @@ def warmth(points, outdoor, running):
         rows.append(_category(value, bands))
         if when.month in HEATING_MONTHS:
             heating += 1
-            chilly += value < HEAT_FIXED[2][1]
+            chilly += value < floor
         _, low, high = bands[1]
         month = months[_month(when)]
         month["values"].append(value)
@@ -136,7 +137,7 @@ def warmth(points, outdoor, running):
                         "low": round(mean(m["low"]), 1), "high": round(mean(m["high"]), 1)})
     coldest = min(points, key=lambda p: p[1]) if points else None
     hottest = max(points, key=lambda p: p[1]) if points else None
-    return {**_grade(rows), "monthly": monthly, "chilly": round(100 * chilly / heating) if heating else None,
+    return {**_grade(rows), "monthly": monthly, "chilly": round(100 * chilly / heating) if heating else None, "chilly_below": floor,
             "coldest": {"value": round(coldest[1], 1), "month": _month(coldest[0])} if coldest else None,
             "hottest": {"value": round(hottest[1], 1), "month": _month(hottest[0])} if hottest else None,
             "day": {"winter": _profile(points, WINTER), "summer": _profile(points, SUMMER),
@@ -171,16 +172,18 @@ def air(points):
             "monthly": [{"month": k, "median": round(sorted(v)[len(v) // 2])} for k, v in sorted(months.items())]}
 
 
-def room(series, outdoor, zone=None, heated=True):
+def room(series, outdoor, zone=None, heated=True, minimum=None):
     """A room's review from hourly means: `series` {"temperature"|"humidity"|"co2": [(time, value)]}, `outdoor` the
-    outdoor temperature's. Times are aware and read in the home's time zone `zone`."""
+    outdoor temperature's. Times are aware and read in the home's time zone `zone`. `minimum` is the room's own, when set:
+    under 18 °C, it is the one the advice to heat is measured against."""
     def local(points):
         return [(t.astimezone(zone) if zone else t, float(v)) for t, v in points or ()
                 if isinstance(v, (int, float)) and not isinstance(v, bool)]
     outside = local(outdoor)
     themes = {}
     if heated and series.get("temperature"):
-        themes["warmth"] = warmth(local(series["temperature"]), outside, running_means(outside))
+        floor = min(HEAT_FIXED[2][1], minimum) if isinstance(minimum, (int, float)) and not isinstance(minimum, bool) else HEAT_FIXED[2][1]
+        themes["warmth"] = warmth(local(series["temperature"]), outside, running_means(outside), floor)
     if series.get("humidity"):
         themes["humidity"] = humidity(local(series["humidity"]))
     if series.get("co2"):
@@ -196,7 +199,7 @@ def advice(review, ventilation=False):
     found, themes = [], review["themes"]
     warm = themes.get("warmth") or {}
     if warm.get("score") is not None and (warm.get("chilly") or 0) >= CHILLY_SHARE:
-        found.append({"key": "heat_more", "theme": "warmth", "level": "action", "share": warm["chilly"]})
+        found.append({"key": "heat_more", "theme": "warmth", "level": "action", "share": warm["chilly"], "below": warm.get("chilly_below", HEAT_FIXED[2][1])})
     wet = themes.get("humidity") or {}
     if wet.get("score") is not None and (wet.get("damp") or 0) >= DAMP_SHARE:
         found.append({"key": "run_ventilation" if ventilation else "air_daily", "theme": "humidity", "level": "action", "share": wet["damp"]})

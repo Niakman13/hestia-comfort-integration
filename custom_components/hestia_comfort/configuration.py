@@ -23,7 +23,7 @@ DATA_CONFIG = DOMAIN + "_configuration"
 # The third-party integrations a person can turn off in the general settings.
 # The equipment a room may declare (« Équipements »): each one changes how its air is read.
 EQUIPMENT = ("shower",)
-SWITCHABLE = ("versatile_thermostat", "adaptive_cover_pro", "cover_automatic", "cover_extender", "alarmo")
+SWITCHABLE = ("versatile_thermostat", "adaptive_cover_pro", "cover_automatic", "cover_extender", "wled", "alarmo")
 # A coloured light that shows the advice (« Lumières »): for the whole home or room by room, one look per state of the banner.
 LIGHT_STATES = ("calm", "benefit", "action", "airing", "urgent")
 LIGHT_EFFECTS = ("keep", "off", "solid", "flash")
@@ -465,6 +465,8 @@ class Configuration:
             for entry in self.entries():
                 if entry.state.value == "loaded":
                     await self.hass.config_entries.async_reload(entry.entry_id)
+            if driver := self.hass.data.get("hestia_comfort_lights"):
+                driver.refresh()
             return self.snapshot()
 
     def weather(self):
