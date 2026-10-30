@@ -44,6 +44,17 @@ class LightPlanTest(unittest.TestCase):
         self.assertEqual(lp.restore(before), ("turn_on", {"brightness": 120, "rgb_color": [255, 200, 150], "effect": "Solid"}))
         self.assertEqual(lp.restore(lp.snapshot("off", {})), ("turn_off", {}))
 
+    def test_a_moving_effect_takes_its_speed(self):
+        looks = {**lp.DEFAULT_LOOKS, "action": {"colour": "#f1b277", "effect": "Heartbeat", "brightness": 70, "speed": "fast"},
+                 "benefit": {"colour": "#a5d6ae", "effect": "Breathe", "brightness": 50}}
+        rule = {**RULE, "states": looks}
+        self.assertEqual(lp.speed(rule, "action"), 220)
+        self.assertEqual(lp.speed(rule, "benefit"), 128)
+        # A fixed colour, a flash or nothing changed has no speed: the segment's own is left alone.
+        self.assertIsNone(lp.speed(rule, "urgent"))
+        self.assertIsNone(lp.speed(rule, "calm"))
+
+
 class Fit(unittest.TestCase):
     """What the light can do, on the real house: a WLED strip and a Hue bulb, neither able to flash (30 October)."""
     WLED = {"supported_features": 36, "effect_list": ["Solid", "Blink", "Breathe"]}

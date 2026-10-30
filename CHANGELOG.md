@@ -1,3 +1,35 @@
+## 2.1.0b6 — Bêta : une carte plus claire, chaque chose à sa place
+
+### Avant de mettre à jour
+
+- Gardez Hestia Weather 3.1.0b2.
+- Vos cartes gardent leur format. Une carte « Intermédiaire » s’affiche toujours ; l’éditeur propose maintenant la tuile dépliable.
+
+### Nouveautés
+
+- Le bandeau est refait : la pièce et son état, le moment (« Maintenant », « En cours »), le geste avec sa durée, sa raison en une ligne, un rond animé et la température en haut à droite.
+- Le « i » s’ouvre sous le titre et explique la pastille : pourquoi « Au mieux », ce qui limite le geste, si les mesures répondent, ce que la pièce a appris et sa dernière aération.
+- Un conseil appris dans la pièce porte une fiole sur le rond et « Optimisé par l’apprentissage ».
+- « À venir » remplace « Prochaines heures » : le graphique de chaque mesure, le prochain geste et le temps dehors.
+- Le module Air fait défiler le CO₂, les COV et les particules, chacun avec sa valeur, sa flèche et sa courbe.
+- Ouvertures montre la courbe du soleil dehors ; Chauffage montre sa puissance, sa consigne, l’écart et le temps de chauffe sur 24 h.
+- Les cartes « À la carte » existent en version détaillée ou compacte.
+- Le panneau WLED parle d’effets visibles sur une LED, règle une vitesse par état, montre un aperçu sur chaque ligne et le tableau des segments, avec l’automatisation qui pilote déjà un segment.
+
+### Améliorations
+
+- Deux grandes cartes : la complète, toute ouverte, et la tuile dépliable. Les détails restent repliés.
+- « À savoir » ne garde que « Pour le geste » et « À surveiller ». Le purificateur et la VMC sont dans le module Air.
+- Les modules sont plus compacts : quatre sur une ligne en pleine largeur, deux en largeur moyenne, un sur téléphone.
+- La Mini tient sur une ligne et l’Alerte devient un bandeau bas.
+- La flèche de tendance est dans un rond teinté ; la courbe n’a plus de cadre de plage.
+- Dans l’éditeur, les formats se choisissent en vignettes, et « Cartes à la pièce » s’appelle « À la carte ».
+
+### Corrections
+
+- Une bêta installée s’affiche à jour sans vider le cache du navigateur.
+- « Mesures » ne compte plus le nombre de mesures : seulement ce qui est à surveiller.
+
 ## 2.1.0b5 — Bêta : les cartes rangées comme Hestia Weather
 
 ### Avant de mettre à jour

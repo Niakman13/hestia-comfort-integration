@@ -43,7 +43,8 @@ def clean_light(rule):
         effect = look.get("effect") if isinstance(look.get("effect"), str) and look.get("effect") else "solid"
         brightness = look.get("brightness")
         brightness = max(1, min(100, int(brightness))) if isinstance(brightness, (int, float)) and not isinstance(brightness, bool) else 60
-        looks[key] = {"colour": colour, "effect": effect, "brightness": brightness}
+        speed = look.get("speed") if look.get("speed") in ("slow", "normal", "fast") else "normal"
+        looks[key] = {"colour": colour, "effect": effect, "brightness": brightness, "speed": speed}
     follow = rule.get("follow") if isinstance(rule.get("follow"), str) else "home"
     return {"entity_id": rule["entity_id"], "follow": follow, "wake": rule.get("wake") is True,
             "night": rule.get("night") is not False, "presence": rule.get("presence") is not False, "states": looks}

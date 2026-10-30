@@ -29,9 +29,35 @@ from .room.airings import AiringsMixin
 from .room.readings import ReadingsMixin
 
 
+def heating_power(attributes):
+    """The heating's power in percent: Versatile Thermostat's own, or 100 while the thermostat heats, 0 otherwise."""
+    for key, scale in (("power_percent", 1), ("on_percent", 100)):
+        value = attributes.get(key)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return max(0.0, min(100.0, float(value) * scale))
+    action = attributes.get("hvac_action")
+    return None if action is None else 100.0 if action == "heating" else 0.0
+
+
+def heated_minutes(rows, start, end):
+    """Minutes spent « heating » between start and end, from the recorder's rows of the thermostat's « hvac_action »
+    (an attribute: it changes at the row's last update, not at its last state change)."""
+    total, since = 0.0, None
+    for row in rows:
+        moment = max(row.last_updated, start)
+        if since is not None:
+            total += (moment - since).total_seconds()
+        since = moment if row.attributes.get("hvac_action") == "heating" else None
+    if since is not None:
+        total += (end - since).total_seconds()
+    return round(total / 60)
+
+
 # The measures whose last hours are kept for the trends: (history, reading).
 HISTORIES = (("temperature_history", "indoor_temperature"), ("outdoor_history", "outdoor_temperature"), ("humidity_history", "indoor_humidity"),
-             ("co2_history", "co2"), ("voc_history", "voc"), ("pm25_history", "pm25"))
+             ("co2_history", "co2"), ("voc_history", "voc"), ("pm25_history", "pm25"),
+             # The « Ouvertures » and « Chauffage » modules: the sun outside and the heating's power (30 October).
+             ("solar_history", "solar"), ("heating_history", "heating_power"))
 
 
 class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, AiringsMixin, ReadingsMixin, DataUpdateCoordinator):
@@ -55,7 +81,9 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
         self.followed = set()
         self.started = dt_util.utcnow()
         self.history_reports = {}
-        self.histories = {key: deque(maxlen=360) for key in ("temperature_history", "outdoor_history", "humidity_history", "co2_history", "voc_history", "pm25_history")}
+        self.histories = {key: deque(maxlen=360) for key, _ in HISTORIES}
+        # The heating's last 24 hours, read in the recorder now and then: minutes heated, and when it was read.
+        self.heating_day, self._heating_day_due = None, None
         # The VOC index of the last minutes, for its mean (engine/voc.py).
         self.voc_points = deque(maxlen=240)
         # The last airing while the VOC called for air, noted the moment the room is shut: the pause starts there.
@@ -219,6 +247,22 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
                 self.histories[key].append((stamp, value))
                 self.history_reports[key] = changed
 
+    async def _read_heating_day(self, entity_id, now):
+        """How long the room heated over the last 24 hours (the thermostat's « heating » action), read every ten minutes."""
+        if self._heating_day_due is not None and now < self._heating_day_due:
+            return
+        self._heating_day_due = now + timedelta(minutes=10)
+        try:
+            from homeassistant.components.recorder import get_instance
+            from . import recorder_history
+            start = now - timedelta(hours=24)
+            rows = (await get_instance(self.hass).async_add_executor_job(
+                recorder_history.read, self.hass, start, now, [entity_id], "hvac_action")).get(entity_id, [])
+        except Exception:  # noqa: BLE001 - no recorder: the module says nothing about the last day
+            logging.getLogger(__name__).debug("Recorder history unavailable for the heating day", exc_info=True)
+            return
+        self.heating_day = heated_minutes(rows, start, now)
+
     def _context(self, now, readings):
         for key, source in HISTORIES:
             history = self.histories[key]
@@ -370,6 +414,15 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
                 preset = state.attributes.get("preset_mode")
                 mode, detail = (preset, "preset") if preset and preset != "none" else (state.state, "hvac")
                 readings["heating_mode"] = Reading(mode, "valid", selected["heating"], state.last_reported.isoformat(), detail)
+                # Its power: Versatile Thermostat says it in percent; any other thermostat heats fully or not at all.
+                power = heating_power(state.attributes)
+                if power is not None:
+                    # A state that lasts: a thermostat heating for an hour reports nothing new, yet its curve goes on.
+                    readings["heating_power"] = Reading(power, "valid", selected["heating"], now.isoformat(), "percent")
+                target = state.attributes.get("temperature")
+                if isinstance(target, (int, float)) and not isinstance(target, bool):
+                    readings["heating_target"] = Reading(float(target), "valid", selected["heating"], state.last_reported.isoformat())
+            await self._read_heating_day(selected["heating"], now)
         outlook = weather_link.outlook(self.hass, self._weather_place())
         # The sun: estimated where the station is shaded (engine/sunlight.py), then averaged over a quarter of an hour.
         if (solar := readings.get("solar")) is not None:
@@ -414,6 +467,8 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
         own = self.previous.to_dict()
         # The room's own learning, once optimal, gives the advised gesture its predicted result.
         summary = feedback.summarize(self.feedback, now)
+        if self.heating_day is not None:
+            own.setdefault("features", {})["heating_day"] = {"minutes": self.heating_day}
         own.setdefault("features", {})["learned"] = twin.learned_advice(own, self.twin, current, (self.drying_model or {}).get("openings", 0), summary)
         # Tonight, simulated on the room's own twin (engine/night.py): when opening cools, what it leaves for tomorrow.
         learned_twin = self.twin or {}

@@ -1,6 +1,6 @@
 {
   "name": "hestia-comfort-configuration",
-  "version": "2.1.0b5",
+  "version": "2.1.0b6",
   "private": true,
   "type": "module",
   "scripts": {

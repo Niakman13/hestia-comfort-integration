@@ -13,7 +13,7 @@ const {isView,numeric,summary,readingStatus,coverageText,windFrom,evolutionLines
 const {LiveView}=await import(pathToFileURL(join(temp,'live.mjs')));
 const {roomChoices}=await import(pathToFileURL(join(temp,'editor.mjs')));
 const {hassMatters}=await import(pathToFileURL(join(temp,'hass-change.mjs')));
-const {outsideGaps,advice,slides,roomCard,facts,factList,factBox,trendOf,modules}=await import(pathToFileURL(join(temp,'views/room.mjs')));
+const {outsideGaps,advice,slides,roomCard,facts,factList,factBox,trendOf,modules,whyRoom}=await import(pathToFileURL(join(temp,'views/room.mjs')));
 const fixtures=JSON.parse(await readFile(new URL('../preview/card-fixtures.json',import.meta.url),'utf8'));
 const fresh=()=>({...structuredClone(fixtures[0].view),computed_at:new Date().toISOString()});
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
@@ -377,7 +377,9 @@ test('the new formats and their settings: lists checked, alert hidden when nothi
   assert.equal(roomCard(calm,cleanConfig({type:'custom:hestia-comfort-card',format:'alert'}),st,'alert'),null);
   const asked=fresh();asked.assessment={...asked.assessment,level:'action',reason:'air_needed',action:'ouvrir'};
   assert.notEqual(roomCard(asked,cleanConfig({type:'custom:hestia-comfort-card',format:'alert'}),st,'alert'),null);
-  assert.match(flat(roomCard(asked,cleanConfig({type:'custom:hestia-comfort-card',format:'mini'}),st,'mini')),/nc-line-card/);
+  assert.match(flat(roomCard(asked,cleanConfig({type:'custom:hestia-comfort-card',format:'mini'}),st,'mini')),/nc-mini-card/);
+  // The alert is a low strip, never a banner: no « Synthèse », no module.
+  assert.match(flat(roomCard(asked,cleanConfig({type:'custom:hestia-comfort-card',format:'alert'}),st,'alert')),/nc-alert-card/);
   const h=cleanHomeConfig({type:'custom:hestia-comfort-home-card',format:'list',list_order:'floor',banner_blocks:['rooms']});
   assert.equal(h.list_order,'floor');assert.throws(()=>cleanHomeConfig({type:'custom:hestia-comfort-home-card',format:'grille'}));
 });
@@ -623,7 +625,7 @@ test('the trend is green only when it heads back to your range (30 October)',()=
   // Under ten minutes of measures: no arrow at all.
   assert.equal(trendOf(v,'co2','high'),undefined);
 });
-test('« À savoir » is said under three headings, the gesture one only with a gesture (30 October)',()=>{
+test('« À savoir » says how to act and what to watch; the last airing goes to the « i » (30 October, evening)',()=>{
   const flat=t=>t==null?'':Array.isArray(t)?t.map(flat).join(''):typeof t!=='object'?String(t):t.strings?t.strings.map((x,i)=>x+(i<t.values.length?flat(t.values[i]):'')).join(''):'';
   const v=fresh();v.names={ouest:'Fenêtre Ouest'};
   v.observations={...v.observations,co2:{value:1300,quality:'valid',source:'sensor.co2'}};
@@ -631,12 +633,16 @@ test('« À savoir » is said under three headings, the gesture one only with a 
   v.assessment={...v.assessment,action:'ouvrir',level:'action',reason:'air_needed',needs:['air'],constraints:[],missing:[],
     features:{...v.assessment.features,airflow:{open:['ouest'],keep:[],path:'one_side',into:null,faster:null,learned:0,avoid:[]}}};
   const box=flat(factBox(v));
-  assert.match(box,/data-group=gesture|Pour le geste/);assert.match(box,/Appris/);
-  assert.ok(box.indexOf('Pour le geste')<box.indexOf('Appris'));
+  assert.match(box,/data-group=gesture|Pour le geste/);assert.doesNotMatch(box,/Appris|Dernière aération/);
+  // Whether to trust the advice is the « i »'s: the last airing and what the room learned.
+  assert.match(flat(whyRoom(v,slides(v)[0])),/Dernière aération/);
 });
 test('the formats come in three kinds, as Hestia Weather’s editor (30 October)',()=>{
   assert.deepEqual(['full','tile','intermediate','temperature','measures','horizon','mini','alert'].map(f=>kindOf(f)),['large','large','large','piece','piece','piece','small','small']);
-  assert.deepEqual(Object.values(KINDS).flat().sort(),['air','alert','full','heating','horizon','humidity','intermediate','measures','mini','openings','temperature','tile']);
+  // One foldable large card only (30 October, evening): « Intermédiaire » is no longer offered, an older card keeps it.
+  assert.deepEqual(Object.values(KINDS).flat().sort(),['air','alert','full','heating','horizon','humidity','measures','mini','openings','temperature','tile']);
+  assert.equal(cleanConfig({type:'custom:hestia-comfort-card',format:'humidity',piece_style:'compact'}).piece_style,'compact');
+  assert.throws(()=>cleanConfig({type:'custom:hestia-comfort-card',piece_style:'grande'}));
   // An older card keeps its format: nothing to change on the dashboard.
   for(const format of ['full','tile','intermediate','mini','measures','alert'])assert.equal(cleanConfig({type:'custom:hestia-comfort-card',format}).format,format);
 });
@@ -697,4 +703,14 @@ test('a new hass from an unrelated state change does not redraw the cards',()=>{
   assert.equal(hassMatters(changed(hass),{...hass,connection:{}}),true);
   assert.equal(hassMatters(changed(undefined),hass),true);
   assert.equal(hassMatters(new Map([['hass',hass],['config',{}]]),hass),true);
+});
+test('the Air module shows each of its measures the same way, one after the other, those out first (30 October, evening)',()=>{
+  const v=fresh();
+  v.observations={...v.observations,co2:{value:1250,quality:'valid',source:'sensor.co2',unit:'ppm'},voc:{value:420,quality:'valid',source:'sensor.voc',unit:''}};
+  v.assessment={...v.assessment,level:'action',reason:'air_needed',action:'ouvrir',needs:['air'],
+    features:{...v.assessment.features,air:{co2_status:'high',pm25_status:'not_configured',voc_status:'high',voc_unit:null,purifier:{on:null,speed:null},coverage:'',message:''}}};
+  const air=modules(v,{type:'custom:hestia-comfort-card',modules:['air']}).find(m=>m.key==='air');
+  assert.deepEqual(air.slides.map(x=>x.label),['CO₂','COV']);
+  // The banner keeps one advice: both reasons are on its line.
+  assert.equal(slides(v).length,1);
 });

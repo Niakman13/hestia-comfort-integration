@@ -1,6 +1,7 @@
 import {html} from 'lit';
 import {unsafeSVG} from 'lit/directives/unsafe-svg.js';
 const paths:Record<string,string>={
+  flame:'<path d="M12 3c1 3 5 5.5 5 10a5 5 0 0 1-10 0c0-2.4 1.2-3.8 2.3-5 .2 1.6 1 2.6 2 3 0-3 .2-5.6.7-8Z"/>',
   window:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M12 3v18M4 12h16"/>',
   open:'<path d="M4 3h16v18H4zM12 3l6 3v12l-6 3V3M4 12h8"/>',
   air:'<path d="M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h6a3 3 0 1 1-3 3"/>',

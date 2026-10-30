@@ -6,7 +6,7 @@ import styles from './styles.css';
 import '../card/src/review';
 import {frame,hubStyles,modernStyles,helpTip,defaultValue,pageHead,todoFrame,itemsFrame,stepMenu,stepFooter,extensionsFrame,detectedFrame,versionsFrame,extensionCard as nkExtensionCard,removeBlock as nkRemoveBlock,pageStyles,setLanguage,addDictionary,t,fr,currentLocale,currentLanguage,type NkLine,type NkLevel} from './socle/ui';
 import {PANEL_EN} from './i18n-en';
-import {lightEditor,noLights,type Lights,type LightRule} from './lights';
+import {lightEditor,noLights,type Lights,type LightRule,type LightInfo} from './lights';
 import {words,labels,indoor,outdoor,multiple,exposures,kinds,measurement,newRoom,coverage,exteriorSummary,livingArea,defaultOpening,warningText,warningId,stages,intros,outdoorGroups,changedAdvanced,advancedDefaults,airSource,airChoices,exteriorChoices,airReferenceDefaults,vocPreset,thresholdSources,type Choice,type Candidate,type Discovery,type Health,type HealthLine,type Target,type Snapshot,type Hass,type Room,type RoomConfig,type Spec,type Twins,type Twin,type Progress,type Extension,seasonNames} from './model';
 // Confort's words beside the hub's (socle 1.13): French in the code, English for any other language.
 addDictionary('en',PANEL_EN);
@@ -67,6 +67,7 @@ export class ComfortSetup extends LitElement {
  @state() private entryId?:string;
  @state() private stage=0;
  @state() private busy=false;
+ @state() private lightInfo:Record<string,LightInfo|null>={};
  @state() private error='';
  @state() private saved='';
  @state() private search:Record<string,string>={};
@@ -680,13 +681,23 @@ export class ComfortSetup extends LitElement {
  private async saveLights(lights:Lights){this.busy=true;this.error='';
   try{this.snapshot=await this.ws<Snapshot>({type:'hestia_comfort/set_lights',lights});}
   catch(e){this.error=this.message(e);}finally{this.busy=false;}}
+ /** A light's segments and LEDs, asked once per light; the editor draws without them until they come. */
+ private infoOf(rule:LightRule|null){const id=rule?.entity_id;if(!id)return undefined;
+  if(!(id in this.lightInfo)){this.lightInfo={...this.lightInfo,[id]:null};
+   void this.ws<LightInfo>({type:'hestia_comfort/light_info',entity_id:id}).then(info=>{this.lightInfo={...this.lightInfo,[id]:info};},()=>undefined);}
+  return this.lightInfo[id]??undefined;}
+ /** Which segment shows which room, for the strip's board. */
+ private lightUsers(){const l=this.lights(),users:Record<string,string>={};
+  if(l.mode==='home'&&l.home)users[l.home.entity_id]=t('Confort · {room}',{room:t('Tout le logement')});
+  if(l.mode==='rooms')for(const r of this.snapshot?.rooms??[])if(l.rooms[r.entry_id])users[l.rooms[r.entry_id].entity_id]=t('Confort · {room}',{room:r.title});
+  return users;}
  private lightsCard(){const l=this.lights(),rooms=this.snapshot?.rooms??[],wled=this.wledOn();
   const name=(r?:LightRule|null)=>r?String(this.hass?.states?.[r.entity_id]?.attributes?.friendly_name??r.entity_id):t('aucune');
   const mode=(m:Lights['mode'])=>html`<label class="check"><input type="radio" name="li-mode" .checked=${l.mode===m} ?disabled=${this.busy} @change=${()=>void this.saveLights({...l,mode:m})}>${m==='home'?t('Tout le logement'):t('Pièce par pièce')}</label>`;
   return frame(t('Notifications lumineuses'),html`<p class="hint">${t('Une lumière prend la couleur du conseil : bleu tout va bien, vert à saisir, orange un geste.')} ${t('Enregistré tout de suite.')}</p>
    <p class="hint">${wled?t('WLED est activé dans Extensions : ses bandeaux, leurs segments et leurs effets sont proposés.'):t('Une ampoule couleur suffit. Activez WLED dans Extensions pour ses bandeaux, leurs segments et leurs effets.')}</p>
    <div class="li-when" role="radiogroup" aria-label=${t('Qui pilote la lumière ?')}><p class="hint">${t('Qui pilote la lumière ?')}</p>${mode('home')}${mode('rooms')}</div>
-   ${l.mode==='home'?lightEditor({hass:this.hass,wled,rule:l.home,busy:this.busy,follows:[{value:'home',label:t('Tout le logement')},...rooms.map(r=>({value:r.entry_id,label:r.title}))],change:rule=>void this.saveLights({...l,home:rule})})
+   ${l.mode==='home'?lightEditor({hass:this.hass,wled,rule:l.home,busy:this.busy,info:this.infoOf(l.home),users:this.lightUsers(),follows:[{value:'home',label:t('Tout le logement')},...rooms.map(r=>({value:r.entry_id,label:r.title}))],change:rule=>void this.saveLights({...l,home:rule})})
     :html`<ul class="li-rooms">${rooms.map(r=>html`<li><span><strong>${r.title}</strong> · ${name(l.rooms[r.entry_id])}</span><button class="nk-edit" ?disabled=${this.busy} @click=${()=>void this.openRoom(r.entry_id,'notifications')}>${t('Régler')}</button></li>`)}</ul>
      <p class="hint">${t('Chaque pièce règle sa lumière dans son onglet Notifications.')}</p>`}`,{className:'li-settings'});}
  /** To the general settings, the draft open here kept for later, as when opening another room. */
@@ -697,7 +708,7 @@ export class ComfortSetup extends LitElement {
  private notifications(){const l=this.lights(),id=this.entryId;
   const light=l.mode==='home'?frame(t('Lumière'),html`<p class="hint">${t('La lumière est réglée pour tout le logement, dans Réglages généraux.')}</p><button class="nk-edit" ?disabled=${this.busy} @click=${()=>this.goSettings()}>${t('Ouvrir le réglage')}</button>`,{className:'nk-field-section nk-plain'})
    :!id?frame(t('Lumière'),html`<p class="hint">${t('Créez d’abord la pièce : sa lumière se règle ensuite ici.')}</p>`,{className:'nk-field-section nk-plain'})
-   :lightEditor({hass:this.hass,wled:this.wledOn(),rule:l.rooms[id]??null,busy:this.busy,taken:this.snapshot?.rooms.find(r=>r.entry_id!==id&&l.rooms[r.entry_id]&&l.rooms[r.entry_id].entity_id===l.rooms[id]?.entity_id)?.title,change:rule=>{const rooms={...l.rooms};if(rule)rooms[id]={...rule,follow:id};else delete rooms[id];void this.saveLights({...l,rooms});}});
+   :lightEditor({hass:this.hass,wled:this.wledOn(),rule:l.rooms[id]??null,busy:this.busy,info:this.infoOf(l.rooms[id]??null),users:this.lightUsers(),taken:this.snapshot?.rooms.find(r=>r.entry_id!==id&&l.rooms[r.entry_id]&&l.rooms[r.entry_id].entity_id===l.rooms[id]?.entity_id)?.title,change:rule=>{const rooms={...l.rooms};if(rule)rooms[id]={...rule,follow:id};else delete rooms[id];void this.saveLights({...l,rooms});}});
   return html`${light}${frame(t('Sur le téléphone'),html`<p class="hint">${t('Bientôt : prévenir sur le téléphone quand un geste est conseillé.')}</p>`,{className:'nk-field-section nk-plain'})}`;}
  private extensionCard(x:Extension,body:unknown=nothing){const [said,cls]=extState[x.state],word=t(said);
   // Linking a heating or a cover is a room's choice: the first room opens on that step.

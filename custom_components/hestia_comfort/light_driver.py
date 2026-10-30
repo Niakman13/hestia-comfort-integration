@@ -28,6 +28,8 @@ class LightDriver:
         self.listening = {}
         # By light: how it was before Hestia, the last decision taken, and whether the person switched it off by hand.
         self.kept, self.decided, self.silenced, self.mains = {}, {}, {}, {}
+        # By WLED segment whose speed Hestia changed: its speed entity and the speed it had.
+        self.speeds = {}
 
     @callback
     def start(self):
@@ -116,6 +118,7 @@ class LightDriver:
                 self._call("turn_off", entity_id, {})
             else:
                 self._wake_main(entity_id)
+                self._set_speed(entity_id, light_plan.speed(rule, key))
                 self._call("turn_on", entity_id, light_plan.fit(action[1], state.attributes))
 
     def _main_of(self, entity_id):
@@ -125,6 +128,23 @@ class LightDriver:
         if entry is None or entry.platform != "wled" or "_" not in (entry.unique_id or ""):
             return None
         return registry.async_get_entity_id("light", "wled", entry.unique_id.rsplit("_", 1)[0])
+
+    def _set_speed(self, entity_id, value):
+        """A WLED effect's speed, set on its segment before the effect starts; the speed it had is put back with the light."""
+        number = speed_entity(self.hass, entity_id)
+        state = self.hass.states.get(number) if number else None
+        if value is None or state is None or state.state in ("unavailable", "unknown"):
+            return
+        self.speeds.setdefault(entity_id, (number, state.state))
+        try:
+            if float(state.state) == value:
+                return
+        except ValueError:
+            pass
+        self._number(number, value)
+
+    def _number(self, entity_id, value):
+        self.hass.async_create_task(self.hass.services.async_call("number", "set_value", {"entity_id": entity_id, "value": value}, blocking=False))
 
     def _wake_main(self, entity_id):
         main = self._main_of(entity_id)
@@ -144,6 +164,12 @@ class LightDriver:
         if kept is not None:
             service, data = light_plan.restore(kept)
             self._call(service, entity_id, data)
+        if entity_id in self.speeds:
+            number, before = self.speeds.pop(entity_id)
+            try:
+                self._number(number, float(before))
+            except ValueError:
+                pass
         for main, held in list(self.mains.items()):
             held["users"].discard(entity_id)
             if not held["users"]:
@@ -153,6 +179,66 @@ class LightDriver:
 
     def _call(self, service, entity_id, data):
         self.hass.async_create_task(self.hass.services.async_call("light", service, {"entity_id": entity_id, **data}, blocking=False))
+
+
+def _segment(registry, entity_id):
+    """A WLED segment light: its registry entry, its strip's address and its number (unique id « <mac>_<segment> »)."""
+    entry = registry.async_get(entity_id)
+    if entry is None or entry.platform != "wled" or "_" not in (entry.unique_id or ""):
+        return None
+    mac, tail = entry.unique_id.rsplit("_", 1)
+    return (entry, mac, int(tail)) if tail.isdigit() else None
+
+
+def speed_entity(hass, entity_id):
+    """The « Vitesse » number of a WLED segment, or None for any other light."""
+    registry = er.async_get(hass)
+    found = _segment(registry, entity_id)
+    return registry.async_get_entity_id("number", "wled", f"{found[1]}_speed_{found[2]}") if found else None
+
+
+def _leds(hass, config_entry_id, number):
+    """How many LEDs a segment has, read from the WLED integration's last update; None when it cannot say."""
+    coordinator = getattr(hass.config_entries.async_get_entry(config_entry_id), "runtime_data", None)
+    segments = getattr(getattr(getattr(coordinator, "data", None), "state", None), "segments", None)
+    if segments is None:
+        return None
+    segment = segments.get(number) if isinstance(segments, dict) else next((s for s in segments if getattr(s, "segment_id", None) == number), None)
+    if segment is None:
+        return None
+    length = getattr(segment, "length", None)
+    if isinstance(length, int):
+        return length
+    start, stop = getattr(segment, "start", None), getattr(segment, "stop", None)
+    return stop - start if isinstance(start, int) and isinstance(stop, int) else None
+
+
+def _automations(hass, entity_id):
+    """The automations already driving a light, by their names: the hub warns before Hestia takes it."""
+    try:
+        from homeassistant.components.automation import automations_with_entity
+        found = automations_with_entity(hass, entity_id)
+    except Exception:  # noqa: BLE001 — no automation integration: nothing to warn about.
+        return []
+    return sorted(str(s.attributes.get("friendly_name") or a) for a in found if (s := hass.states.get(a)) is not None and s.state == "on")
+
+
+def light_info(hass, entity_id):
+    """What the hub shows of a light: a WLED segment's number of LEDs, and each segment of its strip with what drives it."""
+    registry = er.async_get(hass)
+    found = _segment(registry, entity_id)
+    if found is None:
+        return {"wled": getattr(registry.async_get(entity_id), "platform", None) == "wled", "leds": None, "segments": []}
+    entry, mac, _ = found
+    segments = []
+    for other in er.async_entries_for_config_entry(registry, entry.config_entry_id):
+        if other.domain != "light" or not (seg := _segment(registry, other.entity_id)) or seg[1] != mac:
+            continue
+        segments.append({"entity_id": other.entity_id, "segment": seg[2], "leds": _leds(hass, entry.config_entry_id, seg[2]),
+                         "speed": speed_entity(hass, other.entity_id), "automations": _automations(hass, other.entity_id)})
+    segments.sort(key=lambda s: s["segment"])
+    own = next((s for s in segments if s["entity_id"] == entity_id), None)
+    return {"wled": True, "leds": own["leds"] if own else None, "segments": segments}
 
 
 async def async_start_lights(hass, configuration):

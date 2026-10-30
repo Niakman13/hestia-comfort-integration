@@ -10,7 +10,7 @@ export const FORMATS = ['full','tile','intermediate','mini','measures','alert','
 export type Format = typeof FORMATS[number];
 /** The formats in three kinds, as Hestia Weather's editor: large cards, one card per piece of the room, small cards. */
 export type Kind = 'large'|'piece'|'small';
-export const KINDS:Record<Kind,Format[]>={large:['full','tile','intermediate'],piece:['temperature','humidity','air','openings','heating','measures','horizon'],small:['mini','alert']};
+export const KINDS:Record<Kind,Format[]>={large:['full','tile'],piece:['temperature','humidity','air','openings','heating','measures','horizon'],small:['mini','alert']};
 export const kindOf=(format:Format='tile'):Kind=>(Object.keys(KINDS) as Kind[]).find(k=>KINDS[k].includes(format))??'large';
 /** The modules of the full card's « Maintenant », each also a card of its own. */
 export const PIECES = ['temperature','humidity','air','openings','heating'] as const;
@@ -55,6 +55,8 @@ export interface Config {
   show_horizon?: boolean; horizon_mode?: HorizonMode; horizon_subjects?: HorizonSubject[];
   /** « À savoir » and « Détails techniques »: shown or not, which topics and lines, how many lines. */
   show_insights?: boolean; insight_topics?: InsightTopic[]; insight_max?: number; detail_rows?: DetailRow[];
+  /** « À la carte »: the full card's module as it is, or compact (the measure, its way, its half hour). */
+  piece_style?: 'detailed'|'compact';
 }
 /** A list setting: only known values, each once, in the given order. */
 function list<T extends string>(value:unknown,known:readonly T[],name:string):T[]|undefined{
@@ -100,10 +102,12 @@ export interface Features {
  drying?:{minutes:number;now:number;after:number;gain:number;tau:number;openings:number;morning?:number;alone?:number;net?:number;later:{minutes:number;now:number;after:number;gain:number;time:string}|null}|null;
  trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string;
    /** Each measure's last half hour, for its tile: speed per hour, way, and [minutes ago, value] points. */
-   curves?:Partial<Record<'temperature'|'humidity'|'co2'|'voc'|'pm25',{slope:number;way:'up'|'down'|'stable';points:[number,number][]}|null>>};
+   curves?:Partial<Record<'temperature'|'humidity'|'co2'|'voc'|'pm25'|'solar'|'heating',{slope:number;way:'up'|'down'|'stable';points:[number,number][]}|null>>};
  season?:{known:boolean;weight:number|null;outdoor_mean:number|null;minimum:number;maximum:number;heated:boolean;
    /** The home's season when known (Hestia Weather's, or a season sensor): it sets the rules of the advice. */ name?:string|null;group?:'summer'|'between'|'winter'|null};
  day_range?:{min:number;max:number}|null;
+ /** Minutes the room heated over the last 24 hours (the thermostat's action, read in the recorder). */
+ heating_day?:{minutes:number}|null;
  /** Where the air goes through best (engine/wind.py, plan): what to open, what already helps, what to leave shut. */
  airflow?:{open:string[];keep:string[];path:'wind'|'opposite'|'two_sides'|'one_side';into:string|null;faster:number|null;learned:number;
    avoid:{entity_id:string;why:'rain'|'gust'|'sun'}[]}|null;
@@ -151,6 +155,7 @@ export function cleanConfig(input:Config):Config {
     if(input[key]!==undefined && typeof input[key]!=='boolean') throw new Error(t('Réglage d’affichage invalide.'));
   if(input.modules && (!Array.isArray(input.modules) || input.modules.some(m=>!MODULES.includes(m)))) throw new Error(t('Rubrique inconnue.'));
   if(input.horizon_mode!==undefined&&!HORIZON_MODES.includes(input.horizon_mode))throw new Error(t('Réglage « graphique » invalide.'));
+  if(input.piece_style!==undefined&&!['detailed','compact'].includes(input.piece_style))throw new Error(t('Réglage « version » invalide.'));
   hold(input);
   const lists={banner_blocks:list(input.banner_blocks,BANNER_BLOCKS,'bandeau'),scale_marks:list(input.scale_marks,SCALE_MARKS,'échelle'),
     tile_chips:list(input.tile_chips,CHIPS,'pastilles'),tile_blocks:list(input.tile_blocks,TILE_BLOCKS,'tuile dépliée'),mini_values:list(input.mini_values,CHIPS,'ligne'),

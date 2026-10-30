@@ -2,13 +2,16 @@
 
 The settings live in the shared « Hestia » panel (socle, see socle.py), as the « Confort » tab.
 """
+import hashlib
 from pathlib import Path
 import voluptuous as vol
+from aiohttp import web
 from homeassistant.components import websocket_api
-from homeassistant.components.http import StaticPathConfig
+from homeassistant.components.http import HomeAssistantView, StaticPathConfig
 from homeassistant.core import callback
 from . import domain_migration, health, weather_link
 from .engine import feedback
+from .light_driver import light_info
 from .engine.i18n import language, speaking, t
 from homeassistant.util import dt as dt_util
 from .configuration import get_configuration
@@ -19,15 +22,41 @@ ASSETS = "/hestia_comfort-assets"
 CARD_URL = f"{ASSETS}/hestia-comfort-card.js"
 
 
+class _LiveCardView(HomeAssistantView):
+    """The card of a beta, at its usual address, always checked again by the browser (« no-cache »): a beta is
+    rebuilt often, and a browser left alone keeps a script some minutes after a page reload."""
+    url = CARD_URL
+    name = "hestia_comfort:live_card"
+    requires_auth = False
+
+    async def get(self, request):
+        return web.FileResponse(Path(__file__).parent / "frontend" / "hestia-comfort-card.js", headers={"Cache-Control": "no-cache"})
+
+
+def _fingerprint(path):
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()[:8]
+    except OSError:
+        return None
+
+
 async def async_setup_panel(hass):
     if not hass.http or not hasattr(hass.http, "async_register_static_paths"):
         return  # Isolated engine tests and headless HA setups have no frontend.
     if not hass.data.get(DOMAIN + "_panel_asset"):
         # Cached by the browser: every script is asked for with `?v=<version>`, the fonts never change.
+        # A beta is tried and rebuilt often: its files are checked again on every load, a page kept by the browser cannot
+        # hold an older card. A stable version is cached as before.
+        if "b" in VERSION:
+            # Declared before the static files: this one address answers first.
+            hass.http.register_view(_LiveCardView())
         await hass.http.async_register_static_paths([StaticPathConfig(
-            ASSETS, str(Path(__file__).parent / "frontend"), True)])
+            ASSETS, str(Path(__file__).parent / "frontend"), "b" not in VERSION)])
         # The versioned dashboard resource, with a guarded extra module only as fallback.
-        await async_register_card(hass, CARD_URL, VERSION)
+        # A beta keeps one address, checked again on every load (above): a page the browser kept still gets the new card.
+        # A stable version: its version and a fingerprint of the bundle, so every build has its own cached address.
+        stamp = None if "b" in VERSION else await hass.async_add_executor_job(_fingerprint, Path(__file__).parent / "frontend" / "hestia-comfort-card.js")
+        await async_register_card(hass, CARD_URL, f"{VERSION}-{stamp}" if stamp else f"{VERSION}-dev" if "b" in VERSION else VERSION)
         websocket_api.async_register_command(hass, ws_health)
         websocket_api.async_register_command(hass, ws_twins)
         websocket_api.async_register_command(hass, ws_answer)
@@ -35,6 +64,7 @@ async def async_setup_panel(hass):
         websocket_api.async_register_command(hass, ws_pollen_allergy)
         websocket_api.async_register_command(hass, ws_extension)
         websocket_api.async_register_command(hass, ws_lights)
+        websocket_api.async_register_command(hass, ws_light_info)
         hass.data[DOMAIN + "_panel_asset"] = True
     await async_register_brick(hass, {
         "domain": DOMAIN, "name": "Hestia Confort", "slug": "confort", "version": VERSION,
@@ -184,6 +214,14 @@ async def ws_lights(hass, connection, msg):
         connection.send_error(msg["id"], "invalid", str(err))
         return
     connection.send_result(msg["id"], snapshot)
+
+
+@websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/light_info", vol.Required("entity_id"): str})
+@websocket_api.require_admin
+@callback
+def ws_light_info(hass, connection, msg):
+    """A light as the « Lumières » settings show it: a WLED segment's LEDs, its strip's segments and who drives them."""
+    connection.send_result(msg["id"], light_info(hass, msg["entity_id"]))
 
 
 @websocket_api.websocket_command({vol.Required("type"): "hestia_comfort/answer", LANGUAGE: str, vol.Required("entry_id"): str,

@@ -240,7 +240,7 @@ def _slope(history, now, window=30):
 
 
 # Below these speeds per hour a measure is « stable »: a sensor's own noise is no trend.
-STEADY={'temperature':.3,'humidity':2,'co2':100,'voc':30,'pm25':3}
+STEADY={'temperature':.3,'humidity':2,'co2':100,'voc':30,'pm25':3,'solar':40,'heating':10}
 
 
 def _curve(history, now, key, window=30, step=2):

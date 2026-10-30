@@ -59,6 +59,18 @@ def plan(rule, key, *, is_on, hour, someone_home, ours):
     return ("on", data)
 
 
+# A WLED effect's speed (its segment's « Vitesse », 0 to 255), by the hub's three words.
+SPEEDS = {"slow": 60, "normal": 128, "fast": 220}
+
+
+def speed(rule, key):
+    """The WLED speed of a state's effect, or None when the look does not move (nothing changed, off, fixed, a flash)."""
+    look = (rule.get("states") or {}).get(key) or DEFAULT_LOOKS.get(key) or {}
+    if look.get("effect") in (None, "keep", "off", "solid", "flash"):
+        return None
+    return SPEEDS.get(look.get("speed") or "normal", SPEEDS["normal"])
+
+
 # LightEntityFeature.FLASH: a light without it ignores « flash ».
 FLASH = 8
 
