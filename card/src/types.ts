@@ -91,7 +91,9 @@ export interface Features {
  /** An open window letting warmer air into a room under the middle of its range. */
  open_warms?:boolean;
  drying?:{minutes:number;now:number;after:number;gain:number;tau:number;openings:number;morning?:number;alone?:number;net?:number;later:{minutes:number;now:number;after:number;gain:number;time:string}|null}|null;
- trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string};
+ trends?:{indoor:number|null;outdoor:number|null;window_minutes:number;message:string;
+   /** Each measure's last half hour, for its tile: speed per hour, way, and [minutes ago, value] points. */
+   curves?:Partial<Record<'temperature'|'humidity'|'co2'|'voc'|'pm25',{slope:number;way:'up'|'down'|'stable';points:[number,number][]}|null>>};
  season?:{known:boolean;weight:number|null;outdoor_mean:number|null;minimum:number;maximum:number;heated:boolean;
    /** The home's season when known (Hestia Weather's, or a season sensor): it sets the rules of the advice. */ name?:string|null;group?:'summer'|'between'|'winter'|null};
  day_range?:{min:number;max:number}|null;

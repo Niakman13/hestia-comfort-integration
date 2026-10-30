@@ -98,6 +98,27 @@ hestia-note-ticker { display:block; flex:1; min-width:0; }
 .nc-tile.out.soft .nc-ic { background:color-mix(in oklab, var(--nw-fg) 10%, transparent); color:var(--nw-fg2); }
 .nc-tile.out.soft em { font-weight:500; color:var(--nw-fg2); }
 /* Capteur muet : contour en pointillés, valeur effacée ; juste après un démarrage, la tuile scintille comme un chargement. */
+.nc-tile b:has(.nc-way) { display:flex; align-items:center; gap:8px; }
+.nc-tile b .nc-way { display:inline-flex; flex:none; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%;
+  color:var(--t, var(--nw-fg2)); background:color-mix(in oklab, var(--t, var(--nw-fg2)) 14%, transparent); }
+.nc-way .icon { width:14px; height:14px; stroke-width:2.2; }
+.nc-way[data-way="up"] .icon { --r:-90deg; } .nc-way[data-way="down"] .icon { --r:90deg; } .nc-way .icon { transform:rotate(var(--r,0deg)); }
+.nc-way[data-way="up"] .icon { animation:nc-way-up 1.8s ease-in-out infinite; } .nc-way[data-way="down"] .icon { animation:nc-way-down 1.8s ease-in-out infinite; }
+.nc-way[data-way="stable"] .icon { animation:nc-way-flat 2.4s ease-in-out infinite; }
+@keyframes nc-way-up { 0%,100% { transform:rotate(-90deg) translateX(-2px); opacity:.55; } 50% { transform:rotate(-90deg) translateX(2px); opacity:1; } }
+@keyframes nc-way-down { 0%,100% { transform:rotate(90deg) translateX(-2px); opacity:.55; } 50% { transform:rotate(90deg) translateX(2px); opacity:1; } }
+@keyframes nc-way-flat { 0%,100% { transform:translateX(-1px); } 50% { transform:translateX(2px); } }
+/* Green only when the measure heads back to your range, orange when it leaves it further; grey otherwise. */
+[data-tone="better"] { --t:var(--nw-benefit); } [data-tone="worse"] { --t:var(--nw-act); }
+.nc-spark { position:relative; height:24px; margin:6px 0 2px; }
+.nc-spark svg { display:block; width:100%; height:100%; overflow:visible; }
+.nc-spark-band { fill:color-mix(in oklab, var(--nw-calm) 18%, transparent); }
+.nc-spark-line { fill:none; stroke:var(--t, var(--nw-fg2)); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke;
+  stroke-dasharray:1; stroke-dashoffset:0; animation:nc-spark-draw 1.4s var(--nw-ease) .2s backwards; }
+@keyframes nc-spark-draw { from { stroke-dashoffset:1; } }
+.nc-spark-dot { position:absolute; width:8px; height:8px; margin:-4px 0 0 -4px; border-radius:50%; background:var(--t, var(--nw-fg2)); }
+.nc-spark-dot::after { content:''; position:absolute; inset:0; border-radius:50%; background:var(--t, var(--nw-fg2)); animation:nc-spark-now 2s ease-in-out infinite; }
+@keyframes nc-spark-now { 0%,100% { transform:scale(1); opacity:.35; } 60% { transform:scale(2.6); opacity:0; } }
 .nc-tile.mute { border:1.5px dashed color-mix(in srgb, var(--nw-fg) 30%, transparent); }
 .nc-tile.mute b, .nc-tile.mute em { color:var(--nw-fg2); }
 .nc-tile.mute .nc-ic { background:color-mix(in srgb, var(--nw-fg) 8%, transparent); color:var(--nw-fg2); }
@@ -172,7 +193,7 @@ button.nc-tile { font:inherit; color:inherit; text-align:left; cursor:pointer; b
 @keyframes nc-pop { from { opacity:0; scale:.4; } }
 @keyframes nc-grow { from { opacity:0; transform:scaleX(.2); } }
 @media (prefers-reduced-motion:reduce) {
-  .nc-hero::before, .nc-hero::after, .nc-disk, .nc-disk::before, .nc-disk::after, .nc-tile.out em::before, .nc-tile.mute::after, .nc-stack > .nc-slide, .nc-tiles > *, .nc-ring, .nc-now, .nc-mk.room, .nc-band, .nc-day { animation:none !important; }
+  .nc-hero::before, .nc-hero::after, .nc-disk, .nc-disk::before, .nc-disk::after, .nc-tile.out em::before, .nc-tile.mute::after, .nc-way .icon, .nc-spark-line, .nc-spark-dot::after, .nc-stack > .nc-slide, .nc-tiles > *, .nc-ring, .nc-now, .nc-mk.room, .nc-band, .nc-day { animation:none !important; }
   .nc-stack > .nc-slide { transform:none !important; filter:none !important; }
 }
 :host([still]) *, :host([still]) *::before, :host([still]) *::after { animation:none !important; transition:none !important; }
@@ -275,8 +296,13 @@ button.nc-row:hover { background:color-mix(in srgb, var(--nw-fg) 5%, transparent
 .nc-facts li svg { width:16px; height:16px; flex:none; margin-top:2px; opacity:.8; }
 .nc-facts li b { color:var(--nw-fg); font-weight:600; }
 /* What counts most, first: in full ink, its pictogram lit; a risk in the « to watch » colour. */
-.nc-facts li.key { color:var(--nw-fg); padding-bottom:6px; border-bottom:1px solid var(--nw-line); }
-.nc-facts li.key svg { opacity:1; }
+.nc-facts-g + .nc-facts-g { margin-top:10px; }
+.nc-facts-g h4 { display:flex; align-items:center; gap:6px; margin:8px 0 0; font-size:var(--nw-fs-small); font-weight:600; color:var(--nw-fg2); }
+.nc-facts-g h4 svg { width:14px; height:14px; }
+/* Where to open goes with the gesture: on the banner's orange, softly. */
+.nc-facts-g[data-group="gesture"] ul { padding:8px 10px; border-radius:calc(var(--nw-radius) * .6); background:color-mix(in oklab, var(--nw-act) 12%, var(--nw-bg)); }
+.nc-facts-g[data-group="gesture"] li { color:var(--nw-fg); }
+.nc-facts-g[data-group="gesture"] li svg { color:color-mix(in oklab, var(--nw-act) 70%, var(--nw-fg)); opacity:1; }
 .nc-facts li.risk svg { color:var(--nw-watch); opacity:1; }
 .nc-facts li.risk b { color:color-mix(in oklab, var(--nw-watch) 55%, var(--nw-fg)); }
 /* One card for rooms sharing one air: each room's own measures under its name. */

@@ -1,4 +1,4 @@
-import {html,nothing,LitElement,type TemplateResult} from 'lit';
+import {html,svg,nothing,LitElement,type TemplateResult} from 'lit';
 import {property,state} from 'lit/decorators.js';
 import {SCALE_MARKS,CHIPS,TILE_BLOCKS,DETAIL_ROWS,INSIGHT_TOPICS,type Config,type View,type Level,type Format,type BannerBlock,type Chip} from '../types';
 import {numeric,number,heatingLabels,coverageText,windFrom,sourceLabel,needs as needLabels,constraintLabels,shortWhy} from '../view';
@@ -260,7 +260,7 @@ function airflowFacts(v:View):Fact[] {
   const name=(id:string)=>v.names?.[id]??id,out:Fact[]=[];
   if(p.open.length){
     const faster=p.faster&&p.faster>=1.3?` · ${number(p.faster)} fois plus rapide`:'',why=p.open.length+p.keep.length>1?PATHS[p.path]:null;
-    out.push({ic:'open',topic:'windows',title:p.keep.length?`Ouvrez aussi ${p.open.map(name).join(' et ')}`:`Ouvrez ${p.open.map(name).join(' et ')}`,
+    out.push({ic:'open',topic:'windows',opens:p.open.map(name),also:p.keep.length>0,title:p.keep.length?`Ouvrez aussi ${p.open.map(name).join(' et ')}`:`Ouvrez ${p.open.map(name).join(' et ')}`,
       text:`${why??'la meilleure ouverture maintenant'}${faster}${p.learned?` (d’après ${p.learned} aérations)`:''}`});}
   // Said only when the plan had to leave it out: one line for the first one.
   const left=p.avoid[0];
@@ -269,7 +269,8 @@ function airflowFacts(v:View):Fact[] {
 }
 /** « À savoir »: what is worth knowing about the room, under the advice. Never a gesture, one idea per line. */
 export interface Fact {ic:string;title:string;text:TemplateResult|string;topic?:string;rank?:number;
-  /** Lines of one kind said by rooms sharing one air: only the strongest is kept (weight), named after its room. */ key?:string;weight?:number;room?:string}
+  /** Lines of one kind said by rooms sharing one air: only the strongest is kept (weight), named after its room. */ key?:string;weight?:number;room?:string;
+  /** The windows to open for the gesture: rooms sharing one air say them in one line. */ opens?:string[];also?:boolean}
 /** What counts most comes first: where to open for the gesture, a risk, what is out of range, then why nothing
  * better is done, the equipment at work, and last what was learned. */
 const RANK:Record<string,number>={'Fenêtres':0,'Autres fenêtres':0,'Cette nuit':0,'Humidité élevée':1,'Fenêtre ouverte':1,
@@ -456,6 +457,11 @@ export function factList(v:View,partners:View[]=[],config:Config={type:'custom:h
     joined.set(hum,{...hum,text:(parts.length>1?parts.filter(p=>!/^(au-dessus|sous) de votre plage$/.test(p)):parts).join(', ')});}
   // One air, one answer about its windows: a room the open window warms keeps it open, the others do not ask to close it.
   const keep=all.some(f=>typeof f.text==='string'&&f.text.includes('laisser ouvert'))||[v,...partners].some(r=>r.assessment.features?.open_warms);
+  // One air, one gesture: the windows each room asks to open are said in one line, the first room's reason kept.
+  const opening=all.filter(f=>f.opens?.length);
+  if(opening.length>1){const names=[...new Set(opening.flatMap(f=>f.opens!))],first=opening[0];
+    const one={...first,title:`${first.also?'Ouvrez aussi':'Ouvrez'} ${names.join(' et ')}`};
+    for(const f of opening)joined.set(f,one);}
   const seen=new Set<string>(),list=all.filter(f=>!f.key||strongest.get(f.key)===f).map(f=>joined.get(f)??f)
     .map(f=>keep&&typeof f.text==='string'&&f.text.endsWith(', vous pouvez refermer')?{...f,text:f.text.slice(0,-', vous pouvez refermer'.length)}:f)
     .filter(f=>!(keep&&f.title==='Fenêtre ouverte'&&f.text==='sans effet sur le confort'))
@@ -463,9 +469,17 @@ export function factList(v:View,partners:View[]=[],config:Config={type:'custom:h
     .sort((x,y)=>rank(x)-rank(y)).slice(0,config.insight_max??4);
   return list;
 }
+/** The headings of « À savoir », by rank: the gesture's side first, then what is worth watching, then what was learned. */
+const FACT_GROUPS=[{id:'gesture',ic:'hand',title:'Pour le geste',ranks:[0]},{id:'watch',ic:'info',title:'À surveiller',ranks:[1,2,3,4]},{id:'learned',ic:'spark',title:'Appris',ranks:[5]}];
 export function factBox(v:View,partners:View[]=[],config:Config={type:'custom:hestia-comfort-card'},list=factList(v,partners,config)):TemplateResult|typeof nothing {
   // The first line is what counts most: set apart, and a risk in the « to watch » colour.
-  return list.length?html`<div class="nc-facts"><div class="nw-label">${t('À savoir')}</div><ul>${list.map((f,i)=>html`<li class=${(i===0&&list.length>1?'key':'')+(rank(f)===1?' risk':'')}>${icon(f.ic)}<span><b>${tx(f.title)}</b> · ${partners.length&&f.key==='humidity'&&f.room?`${f.room}, `:''}${tl(f.text)}</span></li>`)}</ul></div>`:nothing;
+  // Three headings, each said only when it has lines: where to act for the gesture, what to keep an eye on, what was learned.
+  const line=(f:Fact)=>html`<li class=${rank(f)===1?'risk':''}>${icon(f.ic)}<span><b>${tx(f.title)}</b> · ${partners.length&&f.key==='humidity'&&f.room?`${f.room}, `:''}${tl(f.text)}</span></li>`;
+  // Under « Rien à faire » there is no gesture: its lines join what is worth watching, never on orange.
+  const calm=advice(v).title==='Rien à faire',of=(f:Fact)=>calm&&rank(f)===0?1:rank(f);
+  const groups=FACT_GROUPS.map(g=>({...g,lines:list.filter(f=>g.ranks.includes(of(f)))})).filter(g=>g.lines.length);
+  return list.length?html`<div class="nc-facts"><div class="nw-label">${t('À savoir')}</div>${groups.map(g=>html`<section class="nc-facts-g" data-group=${g.id}>
+    <h4>${icon(g.ic)}${tx(g.title)}</h4><ul>${g.lines.map(line)}</ul></section>`)}</div>`:nothing;
 }
 /** Why the room that leads a shared air asks for its gesture, after its name. */
 const SHARED:Record<string,string>={air_needed:'a besoin d’air',short_air_change:'a besoin d’air',cooling_possible:'se rafraîchit',warming_possible:'se réchauffe',
@@ -560,14 +574,58 @@ export function scale(s:ScaleInput):TemplateResult {
 }
 
 /** `watch` (soft yellow): the measure leaves your range, without a gesture asked; orange stays for gestures. */
+/** The range the room keeps now: the season's when known, as the scale draws it, else its own settings. */
+const seasonRange=(v:View):[number,number]|null=>{const s=v.assessment.features?.season;
+  return s?.minimum!=null&&s?.maximum!=null?[s.minimum,s.maximum]:v.comfort_minimum!=null&&v.comfort_maximum!=null?[v.comfort_minimum,v.comfort_maximum]:null;};
 /** A partner room's temperature, as a tile: the scale above shows only the chosen room. */
 function roomTemperature(p:View):Tile[] {
   const t=numeric(p.observations.indoor_temperature),n=p.assessment.needs,out=n.includes('cool')||n.includes('heat');
-  return t===null?[]:[{ic:'temp',label:'Température',value:number(t),unit:'°C',note:n.includes('cool')?'trop chaud':n.includes('heat')?(p.assessment.features?.warmth?.slight?'un peu frais':'trop frais'):'dans votre plage',level:out?'watch':'calm',out,entity:p.observations.indoor_temperature?.source??undefined}];
+  return t===null?[]:[{ic:'temp',label:'Température',value:number(t),unit:'°C',note:n.includes('cool')?'trop chaud':n.includes('heat')?(p.assessment.features?.warmth?.slight?'un peu frais':'trop frais'):'dans votre plage',level:out?'watch':'calm',out,entity:p.observations.indoor_temperature?.source??undefined,
+    trend:trendOf(p,'temperature',n.includes('cool')?'high':n.includes('heat')?'low':null,seasonRange(p))}];
 }
 export interface Tile {ic:string;label:string;value:string;unit?:string;note:string;level:Level|'watch';out:boolean;entity?:string;
   /** A device at work (purifier, ventilation): framed like a measure, never counted out of your range. */
-  remedy?:boolean}
+  remedy?:boolean;
+  /** The last half hour: which way it goes, whether that is good for the room, and your range to draw behind. */
+  trend?:Trend}
+/** `better` heads back to your range, `worse` leaves it further; anything else is said in grey, never in green. */
+export interface Trend {way:'up'|'down'|'stable';tone:'better'|'worse'|'steady';points:[number,number][];band?:[number,number]|null;key:string}
+/** The curve of a measure, toned by where it stands: `out` is the side of your range it is on, if any. */
+export function trendOf(v:View,key:'temperature'|'humidity'|'co2'|'voc'|'pm25',out:'high'|'low'|null,band:[number,number]|null=null):Trend|undefined {
+  const c=v.assessment.features?.trends?.curves?.[key];
+  if(!c||c.points.length<2)return undefined;
+  const tone=c.way==='stable'||!out?'steady':(out==='high')===(c.way==='down')?'better':'worse';
+  return {way:c.way,tone,points:c.points,band,key};
+}
+/** Below these spans the curve is not stretched: a few tenths would otherwise look like a climb. */
+const SPAN:Record<string,number>={temperature:.8,humidity:5,co2:150,voc:60,pm25:6};
+/** A smooth line through the points that never overshoots them (monotone cubic), in a 100 × 24 box. */
+function curvePath(pts:[number,number][]):string {
+  const n=pts.length,d=pts.slice(1).map((p,i)=>(p[1]-pts[i][1])/((p[0]-pts[i][0])||1));
+  const m=pts.map((_,i)=>i===0?d[0]:i===n-1?d[n-2]:d[i-1]*d[i]<=0?0:(d[i-1]+d[i])/2);
+  let path=`M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for(let i=0;i<n-1;i++){const h=(pts[i+1][0]-pts[i][0])/3;
+    path+=` C${(pts[i][0]+h).toFixed(1)} ${(pts[i][1]+m[i]*h).toFixed(1)} ${(pts[i+1][0]-h).toFixed(1)} ${(pts[i+1][1]-m[i+1]*h).toFixed(1)} ${pts[i+1][0].toFixed(1)} ${pts[i+1][1].toFixed(1)}`;}
+  return path;
+}
+const WAYS={up:'en hausse',down:'en baisse',stable:'stable'} as const;
+/** The arrow beside the value: it moves the way the measure goes. */
+const trendArrow=(r:Trend)=>html`<span class="nc-way" data-way=${r.way} data-tone=${r.tone} title=${tx(WAYS[r.way])} aria-label=${tx(WAYS[r.way])}>${icon('arrow')}</span>`;
+/** The last half hour, drawn smooth over your range; the last point, now, breathes. */
+function sparkline(r:Trend):TemplateResult {
+  // Your range's nearest edge stays in view, as a strip under or over the curve; too far, it is left out.
+  const vals=r.points.map(p=>p[1]),span=SPAN[r.key]??0;let a=Math.min(...vals),b=Math.max(...vals);
+  const band=r.band&&Math.max(r.band[0]-b,a-r.band[1])<=span*3?r.band:null;
+  if(band){a=Math.min(a,band[1]);b=Math.max(b,band[0]);}
+  const mid=(a+b)/2,half=Math.max(b-a,span)/2*1.35;
+  const lo=mid-half,hi=mid+half,y=(x:number)=>22-(x-lo)/(hi-lo)*20,pts=r.points.map(([ago,x]):[number,number]=>[Math.max(0,Math.min(100,(30-ago)/30*100)),y(x)]);
+  const [bx,by]=band?[y(Math.min(hi,band[1])),y(Math.max(lo,band[0]))]:[0,0],last=pts[pts.length-1];
+  const line=curvePath(pts);
+  return html`<div class="nc-spark" data-tone=${r.tone} aria-hidden="true"><svg viewBox="0 0 100 24" preserveAspectRatio="none">
+    ${band&&by>bx?svg`<rect class="nc-spark-band" x="0" width="100" y=${Math.max(0,bx)} height=${Math.min(24,by)-Math.max(0,bx)}></rect>`:nothing}
+    <path class="nc-spark-line" d=${line} pathLength="1"></path></svg>
+    <span class="nc-spark-dot" style=${`left:${last[0]}%;top:${last[1]/24*100}%`}></span></div>`;
+}
 /** Opens Home Assistant's own details window (history, attributes) for an entity, as any dashboard card does. */
 export const moreInfo=(e:Event,entityId:string)=>{e.stopPropagation();(e.currentTarget as HTMLElement).dispatchEvent(new CustomEvent('hass-more-info',{detail:{entityId},bubbles:true,composed:true}));};
 /** The entity behind each tile: the one a tap opens. */
@@ -591,12 +649,13 @@ const ownTiles=(v:View,list:Tile[])=>list.filter(t=>!v.inherited?.[tileKeys[t.la
 export function tiles(v:View,config:Config):Tile[] {
   const o=v.observations,a=v.assessment,mods=new Set(config.modules??[]),list:Tile[]=[],air=a.features?.air;
   if(mods.has('humidity')&&o.indoor_humidity){const h=numeric(o.indoor_humidity),hum=a.features?.humidity,wet=a.needs.includes('dry'),outside=hum?.source==='outside',out=h!==null&&(hum?.degree!==undefined?hum.degree>=2:wet);
-    list.push({ic:'drop',label:'Humidité',value:number(h),unit:'%',note:h===null?gone(o.indoor_humidity):(humidityLabel(v)?.toLowerCase()??(outside?'humide dehors aussi':'normale')),level:out?'watch':'calm',out});}
+    list.push({ic:'drop',label:'Humidité',value:number(h),unit:'%',note:h===null?gone(o.indoor_humidity):(humidityLabel(v)?.toLowerCase()??(outside?'humide dehors aussi':'normale')),level:out?'watch':'calm',out,
+      trend:h===null?undefined:trendOf(v,'humidity',hum?.status==='high'||hum?.status==='low'?hum.status:null,hum?.minimum!=null&&hum?.maximum!=null?[hum.minimum,hum.maximum]:null)});}
   if(mods.has('air')&&o.co2){const c=numeric(o.co2),high=air?.co2_status==='high';
-    list.push({ic:'air',label:'CO₂',value:number(c),unit:'ppm',note:c===null?gone(o.co2):high?'à renouveler':'normal',level:high?(a.level==='urgent'?'urgent':'watch'):'calm',out:high});}
+    list.push({ic:'air',label:'CO₂',value:number(c),unit:'ppm',note:c===null?gone(o.co2):high?'à renouveler':'normal',level:high?(a.level==='urgent'?'urgent':'watch'):'calm',out:high,trend:c===null?undefined:trendOf(v,'co2',high?'high':null)});}
   if(mods.has('air'))for(const [key,ic,label,status] of [['pm25','pm','Particules',air?.pm25_status],['voc','flask','COV',air?.voc_status]] as const){
     if(!o[key])continue;const x=numeric(o[key]),high=status==='high',treated=key==='pm25'&&high&&air?.pm25_treated===true;
-    list.push({ic,label,value:number(x),unit:o[key].unit??'',note:x===null?gone(o[key]):treated?'filtrées':key==='voc'&&air?.voc_falling?'en baisse':key==='voc'&&(air?.voc_outdoor||air?.voc_rising_open)?'élevés':high?(key==='voc'&&typeof air?.voc_minutes==='number'&&air.voc_minutes>0?`depuis ${air.voc_minutes} min`:'élevés'):status==='uninterpreted'?'sans seuil':key==='pm25'?'normales':'normaux',level:treated?'calm':high?'watch':status==='ok'?'calm':'neutral',out:high});}
+    list.push({ic,label,value:number(x),unit:o[key].unit??'',note:x===null?gone(o[key]):treated?'filtrées':key==='voc'&&air?.voc_falling?'en baisse':key==='voc'&&(air?.voc_outdoor||air?.voc_rising_open)?'élevés':high?(key==='voc'&&typeof air?.voc_minutes==='number'&&air.voc_minutes>0?`depuis ${air.voc_minutes} min`:'élevés'):status==='uninterpreted'?'sans seuil':key==='pm25'?'normales':'normaux',level:treated?'calm':high?'watch':status==='ok'?'calm':'neutral',out:high,trend:x===null?undefined:trendOf(v,key,high?'high':null)});}
   if(mods.has('windows')){const contacts=Object.entries(o).filter(([k])=>k.startsWith('window:')).map(([,r])=>r);
     if(contacts.length){const open=contacts.filter(r=>r.quality==='valid'&&r.value===true).length,flagged=(a.openings??[]).some(x=>x.flags.length>0&&x.open===true);
       list.push({ic:open?'open':'window',label:'Fenêtres',value:`${open}/${contacts.length}`,note:flagged?'à refermer':open?(open>1?`${open} ouvertes`:'1 ouverte'):'toutes fermées',level:flagged?'action':'neutral',out:flagged});}}
@@ -629,7 +688,7 @@ export function tiles(v:View,config:Config):Tile[] {
 // Out of range with a gesture to make: the orange frame; without one, a discreet mark (« soft »).
 const tileClass=(t:Tile,soft=false)=>'nc-tile'+(t.out?(soft?' out soft':' out'):'')+(['indisponible','pas de nouvelle mesure','en attente'].includes(t.note)?' mute':'');
 export const tile=(t:Tile,soft=false)=>t.entity?html`<button type="button" class=${tileClass(t,soft)} data-level=${t.level} title=${tr('Détails : {label}',{label:tx(t.label)})} @click=${(e:Event)=>moreInfo(e,t.entity!)}>${tileBody(t)}</button>`:html`<div class=${tileClass(t,soft)} data-level=${t.level}>${tileBody(t)}</div>`;
-const tileBody=(t:Tile)=>html`<div class="nc-tile-h"><span class="nc-ic">${icon(t.ic)}</span><span class="nw-label">${tx(t.label)}</span></div><b>${tx(t.value)}${t.unit&&t.value!=='—'?html`<small>${t.unit}</small>`:nothing}</b><em>${tx(t.note)}</em>`;
+const tileBody=(t:Tile)=>html`<div class="nc-tile-h"><span class="nc-ic">${icon(t.ic)}</span><span class="nw-label">${tx(t.label)}</span></div><b><span>${tx(t.value)}${t.unit&&t.value!=='—'?html`<small>${t.unit}</small>`:nothing}</span>${t.trend?trendArrow(t.trend):nothing}</b>${t.trend?sparkline(t.trend):nothing}<em>${tx(t.note)}</em>`;
 
 const row=(label:string,x:string)=>html`<li><b>${tx(label)}</b><span> · ${tx(x)}</span></li>`;
 /** One short line per fact: the long explanations of 0.9 become « title · fact ». */

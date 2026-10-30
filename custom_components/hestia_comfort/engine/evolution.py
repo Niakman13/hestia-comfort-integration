@@ -239,6 +239,33 @@ def _slope(history, now, window=30):
     return round(sum((x-mx)*(y-my) for x,y in zip(xs,ys))/denominator,2) if denominator else None
 
 
+# Below these speeds per hour a measure is « stable »: a sensor's own noise is no trend.
+STEADY={'temperature':.3,'humidity':2,'co2':100,'voc':30,'pm25':3}
+
+
+def _curve(history, now, key, window=30, step=2):
+    """A measure's last half hour for its tile: its speed per hour, its way (up, down, stable) and its points.
+
+    Points are the mean of each `step` minutes, as [minutes ago, value]; None under the same three measures over
+    ten minutes the slope asks for."""
+    slope=_slope(history,now,window)
+    if slope is None:
+        return None
+    buckets={}
+    for point in history or []:
+        try:
+            stamp,value=point
+            stamp=datetime.fromisoformat(stamp.replace('Z','+00:00')) if isinstance(stamp,str) else stamp
+            ago=(now-stamp).total_seconds()/60
+            if _number(value) and 0<=ago<=window:
+                buckets.setdefault(int(ago//step),[]).append(float(value))
+        except (ValueError,TypeError,AttributeError):
+            continue
+    points=[[min(window,k*step+step/2),round(sum(v)/len(v),2)] for k,v in sorted(buckets.items(),reverse=True)]
+    way='stable' if abs(slope)<STEADY[key] else 'up' if slope>0 else 'down'
+    return dict(slope=slope,way=way,points=points)
+
+
 def features(readings,settings,context,openings,sun,details,needs,action,reason,now,ai,ae,air):
     ti,te=_value(readings,'indoor_temperature'),_value(readings,'outdoor_temperature')
     rh=_value(readings,'indoor_humidity')
@@ -289,4 +316,5 @@ def features(readings,settings,context,openings,sun,details,needs,action,reason,
                 ventilation=dict(opened_minutes=elapsed,duration_minutes=duration,message=vm,capacity=capacity),
                 humidity=dict(dew_point=dew,incoming_relative=incoming,glass_temperature=glass,condensation_risk=condensation,message=hmessage),
                 trends=dict(indoor=_slope(context.get('temperature_history'),now),outdoor=_slope(context.get('outdoor_history'),now),window_minutes=30,
+                            curves={k:_curve(context.get(k+'_history'),now,k) for k in STEADY},
                             message='Tendance en °C/h sur au plus 30 minutes de mesures réelles ; au moins 3 mesures sur 10 minutes.'))

@@ -130,6 +130,18 @@ class EvolutionTests(unittest.TestCase):
     def test_trend_uses_real_timed_history(self):
         ctx={'temperature_history':[((NOW-timedelta(minutes=20)).isoformat(),20),((NOW-timedelta(minutes=10)).isoformat(),21),(NOW.isoformat(),22)]}
         self.assertEqual(assess(zone(),now=NOW,context=ctx).features['trends']['indoor'],6)
+    def test_tile_curves_say_the_way_and_the_last_half_hour(self):
+        at=lambda m,v:((NOW-timedelta(minutes=m)).isoformat(),v)
+        ctx={'humidity_history':[at(m,66) for m in (28,20,12,4)],'voc_history':[at(28,380),at(20,340),at(12,300),at(4,270),at(45,500)],
+             'co2_history':[at(5,600),at(1,610)]}
+        c=assess(zone(),now=NOW,context=ctx).features['trends']['curves']
+        self.assertEqual(c['humidity']['way'],'stable')
+        self.assertEqual(c['voc']['way'],'down')
+        # The oldest point first, as [minutes ago, value]; what is older than half an hour is left out.
+        self.assertEqual([p[1] for p in c['voc']['points']],[380,340,300,270])
+        self.assertEqual(c['voc']['points'][0][0],29)
+        # Under ten minutes of measures: no way said.
+        self.assertIsNone(c['co2']); self.assertIsNone(c['temperature'])
     def test_durations_with_hard_veto_unavailable(self):
         r=assess(zone(co2=1800,rain=True,**{'window:a':True}),context={'opening_minutes':{'a':10}})
         self.assertEqual(r.action,'fermer')

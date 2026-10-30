@@ -50,7 +50,7 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
         self.followed = set()
         self.started = dt_util.utcnow()
         self.history_reports = {}
-        self.histories = {"temperature_history": deque(maxlen=360), "outdoor_history": deque(maxlen=360), "humidity_history": deque(maxlen=360)}
+        self.histories = {key: deque(maxlen=360) for key in ("temperature_history", "outdoor_history", "humidity_history", "co2_history", "voc_history", "pm25_history")}
         # The VOC index of the last minutes, for its mean (engine/voc.py).
         self.voc_points = deque(maxlen=240)
         # The last airing while the VOC called for air, noted the moment the room is shut: the pause starts there.
@@ -185,7 +185,8 @@ class ComfortCoordinator(LearningMixin, VolumeMixin, PresenceMixin, SunMixin, Ai
         await self.async_request_refresh()
 
     def _context(self, now, readings):
-        for key, source in (("temperature_history", "indoor_temperature"), ("outdoor_history", "outdoor_temperature"), ("humidity_history", "indoor_humidity")):
+        for key, source in (("temperature_history", "indoor_temperature"), ("outdoor_history", "outdoor_temperature"), ("humidity_history", "indoor_humidity"),
+                            ("co2_history", "co2"), ("voc_history", "voc"), ("pm25_history", "pm25")):
             history = self.histories[key]
             reading = readings.get(source)
             # Keep samples received during this session; repeated clock refreshes do not invent samples.

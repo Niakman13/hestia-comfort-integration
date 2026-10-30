@@ -13,7 +13,7 @@ const {isView,numeric,summary,readingStatus,coverageText,windFrom,evolutionLines
 const {LiveView}=await import(pathToFileURL(join(temp,'live.mjs')));
 const {roomChoices}=await import(pathToFileURL(join(temp,'editor.mjs')));
 const {hassMatters}=await import(pathToFileURL(join(temp,'hass-change.mjs')));
-const {outsideGaps,advice,slides,roomCard,facts,factList}=await import(pathToFileURL(join(temp,'views/room.mjs')));
+const {outsideGaps,advice,slides,roomCard,facts,factList,factBox,trendOf}=await import(pathToFileURL(join(temp,'views/room.mjs')));
 const fixtures=JSON.parse(await readFile(new URL('../preview/card-fixtures.json',import.meta.url),'utf8'));
 const fresh=()=>({...structuredClone(fixtures[0].view),computed_at:new Date().toISOString()});
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
@@ -611,6 +611,38 @@ test('where to open is said under the advice, only while airing is asked',()=>{
   assert.equal(said().some(t=>t.startsWith('Ouvrez')),false);
 });
 
+test('the trend is green only when it heads back to your range (30 October)',()=>{
+  const v=fresh(),curve=way=>({slope:way==='stable'?0:way==='up'?5:-5,way,points:[[28,66],[16,66],[2,66]]});
+  v.assessment={...v.assessment,features:{...v.assessment.features,trends:{indoor:null,outdoor:null,window_minutes:30,message:'',curves:{humidity:curve('down'),co2:null}}}};
+  assert.equal(trendOf(v,'humidity','high').tone,'better');
+  assert.equal(trendOf(v,'humidity','low').tone,'worse');
+  // In your range it may move: said in grey, never green.
+  assert.equal(trendOf(v,'humidity',null).tone,'steady');
+  v.assessment.features.trends.curves.humidity=curve('stable');
+  assert.equal(trendOf(v,'humidity','high').tone,'steady');
+  // Under ten minutes of measures: no arrow at all.
+  assert.equal(trendOf(v,'co2','high'),undefined);
+});
+test('« À savoir » is said under three headings, the gesture one only with a gesture (30 October)',()=>{
+  const flat=t=>t==null?'':Array.isArray(t)?t.map(flat).join(''):typeof t!=='object'?String(t):t.strings?t.strings.map((x,i)=>x+(i<t.values.length?flat(t.values[i]):'')).join(''):'';
+  const v=fresh();v.names={ouest:'Fenêtre Ouest'};
+  v.observations={...v.observations,co2:{value:1300,quality:'valid',source:'sensor.co2'}};
+  v.feedback={last:{measure:'voc',before:384,after:313,predicted:null}};
+  v.assessment={...v.assessment,action:'ouvrir',level:'action',reason:'air_needed',needs:['air'],constraints:[],missing:[],
+    features:{...v.assessment.features,airflow:{open:['ouest'],keep:[],path:'one_side',into:null,faster:null,learned:0,avoid:[]}}};
+  const box=flat(factBox(v));
+  assert.match(box,/data-group=gesture|Pour le geste/);assert.match(box,/Appris/);
+  assert.ok(box.indexOf('Pour le geste')<box.indexOf('Appris'));
+});
+test('one air says its windows to open in one line (30 October)',()=>{
+  // Salon asks for Fenêtre Ouest, Cuisine for Fenêtre Cuisine, both doors already open: one gesture, one line.
+  const room=(title,open)=>{const v=fresh();v.title=title;v.names={ouest:'Fenêtre Ouest',cuisine:'Fenêtre Cuisine',sd:'Porte-fenêtre SD'};
+    v.observations={...v.observations,co2:{value:1300,quality:'valid',source:'sensor.co2'}};
+    v.assessment={...v.assessment,action:'ouvrir',level:'action',reason:'air_needed',needs:['air'],constraints:[],missing:[],
+      features:{...v.assessment.features,airflow:{open:[open],keep:['sd'],path:'two_sides',into:null,faster:null,learned:0,avoid:[]}}};return v;};
+  const said=factList(room('Salon','ouest'),[room('Cuisine','cuisine')]).filter(f=>f.title.startsWith('Ouvrez')).map(f=>f.title);
+  assert.deepEqual(said,['Ouvrez aussi Fenêtre Ouest et Fenêtre Cuisine']);
+});
 test('one air never says « refermer » and « laisser ouvert », nor « refroidirait » with a milder outside (27 October)',()=>{
   // Salon 20,3 °C open, Cuisine 19,6 °C open and a little cool, 22,3 °C outside: the open window warms them.
   const room=(title,ti,hi,reason,needs,features)=>{const v=fresh();v.title=title;

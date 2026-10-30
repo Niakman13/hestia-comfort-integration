@@ -1,3 +1,30 @@
+## 2.1.0b4 — Bêta : la tendance de chaque mesure
+
+**En bref**
+
+- **Chaque mesure montre sa tendance** : une flèche animée et la courbe des 30 dernières minutes.
+- **La couleur dit si c’est bon** : vert quand la mesure revient vers votre plage, orange quand elle s’en éloigne, gris sinon.
+- **« À savoir » est rangé** : Pour le geste, À surveiller, Appris.
+
+### Avant de mettre à jour
+
+- Gardez Hestia Weather 3.1.0b2.
+
+### Nouveautés
+
+- Température, humidité, CO₂, COV et particules : une flèche qui monte, descend ou reste stable.
+- Sous la valeur, une courbe des 30 dernières minutes, avec votre plage en léger fond vert.
+- La flèche apparaît après une dizaine de minutes de mesures.
+
+### Améliorations
+
+- « À savoir » range ses lignes en trois rubriques ; une rubrique vide n’apparaît pas.
+- Les fenêtres à ouvrir pour le geste sont sur un léger fond orange ; sous « Rien à faire », il n’y en a pas.
+
+### Corrections
+
+- Deux pièces qui partagent le même air disaient chacune « Ouvrez aussi … » : les fenêtres sont maintenant dites en une seule ligne.
+
 ## 2.1.0b3 — Bêta : WLED à part, les plages de chaque pièce
 
 **En bref**

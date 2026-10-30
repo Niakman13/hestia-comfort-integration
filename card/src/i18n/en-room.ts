@@ -47,7 +47,7 @@ export const EN_ROOM:Record<string,string>={
  'À savoir':'Good to know','Humidité':'Humidity','Humidité élevée':'High humidity','Air humide':'Humid air','Légèrement humide':'Slightly humid','Très humide':'Very humid','Air sec':'Dry air',
  'Légèrement sec':'Slightly dry','Très sec':'Very dry','Air humide dehors':'Humid air outside','Pièce fraîche':'Cool room','Un peu frais':'A little cool','Pièce chaude':'Warm room','Soleil':'Sun',
  'Fenêtres':'Windows','Autres fenêtres':'Other windows','Aération':'Airing','Aération d’hiver':'Winter airing','Pièce vide':'Empty room','Pollens élevés':'High pollen','Nuit':'Night','Purificateur':'Purifier','VMC':'Ventilation',
- 'Cette nuit':'Tonight','Dernière aération':'Last airing','COV':'VOC','Vapeur':'Steam','Apprentissage':'Learning',
+ 'Cette nuit':'Tonight','Dernière aération':'Last airing','Pour le geste':'For the gesture','Appris':'Learned','en hausse':'rising','stable':'steady','À surveiller':'Worth watching','COV':'VOC','Vapeur':'Steam','Apprentissage':'Learning',
  'revient vers votre plage':'coming back into your range','au-dessus de votre plage':'above your range','sous votre plage':'below your range','depuis plusieurs heures':'for several hours',
  'au-dessus de votre plage depuis plusieurs heures':'above your range for several hours','sous votre plage depuis plusieurs heures':'below your range for several hours',
  'aérer assécherait davantage la pièce':'airing would dry the room further','l’air extérieur pourrait augmenter l’humidité ; le conseil tient aussi compte de la température':'outside air could raise the humidity; the advice also weighs the temperature',
